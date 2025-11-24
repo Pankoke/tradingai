@@ -179,5 +179,16 @@
   "docs.examples.example2.title": "Python: Fetch setups",
   "docs.examples.example2.body": "Example using requests against the setups endpoint.",
   "docs.examples.notes.title": "Notes",
-  "docs.examples.notes.body": "Use test/sandbox keys and respect rate limits before going to production."
+  "docs.examples.notes.body": "Use test/sandbox keys and respect rate limits before going to production.",
+
+  "setupGenerator.title": "Setup Generator",
+  "setupGenerator.intro": "Generate a sample setup based on asset, timeframe and risk profile.",
+  "setupGenerator.form.asset": "Asset",
+  "setupGenerator.form.timeframe": "Timeframe",
+  "setupGenerator.form.risk": "Risk profile",
+  "setupGenerator.form.type": "Setup type",
+  "setupGenerator.form.generate": "Generate setup",
+  "setupGenerator.resultTitle": "Generated setup",
+  "setupGenerator.explanationTitle": "AI explanation",
+  "setupGenerator.mockExplanation": "This setup was generated based on your chosen parameters:"
 }

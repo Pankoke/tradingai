@@ -123,16 +123,35 @@ export function Header(): JSX.Element {
 }
 
 function NavDropdown({ label, items }: NavDropdownProps): JSX.Element {
+  const [open, setOpen] = useState(false);
+
+  const handleEnter = (): void => setOpen(true);
+  const handleLeave = (): void => setOpen(false);
+
   return (
-    <div className="relative group">
+    <div
+      className="relative"
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
+      onFocus={handleEnter}
+      onBlur={handleLeave}
+    >
       <button
         type="button"
-        className="flex items-center gap-1 rounded-md px-2 py-1 text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
+        className="flex items-center gap-1 rounded-md px-2 py-1 text-[var(--text-secondary)] transition hover:bg-[var(--bg-main)] hover:text-[var(--text-primary)]"
+        aria-haspopup="true"
+        aria-expanded={open}
       >
         {label}
-        <span className="text-[10px]">▼</span>
+        <span className="text-[10px]" aria-hidden="true">
+          v
+        </span>
       </button>
-      <div className="invisible absolute left-0 top-full z-20 mt-2 min-w-[220px] rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100">
+      <div
+        className={`absolute left-0 top-full z-20 mt-2 min-w-[220px] rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 shadow-lg transition ${
+          open ? "visible opacity-100 translate-y-0" : "invisible opacity-0 -translate-y-1"
+        }`}
+      >
         <div className="flex flex-col gap-1 text-sm">
           {items.map((item) => (
             <Link

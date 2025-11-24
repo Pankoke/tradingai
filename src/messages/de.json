@@ -179,5 +179,16 @@
   "docs.examples.example2.title": "Python: Setups abrufen",
   "docs.examples.example2.body": "Beispiel mit requests auf den Setups-Endpunkt.",
   "docs.examples.notes.title": "Hinweise",
-  "docs.examples.notes.body": "Nutze Test-/Sandbox-Keys und prüfe Rate Limits, bevor du in Produktion gehst."
+  "docs.examples.notes.body": "Nutze Test-/Sandbox-Keys und prüfe Rate Limits, bevor du in Produktion gehst.",
+
+  "setupGenerator.title": "Setup Generator",
+  "setupGenerator.intro": "Erzeuge ein Beispiel-Setup basierend auf Asset, Timeframe und Risikoprofil.",
+  "setupGenerator.form.asset": "Asset",
+  "setupGenerator.form.timeframe": "Timeframe",
+  "setupGenerator.form.risk": "Risiko-Profil",
+  "setupGenerator.form.type": "Setup-Typ",
+  "setupGenerator.form.generate": "Setup generieren",
+  "setupGenerator.resultTitle": "Generiertes Setup",
+  "setupGenerator.explanationTitle": "KI-Begründung",
+  "setupGenerator.mockExplanation": "Dieses Setup wurde auf Basis der gewählten Parameter erstellt:"
 }
