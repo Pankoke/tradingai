@@ -1,5 +1,6 @@
 import React from "react";
 import type { JSX } from "react";
+import Link from "next/link";
 
 const badges = ["Alle Setups", "KI-Interpretationen", "Multi-Asset-Analysen", "Echtzeit-Alerts"];
 
@@ -24,12 +25,12 @@ export function CTA(): JSX.Element {
         </div>
       </div>
       <div className="flex items-center gap-3 sm:flex-col sm:items-end sm:gap-2">
-        <button
-          type="button"
+        <Link
+          href="/pricing"
           className="rounded-full bg-[var(--accent)] px-5 py-2 text-sm font-semibold text-black shadow-[0_10px_20px_rgba(34,197,94,0.25)] transition hover:opacity-90"
         >
-          Perception Pro entdecken
-        </button>
+          Pricing & Pläne
+        </Link>
       </div>
     </section>
   );
