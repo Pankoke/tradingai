@@ -1,14 +1,72 @@
-﻿import React from "react";
+import React, { Suspense } from "react";
 import type { JSX } from "react";
+import { SetupCard } from "../../(marketing)/components/SetupCard";
+import { PremiumControls } from "@/src/components/setups/PremiumControls";
+import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
+import type { Setup } from "@/src/lib/engine/types";
 
-export default function Page(): JSX.Element {
+type PageProps = {
+  searchParams?: {
+    sort?: string;
+    dir?: string;
+    filter?: string;
+  };
+};
+
+function applyFilter(setups: Setup[], filter: string): Setup[] {
+  if (filter === "long") return setups.filter((s) => s.direction === "Long");
+  if (filter === "short") return setups.filter((s) => s.direction === "Short");
+  return setups;
+}
+
+function applySort(setups: Setup[], sort: string, dir: string): Setup[] {
+  const direction = dir === "asc" ? 1 : -1;
+  const cloned = [...setups];
+  return cloned.sort((a, b) => {
+    if (sort === "confidence") return (a.confidence - b.confidence) * direction;
+    if (sort === "sentiment") return (a.sentimentScore - b.sentimentScore) * direction;
+    if (sort === "timeframe") return a.timeframe.localeCompare(b.timeframe) * direction;
+    if (sort === "direction") return a.direction.localeCompare(b.direction) * direction;
+    return (a.confidence - b.confidence) * direction;
+  });
+}
+
+export default async function PremiumSetupsPage({ searchParams }: PageProps): Promise<JSX.Element> {
+  const snapshot = await buildPerceptionSnapshot();
+  const { setups } = snapshot;
+
+  const sort = searchParams?.sort ?? "confidence";
+  const dir = searchParams?.dir ?? "desc";
+  const filter = searchParams?.filter ?? "all";
+
+  const filtered = applyFilter(setups, filter);
+  const sorted = applySort(filtered, sort, dir);
+
   return (
     <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
-      <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Premium Setups</h1>
-        <p className="mt-3 text-sm text-[var(--text-secondary)] sm:text-base">
-          Platzhalterseite für Premium-Setups. Hier werden später alle exklusiven Setups mit Filtern, Metriken und Alerts verfügbar sein.
-        </p>
+      <div className="mx-auto max-w-6xl px-4 py-8 md:py-10 space-y-6">
+        <div className="space-y-3">
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Premium Setups</h1>
+          <p className="max-w-2xl text-sm text-[var(--text-secondary)] sm:text-base">
+            Zugriff auf alle heutigen Setups. Filter, Historie und Alerts folgen im Premium-Bereich.
+          </p>
+        </div>
+
+        <Suspense
+          fallback={
+            <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 text-sm text-[var(--text-secondary)]">
+              Lädt Filter ...
+            </div>
+          }
+        >
+          <PremiumControls currentSort={sort} currentDir={dir} currentFilter={filter} />
+        </Suspense>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {sorted.map((setup) => (
+            <SetupCard key={setup.id} setup={setup} />
+          ))}
+        </div>
       </div>
     </div>
   );
