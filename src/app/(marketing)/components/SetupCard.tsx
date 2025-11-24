@@ -24,7 +24,7 @@ type SetupCardProps = {
   highlight?: boolean;
 };
 
-export function SetupCard({ setup, highlight = false }: SetupCardProps): JSX.Element {
+export function SetupCard({ setup, highlight }: SetupCardProps): JSX.Element {
   const directionColor =
     setup.direction === "Long" ? "text-emerald-400" : "text-red-400";
 
