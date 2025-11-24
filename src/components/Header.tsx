@@ -80,7 +80,7 @@ export function Header(): JSX.Element {
             <NavDropdown
               label={t("nav.docs")}
               items={[
-                { href: `${localePrefix}/docs`, label: "Übersicht" },
+                { href: `${localePrefix}/docs`, label: t("docs.overview.title") },
                 { href: `${localePrefix}/docs/api`, label: "API" },
                 { href: `${localePrefix}/docs/webhooks`, label: "Webhooks" },
                 { href: `${localePrefix}/docs/sdks`, label: "SDKs" },

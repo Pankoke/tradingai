@@ -66,7 +66,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps): JSX.Element {
     {
       label: t("nav.docs"),
       children: [
-        { label: "Übersicht", href: "/docs" },
+        { label: t("docs.overview.title"), href: "/docs" },
         { label: "API", href: "/docs/api" },
         { label: "Webhooks", href: "/docs/webhooks" },
         { label: "SDKs", href: "/docs/sdks" },
