@@ -1,5 +1,8 @@
+"use client";
+
 import React from "react";
 import type { JSX } from "react";
+import { useT } from "../../../../lib/i18n/ClientProvider";
 
 type HeroStatProps = {
   label: string;
@@ -22,6 +25,7 @@ function HeroStat({ label, value, icon }: HeroStatProps): JSX.Element {
 }
 
 export function Hero(): JSX.Element {
+  const t = useT();
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -34,22 +38,21 @@ export function Hero(): JSX.Element {
       <div className="space-y-5">
         <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-1 text-[0.7rem] text-[var(--text-secondary)] shadow-sm shadow-[rgba(34,197,94,0.15)]">
           <span className="h-2 w-2 rounded-full bg-[var(--accent)]" />
-          <span className="font-medium">AI-powered · Snapshot-basiert</span>
+          <span className="font-medium">{t("hero.badge")}</span>
         </div>
         <div className="space-y-3">
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl md:text-5xl">
-            Perception Lab – KI-gestützte Markt-Setups
+            {t("hero.title")}
           </h1>
           <p className="max-w-2xl text-sm text-[var(--text-secondary)] sm:text-base">
-            Die Perception Engine kombiniert regelbasierte Marktanalyse mit KI und erzeugt täglich klare,
-            objektive und handelbare Setups.
+            {t("hero.subtitle")}
           </p>
         </div>
         <a
           href="#perception-lab"
           className="inline-flex items-center gap-2 text-sm font-medium text-[var(--accent)] underline decoration-[var(--accent)] underline-offset-4 hover:brightness-110"
         >
-          Was ist das Perception Lab?
+          {t("hero.linkPerception")}
           <span aria-hidden="true">→</span>
         </a>
       </div>
@@ -61,10 +64,10 @@ export function Hero(): JSX.Element {
           </span>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          <HeroStat icon="📈" label="Analysierte Assets heute" value="32" />
-          <HeroStat icon="🧭" label="Aktive Setups" value="24" />
-          <HeroStat icon="⚡" label="Starke Signale" value="7" />
-          <HeroStat icon="🛡️" label="Schwache Signale" value="5" />
+          <HeroStat icon="📈" label={t("hero.stat.assets")} value="32" />
+          <HeroStat icon="🧭" label={t("hero.stat.setups")} value="24" />
+          <HeroStat icon="⚡" label={t("hero.stat.strongSignals")} value="7" />
+          <HeroStat icon="🛡️" label={t("hero.stat.weakSignals")} value="5" />
         </div>
       </div>
     </section>

@@ -1,0 +1,25 @@
+{
+  "nav.home": "Home",
+  "nav.setups": "Setups",
+  "nav.backtesting": "Backtesting",
+  "nav.kiTools": "KI-Tools",
+  "nav.pricing": "Pricing",
+  "nav.docs": "Docs",
+  "nav.account": "Account",
+
+  "hero.badge": "AI-powered · Snapshot-basiert",
+  "hero.title": "Perception Lab – KI-gestützte Markt-Setups",
+  "hero.subtitle": "Die Perception Engine kombiniert regelbasierte Marktanalyse mit KI und erzeugt täglich klare, objektive und handelbare Setups.",
+  "hero.linkPerception": "Was ist das Perception Lab?",
+  "hero.stat.assets": "Analysierte Assets heute",
+  "hero.stat.setups": "Aktive Setups",
+  "hero.stat.strongSignals": "Starke Signale",
+  "hero.stat.weakSignals": "Schwache Signale",
+
+  "section.setupsOfTheDay": "Setup des Tages",
+  "section.moreSetups": "Weitere Setups",
+  "section.perceptionLab": "Was ist das Perception Lab?",
+  "section.cta.title": "Mehr Setups freischalten",
+  "section.cta.text": "Im Free-Tier siehst du nur eine Auswahl. In der Premium-Version erhältst du alle täglichen Setups, KI-Interpretationen, Multi-Asset-Analysen und Alerts – alles an einem Ort.",
+  "section.cta.button": "Pricing & Pläne"
+}

@@ -1,4 +1,4 @@
-import type { SetupCardSetup } from "../app/(marketing)/components/SetupCard";
+import type { SetupCardSetup } from "../app/[locale]/(marketing)/components/SetupCard";
 
 export const mockSetups: SetupCardSetup[] = [
   {

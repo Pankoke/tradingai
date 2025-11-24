@@ -1,6 +1,10 @@
-import React from "react";
+"use client";
+
+import React, { useMemo } from "react";
 import type { JSX } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { i18nConfig, type Locale } from "../../../../lib/i18n/config";
 
 export type Direction = "Long" | "Short";
 
@@ -30,8 +34,25 @@ type GaugeProps = {
   value: number;
 };
 
+type LevelProps = {
+  label: string;
+  value: string;
+  tone: "neutral" | "danger" | "success";
+};
+
+function localePrefix(pathname: string): string {
+  const segments = pathname.split("/").filter(Boolean);
+  const maybeLocale = segments[0];
+  if (i18nConfig.locales.includes(maybeLocale as Locale)) {
+    return `/${maybeLocale}`;
+  }
+  return `/${i18nConfig.defaultLocale}`;
+}
+
 export function SetupCard({ setup, highlight = false }: SetupCardProps): JSX.Element {
   const isLong = setup.direction === "Long";
+  const pathname = usePathname();
+  const prefix = useMemo(() => localePrefix(pathname), [pathname]);
 
   return (
     <article
@@ -79,7 +100,7 @@ export function SetupCard({ setup, highlight = false }: SetupCardProps): JSX.Ele
 
       <div className="flex justify-end">
         <Link
-          href={`/setups/${setup.id}`}
+          href={`${prefix}/setups/${setup.id}`}
           className="rounded-full bg-[var(--accent)] px-3 py-1 text-xs font-semibold text-black shadow-[0_10px_15px_rgba(34,197,94,0.2)] transition hover:opacity-90"
         >
           Analyse öffnen
@@ -108,12 +129,6 @@ function MiniGauge({ label, value }: GaugeProps): JSX.Element {
     </div>
   );
 }
-
-type LevelProps = {
-  label: string;
-  value: string;
-  tone: "neutral" | "danger" | "success";
-};
 
 function Level({ label, value, tone }: LevelProps): JSX.Element {
   const color =

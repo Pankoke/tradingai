@@ -1,7 +1,7 @@
 import React from "react";
 import type { JSX } from "react";
 import { SetupCard } from "../(marketing)/components/SetupCard";
-import { mockSetups } from "../../lib/mockSetups";
+import { mockSetups } from "../../../lib/mockSetups";
 
 export default function SetupsPage(): JSX.Element {
   return (

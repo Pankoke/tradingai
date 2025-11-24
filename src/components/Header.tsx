@@ -1,74 +1,100 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import type { JSX } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
 import { LanguageToggle } from "./LanguageToggle";
 import { MobileMenu } from "./MobileMenu";
+import { i18nConfig, type Locale } from "../lib/i18n/config";
+import { useT } from "../lib/i18n/ClientProvider";
+
+type NavItem = {
+  href: string;
+  label: string;
+};
+
+type NavDropdownProps = {
+  label: string;
+  items: NavItem[];
+};
+
+function buildLocalePrefix(pathname: string): string {
+  const segments = pathname.split("/").filter(Boolean);
+  const maybeLocale = segments[0];
+  if (i18nConfig.locales.includes(maybeLocale as Locale)) {
+    return `/${maybeLocale}`;
+  }
+  return `/${i18nConfig.defaultLocale}`;
+}
 
 export function Header(): JSX.Element {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+  const t = useT();
+
+  const localePrefix = useMemo(() => buildLocalePrefix(pathname), [pathname]);
 
   return (
     <header className="border-b border-[var(--border-subtle)] bg-[var(--bg-surface)]">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         <div className="flex items-center gap-4">
-          <Link href="/" className="text-sm font-bold tracking-tight">
+          <Link href={`${localePrefix}/`} className="text-sm font-bold tracking-tight">
             TradingAI
           </Link>
           <nav className="hidden items-center gap-4 text-sm text-[var(--text-secondary)] md:flex">
-            <Link href="/" className="hover:text-[var(--text-primary)]">
-              Home
+            <Link href={`${localePrefix}/`} className="hover:text-[var(--text-primary)]">
+              {t("nav.home")}
             </Link>
             <NavDropdown
-              label="Setups"
+              label={t("nav.setups")}
               items={[
-                { href: "/setups", label: "Setup of the Day" },
-                { href: "/setups/premium", label: "Premium Setups" },
-                { href: "/perception", label: "Perception Lab" },
+                { href: `${localePrefix}/setups`, label: "Setup of the Day" },
+                { href: `${localePrefix}/setups/premium`, label: "Premium Setups" },
+                { href: `${localePrefix}/perception`, label: "Perception Lab" },
               ]}
             />
             <NavDropdown
-              label="Backtesting"
+              label={t("nav.backtesting")}
               items={[
-                { href: "/backtesting/event", label: "Event-Backtester" },
-                { href: "/backtesting/history", label: "Setup-Historie" },
-                { href: "/backtesting/replay", label: "Replay-Modus" },
-                { href: "/backtesting/ai", label: "KI-Backtesting" },
+                { href: `${localePrefix}/backtesting/event`, label: "Event-Backtester" },
+                { href: `${localePrefix}/backtesting/history`, label: "Setup-Historie" },
+                { href: `${localePrefix}/backtesting/replay`, label: "Replay-Modus" },
+                { href: `${localePrefix}/backtesting/ai`, label: "KI-Backtesting" },
               ]}
             />
             <NavDropdown
-              label="KI-Tools"
+              label={t("nav.kiTools")}
               items={[
-                { href: "/ai-tools/setup-generator", label: "Setup Generator" },
-                { href: "/ai-tools/market-summary", label: "Market Summary AI" },
-                { href: "/ai-tools/event-interpreter", label: "Event Interpreter" },
-                { href: "/ai-tools/risk-manager", label: "Risk Manager" },
-                { href: "/ai-tools/screenshot-analysis", label: "Screenshot-Analyse" },
+                { href: `${localePrefix}/ai-tools/setup-generator`, label: "Setup Generator" },
+                { href: `${localePrefix}/ai-tools/market-summary`, label: "Market Summary AI" },
+                { href: `${localePrefix}/ai-tools/event-interpreter`, label: "Event Interpreter" },
+                { href: `${localePrefix}/ai-tools/risk-manager`, label: "Risk Manager" },
+                { href: `${localePrefix}/ai-tools/screenshot-analysis`, label: "Screenshot-Analyse" },
               ]}
             />
-            <Link href="/pricing" className="hover:text-[var(--text-primary)]">
-              Pricing
+            <Link href={`${localePrefix}/pricing`} className="hover:text-[var(--text-primary)]">
+              {t("nav.pricing")}
             </Link>
             <NavDropdown
-              label="Docs"
+              label={t("nav.docs")}
               items={[
-                { href: "/docs", label: "Übersicht" },
-                { href: "/docs/api", label: "API" },
-                { href: "/docs/webhooks", label: "Webhooks" },
-                { href: "/docs/sdks", label: "SDKs" },
-                { href: "/docs/examples", label: "Beispiele" },
+                { href: `${localePrefix}/docs`, label: "Übersicht" },
+                { href: `${localePrefix}/docs/api`, label: "API" },
+                { href: `${localePrefix}/docs/webhooks`, label: "Webhooks" },
+                { href: `${localePrefix}/docs/sdks`, label: "SDKs" },
+                { href: `${localePrefix}/docs/examples`, label: "Beispiele" },
               ]}
             />
             <NavDropdown
-              label="Account"
+              label={t("nav.account")}
               items={[
-                { href: "/account/profile", label: "Profil" },
-                { href: "/account/api-keys", label: "API Keys" },
-                { href: "/account/billing", label: "Billing" },
-                { href: "/account/alerts", label: "Alerts" },
-                { href: "/account/saved-setups", label: "Saved Setups" },
+                { href: `${localePrefix}/account/profile`, label: "Profil" },
+                { href: `${localePrefix}/account/api-keys`, label: "API Keys" },
+                { href: `${localePrefix}/account/billing`, label: "Billing" },
+                { href: `${localePrefix}/account/alerts`, label: "Alerts" },
+                { href: `${localePrefix}/account/saved-setups`, label: "Saved Setups" },
               ]}
             />
           </nav>
@@ -95,16 +121,6 @@ export function Header(): JSX.Element {
     </header>
   );
 }
-
-type NavItem = {
-  href: string;
-  label: string;
-};
-
-type NavDropdownProps = {
-  label: string;
-  items: NavItem[];
-};
 
 function NavDropdown({ label, items }: NavDropdownProps): JSX.Element {
   return (

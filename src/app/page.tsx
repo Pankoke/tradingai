@@ -1,7 +1,5 @@
-import React from "react";
-import type { JSX } from "react";
-import MarketingPage from "./(marketing)/page";
+import { redirect } from "next/navigation";
 
-export default function RootPage(): JSX.Element {
-  return <MarketingPage />;
+export default function RootRedirect(): void {
+  redirect("/de");
 }

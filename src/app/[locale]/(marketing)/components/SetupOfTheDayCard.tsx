@@ -1,7 +1,20 @@
-import React from "react";
+"use client";
+
+import React, { useMemo } from "react";
 import type { JSX } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { SetupCardSetup } from "./SetupCard";
+import { i18nConfig, type Locale } from "../../../../lib/i18n/config";
+
+function localePrefix(pathname: string): string {
+  const segments = pathname.split("/").filter(Boolean);
+  const maybeLocale = segments[0];
+  if (i18nConfig.locales.includes(maybeLocale as Locale)) {
+    return `/${maybeLocale}`;
+  }
+  return `/${i18nConfig.defaultLocale}`;
+}
 
 type SetupOfTheDayCardProps = {
   setup: SetupCardSetup;
@@ -26,6 +39,8 @@ function toneClass(tone: LevelBoxPropsDay["tone"]): string {
 
 export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Element {
   const isLong = setup.direction === "Long";
+  const pathname = usePathname();
+  const prefix = useMemo(() => localePrefix(pathname), [pathname]);
 
   return (
     <section className="flex flex-col gap-6 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5 shadow-lg shadow-[rgba(0,0,0,0.35)] ring-1 ring-[rgba(34,197,94,0.08)] sm:p-6 lg:p-7">
@@ -63,7 +78,7 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
 
       <div className="mt-3 flex justify-end">
         <Link
-          href={`/setups/${setup.id}`}
+          href={`${prefix}/setups/${setup.id}`}
           className="rounded-full bg-[var(--accent)] px-4 py-1.5 text-sm font-semibold text-black shadow-[0_10px_20px_rgba(34,197,94,0.25)] transition hover:opacity-90"
         >
           Analyse öffnen

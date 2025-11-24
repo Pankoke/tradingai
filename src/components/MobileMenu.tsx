@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import type { JSX } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { i18nConfig, type Locale } from "../lib/i18n/config";
 
 type NavItem = {
   label: string;
@@ -14,6 +16,15 @@ type MobileMenuProps = {
   open: boolean;
   onClose: () => void;
 };
+
+function buildLocalePrefix(pathname: string): string {
+  const segments = pathname.split("/").filter(Boolean);
+  const maybeLocale = segments[0];
+  if (i18nConfig.locales.includes(maybeLocale as Locale)) {
+    return `/${maybeLocale}`;
+  }
+  return `/${i18nConfig.defaultLocale}`;
+}
 
 const navItems: NavItem[] = [
   { label: "Home", href: "/" },
@@ -69,6 +80,8 @@ const navItems: NavItem[] = [
 
 export function MobileMenu({ open, onClose }: MobileMenuProps): JSX.Element {
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  const pathname = usePathname();
+  const localePrefix = useMemo(() => buildLocalePrefix(pathname), [pathname]);
 
   const toggleSection = (label: string): void => {
     setOpenSections((prev) => ({ ...prev, [label]: !prev[label] }));
@@ -128,7 +141,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps): JSX.Element {
                     {item.children.map((child) => (
                       <Link
                         key={child.href}
-                        href={child.href ?? "#"}
+                        href={`${localePrefix}${child.href ?? "#"}`}
                         className="rounded-lg px-3 py-2 text-[var(--text-secondary)] hover:bg-[var(--bg-main)] hover:text-[var(--text-primary)]"
                         onClick={onClose}
                       >
@@ -141,7 +154,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps): JSX.Element {
             ) : (
               <Link
                 key={item.href}
-                href={item.href ?? "#"}
+                href={`${localePrefix}${item.href ?? "#"}`}
                 className="rounded-lg px-3 py-2 hover:bg-[var(--bg-main)] hover:text-[var(--text-primary)]"
                 onClick={onClose}
               >

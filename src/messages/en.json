@@ -1,0 +1,25 @@
+{
+  "nav.home": "Home",
+  "nav.setups": "Setups",
+  "nav.backtesting": "Backtesting",
+  "nav.kiTools": "AI Tools",
+  "nav.pricing": "Pricing",
+  "nav.docs": "Docs",
+  "nav.account": "Account",
+
+  "hero.badge": "AI-powered · Snapshot-based",
+  "hero.title": "Perception Lab – AI-powered Market Setups",
+  "hero.subtitle": "The Perception Engine blends rule-based market analysis with AI to deliver clear, objective, and tradable setups every day.",
+  "hero.linkPerception": "What is the Perception Lab?",
+  "hero.stat.assets": "Assets analyzed today",
+  "hero.stat.setups": "Active setups",
+  "hero.stat.strongSignals": "Strong signals",
+  "hero.stat.weakSignals": "Weak signals",
+
+  "section.setupsOfTheDay": "Setup of the Day",
+  "section.moreSetups": "More Setups",
+  "section.perceptionLab": "What is the Perception Lab?",
+  "section.cta.title": "Unlock more setups",
+  "section.cta.text": "Free shows only a selection. Premium gives you all daily setups, AI interpretations, multi-asset analysis and alerts — all in one place.",
+  "section.cta.button": "Pricing & Plans"
+}

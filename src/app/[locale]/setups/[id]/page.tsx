@@ -1,12 +1,12 @@
 import type { JSX } from "react";
-import { getSetupById } from "../../../lib/mockSetups";
+import { getSetupById } from "../../../../lib/mockSetups";
 
 type PageProps = {
-  params: Promise<{ id: string }>;
+  params: { locale: string; id: string };
 };
 
-export default async function SetupDetailPage({ params }: PageProps): Promise<JSX.Element> {
-  const { id } = await params;
+export default function SetupDetailPage({ params }: PageProps): JSX.Element {
+  const { id } = params;
   const setup = getSetupById(id);
 
   if (!setup) {
