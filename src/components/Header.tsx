@@ -1,12 +1,15 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import type { JSX } from "react";
 import Link from "next/link";
 import { ThemeToggle } from "./ThemeToggle";
 import { LanguageToggle } from "./LanguageToggle";
+import { MobileMenu } from "./MobileMenu";
 
 export function Header(): JSX.Element {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
   return (
     <header className="border-b border-[var(--border-subtle)] bg-[var(--bg-surface)]">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
@@ -73,8 +76,22 @@ export function Header(): JSX.Element {
         <div className="flex items-center gap-3">
           <LanguageToggle />
           <ThemeToggle />
+          <button
+            type="button"
+            className="inline-flex items-center justify-center rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2 py-1 text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] md:hidden"
+            aria-label="Menü öffnen"
+            onClick={() => setMobileOpen(true)}
+          >
+            <span className="sr-only">Menü</span>
+            <span className="flex flex-col gap-1">
+              <span className="block h-0.5 w-5 bg-[var(--text-primary)]" />
+              <span className="block h-0.5 w-5 bg-[var(--text-primary)]" />
+              <span className="block h-0.5 w-5 bg-[var(--text-primary)]" />
+            </span>
+          </button>
         </div>
       </div>
+      <MobileMenu open={mobileOpen} onClose={() => setMobileOpen(false)} />
     </header>
   );
 }
