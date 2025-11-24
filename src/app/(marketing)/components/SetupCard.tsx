@@ -1,5 +1,6 @@
 import React from "react";
 import type { JSX } from "react";
+import Link from "next/link";
 
 export type Direction = "Long" | "Short";
 
@@ -24,89 +25,110 @@ type SetupCardProps = {
   highlight?: boolean;
 };
 
-export function SetupCard({ setup, highlight }: SetupCardProps): JSX.Element {
-  const directionColor =
-    setup.direction === "Long" ? "text-emerald-400" : "text-red-400";
+type GaugeProps = {
+  label?: string;
+  value: number;
+};
+
+export function SetupCard({ setup, highlight = false }: SetupCardProps): JSX.Element {
+  const isLong = setup.direction === "Long";
 
   return (
     <article
-      className={`flex flex-col gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 ${highlight ? "shadow-md" : ""}`}
+      className={`flex flex-col gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 ${highlight ? "shadow-lg shadow-[rgba(34,197,94,0.2)]" : "shadow-md"}`}
     >
-      <header className="flex items-center justify-between gap-2">
-        <div>
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <span>{setup.symbol}</span>
-            <span className="text-xs text-[var(--text-secondary)]">· {setup.timeframe}</span>
-          </div>
-          <div className={`text-xs font-medium ${directionColor}`}>{setup.direction}</div>
-        </div>
-        <div className="flex flex-col items-end text-xs">
-          <span className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-[var(--text-primary)]">
-            {setup.type}
-          </span>
-          <span className="mt-1 text-[var(--text-secondary)]">
-            Confidence:{" "}
-            <span className="font-semibold text-[var(--text-primary)]">
-              {setup.confidence}%
-            </span>
-          </span>
+      <header className="flex items-center justify-between text-[0.7rem] uppercase tracking-[0.25em] text-[var(--text-secondary)]">
+        <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-main)] px-3 py-1 text-[0.65rem] font-semibold">
+          {setup.type}
+        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[0.65rem]">Confidence</span>
+          <MiniGauge value={setup.confidence} />
         </div>
       </header>
-      <div className="grid gap-2 text-xs text-[var(--text-secondary)] sm:grid-cols-2">
-        <ScoreRow label="Event" value={setup.eventScore} />
-        <ScoreRow label="Bias" value={setup.biasScore} />
-        <ScoreRow label="Sentiment" value={setup.sentimentScore} />
-        <ScoreRow label="Balance" value={setup.balanceScore} />
+
+      <div className="flex items-center justify-between gap-2">
+        <div className="space-y-1">
+          <div className="text-base font-semibold text-[var(--text-primary)]">
+            {setup.symbol} · {setup.timeframe}
+          </div>
+          <span
+            className={`inline-flex w-fit rounded-full border px-2 py-0.5 text-xs font-semibold ${
+              isLong
+                ? "border-emerald-500/40 text-emerald-400"
+                : "border-red-500/40 text-red-400"
+            }`}
+          >
+            {setup.direction}
+          </span>
+        </div>
       </div>
-      <div className="mt-2 grid gap-2 text-xs sm:grid-cols-3">
-        <LevelBox label="Entry-Zone" value={setup.entryZone} />
-        <LevelBox label="Stop-Loss" value={setup.stopLoss} />
-        <LevelBox label="Take-Profit" value={setup.takeProfit} />
+
+      <div className="flex flex-wrap gap-3">
+        <MiniGauge label="Event" value={setup.eventScore} />
+        <MiniGauge label="Bias" value={setup.biasScore} />
+        <MiniGauge label="Sentiment" value={setup.sentimentScore} />
+        <MiniGauge label="Ausgewogen" value={setup.balanceScore} />
       </div>
-      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--bg-main)]">
-        <div
-          className="h-full bg-[var(--accent)] transition-all"
-          style={{ width: `${setup.confidence}%` }}
-        />
+
+      <div className="grid gap-3 text-xs sm:grid-cols-3">
+        <Level label="Entry-Zone" value={setup.entryZone} tone="neutral" />
+        <Level label="Take-Profit" value={setup.takeProfit} tone="success" />
+        <Level label="Stop-Loss" value={setup.stopLoss} tone="danger" />
       </div>
-      <div className="mt-2 flex justify-end">
-        <button
-          type="button"
-          className="rounded-full bg-[var(--accent)] px-3 py-1 text-xs font-medium text-black hover:opacity-90"
+
+      <div className="flex justify-end">
+        <Link
+          href={`/setups/${setup.id}`}
+          className="rounded-full bg-[var(--accent)] px-3 py-1 text-xs font-semibold text-black shadow-[0_10px_15px_rgba(34,197,94,0.2)] transition hover:opacity-90"
         >
           Analyse öffnen
-        </button>
+        </Link>
       </div>
     </article>
   );
 }
 
-type ScoreRowProps = {
-  label: string;
-  value: number;
-};
+function MiniGauge({ label, value }: GaugeProps): JSX.Element {
+  const clamped = Math.max(0, Math.min(100, value));
 
-function ScoreRow({ label, value }: ScoreRowProps): JSX.Element {
   return (
-    <div className="flex items-center justify-between">
-      <span>{label}</span>
-      <span className="font-medium text-[var(--text-primary)]">{value}%</span>
+    <div className="flex flex-col items-center gap-1">
+      <div
+        className="relative flex h-12 w-12 items-center justify-center rounded-full border border-[var(--border-subtle)] bg-[var(--bg-main)]"
+        style={{
+          background: `conic-gradient(var(--accent) ${clamped}%, rgba(7,12,24,0.9) ${clamped}% 100%)`,
+        }}
+      >
+        <div className="flex h-[68%] w-[68%] items-center justify-center rounded-full bg-[var(--bg-surface)] text-xs font-semibold text-white">
+          {clamped}%
+        </div>
+      </div>
+      {label ? <span className="text-[0.7rem] text-[var(--text-secondary)]">{label}</span> : null}
     </div>
   );
 }
 
-type LevelBoxProps = {
+type LevelProps = {
   label: string;
   value: string;
+  tone: "neutral" | "danger" | "success";
 };
 
-function LevelBox({ label, value }: LevelBoxProps): JSX.Element {
+function Level({ label, value, tone }: LevelProps): JSX.Element {
+  const color =
+    tone === "danger"
+      ? "text-red-400"
+      : tone === "success"
+        ? "text-emerald-400"
+        : "text-[var(--text-primary)]";
+
   return (
     <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-main)] px-3 py-2">
-      <div className="text-[0.65rem] uppercase tracking-wide text-[var(--text-secondary)]">
+      <div className="text-[0.6rem] uppercase tracking-[0.2em] text-[var(--text-secondary)]">
         {label}
       </div>
-      <div className="text-xs font-semibold text-[var(--text-primary)]">{value}</div>
+      <div className={`mt-1 text-sm font-semibold ${color}`}>{value}</div>
     </div>
   );
 }

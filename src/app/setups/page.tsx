@@ -1,30 +1,24 @@
+import React from "react";
 import type { JSX } from "react";
+import { SetupCard } from "../(marketing)/components/SetupCard";
+import { mockSetups } from "../../lib/mockSetups";
 
 export default function SetupsPage(): JSX.Element {
   return (
-    <main className="min-h-screen bg-gray-50 px-6 py-12">
-      <div className="mx-auto max-w-3xl space-y-6">
-        <div className="space-y-3">
-          <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
-            AI-Setups
-          </h1>
-          <p className="text-lg text-gray-700">
-            Hier werden später alle Setups mit Filtern, Sortierung und Details
-            gesammelt angezeigt.
+    <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
+      <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
+        <div className="space-y-3 pb-6">
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Alle Setups</h1>
+          <p className="max-w-2xl text-sm text-[var(--text-secondary)] sm:text-base">
+            Vorschau auf aktuelle Setups. Detailansicht mit mehr Infos und Scoring folgt per Klick auf Analyse.
           </p>
         </div>
-        <ul className="space-y-3">
-          <li className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
-            Momentum Breakout - Perception/Logic/Execution v1
-          </li>
-          <li className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
-            Mean Reversion Radar - Beta Setup
-          </li>
-          <li className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
-            Liquidity Sweep Tracker - Experimentell
-          </li>
-        </ul>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {mockSetups.map((setup) => (
+            <SetupCard key={setup.id} setup={setup} />
+          ))}
+        </div>
       </div>
-    </main>
+    </div>
   );
 }
