@@ -1,3 +1,5 @@
+import type { JSX } from "react";
+
 export default function SetupsPage(): JSX.Element {
   return (
     <main className="min-h-screen bg-gray-50 px-6 py-12">
