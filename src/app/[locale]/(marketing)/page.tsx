@@ -1,8 +1,6 @@
 "use client";
 
- "use client";
-
-import React from "react";
+import React, { useEffect, useState } from "react";
 import type { JSX } from "react";
 import { useT } from "../../../lib/i18n/ClientProvider";
 import { Hero } from "./components/Hero";
@@ -10,11 +8,60 @@ import { Features } from "./components/Features";
 import { CTA } from "./components/CTA";
 import { SetupCard } from "./components/SetupCard";
 import { SetupOfTheDayCard } from "./components/SetupOfTheDayCard";
-import { mockSetups } from "../../../lib/mockSetups";
+import { fetchTodaySetups } from "../../../lib/api/perceptionClient";
+import type { Setup } from "../../../lib/engine/types";
 
 export default function MarketingPage(): JSX.Element {
   const t = useT();
-  const [setupOfTheDay, ...otherSetups] = mockSetups;
+  const [setups, setSetups] = useState<Setup[]>([]);
+  const [setupOfTheDayId, setSetupOfTheDayId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async (): Promise<void> => {
+      try {
+        const { setups: fetchedSetups, setupOfTheDayId: id } = await fetchTodaySetups();
+        setSetups(fetchedSetups);
+        setSetupOfTheDayId(id);
+      } catch (err) {
+        console.error(err);
+        setError("Kein Setup verfügbar.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    void load();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
+        <div className="mx-auto max-w-6xl px-4 py-12 text-sm text-[var(--text-secondary)]">Lädt Setups ...</div>
+      </div>
+    );
+  }
+
+  if (error || setups.length === 0 || !setupOfTheDayId) {
+    return (
+      <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
+        <div className="mx-auto max-w-6xl px-4 py-12 text-sm text-[var(--text-secondary)]">
+          {error ?? "Keine Setups verfügbar."}
+        </div>
+      </div>
+    );
+  }
+
+  const setupOfTheDay = setups.find((setup) => setup.id === setupOfTheDayId);
+  const otherSetups = setups.filter((setup) => setup.id !== setupOfTheDayId).slice(0, 3);
+
+  if (!setupOfTheDay) {
+    return (
+      <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
+        <div className="mx-auto max-w-6xl px-4 py-12 text-sm text-[var(--text-secondary)]">Kein Setup verfügbar.</div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
@@ -29,7 +76,7 @@ export default function MarketingPage(): JSX.Element {
               <span className="text-[var(--accent)]">{t("setups.moreSetupsArrowHint")}</span>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-              {otherSetups.slice(0, 3).map((setup) => (
+              {otherSetups.map((setup) => (
                 <SetupCard key={setup.id} setup={setup} />
               ))}
             </div>

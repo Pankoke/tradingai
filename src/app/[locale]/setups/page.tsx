@@ -1,9 +1,11 @@
 import React from "react";
 import type { JSX } from "react";
 import { SetupCard } from "../(marketing)/components/SetupCard";
-import { mockSetups } from "../../../lib/mockSetups";
+import { fetchTodaySetups } from "../../../lib/api/perceptionClient";
 
-export default function SetupsPage(): JSX.Element {
+export default async function SetupsPage(): Promise<JSX.Element> {
+  const { setups, setupOfTheDayId } = await fetchTodaySetups();
+
   return (
     <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
       <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
@@ -14,8 +16,8 @@ export default function SetupsPage(): JSX.Element {
           </p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {mockSetups.map((setup) => (
-            <SetupCard key={setup.id} setup={setup} />
+          {setups.map((setup) => (
+            <SetupCard key={setup.id} setup={setup} highlight={setup.id === setupOfTheDayId} />
           ))}
         </div>
       </div>
