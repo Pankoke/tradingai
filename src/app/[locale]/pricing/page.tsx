@@ -1,5 +1,8 @@
+"use client";
+
 import React from "react";
 import type { JSX } from "react";
+import { useT } from "../../../lib/i18n/ClientProvider";
 
 type Plan = {
   name: string;
@@ -11,68 +14,74 @@ type Plan = {
   badge?: string;
 };
 
-const plans: Plan[] = [
-  {
-    name: "Free",
-    price: "0 € / Monat",
-    description: "Einstieg mit einem Top-Setup plus einigen freien Setups.",
-    features: [
-      "Setup des Tages",
-      "3–4 weitere freie Setups",
-      "Basis-Perception-Übersicht",
-      "Keine Zahlung erforderlich",
-    ],
-    cta: "Kostenlos nutzen",
-  },
-  {
-    name: "Premium",
-    price: "29–49 € / Monat",
-    description: "Voller Zugriff auf alle Setups für aktive Trader.",
-    features: [
-      "Alle täglichen Setups (20–40)",
-      "Setup-Historie (7–30 Tage)",
-      "Alerts für Assets & Scores",
-      "Favoriten & Trading-Journal",
-      "E-Mail-Alerts",
-    ],
-    cta: "Auf Premium upgraden",
-    highlighted: true,
-    badge: "Empfohlen",
-  },
-  {
-    name: "Pro",
-    price: "79–99 € / Monat",
-    description: "Für Power-User, Automatisierung und API-Zugriff.",
-    features: [
-      "Erweiterte Historie (60–90 Tage)",
-      "Erweiterte Filter & Scoring-Tools",
-      "API-Zugriff auf Setups & Scores",
-      "Priorisierte Alerts",
-      "Erweiterte Backtesting-Features (in Planung)",
-    ],
-    cta: "Pro testen",
-  },
-];
-
-const comparison = [
-  { feature: "Tägliche Setups", free: "Basis", premium: "Alle", pro: "Alle" },
-  { feature: "Historie", free: "—", premium: "7–30 Tage", pro: "60–90 Tage" },
-  { feature: "Alerts", free: "—", premium: "E-Mail", pro: "E-Mail + priorisiert" },
-  { feature: "Trading-Journal", free: "—", premium: "Favoriten & Notes", pro: "Erweitert" },
-  { feature: "Backtesting-Module", free: "—", premium: "Standard", pro: "Erweitert" },
-  { feature: "API-Zugriff", free: "—", premium: "—", pro: "✓" },
-];
+type ComparisonRow = {
+  feature: string;
+  free: string;
+  premium: string;
+  pro: string;
+};
 
 export default function Page(): JSX.Element {
+  const t = useT();
+
+  const plans: Plan[] = [
+    {
+      name: t("pricing.free.title"),
+      price: t("pricing.free.price"),
+      description: t("pricing.subtitle"),
+      features: [
+        t("pricing.free.feature1"),
+        t("pricing.free.feature2"),
+        t("pricing.free.feature3"),
+        t("pricing.free.feature4"),
+      ],
+      cta: t("pricing.free.cta"),
+    },
+    {
+      name: t("pricing.premium.title"),
+      price: t("pricing.premium.price"),
+      description: t("pricing.subtitle"),
+      features: [
+        t("pricing.premium.feature1"),
+        t("pricing.premium.feature2"),
+        t("pricing.premium.feature3"),
+        t("pricing.premium.feature4"),
+        t("pricing.premium.feature5"),
+      ],
+      cta: t("pricing.premium.cta"),
+      highlighted: true,
+      badge: t("pricing.badge.recommended"),
+    },
+    {
+      name: t("pricing.pro.title"),
+      price: t("pricing.pro.price"),
+      description: t("pricing.subtitle"),
+      features: [
+        t("pricing.pro.feature1"),
+        t("pricing.pro.feature2"),
+        t("pricing.pro.feature3"),
+        t("pricing.pro.feature4"),
+        t("pricing.pro.feature5"),
+      ],
+      cta: t("pricing.pro.cta"),
+    },
+  ];
+
+  const comparison: ComparisonRow[] = [
+    { feature: t("setups.setupOfTheDay"), free: t("setups.freeSetups"), premium: "Alle", pro: "Alle" },
+    { feature: "Historie", free: "-", premium: "7–30 Tage", pro: "60–90 Tage" },
+    { feature: "Alerts", free: "-", premium: "E-Mail", pro: "E-Mail + priorisiert" },
+    { feature: "Trading-Journal", free: "-", premium: "Favoriten & Notes", pro: "Erweitert" },
+    { feature: "Backtesting-Module", free: "-", premium: "Standard", pro: "Erweitert" },
+    { feature: "API-Zugriff", free: "-", premium: "-", pro: "✓" },
+  ];
+
   return (
     <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
       <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
         <header className="space-y-3 pb-6">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Pricing & Pläne</h1>
-          <p className="max-w-3xl text-sm text-[var(--text-secondary)] sm:text-base">
-            Free für den Einstieg mit wenigen Setups, Premium für aktive Trader mit vollem Zugriff, Pro für Automatisierung
-            und API/Integrationen.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("pricing.title")}</h1>
+          <p className="max-w-3xl text-sm text-[var(--text-secondary)] sm:text-base">{t("pricing.subtitle")}</p>
         </header>
 
         <section className="grid gap-4 md:grid-cols-3">
@@ -122,7 +131,7 @@ export default function Page(): JSX.Element {
         </section>
 
         <section className="mt-8 space-y-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5 shadow-md">
-          <h3 className="text-lg font-semibold">Vergleich</h3>
+          <h3 className="text-lg font-semibold">{t("pricing.comparison.title")}</h3>
           <div className="grid gap-3 text-sm text-[var(--text-secondary)]">
             <div className="grid grid-cols-4 items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
               <span>Feature</span>
@@ -145,11 +154,8 @@ export default function Page(): JSX.Element {
         </section>
 
         <section className="mt-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5 shadow-md">
-          <h3 className="text-lg font-semibold">API Access</h3>
-          <p className="mt-2 text-sm text-[var(--text-secondary)]">
-            Pro-User erhalten Zugriff auf API und Webhooks, um Setups & Scores direkt in eigene Systeme zu integrieren.
-            Details folgen – erste Infos findest du in den Docs.
-          </p>
+          <h3 className="text-lg font-semibold">{t("pricing.apiInfo.title")}</h3>
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">{t("pricing.apiInfo.text")}</p>
           <a
             href="/docs/api"
             className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[var(--accent)] underline decoration-[var(--accent)] underline-offset-4 hover:brightness-110"

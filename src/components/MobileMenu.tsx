@@ -5,6 +5,7 @@ import type { JSX } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { i18nConfig, type Locale } from "../lib/i18n/config";
+import { useT } from "../lib/i18n/ClientProvider";
 
 type NavItem = {
   label: string;
@@ -26,62 +27,63 @@ function buildLocalePrefix(pathname: string): string {
   return `/${i18nConfig.defaultLocale}`;
 }
 
-const navItems: NavItem[] = [
-  { label: "Home", href: "/" },
-  {
-    label: "Setups",
-    children: [
-      { label: "Setup of the Day", href: "/setups" },
-      { label: "Premium Setups", href: "/setups/premium" },
-      { label: "Perception Lab", href: "/perception" },
-    ],
-  },
-  {
-    label: "Backtesting",
-    children: [
-      { label: "Event-Backtester", href: "/backtesting/event" },
-      { label: "Setup-Historie", href: "/backtesting/history" },
-      { label: "Replay-Modus", href: "/backtesting/replay" },
-      { label: "KI-Backtesting", href: "/backtesting/ai" },
-    ],
-  },
-  {
-    label: "KI-Tools",
-    children: [
-      { label: "Setup Generator", href: "/ai-tools/setup-generator" },
-      { label: "Market Summary AI", href: "/ai-tools/market-summary" },
-      { label: "Event Interpreter", href: "/ai-tools/event-interpreter" },
-      { label: "Risk Manager", href: "/ai-tools/risk-manager" },
-      { label: "Screenshot-Analyse", href: "/ai-tools/screenshot-analysis" },
-    ],
-  },
-  { label: "Pricing", href: "/pricing" },
-  {
-    label: "Docs",
-    children: [
-      { label: "Übersicht", href: "/docs" },
-      { label: "API", href: "/docs/api" },
-      { label: "Webhooks", href: "/docs/webhooks" },
-      { label: "SDKs", href: "/docs/sdks" },
-      { label: "Beispiele", href: "/docs/examples" },
-    ],
-  },
-  {
-    label: "Account",
-    children: [
-      { label: "Profil", href: "/account/profile" },
-      { label: "API Keys", href: "/account/api-keys" },
-      { label: "Billing", href: "/account/billing" },
-      { label: "Alerts", href: "/account/alerts" },
-      { label: "Saved Setups", href: "/account/saved-setups" },
-    ],
-  },
-];
-
 export function MobileMenu({ open, onClose }: MobileMenuProps): JSX.Element {
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   const pathname = usePathname();
   const localePrefix = useMemo(() => buildLocalePrefix(pathname), [pathname]);
+  const t = useT();
+
+  const navItems: NavItem[] = [
+    { label: t("nav.home"), href: "/" },
+    {
+      label: t("nav.setups"),
+      children: [
+        { label: "Setup of the Day", href: "/setups" },
+        { label: "Premium Setups", href: "/setups/premium" },
+        { label: "Perception Lab", href: "/perception" },
+      ],
+    },
+    {
+      label: t("nav.backtesting"),
+      children: [
+        { label: "Event-Backtester", href: "/backtesting/event" },
+        { label: "Setup-Historie", href: "/backtesting/history" },
+        { label: "Replay-Modus", href: "/backtesting/replay" },
+        { label: "KI-Backtesting", href: "/backtesting/ai" },
+      ],
+    },
+    {
+      label: t("nav.kiTools"),
+      children: [
+        { label: "Setup Generator", href: "/ai-tools/setup-generator" },
+        { label: "Market Summary AI", href: "/ai-tools/market-summary" },
+        { label: "Event Interpreter", href: "/ai-tools/event-interpreter" },
+        { label: "Risk Manager", href: "/ai-tools/risk-manager" },
+        { label: "Screenshot-Analyse", href: "/ai-tools/screenshot-analysis" },
+      ],
+    },
+    { label: t("nav.pricing"), href: "/pricing" },
+    {
+      label: t("nav.docs"),
+      children: [
+        { label: "Übersicht", href: "/docs" },
+        { label: "API", href: "/docs/api" },
+        { label: "Webhooks", href: "/docs/webhooks" },
+        { label: "SDKs", href: "/docs/sdks" },
+        { label: "Beispiele", href: "/docs/examples" },
+      ],
+    },
+    {
+      label: t("nav.account"),
+      children: [
+        { label: "Profil", href: "/account/profile" },
+        { label: "API Keys", href: "/account/api-keys" },
+        { label: "Billing", href: "/account/billing" },
+        { label: "Alerts", href: "/account/alerts" },
+        { label: "Saved Setups", href: "/account/saved-setups" },
+      ],
+    },
+  ];
 
   const toggleSection = (label: string): void => {
     setOpenSections((prev) => ({ ...prev, [label]: !prev[label] }));

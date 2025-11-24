@@ -60,7 +60,7 @@ export function Hero(): JSX.Element {
       <div className="space-y-3">
         <div className="flex justify-end">
           <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-1 text-xs text-[var(--text-secondary)] shadow-sm">
-            {today}
+            {t("hero.datePrefix")} {today}
           </span>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">

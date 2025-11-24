@@ -1,55 +1,40 @@
+"use client";
+
 import React from "react";
 import type { JSX } from "react";
+import { useT } from "../../../lib/i18n/ClientProvider";
 
-const steps = [
-  {
-    title: "Marktstruktur",
-    description: "Unterstützungen, Widerstände, Trend, Volatilität werden analysiert, um den strukturellen Kontext zu bestimmen.",
-  },
-  {
-    title: "Event-Bewertung",
-    description: "Wirtschaftsdaten, News und Risiko-Faktoren fließen in einen Event-Score ein, der Setups gewichtet.",
-  },
-  {
-    title: "Sentiment & Bias",
-    description: "Funding, Fear/Greed und Flow-Daten geben Hinweise auf Marktstimmung und Richtung.",
-  },
-  {
-    title: "Setup-Scoring",
-    description: "Die KI bewertet Relevanz, Timing und Qualität und erzeugt einen Confidence-Score pro Setup.",
-  },
+const steps = (t: (key: string) => string) => [
+  { title: t("perception.engine.marketstructure"), description: t("perception.engine.marketstructure") },
+  { title: t("perception.engine.events"), description: t("perception.engine.events") },
+  { title: t("perception.engine.sentiment"), description: t("perception.engine.sentiment") },
+  { title: t("perception.engine.scoring"), description: t("perception.engine.scoring") },
 ];
 
 export default function PerceptionPage(): JSX.Element {
+  const t = useT();
   const today = new Date().toLocaleDateString("de-DE", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
+  const stepItems = steps(t);
 
   return (
     <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
       <div className="mx-auto flex max-w-6xl flex-col gap-10 px-4 py-8 md:py-10">
         <section className="space-y-4">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Perception Lab – Analyse Engine
-          </h1>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("perception.title")}</h1>
           <div className="space-y-3 text-sm text-[var(--text-secondary)] sm:text-base">
-            <p>
-              Die Perception Engine verarbeitet Marktstruktur, Events und Sentiment und erzeugt daraus tägliche Snapshots
-              mit klar definierten Setups.
-            </p>
-            <p>
-              Als Quellen dienen Marktstruktur-Analysen, Makro- und Mikro-Events sowie Sentiment-Signale. Jeden Tag entsteht
-              ein Snapshot, der auf der Landing Page sichtbar ist.
-            </p>
+            <p>{t("perception.intro1")}</p>
+            <p>{t("perception.intro2")}</p>
           </div>
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-semibold tracking-tight sm:text-xl">Engine-Logik in Schritten</h2>
+          <h2 className="text-lg font-semibold tracking-tight sm:text-xl">{t("perception.subtitle")}</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {steps.map((step) => (
+            {stepItems.map((step) => (
               <article
                 key={step.title}
                 className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4"
@@ -62,11 +47,7 @@ export default function PerceptionPage(): JSX.Element {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold tracking-tight sm:text-xl">Beispiel-Snapshot</h2>
-          <p className="text-sm text-[var(--text-secondary)] sm:text-base">
-            Auf der Landing-Page siehst du täglich einen Snapshot aller produzierten Setups. Die Perception-Seite erklärt
-            das zugrunde liegende System.
-          </p>
+          <h2 className="text-lg font-semibold tracking-tight sm:text-xl">{t("perception.snapshotHint")}</h2>
           <div className="max-w-xl rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -77,10 +58,7 @@ export default function PerceptionPage(): JSX.Element {
                 Snapshot Engine aktiv
               </span>
             </div>
-            <p className="mt-3 text-xs text-[var(--text-secondary)] sm:text-sm">
-              Die Engine generiert täglich neue Setups und bewertet sie nach Relevanz und Risiko. Die Ergebnisse erscheinen
-              auf der Landing Page, während dieser Bereich die Methodik erklärt.
-            </p>
+            <p className="mt-3 text-xs text-[var(--text-secondary)] sm:text-sm">{t("perception.snapshotHint")}</p>
           </div>
         </section>
       </div>

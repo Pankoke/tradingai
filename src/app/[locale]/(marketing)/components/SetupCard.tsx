@@ -5,6 +5,7 @@ import type { JSX } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { i18nConfig, type Locale } from "../../../../lib/i18n/config";
+import { useT } from "../../../../lib/i18n/ClientProvider";
 
 export type Direction = "Long" | "Short";
 
@@ -53,6 +54,7 @@ export function SetupCard({ setup, highlight = false }: SetupCardProps): JSX.Ele
   const isLong = setup.direction === "Long";
   const pathname = usePathname();
   const prefix = useMemo(() => localePrefix(pathname), [pathname]);
+  const t = useT();
 
   return (
     <article
@@ -60,7 +62,7 @@ export function SetupCard({ setup, highlight = false }: SetupCardProps): JSX.Ele
     >
       <header className="flex items-center justify-between text-[0.7rem] uppercase tracking-[0.25em] text-[var(--text-secondary)]">
         <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-main)] px-3 py-1 text-[0.65rem] font-semibold">
-          {setup.type}
+          {setup.type === "Regelbasiert" ? t("setups.type.ruleBased") : t("setups.type.ai")}
         </span>
         <div className="flex items-center gap-2">
           <span className="text-[0.65rem]">Confidence</span>
@@ -86,16 +88,16 @@ export function SetupCard({ setup, highlight = false }: SetupCardProps): JSX.Ele
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <MiniGauge label="Event" value={setup.eventScore} />
-        <MiniGauge label="Bias" value={setup.biasScore} />
-        <MiniGauge label="Sentiment" value={setup.sentimentScore} />
-        <MiniGauge label="Ausgewogen" value={setup.balanceScore} />
+        <MiniGauge label={t("setups.event")} value={setup.eventScore} />
+        <MiniGauge label={t("setups.bias")} value={setup.biasScore} />
+        <MiniGauge label={t("setups.sentiment")} value={setup.sentimentScore} />
+        <MiniGauge label={t("setups.balance")} value={setup.balanceScore} />
       </div>
 
       <div className="grid gap-3 text-xs sm:grid-cols-3">
-        <Level label="Entry-Zone" value={setup.entryZone} tone="neutral" />
-        <Level label="Take-Profit" value={setup.takeProfit} tone="success" />
-        <Level label="Stop-Loss" value={setup.stopLoss} tone="danger" />
+        <Level label={t("setups.entry")} value={setup.entryZone} tone="neutral" />
+        <Level label={t("setups.takeProfit")} value={setup.takeProfit} tone="success" />
+        <Level label={t("setups.stopLoss")} value={setup.stopLoss} tone="danger" />
       </div>
 
       <div className="flex justify-end">
@@ -103,7 +105,7 @@ export function SetupCard({ setup, highlight = false }: SetupCardProps): JSX.Ele
           href={`${prefix}/setups/${setup.id}`}
           className="rounded-full bg-[var(--accent)] px-3 py-1 text-xs font-semibold text-black shadow-[0_10px_15px_rgba(34,197,94,0.2)] transition hover:opacity-90"
         >
-          Analyse öffnen
+          {t("setups.openAnalysis")}
         </Link>
       </div>
     </article>

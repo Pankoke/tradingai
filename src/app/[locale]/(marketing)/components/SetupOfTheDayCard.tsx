@@ -4,6 +4,7 @@ import React, { useMemo } from "react";
 import type { JSX } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useT } from "../../../../lib/i18n/ClientProvider";
 import type { SetupCardSetup } from "./SetupCard";
 import { i18nConfig, type Locale } from "../../../../lib/i18n/config";
 
@@ -38,6 +39,7 @@ function toneClass(tone: LevelBoxPropsDay["tone"]): string {
 }
 
 export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Element {
+  const t = useT();
   const isLong = setup.direction === "Long";
   const pathname = usePathname();
   const prefix = useMemo(() => localePrefix(pathname), [pathname]);
@@ -48,7 +50,7 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
         <div className="flex flex-1 flex-col gap-4">
           <div className="space-y-2">
             <p className="text-[0.58rem] font-semibold uppercase tracking-[0.35em] text-[var(--text-secondary)]">
-              Setup des Tages
+              {t("setups.setupOfTheDay")}
             </p>
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
               {setup.symbol.toUpperCase()} · {setup.timeframe}
@@ -56,12 +58,15 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
             <p className={`text-2xl font-semibold ${isLong ? "text-emerald-400" : "text-red-400"}`}>
               {setup.direction}
             </p>
+            <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-main)] px-3 py-1 text-xs font-semibold">
+              {setup.type === "Regelbasiert" ? t("setups.type.ruleBased") : t("setups.type.ai")}
+            </span>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <SmallGauge label="Event" value={setup.eventScore} />
-            <SmallGauge label="Bias" value={setup.biasScore} />
-            <SmallGauge label="Sentiment" value={setup.sentimentScore} />
-            <SmallGauge label="Ausgewogen" value={setup.balanceScore} />
+            <SmallGauge label={t("setups.event")} value={setup.eventScore} />
+            <SmallGauge label={t("setups.bias")} value={setup.biasScore} />
+            <SmallGauge label={t("setups.sentiment")} value={setup.sentimentScore} />
+            <SmallGauge label={t("setups.balance")} value={setup.balanceScore} />
           </div>
         </div>
 
@@ -71,9 +76,9 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
       </div>
 
       <div className="mt-4 grid gap-3 border-t border-[var(--border-subtle)] pt-4 text-xs sm:grid-cols-3">
-        <LevelBox label="Entry-Zone" value={setup.entryZone} tone="neutral" />
-        <LevelBox label="Stop-Loss" value={setup.stopLoss} tone="danger" />
-        <LevelBox label="Take-Profit" value={setup.takeProfit} tone="success" />
+        <LevelBox label={t("setups.entry")} value={setup.entryZone} tone="neutral" />
+        <LevelBox label={t("setups.stopLoss")} value={setup.stopLoss} tone="danger" />
+        <LevelBox label={t("setups.takeProfit")} value={setup.takeProfit} tone="success" />
       </div>
 
       <div className="mt-3 flex justify-end">
@@ -81,7 +86,7 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
           href={`${prefix}/setups/${setup.id}`}
           className="rounded-full bg-[var(--accent)] px-4 py-1.5 text-sm font-semibold text-black shadow-[0_10px_20px_rgba(34,197,94,0.25)] transition hover:opacity-90"
         >
-          Analyse öffnen
+          {t("setups.openAnalysis")}
         </Link>
       </div>
     </section>

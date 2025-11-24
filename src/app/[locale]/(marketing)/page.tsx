@@ -1,5 +1,7 @@
 "use client";
 
+ "use client";
+
 import React from "react";
 import type { JSX } from "react";
 import { useT } from "../../../lib/i18n/ClientProvider";
@@ -24,8 +26,7 @@ export default function MarketingPage(): JSX.Element {
           </div>
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-              <span className="text-[var(--accent)]">➜</span>
-              <span>{t("section.moreSetups")}</span>
+              <span className="text-[var(--accent)]">{t("setups.moreSetupsArrowHint")}</span>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
               {otherSetups.slice(0, 3).map((setup) => (

@@ -1,5 +1,8 @@
+"use client";
+
 import type { JSX } from "react";
 import { getSetupById } from "../../../../lib/mockSetups";
+import { useT } from "../../../../lib/i18n/ClientProvider";
 
 type PageProps = {
   params: { locale: string; id: string };
@@ -8,15 +11,13 @@ type PageProps = {
 export default function SetupDetailPage({ params }: PageProps): JSX.Element {
   const { id } = params;
   const setup = getSetupById(id);
+  const t = useT();
 
   if (!setup) {
     return (
       <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
         <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Setup nicht gefunden</h1>
-          <p className="mt-2 text-sm text-[var(--text-secondary)] sm:text-base">
-            Das angeforderte Setup existiert nicht oder wurde entfernt.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("detail.notFound")}</h1>
         </div>
       </div>
     );
@@ -45,28 +46,32 @@ export default function SetupDetailPage({ params }: PageProps): JSX.Element {
             <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-1 text-xs">
               Confidence: {setup.confidence}%
             </span>
-            <span className="text-xs">Snapshot von heute</span>
+            <span className="text-xs">{t("detail.header.snapshotLabel")}</span>
           </div>
         </header>
 
         <div className="grid gap-4 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
           <div className="space-y-4">
             <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-lg">
-              <h2 className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">Trade Setup</h2>
+              <h2 className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">
+                {t("detail.tradeSetupTitle")}
+              </h2>
               <div className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
-                <Level label="Entry-Zone" value={setup.entryZone} tone="neutral" />
-                <Level label="Stop-Loss" value={setup.stopLoss} tone="danger" />
-                <Level label="Take-Profit" value={setup.takeProfit} tone="success" />
+                <Level label={t("setups.entry")} value={setup.entryZone} tone="neutral" />
+                <Level label={t("setups.stopLoss")} value={setup.stopLoss} tone="danger" />
+                <Level label={t("setups.takeProfit")} value={setup.takeProfit} tone="success" />
               </div>
             </div>
 
             <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-lg">
-              <h2 className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">Key-Metriken</h2>
+              <h2 className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">
+                {t("detail.keyMetricsTitle")}
+              </h2>
               <div className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">
-                <MetricRow label="Event-Score" value={setup.eventScore} />
-                <MetricRow label="Bias-Score" value={setup.biasScore} />
-                <MetricRow label="Sentiment-Score" value={setup.sentimentScore} />
-                <MetricRow label="Balance-Score" value={setup.balanceScore} />
+                <MetricRow label={t("setups.event")} value={setup.eventScore} />
+                <MetricRow label={t("setups.bias")} value={setup.biasScore} />
+                <MetricRow label={t("setups.sentiment")} value={setup.sentimentScore} />
+                <MetricRow label={t("setups.balance")} value={setup.balanceScore} />
               </div>
               <div className="mt-4">
                 <div className="mb-1 text-xs text-[var(--text-secondary)]">Confidence</div>
@@ -82,7 +87,9 @@ export default function SetupDetailPage({ params }: PageProps): JSX.Element {
 
           <div className="space-y-4">
             <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-lg">
-              <h2 className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">Chart (Placeholder)</h2>
+              <h2 className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">
+                {t("detail.chartTitle")}
+              </h2>
               <div className="mt-3 flex h-64 items-center justify-center rounded-xl bg-[var(--bg-main)] text-[var(--text-secondary)]">
                 Chart-Preview (Demo)
               </div>
@@ -91,25 +98,25 @@ export default function SetupDetailPage({ params }: PageProps): JSX.Element {
         </div>
 
         <div className="mt-6 grid gap-4 lg:grid-cols-2">
-          <TabCard title="Setup">
+          <TabCard title={t("detail.tab.setup")}>
             <p className="text-sm text-[var(--text-secondary)]">
               Dieses Setup fokussiert sich auf klare Entry-Zonen mit definiertem Stop-Loss und Take-Profit. Der Bias
               basiert auf Marktstruktur und Event-Kontext.
             </p>
           </TabCard>
-          <TabCard title="Scores">
+          <TabCard title={t("detail.tab.scores")}>
             <p className="text-sm text-[var(--text-secondary)]">
               Bias: {setup.biasScore}% · Sentiment: {setup.sentimentScore}% · Event: {setup.eventScore}% · Balance:{" "}
               {setup.balanceScore}%.
             </p>
           </TabCard>
-          <TabCard title="Analyse / Erklärung">
+          <TabCard title={t("detail.tab.analysis")}>
             <p className="text-sm text-[var(--text-secondary)]">
               Hier wird später eine KI-generierte Erklärung des Setups erscheinen, inklusive Markt-Story und
               Begründung der Scores.
             </p>
           </TabCard>
-          <TabCard title="Risiko & R:R">
+          <TabCard title={t("detail.tab.risk")}>
             <p className="text-sm text-[var(--text-secondary)]">
               Geplante Risk-Module zeigen hier künftige Metriken wie R:R, Positionsgrößen oder Szenario-Analysen.
             </p>

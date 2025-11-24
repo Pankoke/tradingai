@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { useT } from "../../../../lib/i18n/ClientProvider";
 import { i18nConfig, type Locale } from "../../../../lib/i18n/config";
 
-const badges = ["Alle Setups", "KI-Interpretationen", "Multi-Asset-Analysen", "Echtzeit-Alerts"];
+const badgeKeys = ["cta.feature1", "cta.feature2", "cta.feature3", "cta.feature4"];
 
 function localePrefix(pathname: string): string {
   const segments = pathname.split("/").filter(Boolean);
@@ -29,12 +29,12 @@ export function CTA(): JSX.Element {
         <h2 className="text-lg font-semibold tracking-tight sm:text-xl">{t("section.cta.title")}</h2>
         <p className="max-w-xl text-sm text-[var(--text-secondary)] sm:text-base">{t("section.cta.text")}</p>
         <div className="flex flex-wrap gap-2">
-          {badges.map((badge) => (
+          {badgeKeys.map((badgeKey) => (
             <span
-              key={badge}
+              key={badgeKey}
               className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-main)] px-3 py-1 text-[0.75rem] text-[var(--accent)]"
             >
-              {badge}
+              {t(badgeKey)}
             </span>
           ))}
         </div>
