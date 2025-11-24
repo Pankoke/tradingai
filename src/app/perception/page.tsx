@@ -1,6 +1,7 @@
 import React from "react";
 import type { JSX } from "react";
 import { SetupCard } from "../(marketing)/components/SetupCard";
+import { SetupOfTheDayCard } from "../(marketing)/components/SetupOfTheDayCard";
 
 type Direction = "Long" | "Short";
 
@@ -135,7 +136,7 @@ export default function PerceptionPage(): JSX.Element {
           <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--accent)]">
             Setup des Tages
           </h2>
-          <SetupCard setup={firstSetup} highlight />
+          <SetupOfTheDayCard setup={firstSetup} />
         </section>
 
         <section className="space-y-4">

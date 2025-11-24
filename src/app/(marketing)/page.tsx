@@ -4,6 +4,7 @@ import { Hero } from "./components/Hero";
 import { Features } from "./components/Features";
 import { CTA } from "./components/CTA";
 import { SetupCard } from "./components/SetupCard";
+import { SetupOfTheDayCard } from "./components/SetupOfTheDayCard";
 
 type Direction = "Long" | "Short";
 
@@ -95,10 +96,7 @@ export default function MarketingPage(): JSX.Element {
         <Hero />
         <section className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)]">
           <div className="flex flex-col gap-4">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--accent)]">
-              Setup des Tages
-            </h2>
-            <SetupCard setup={setupOfTheDay} highlight />
+            <SetupOfTheDayCard setup={setupOfTheDay} />
           </div>
           <div className="flex flex-col gap-4">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">

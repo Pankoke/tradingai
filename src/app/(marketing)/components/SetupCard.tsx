@@ -1,24 +1,26 @@
 import React from "react";
 import type { JSX } from "react";
 
-type Direction = "Long" | "Short";
+export type Direction = "Long" | "Short";
+
+export type SetupCardSetup = {
+  id: string;
+  symbol: string;
+  timeframe: string;
+  direction: Direction;
+  confidence: number;
+  eventScore: number;
+  biasScore: number;
+  sentimentScore: number;
+  balanceScore: number;
+  entryZone: string;
+  stopLoss: string;
+  takeProfit: string;
+  type: "Regelbasiert" | "KI";
+};
 
 type SetupCardProps = {
-  setup: {
-    id: string;
-    symbol: string;
-    timeframe: string;
-    direction: Direction;
-    confidence: number;
-    eventScore: number;
-    biasScore: number;
-    sentimentScore: number;
-    balanceScore: number;
-    entryZone: string;
-    stopLoss: string;
-    takeProfit: string;
-    type: "Regelbasiert" | "KI";
-  };
+  setup: SetupCardSetup;
   highlight?: boolean;
 };
 
