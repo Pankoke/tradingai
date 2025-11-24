@@ -10,7 +10,7 @@ export default function PerceptionPage(): JSX.Element {
           Perception, Logic und Execution.
         </p>
         <p className="text-sm text-gray-500">
-          Hinweis: Aktuell nutzt die Seite noch Mock-Daten und
+          Hinweisse: Aktuell nutzt die Seite noch Mock-Daten und
           Platzhalter-Inhalte.
         </p>
       </div>
