@@ -50,12 +50,6 @@ export function Header(): JSX.Element {
             >
               {t("nav.home")}
             </Link>
-            <Link
-              href={`${localePrefix}/ai-tools`}
-              className="inline-flex h-9 items-center rounded-md px-3 transition hover:bg-[var(--bg-main)] hover:text-[var(--text-primary)]"
-            >
-              {t("nav.kiTools")}
-            </Link>
             <NavDropdown
               label={t("nav.setups")}
               items={[
