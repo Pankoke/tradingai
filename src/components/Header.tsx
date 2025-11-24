@@ -50,6 +50,12 @@ export function Header(): JSX.Element {
             >
               {t("nav.home")}
             </Link>
+            <Link
+              href={`${localePrefix}/ai-tools`}
+              className="inline-flex h-9 items-center rounded-md px-3 transition hover:bg-[var(--bg-main)] hover:text-[var(--text-primary)]"
+            >
+              {t("nav.kiTools")}
+            </Link>
             <NavDropdown
               label={t("nav.setups")}
               items={[
@@ -70,6 +76,7 @@ export function Header(): JSX.Element {
             <NavDropdown
               label={t("nav.kiTools")}
               items={[
+                { href: `${localePrefix}/ai-tools`, label: t("nav.kiTools") },
                 { href: `${localePrefix}/ai-tools/setup-generator`, label: "Setup Generator" },
                 { href: `${localePrefix}/ai-tools/market-summary`, label: "Market Summary AI" },
                 { href: `${localePrefix}/ai-tools/event-interpreter`, label: "Event Interpreter" },
