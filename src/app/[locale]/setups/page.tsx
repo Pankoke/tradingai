@@ -1,10 +1,12 @@
 import React from "react";
 import type { JSX } from "react";
 import { SetupCard } from "../(marketing)/components/SetupCard";
-import { fetchTodaySetups } from "../../../lib/api/perceptionClient";
+import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
+import type { Setup } from "@/src/lib/engine/types";
 
 export default async function SetupsPage(): Promise<JSX.Element> {
-  const { setups, setupOfTheDayId } = await fetchTodaySetups();
+  const snapshot = await buildPerceptionSnapshot();
+  const { setups, setupOfTheDayId } = snapshot;
 
   return (
     <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">

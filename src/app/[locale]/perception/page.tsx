@@ -1,7 +1,7 @@
 import React from "react";
 import type { JSX } from "react";
-import { fetchPerceptionSnapshot, fetchTodaySetups } from "../../../lib/api/perceptionClient";
-import type { Setup } from "../../../lib/engine/types";
+import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
+import type { Setup, PerceptionSnapshot } from "@/src/lib/engine/types";
 
 function formatDate(iso: string): string {
   const date = new Date(iso);
@@ -15,8 +15,8 @@ function formatDate(iso: string): string {
 }
 
 export default async function PerceptionPage(): Promise<JSX.Element> {
-  const snapshot = await fetchPerceptionSnapshot();
-  const { setups, setupOfTheDayId } = await fetchTodaySetups();
+  const snapshot: PerceptionSnapshot = await buildPerceptionSnapshot();
+  const { setups, setupOfTheDayId } = snapshot;
 
   const setupOfTheDay: Setup | undefined = setups.find((s) => s.id === setupOfTheDayId);
   const otherSetups: Setup[] = setups.filter((s) => s.id !== setupOfTheDayId);

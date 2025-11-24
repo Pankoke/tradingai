@@ -9,7 +9,10 @@ async function safeJson<T>(response: Response): Promise<T> {
 }
 
 function resolveUrl(path: string): string {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const base =
+    process.env.NEXT_PUBLIC_APP_URL ??
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
+  if (!base) return path;
   return new URL(path, base).toString();
 }
 
