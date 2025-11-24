@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -37,14 +37,17 @@ export function Header(): JSX.Element {
   const localePrefix = useMemo(() => buildLocalePrefix(pathname), [pathname]);
 
   return (
-    <header className="border-b border-[var(--border-subtle)] bg-[var(--bg-surface)]">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-4">
-          <Link href={`${localePrefix}/`} className="text-sm font-bold tracking-tight">
+    <header className="border-b border-[var(--border-subtle)] bg-[var(--bg-surface)]/95 backdrop-blur">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
+        <div className="flex items-center gap-5">
+          <Link href={`${localePrefix}/`} className="text-sm font-extrabold tracking-tight text-[var(--text-primary)]">
             TradingAI
           </Link>
-          <nav className="hidden items-center gap-4 text-sm text-[var(--text-secondary)] md:flex">
-            <Link href={`${localePrefix}/`} className="hover:text-[var(--text-primary)]">
+          <nav className="hidden items-center gap-1 text-sm text-[var(--text-secondary)] md:flex">
+            <Link
+              href={`${localePrefix}/`}
+              className="inline-flex h-9 items-center rounded-md px-3 transition hover:bg-[var(--bg-main)] hover:text-[var(--text-primary)]"
+            >
               {t("nav.home")}
             </Link>
             <NavDropdown
@@ -74,7 +77,10 @@ export function Header(): JSX.Element {
                 { href: `${localePrefix}/ai-tools/screenshot-analysis`, label: "Screenshot-Analyse" },
               ]}
             />
-            <Link href={`${localePrefix}/pricing`} className="hover:text-[var(--text-primary)]">
+            <Link
+              href={`${localePrefix}/pricing`}
+              className="inline-flex h-9 items-center rounded-md px-3 transition hover:bg-[var(--bg-main)] hover:text-[var(--text-primary)]"
+            >
               {t("nav.pricing")}
             </Link>
             <NavDropdown
@@ -104,11 +110,11 @@ export function Header(): JSX.Element {
           <ThemeToggle />
           <button
             type="button"
-            className="inline-flex items-center justify-center rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2 py-1 text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] md:hidden"
-            aria-label="Menü öffnen"
+            className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2 text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] md:hidden"
+            aria-label="Menue oeffnen"
             onClick={() => setMobileOpen(true)}
           >
-            <span className="sr-only">Menü</span>
+            <span className="sr-only">Menue</span>
             <span className="flex flex-col gap-1">
               <span className="block h-0.5 w-5 bg-[var(--text-primary)]" />
               <span className="block h-0.5 w-5 bg-[var(--text-primary)]" />
@@ -124,27 +130,40 @@ export function Header(): JSX.Element {
 
 function NavDropdown({ label, items }: NavDropdownProps): JSX.Element {
   const [open, setOpen] = useState(false);
+  const closeTimer = useRef<number | null>(null);
 
-  const handleEnter = (): void => setOpen(true);
-  const handleLeave = (): void => setOpen(false);
+  const clearTimer = (): void => {
+    if (closeTimer.current) {
+      window.clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  };
+
+  const handleEnter = (): void => {
+    clearTimer();
+    setOpen(true);
+  };
+
+  const handleLeave = (): void => {
+    clearTimer();
+    closeTimer.current = window.setTimeout(() => setOpen(false), 120);
+  };
+
+  const handleBlur = (): void => {
+    handleLeave();
+  };
 
   return (
-    <div
-      className="relative"
-      onMouseEnter={handleEnter}
-      onMouseLeave={handleLeave}
-      onFocus={handleEnter}
-      onBlur={handleLeave}
-    >
+    <div className="relative" onMouseEnter={handleEnter} onMouseLeave={handleLeave} onFocus={handleEnter} onBlur={handleBlur}>
       <button
         type="button"
-        className="flex items-center gap-1 rounded-md px-2 py-1 text-[var(--text-secondary)] transition hover:bg-[var(--bg-main)] hover:text-[var(--text-primary)]"
+        className="inline-flex h-9 items-center gap-1 rounded-md px-3 text-[var(--text-secondary)] transition hover:bg-[var(--bg-main)] hover:text-[var(--text-primary)]"
         aria-haspopup="true"
         aria-expanded={open}
       >
         {label}
         <span className="text-[10px]" aria-hidden="true">
-          v
+          ▾
         </span>
       </button>
       <div

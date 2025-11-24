@@ -26,11 +26,11 @@ export function LanguageToggle(): JSX.Element {
   };
 
   return (
-    <div className="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-main)] p-1 text-xs">
+    <div className="inline-flex h-9 items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-main)] px-2 text-xs">
       <button
         type="button"
         onClick={() => switchLocale("de")}
-        className={`rounded-full px-2 py-0.5 ${
+        className={`rounded-full px-2 py-1 ${
           current === "de" ? "bg-[var(--accent-soft)] text-[var(--text-primary)]" : "text-[var(--text-secondary)]"
         }`}
       >
@@ -39,7 +39,7 @@ export function LanguageToggle(): JSX.Element {
       <button
         type="button"
         onClick={() => switchLocale("en")}
-        className={`rounded-full px-2 py-0.5 ${
+        className={`rounded-full px-2 py-1 ${
           current === "en" ? "bg-[var(--accent-soft)] text-[var(--text-primary)]" : "text-[var(--text-secondary)]"
         }`}
       >
