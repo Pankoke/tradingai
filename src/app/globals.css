@@ -10,7 +10,7 @@ background: var(--bg-main);
 color: var(--text-primary);
 }
 
-{
+* {
 box-sizing: border-box;
 }
 
