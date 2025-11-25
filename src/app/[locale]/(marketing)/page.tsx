@@ -10,8 +10,11 @@ import type { Setup } from "@/src/lib/engine/types";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import { clamp } from "@/src/lib/math";
 import { useT } from "@/src/lib/i18n/ClientProvider";
+import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
 
-type Labels = {
+type Labels = ReturnType<typeof buildLabels>;
+
+function buildLabels(t: (key: string) => string): {
   directionLong: string;
   directionShort: string;
   confidence: string;
@@ -37,7 +40,35 @@ type Labels = {
   heroFallback: string;
   listHeadline: string;
   listEmpty: string;
-};
+} {
+  return {
+    directionLong: t("homepage.labels.directionLong"),
+    directionShort: t("homepage.labels.directionShort"),
+    confidence: t("homepage.labels.confidence"),
+    entry: t("homepage.labels.entry"),
+    stopLoss: t("homepage.labels.stop"),
+    takeProfit: t("homepage.labels.take"),
+    eventHigh: t("homepage.labels.eventHigh"),
+    eventMedium: t("homepage.labels.eventMedium"),
+    eventLow: t("homepage.labels.eventLow"),
+    biasBullish: t("homepage.labels.biasBullish"),
+    biasBearish: t("homepage.labels.biasBearish"),
+    biasNeutral: t("homepage.labels.biasNeutral"),
+    sentimentPositive: t("homepage.labels.sentimentPositive"),
+    sentimentNegative: t("homepage.labels.sentimentNegative"),
+    sentimentNeutral: t("homepage.labels.sentimentNeutral"),
+    sourceRuleBased: t("homepage.labels.sourceRuleBased"),
+    orderflowBuyers: t("homepage.labels.orderflowBuyers"),
+    orderflowSellers: t("homepage.labels.orderflowSellers"),
+    orderflowBalanced: t("homepage.labels.orderflowBalanced"),
+    weakSetup: t("homepage.labels.weakSetup"),
+    heroHeadline: t("homepage.hero.headline"),
+    heroCta: t("homepage.hero.cta"),
+    heroFallback: t("marketing.noSetupOfDay"),
+    listHeadline: t("homepage.list.headline"),
+    listEmpty: t("homepage.list.empty"),
+  };
+}
 
 function parseEntryZone(value: string): { from: number; to: number } {
   const matches = value.match(/-?\d+(\.\d+)?/g);
@@ -74,40 +105,21 @@ function toHomepageSetup(setup: Setup): HomepageSetup {
 
 export default function MarketingPage(): JSX.Element {
   const t = useT();
+  const pathname = usePathname();
   const [setupOfTheDay, setSetupOfTheDay] = useState<HomepageSetup | null>(null);
   const [secondarySetups, setSecondarySetups] = useState<HomepageSetup[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
 
-  const labels: Labels = useMemo(
-    () => ({
-      directionLong: "Long",
-      directionShort: "Short",
-      confidence: "Confidence",
-      entry: "Entry",
-      stopLoss: "Stop-Loss",
-      takeProfit: "Take-Profit",
-      eventHigh: "Event: high",
-      eventMedium: "Event: medium",
-      eventLow: "Event: low",
-      biasBullish: "Bias: bullish",
-      biasBearish: "Bias: bearish",
-      biasNeutral: "Bias: neutral",
-      sentimentPositive: "Sentiment: positive",
-      sentimentNegative: "Sentiment: negative",
-      sentimentNeutral: "Sentiment: neutral",
-      sourceRuleBased: "Rule-based setup",
-      orderflowBuyers: "Orderflow: buyers",
-      orderflowSellers: "Orderflow: sellers",
-      orderflowBalanced: "Orderflow: balanced",
-      weakSetup: "Weak signal",
-      heroHeadline: "Setup des Tages",
-      heroCta: "Analyse öffnen",
-      heroFallback: t("marketing.noSetupOfDay"),
-      listHeadline: "Weitere Setups",
-      listEmpty: t("marketing.noSetups"),
-    }),
-    [t],
-  );
+  const locale = useMemo(() => {
+    const segments = pathname.split("/").filter(Boolean);
+    const maybeLocale = segments[0];
+    if (i18nConfig.locales.includes(maybeLocale as Locale)) {
+      return maybeLocale as Locale;
+    }
+    return i18nConfig.defaultLocale;
+  }, [pathname]);
+
+  const labels: Labels = useMemo(() => buildLabels(t), [t]);
 
   useEffect(() => {
     const load = async (): Promise<void> => {
@@ -135,7 +147,7 @@ export default function MarketingPage(): JSX.Element {
   const activeSetups = allSetups.length;
   const strongSignals = allSetups.filter((s) => !s.weakSignal).length;
   const weakSignals = allSetups.filter((s) => s.weakSignal).length;
-  const todayHuman = new Date().toLocaleDateString("de-DE", {
+  const todayHuman = new Date().toLocaleDateString(locale === "de" ? "de-DE" : "en-US", {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -164,27 +176,23 @@ export default function MarketingPage(): JSX.Element {
         <header className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
           <div className="space-y-3 text-left">
             <span className="inline-flex items-center justify-center rounded-full border border-sky-200 bg-sky-50 px-4 py-1.5 text-xs font-medium text-sky-700 shadow-sm dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300 dark:shadow-lg dark:shadow-sky-500/10">
-              AI-powered · Snapshot-basiert
+              {t("hero.badge")}
             </span>
             <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl md:text-5xl">
-              Perception Lab – KI-gestützte Markt-Setups
+              {t("hero.title")}
             </h1>
             <p className="max-w-3xl text-sm text-slate-200 sm:text-base">
-              Die Perception Engine kombiniert regelbasierte Marktanalyse mit künstlicher Intelligenz und erzeugt daraus
-              täglich klare, objektive und handelbare Setups.
+              {t("hero.subtitle")}
             </p>
-            <a
-              href="#perception-lab"
-              className="text-sm font-semibold text-sky-400 underline underline-offset-4"
-            >
-              Was ist das Perception Lab?
+            <a href="#perception-lab" className="text-sm font-semibold text-sky-400 underline underline-offset-4">
+              {t("hero.linkPerception")}
             </a>
           </div>
           <div className="grid w-full max-w-xl grid-cols-2 gap-3 self-start md:mt-6">
-            <KpiCard icon={<BarChart3 className="h-4 w-4 text-sky-300" />} label="Analysierte Assets heute" value={assetsAnalyzed} />
-            <KpiCard icon={<Activity className="h-4 w-4 text-emerald-300" />} label="Aktive Setups" value={activeSetups} />
-            <KpiCard icon={<Zap className="h-4 w-4 text-emerald-300" />} label="Starke Signale" value={strongSignals} />
-            <KpiCard icon={<Shield className="h-4 w-4 text-amber-300" />} label="Schwache Signale" value={weakSignals} />
+            <KpiCard icon={<BarChart3 className="h-4 w-4 text-sky-300" />} label={t("homepage.kpi.assets")} value={assetsAnalyzed} />
+            <KpiCard icon={<Activity className="h-4 w-4 text-emerald-300" />} label={t("homepage.kpi.active")} value={activeSetups} />
+            <KpiCard icon={<Zap className="h-4 w-4 text-emerald-300" />} label={t("homepage.kpi.strong")} value={strongSignals} />
+            <KpiCard icon={<Shield className="h-4 w-4 text-amber-300" />} label={t("homepage.kpi.weak")} value={weakSignals} />
           </div>
         </header>
 
