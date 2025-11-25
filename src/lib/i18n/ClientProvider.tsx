@@ -3,7 +3,9 @@
 import React, { createContext, useContext } from "react";
 import type { ReactNode, JSX } from "react";
 
-type Messages = Record<string, string | Messages>;
+interface Messages {
+  [key: string]: string | Messages;
+}
 
 const I18nContext = createContext<Messages>({});
 
