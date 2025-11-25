@@ -3,7 +3,7 @@ import type { JSX } from "react";
 import HomepageHeroSetupCard from "@/src/components/homepage/HomepageHeroSetupCard";
 import HomepageSetupCard from "@/src/components/homepage/HomepageSetupCard";
 import { EngineMetaPanel } from "@/src/components/perception/EngineMetaPanel";
-import { fetchPerceptionSnapshot, fetchTodaySetups } from "@/src/lib/api/perceptionClient";
+import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import { clamp } from "@/src/lib/math";
 import type { Setup } from "@/src/lib/engine/types";
@@ -111,10 +111,8 @@ export default async function SetupsPage({ params }: PageProps): Promise<JSX.Ele
   const t = (key: string): string => messages[key] ?? key;
   const labels: Labels = buildLabels(t);
 
-  const [{ setups, setupOfTheDayId }, snapshot] = await Promise.all([
-    fetchTodaySetups(),
-    fetchPerceptionSnapshot(),
-  ]);
+  const snapshot = await buildPerceptionSnapshot();
+  const { setups, setupOfTheDayId } = snapshot;
   const setupOfTheDayRaw = setups.find((s) => s.id === setupOfTheDayId) ?? null;
   const setupOfTheDay = setupOfTheDayRaw ? toHomepageSetup(setupOfTheDayRaw) : null;
   const freeSetups = setups.filter((s) => s.accessLevel === "free" && s.id !== setupOfTheDayId);
