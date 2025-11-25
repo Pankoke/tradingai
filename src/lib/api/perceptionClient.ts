@@ -5,8 +5,7 @@ import { perceptionSnapshotSchema, type PerceptionSnapshot, type Setup, setupSch
 function resolveUrl(path: string): string {
   const base =
     process.env.NEXT_PUBLIC_APP_URL ??
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
-  if (!base) return path;
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
   return new URL(path, base).toString();
 }
 
