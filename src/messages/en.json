@@ -378,5 +378,12 @@
   "premium.info": "You see all setups for today, split into free, premium and pro.",
   "premium.section.free": "Free setups today",
   "premium.section.premium": "Premium setups today",
-  "premium.section.pro": "Pro setups today"
+  "premium.section.pro": "Pro setups today",
+  "proNotice.title": "Soon Pro-only",
+  "proNotice.text.default": "This area will be available to Pro members only in the future. For now, you can still explore all content without restrictions.",
+  "proNotice.text.setupsPremium": "Premium and Pro setups will only be available to Pro members in the future. At the moment, you can still see the full list.",
+  "proNotice.text.aiTools": "The AI tools will become a Pro-only feature in the future. Right now, you can still use them without any limitations.",
+  "proNotice.text.backtesting": "Backtesting capabilities will become an exclusive Pro feature. Currently, they are still unlocked for everyone.",
+  "proNotice.text.docs": "Extended documentation and deep-dive guides will be reserved for Pro members in the future. For now, everything remains open.",
+  "proNotice.cta": "View Pro plans"
 }

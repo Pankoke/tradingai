@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useT } from "../../../lib/i18n/ClientProvider";
 import { i18nConfig, type Locale } from "../../../lib/i18n/config";
+import { ProNotice } from "@/src/components/common/ProNotice";
 
 type ToolCard = {
   key: string;
@@ -47,6 +48,8 @@ export default function AiToolsHubPage({ params }: { params: { locale: string } 
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("aiToolsHub.title")}</h1>
           <p className="text-sm text-[var(--text-secondary)] sm:text-base">{t("aiToolsHub.intro")}</p>
         </header>
+
+        <ProNotice context="aiTools" />
 
         <div className="grid gap-6 sm:grid-cols-2">
           {tools.map((tool) => (

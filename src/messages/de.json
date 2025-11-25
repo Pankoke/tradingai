@@ -375,5 +375,12 @@
   "perceptionHistory.table.direction": "Richtung",
   "perceptionHistory.table.confidence": "Confidence",
   "perceptionHistory.table.totalSetups": "Anzahl Setups",
-  "perceptionHistory.table.events": "Events"
+  "perceptionHistory.table.events": "Events",
+  "proNotice.title": "Bald nur für Pro-Mitglieder",
+  "proNotice.text.default": "Dieser Bereich wird zukünftig nur für Pro-Mitglieder verfügbar sein. Aktuell kannst du alle Inhalte noch ohne Einschränkungen testen.",
+  "proNotice.text.setupsPremium": "Die Premium- und Pro-Setups werden zukünftig nur für Pro-Mitglieder verfügbar sein. Aktuell kannst du sie noch komplett einsehen.",
+  "proNotice.text.aiTools": "Die KI-Tools werden zukünftig nur Pro-Mitgliedern in vollem Umfang zur Verfügung stehen. Momentan kannst du sie noch ohne Einschränkungen nutzen.",
+  "proNotice.text.backtesting": "Die Backtesting-Funktionen werden zukünftig ein exklusives Pro-Feature sein. Derzeit sind sie noch für alle freigeschaltet.",
+  "proNotice.text.docs": "Die erweiterten Dokumentationen und Deep-Dive-Guides werden zukünftig Pro-Mitgliedern vorbehalten sein. Aktuell kannst du sie noch frei einsehen.",
+  "proNotice.cta": "Zu den Pro-Paketen"
 }

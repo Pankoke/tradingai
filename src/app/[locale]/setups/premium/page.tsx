@@ -4,6 +4,7 @@ import Link from "next/link";
 import HomepageSetupCard from "@/src/components/homepage/HomepageSetupCard";
 import { PremiumControls } from "@/src/components/setups/PremiumControls";
 import { EngineMetaPanel } from "@/src/components/perception/EngineMetaPanel";
+import { ProNotice } from "@/src/components/common/ProNotice";
 import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
 import type { Setup } from "@/src/lib/engine/types";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
@@ -162,6 +163,8 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
         >
           <PremiumControls currentSort={sort} currentDir={dir} currentFilter={filter} />
         </Suspense>
+
+        <ProNotice context="setupsPremium" />
 
         <div className="space-y-8">
           {freeSetups.length > 0 ? (

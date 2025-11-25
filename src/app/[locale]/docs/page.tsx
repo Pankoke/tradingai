@@ -3,6 +3,7 @@
 import React from "react";
 import type { JSX } from "react";
 import { useT } from "../../../lib/i18n/ClientProvider";
+import { ProNotice } from "@/src/components/common/ProNotice";
 
 type CardProps = {
   title: string;
@@ -48,6 +49,8 @@ export default function DocsOverviewPage(): JSX.Element {
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("docs.overview.title")}</h1>
           <p className="text-sm text-[var(--text-secondary)] sm:text-base">{t("docs.overview.intro")}</p>
         </header>
+
+        <ProNotice context="docs" />
 
         <section className="space-y-3 pb-8">
           <h2 className="text-lg font-semibold tracking-tight sm:text-xl">{t("docs.overview.whatYouCanDo.title")}</h2>
