@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { usePathname } from "next/navigation";
-import { Activity, BarChart3, Shield, Zap } from "lucide-react";
+import { Activity, BarChart3, Shield, Zap, ActivitySquare } from "lucide-react";
 import HomepageHeroSetupCard from "@/src/components/homepage/HomepageHeroSetupCard";
 import HomepageSetupCard from "@/src/components/homepage/HomepageSetupCard";
 import { fetchTodaySetups } from "@/src/lib/api/perceptionClient";
@@ -12,7 +12,6 @@ import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import { clamp } from "@/src/lib/math";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
-import { ActivitySquare, BarChart3, Shield, Zap } from "lucide-react";
 
 type Labels = ReturnType<typeof buildLabels>;
 
