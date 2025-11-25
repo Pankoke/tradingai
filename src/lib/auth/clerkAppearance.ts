@@ -10,7 +10,6 @@ export const clerkAppearance: Appearance = {
   },
   variables: {
     colorPrimary: "var(--accent)",
-    colorTextOnPrimary: "#0b0f1a",
     colorBackground: "var(--bg-elevated)",
     colorText: "var(--text-primary)",
     colorTextSecondary: "var(--text-muted)",
@@ -29,7 +28,7 @@ export const clerkAppearance: Appearance = {
       "bg-[var(--bg-main)] border-[var(--border-subtle)] text-[var(--text-primary)] rounded-xl focus:border-[var(--accent)] focus:ring-0",
     formFieldLabel: "text-[var(--text-secondary)]",
     button:
-      "rounded-xl border border-transparent bg-[var(--accent)] text-[color:var(--text-primary)] font-semibold shadow-[0_12px_40px_rgba(0,0,0,0.2)] hover:opacity-95 transition",
+      "rounded-xl border border-transparent bg-[var(--accent)] text-black font-semibold shadow-[0_12px_40px_rgba(0,0,0,0.2)] hover:opacity-95 transition",
     socialButtonsBlockButton:
       "rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-main)] text-[var(--text-primary)] hover:border-[var(--accent)] hover:bg-[var(--bg-surface)] transition",
     footer: "text-[var(--text-muted)]",
