@@ -10,7 +10,6 @@ export type MessageKey = keyof typeof deMessages | keyof typeof enMessages;
 const I18nContext = createContext<Messages | null>(null);
 
 function getMessage(messages: Messages, key: MessageKey): string {
-  // Only allow known keys at compile time; fallback keeps runtime predictable.
   const value = messages[key as keyof Messages];
   return typeof value === "string" ? value : key;
 }
