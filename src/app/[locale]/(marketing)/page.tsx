@@ -26,18 +26,20 @@ export default function MarketingPage(): JSX.Element {
         setSetupOfTheDayId(id);
       } catch (err) {
         console.error(err);
-        setError("Kein Setup verfügbar.");
+        setError(t("marketing.error"));
       } finally {
         setLoading(false);
       }
     };
     void load();
+    // Intentionally no dependencies to avoid refetch loops caused by changing t reference
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading) {
     return (
       <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
-        <div className="mx-auto max-w-6xl px-4 py-12 text-sm text-[var(--text-secondary)]">Lädt Setups ...</div>
+        <div className="mx-auto max-w-6xl px-4 py-12 text-sm text-[var(--text-secondary)]">{t("marketing.loading")}</div>
       </div>
     );
   }
@@ -46,7 +48,7 @@ export default function MarketingPage(): JSX.Element {
     return (
       <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
         <div className="mx-auto max-w-6xl px-4 py-12 text-sm text-[var(--text-secondary)]">
-          {error ?? "Keine Setups verfügbar."}
+          {error ?? t("marketing.noSetups")}
         </div>
       </div>
     );
@@ -58,7 +60,9 @@ export default function MarketingPage(): JSX.Element {
   if (!setupOfTheDay) {
     return (
       <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
-        <div className="mx-auto max-w-6xl px-4 py-12 text-sm text-[var(--text-secondary)]">Kein Setup verfügbar.</div>
+        <div className="mx-auto max-w-6xl px-4 py-12 text-sm text-[var(--text-secondary)]">
+          {t("marketing.noSetupOfDay")}
+        </div>
       </div>
     );
   }
@@ -67,15 +71,15 @@ export default function MarketingPage(): JSX.Element {
     <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
       <div className="mx-auto flex max-w-6xl flex-col gap-10 px-4 py-8 md:py-12">
         <Hero />
-        <section className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)]">
+        <section className="flex flex-col gap-6">
           <div className="flex flex-col gap-4">
             <SetupOfTheDayCard setup={setupOfTheDay} />
           </div>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
               <span className="text-[var(--accent)]">{t("setups.moreSetupsArrowHint")}</span>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {otherSetups.map((setup) => (
                 <SetupCard key={setup.id} setup={setup} />
               ))}

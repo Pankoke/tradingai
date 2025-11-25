@@ -3,8 +3,9 @@
 import React, { useEffect, useState } from "react";
 import type { JSX } from "react";
 import { useT } from "@/src/lib/i18n/ClientProvider";
-import { fetchTodayBiasSnapshot } from "@/src/lib/api/eventsBiasClient";
-import type { BiasSnapshot, BiasEntry } from "@/src/lib/engine/eventsBiasTypes";
+import { fetcher } from "@/src/lib/fetcher";
+import type { BiasEntry, BiasSnapshot } from "@/src/lib/engine/eventsBiasTypes";
+import { biasSnapshotSchema } from "@/src/lib/engine/eventsBiasTypes";
 
 function formatDate(value: string): string {
   return new Date(value).toLocaleString();
@@ -20,7 +21,7 @@ export default function BiasPage(): JSX.Element {
   useEffect(() => {
     const load = async (): Promise<void> => {
       try {
-        const data = await fetchTodayBiasSnapshot();
+        const data = await fetcher("/api/bias/today", biasSnapshotSchema);
         setSnapshot(data);
         setState("idle");
       } catch (error) {

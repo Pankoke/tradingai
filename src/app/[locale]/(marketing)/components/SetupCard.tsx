@@ -114,6 +114,7 @@ export function SetupCard({ setup, highlight = false }: SetupCardProps): JSX.Ele
 
 function MiniGauge({ label, value }: GaugeProps): JSX.Element {
   const clamped = Math.max(0, Math.min(100, value));
+  const display = Math.round(clamped);
 
   return (
     <div className="flex flex-col items-center gap-1">
@@ -124,7 +125,7 @@ function MiniGauge({ label, value }: GaugeProps): JSX.Element {
         }}
       >
         <div className="flex h-[68%] w-[68%] items-center justify-center rounded-full bg-[var(--bg-surface)] text-xs font-semibold text-white">
-          {clamped}%
+          {display}%
         </div>
       </div>
       {label ? <span className="text-[0.7rem] text-[var(--text-secondary)]">{label}</span> : null}

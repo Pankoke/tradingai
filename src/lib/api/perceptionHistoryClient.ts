@@ -1,14 +1,19 @@
+import { z } from "zod";
 import type { PerceptionHistoryEntry } from "@/src/lib/cache/perceptionHistory";
+import { fetcher } from "@/src/lib/fetcher";
+import { perceptionSnapshotSchema } from "@/src/lib/engine/types";
+import { eventSchema, biasSnapshotSchema } from "@/src/lib/engine/eventsBiasTypes";
 
-async function safeJson<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}`);
-  }
-  return (await response.json()) as T;
-}
+const perceptionHistoryEntrySchema = z.object({
+  id: z.string(),
+  createdAt: z.string(),
+  snapshot: perceptionSnapshotSchema,
+  events: eventSchema.array(),
+  biasSnapshot: biasSnapshotSchema.nullable(),
+});
 
 export async function fetchPerceptionHistory(limit?: number): Promise<PerceptionHistoryEntry[]> {
   const search = limit && limit > 0 ? `?limit=${limit}` : "";
-  const res = await fetch(`/api/perception/history${search}`, { method: "GET" });
-  return safeJson<PerceptionHistoryEntry[]>(res);
+  const schema = perceptionHistoryEntrySchema.array();
+  return fetcher(`/api/perception/history${search}`, schema);
 }

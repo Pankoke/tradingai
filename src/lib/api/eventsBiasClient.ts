@@ -1,17 +1,6 @@
-import {
-  eventSchema,
-  biasSnapshotSchema,
-  type Event,
-  type BiasSnapshot,
-} from "@/src/lib/engine/eventsBiasTypes";
-
-async function safeJson<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}`);
-  }
-  const data = (await response.json()) as unknown;
-  return data as T;
-}
+import { z } from "zod";
+import { fetcher } from "@/src/lib/fetcher";
+import { eventSchema, biasSnapshotSchema, type Event, type BiasSnapshot } from "@/src/lib/engine/eventsBiasTypes";
 
 function resolveUrl(path: string): string {
   const base =
@@ -22,13 +11,11 @@ function resolveUrl(path: string): string {
 }
 
 export async function fetchTodayEvents(): Promise<Event[]> {
-  const res = await fetch(resolveUrl("/api/events/today"), { method: "GET" });
-  const raw = await safeJson<{ events: Event[] }>(res);
-  return eventSchema.array().parse(raw.events);
+  const schema = z.object({ events: eventSchema.array() });
+  const data = await fetcher(resolveUrl("/api/events/today"), schema);
+  return data.events;
 }
 
 export async function fetchTodayBiasSnapshot(): Promise<BiasSnapshot> {
-  const res = await fetch(resolveUrl("/api/bias/today"), { method: "GET" });
-  const raw = await safeJson<BiasSnapshot>(res);
-  return biasSnapshotSchema.parse(raw);
+  return fetcher(resolveUrl("/api/bias/today"), biasSnapshotSchema);
 }
