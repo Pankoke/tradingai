@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { Activity, BarChart3, Shield, Zap, ActivitySquare } from "lucide-react";
 import HomepageHeroSetupCard from "@/src/components/homepage/HomepageHeroSetupCard";
 import { fetchTodaySetups } from "@/src/lib/api/perceptionClient";
@@ -270,12 +271,12 @@ export default function MarketingPage(): JSX.Element {
                 <BadgeDot label={t("homepage.cta.badges.alerts")} />
               </div>
             </div>
-            <a
+            <Link
               href="/perception"
               className="inline-flex items-center justify-center rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(14,165,233,0.3)] transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
             >
               {t("homepage.cta.button")}
-            </a>
+            </Link>
           </div>
         </section>
       </div>

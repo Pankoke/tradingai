@@ -275,7 +275,7 @@ function buildFactors(asset: string, event: string): string[] {
     "Market reacts strongly to macro events",
     "Liquidity conditions shifting",
     "Funding turning negative",
-    "Event historically triggers spikes",
+    `${event} historically triggers spikes`,
     `${asset} shows correlation to rate decisions`,
     `${asset} sensitive to risk-on/off flows`,
   ];

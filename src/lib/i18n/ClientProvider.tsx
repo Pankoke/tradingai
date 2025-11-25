@@ -3,18 +3,23 @@
 import React, { createContext, useContext } from "react";
 import type { ReactNode, JSX } from "react";
 
-type Messages = Record<string, string>;
+type Messages = Record<string, string | Messages>;
 
 const I18nContext = createContext<Messages>({});
 
 function getMessage(messages: Messages, key: string): string {
-  if (messages[key]) return messages[key];
+  const direct = messages[key];
+  if (typeof direct === "string") return direct;
+
   if (key.includes(".")) {
     const parts = key.split(".");
-    let current: any = messages;
+    let current: string | Messages | undefined = messages;
     for (const part of parts) {
-      current = current?.[part];
-      if (!current) break;
+      if (typeof current !== "object" || current === null) {
+        current = undefined;
+        break;
+      }
+      current = current[part] as string | Messages | undefined;
     }
     if (typeof current === "string") return current;
   }

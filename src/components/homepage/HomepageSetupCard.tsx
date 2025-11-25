@@ -6,6 +6,28 @@ import { Badge } from "@/src/components/ui/badge";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import { clamp } from "@/src/lib/math";
 
+type RingProps = { value: number; label: string; color: string };
+
+function Ring({ value, label, color }: RingProps): JSX.Element {
+  return (
+    <div className="flex flex-col items-center gap-1" title={label || undefined}>
+      <div
+        className="relative flex h-14 w-14 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-900/60"
+        style={{
+          backgroundImage: `conic-gradient(${color} ${clamp(value, 0, 100)}%, #e2e8f0 ${clamp(value, 0, 100)}%)`,
+        }}
+      >
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-inner shadow-slate-300/60 dark:bg-slate-950/80 dark:shadow-black/30">
+          <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-100">
+            {clamp(value, 0, 100)}%
+          </span>
+        </div>
+      </div>
+      {label ? <p className="text-[10px] text-slate-600 dark:text-slate-300">{label}</p> : null}
+    </div>
+  );
+}
+
 type Props = {
   setup: HomepageSetup;
   weakLabel: string;
@@ -63,24 +85,6 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
   const sentimentPercent = clamp(Math.round(((setup.sentimentScore + 1) / 2) * 100), 0, 100);
   const orderflowPercent =
     setup.orderflowMode === "buyers_dominant" ? 80 : setup.orderflowMode === "sellers_dominant" ? 30 : 55;
-
-  const Ring = ({ value, label, color }: { value: number; label: string; color: string }): JSX.Element => (
-    <div className="flex flex-col items-center gap-1" title={label || undefined}>
-      <div
-        className="relative flex h-14 w-14 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-900/60"
-        style={{
-          backgroundImage: `conic-gradient(${color} ${clamp(value, 0, 100)}%, #e2e8f0 ${clamp(value, 0, 100)}%)`,
-        }}
-      >
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-inner shadow-slate-300/60 dark:bg-slate-950/80 dark:shadow-black/30">
-          <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-100">
-            {clamp(value, 0, 100)}%
-          </span>
-        </div>
-      </div>
-      {label ? <p className="text-[10px] text-slate-600 dark:text-slate-300">{label}</p> : null}
-    </div>
-  );
 
   return (
     <div className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950/80 dark:shadow-none dark:hover:border-slate-600 dark:hover:bg-slate-900/90">

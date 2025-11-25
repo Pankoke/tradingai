@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { JSX } from "react";
+import Link from "next/link";
 import { useT } from "../../../lib/i18n/ClientProvider";
 
 const modules = (t: (key: string) => string) => [
@@ -48,18 +49,18 @@ export default function PerceptionPage(): JSX.Element {
         <section className="space-y-3">
           <h2 className="text-lg font-semibold tracking-tight sm:text-xl">{t("perception.linksTitle")}</h2>
           <div className="flex flex-wrap gap-3 text-sm">
-            <a
+            <Link
               href="/setups"
               className="rounded-full bg-[var(--accent)] px-3 py-1.5 font-semibold text-black hover:opacity-90"
             >
               {t("perception.linkSetupOfDay")}
-            </a>
-            <a
+            </Link>
+            <Link
               href="/setups/premium"
               className="rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-[var(--text-primary)] hover:bg-[var(--bg-main)]"
             >
               {t("perception.linkAllSetups")}
-            </a>
+            </Link>
           </div>
         </section>
       </div>

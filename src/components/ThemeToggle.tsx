@@ -37,19 +37,11 @@ function applyTheme(theme: Theme): void {
 }
 
 export function ThemeToggle(): JSX.Element {
-  const [theme, setTheme] = useState<Theme>("dark");
-  const [mounted, setMounted] = useState(false);
+  const [theme, setTheme] = useState<Theme>(() => resolveTheme());
 
   useEffect(() => {
-    const initial = resolveTheme();
-    setTheme(initial);
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
     applyTheme(theme);
-  }, [theme, mounted]);
+  }, [theme]);
 
   const isDark = theme === "dark";
 

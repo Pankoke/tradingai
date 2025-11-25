@@ -7,9 +7,7 @@ type TFunction = (key: string) => string;
 
 declare global {
   // Vitest replaces these via vi.stubGlobal; declarations keep TypeScript happy.
-  // eslint-disable-next-line no-var
   var __TEST_FETCH__: FetchFn | undefined;
-  // eslint-disable-next-line no-var
   var __TEST_T__: TFunction | undefined;
 }
 
