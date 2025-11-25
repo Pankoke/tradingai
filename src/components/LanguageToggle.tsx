@@ -26,22 +26,28 @@ export function LanguageToggle(): JSX.Element {
   };
 
   return (
-    <div className="inline-flex h-9 items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-main)] px-2 text-xs">
+    <div className="inline-flex h-9 items-center gap-1 rounded-full border border-slate-600 bg-slate-900 px-2 text-xs shadow-sm">
       <button
         type="button"
         onClick={() => switchLocale("de")}
-        className={`rounded-full px-2 py-1 ${
-          current === "de" ? "bg-[var(--accent-soft)] text-[var(--text-primary)]" : "text-[var(--text-secondary)]"
+        className={`rounded-full px-3 py-1 font-semibold ${
+          current === "de"
+            ? "bg-slate-100 text-slate-900"
+            : "text-slate-200 hover:bg-slate-800"
         }`}
+        aria-pressed={current === "de"}
       >
         DE
       </button>
       <button
         type="button"
         onClick={() => switchLocale("en")}
-        className={`rounded-full px-2 py-1 ${
-          current === "en" ? "bg-[var(--accent-soft)] text-[var(--text-primary)]" : "text-[var(--text-secondary)]"
+        className={`rounded-full px-3 py-1 font-semibold ${
+          current === "en"
+            ? "bg-slate-100 text-slate-900"
+            : "text-slate-200 hover:bg-slate-800"
         }`}
+        aria-pressed={current === "en"}
       >
         EN
       </button>
