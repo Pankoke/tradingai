@@ -2,8 +2,10 @@
 
 import React from "react";
 import type { JSX } from "react";
+import { usePathname } from "next/navigation";
 import { Badge } from "@/src/components/ui/badge";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
+import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
 import { clamp } from "@/src/lib/math";
 
 type Props = {
@@ -59,6 +61,16 @@ function RingStat({ valueLabel, percent, color }: RingStatProps): JSX.Element {
 }
 
 export default function HomepageHeroSetupCard({ setup, title, weakLabel, ctaLabel, labels }: Props): JSX.Element {
+  const pathname = usePathname();
+  const localePrefix = React.useMemo(() => {
+    const segments = pathname.split("/").filter(Boolean);
+    const maybeLocale = segments[0];
+    if (i18nConfig.locales.includes(maybeLocale as Locale)) {
+      return `/${maybeLocale}`;
+    }
+    return `/${i18nConfig.defaultLocale}`;
+  }, [pathname]);
+
   const confidence = clamp(setup.confidence, 0, 100);
   const eventLabel =
     setup.eventLevel === "high"
@@ -162,7 +174,7 @@ export default function HomepageHeroSetupCard({ setup, title, weakLabel, ctaLabe
 
       <div className="mt-6 flex justify-end">
         <a
-          href="/perception"
+          href={`${localePrefix}/setups`}
           className="inline-flex items-center rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-sky-500/25 transition hover:translate-x-0.5 hover:shadow-sky-400/30"
         >
           {ctaLabel}

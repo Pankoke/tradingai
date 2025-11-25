@@ -58,7 +58,6 @@ export default async function PremiumSetupsPage({ searchParams }: PageProps): Pr
         <EngineMetaPanel
           generatedAt={snapshot.generatedAt}
           version={snapshot.version}
-          universe={snapshot.universe}
         />
 
         <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-200">

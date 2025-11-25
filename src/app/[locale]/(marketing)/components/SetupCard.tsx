@@ -4,6 +4,7 @@ import React, { useMemo } from "react";
 import type { JSX } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Lock } from "lucide-react";
 import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 
@@ -118,9 +119,10 @@ export function SetupCard({ setup, highlight = false }: SetupCardProps): JSX.Ele
       <div className="flex justify-end">
         <Link
           href={`${prefix}/setups/${setup.id}`}
-          className="rounded-full bg-[#0ea5e9] px-3 py-1 text-xs font-semibold text-white shadow-[0_10px_15px_rgba(14,165,233,0.25)] transition hover:brightness-105"
+          className="inline-flex items-center gap-1.5 rounded-full bg-[#0ea5e9] px-3 py-1 text-xs font-semibold text-white shadow-[0_10px_15px_rgba(14,165,233,0.25)] transition hover:brightness-105"
         >
-          {t("setups.openAnalysis")}
+          <Lock className="h-3.5 w-3.5" aria-hidden />
+          <span>{t("setups.openAnalysis")}</span>
         </Link>
       </div>
     </article>

@@ -8,10 +8,9 @@ import { useT } from "@/src/lib/i18n/ClientProvider";
 type EngineMetaPanelProps = {
   generatedAt: string;
   version: string;
-  universe: string[];
 };
 
-export function EngineMetaPanel({ generatedAt, version, universe }: EngineMetaPanelProps): JSX.Element {
+export function EngineMetaPanel({ generatedAt, version }: EngineMetaPanelProps): JSX.Element {
   const t = useT();
   const router = useRouter();
 
@@ -33,22 +32,9 @@ export function EngineMetaPanel({ generatedAt, version, universe }: EngineMetaPa
           {t("perception.refresh")}
         </button>
       </div>
-      <div className="grid gap-2 sm:grid-cols-3 sm:items-center">
+      <div className="grid gap-2 sm:grid-cols-2 sm:items-center">
         <MetaItem label={t("perception.engineMeta.lastUpdated")} value={formattedDate} />
         <MetaItem label={t("perception.engineMeta.version")} value={version} />
-        <div className="flex flex-wrap gap-2">
-          <span className="text-[0.7rem] uppercase tracking-wide text-[var(--text-secondary)]">
-            {t("perception.engineMeta.universe")}
-          </span>
-          {universe.map((u) => (
-            <span
-              key={u}
-              className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-main)] px-2 py-0.5 text-[0.75rem] text-[var(--text-primary)]"
-            >
-              {u}
-            </span>
-          ))}
-        </div>
       </div>
     </div>
   );

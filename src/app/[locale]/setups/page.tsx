@@ -10,7 +10,7 @@ export default async function SetupsPage(): Promise<JSX.Element> {
   const snapshot = await buildPerceptionSnapshot();
   const { setups, setupOfTheDayId } = snapshot;
   const setupOfTheDay = setups.find((s) => s.id === setupOfTheDayId) ?? null;
-  const otherSetups = setups.filter((s) => s.id !== setupOfTheDayId);
+  const otherSetups = setups.filter((s) => s.id !== setupOfTheDayId).slice(0, 3);
 
   return (
     <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
@@ -25,7 +25,6 @@ export default async function SetupsPage(): Promise<JSX.Element> {
         <EngineMetaPanel
           generatedAt={snapshot.generatedAt}
           version={snapshot.version}
-          universe={snapshot.universe}
         />
 
         <section className="space-y-4">

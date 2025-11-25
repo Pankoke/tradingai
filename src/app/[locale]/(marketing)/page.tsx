@@ -5,7 +5,6 @@ import type { JSX } from "react";
 import { usePathname } from "next/navigation";
 import { Activity, BarChart3, Shield, Zap, ActivitySquare } from "lucide-react";
 import HomepageHeroSetupCard from "@/src/components/homepage/HomepageHeroSetupCard";
-import HomepageSetupCard from "@/src/components/homepage/HomepageSetupCard";
 import { fetchTodaySetups } from "@/src/lib/api/perceptionClient";
 import type { Setup } from "@/src/lib/engine/types";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
@@ -108,7 +107,6 @@ export default function MarketingPage(): JSX.Element {
   const t = useT();
   const pathname = usePathname();
   const [setupOfTheDay, setSetupOfTheDay] = useState<HomepageSetup | null>(null);
-  const [secondarySetups, setSecondarySetups] = useState<HomepageSetup[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
 
   const locale = useMemo(() => {
@@ -128,9 +126,7 @@ export default function MarketingPage(): JSX.Element {
         const { setups, setupOfTheDayId } = await fetchTodaySetups();
         const mapped = setups.map(toHomepageSetup);
         const hero = mapped.find((s) => s.id === setupOfTheDayId) ?? mapped[0] ?? null;
-        const rest = mapped.filter((s) => s.id !== hero?.id).slice(0, 3);
         setSetupOfTheDay(hero);
-        setSecondarySetups(rest);
         setState("ready");
       } catch (error) {
         console.error(error);
@@ -140,10 +136,7 @@ export default function MarketingPage(): JSX.Element {
     void load();
   }, []);
 
-  const allSetups = useMemo(
-    () => [setupOfTheDay, ...secondarySetups].filter(Boolean) as HomepageSetup[],
-    [setupOfTheDay, secondarySetups],
-  );
+  const allSetups = useMemo(() => (setupOfTheDay ? [setupOfTheDay] : []), [setupOfTheDay]);
   const assetsAnalyzed = new Set(allSetups.map((s) => s.symbol)).size;
   const activeSetups = allSetups.length;
   const strongSignals = allSetups.filter((s) => !s.weakSignal).length;
@@ -231,49 +224,6 @@ export default function MarketingPage(): JSX.Element {
               ctaLabel={labels.heroCta}
             />
           </div>
-        </section>
-
-        <section className="space-y-4">
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-semibold text-emerald-500 dark:text-emerald-300">↗</span>
-            <h2 className="text-xl font-semibold text-[var(--text-primary)] dark:text-white">{labels.listHeadline}</h2>
-          </div>
-          {secondarySetups.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-1 xl:grid-cols-3">
-              {secondarySetups.map((setup) => (
-                <HomepageSetupCard
-                  key={setup.id}
-                  setup={setup}
-                  weakLabel={labels.weakSetup}
-                  labels={{
-                    directionLong: labels.directionLong,
-                    directionShort: labels.directionShort,
-                    confidence: labels.confidence,
-                    entry: labels.entry,
-                    stop: labels.stopLoss,
-                    take: labels.takeProfit,
-                    eventHigh: labels.eventHigh,
-                    eventMedium: labels.eventMedium,
-                    eventLow: labels.eventLow,
-                    sourceRuleBased: labels.sourceRuleBased,
-                    biasBullish: labels.biasBullish,
-                    biasBearish: labels.biasBearish,
-                    biasNeutral: labels.biasNeutral,
-                    sentimentPositive: labels.sentimentPositive,
-                    sentimentNegative: labels.sentimentNegative,
-                    sentimentNeutral: labels.sentimentNeutral,
-                    orderflowBuyers: labels.orderflowBuyers,
-                    orderflowSellers: labels.orderflowSellers,
-                    orderflowBalanced: labels.orderflowBalanced,
-                  }}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900/90 dark:text-slate-200">
-              {labels.listEmpty}
-            </div>
-          )}
         </section>
 
         <section id="perception-lab" className="rounded-3xl border border-slate-800 bg-[#0b1325] p-6 shadow-inner shadow-black/40">
