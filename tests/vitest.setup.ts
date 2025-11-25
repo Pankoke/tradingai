@@ -17,8 +17,7 @@ const defaultFetchImpl: FetchFn = async () =>
   new Response(JSON.stringify({}), { status: 200, headers: { "Content-Type": "application/json" } });
 
 function createFetchMock(): MockedFunction<FetchFn> {
-  const mock = vi.fn<FetchFn>();
-  mock.mockImplementation(defaultFetchImpl);
+  const mock = vi.fn(defaultFetchImpl) as MockedFunction<FetchFn>;
   return mock;
 }
 
