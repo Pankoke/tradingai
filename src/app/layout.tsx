@@ -42,6 +42,8 @@ export default function RootLayout({ children }: RootLayoutProps): JSX.Element {
   return (
     <html lang="de" suppressHydrationWarning>
       <head>
+        <meta charSet="utf-8" />
+        <meta httpEquiv="Content-Type" content="text/html; charset=utf-8" />
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="min-h-screen bg-[var(--bg-main)] text-[var(--text-primary)] antialiased">
