@@ -1,4 +1,4 @@
-import type { HTMLAttributes } from "react";
+import type { HTMLAttributes, JSX } from "react";
 import React from "react";
 
 type BadgeVariant = "default" | "secondary" | "destructive" | "outline";
