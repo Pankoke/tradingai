@@ -23,8 +23,8 @@ function buildLabels(t: (key: string) => string): {
   directionShort: string;
   confidence: string;
   entry: string;
-  stopLoss: string;
-  takeProfit: string;
+  stop: string;
+  take: string;
   eventHigh: string;
   eventMedium: string;
   eventLow: string;
@@ -45,8 +45,8 @@ function buildLabels(t: (key: string) => string): {
     directionShort: t("homepage.labels.directionShort"),
     confidence: t("homepage.labels.confidence"),
     entry: t("homepage.labels.entry"),
-    stopLoss: t("homepage.labels.stop"),
-    takeProfit: t("homepage.labels.take"),
+    stop: t("homepage.labels.stop"),
+    take: t("homepage.labels.take"),
     eventHigh: t("homepage.labels.eventHigh"),
     eventMedium: t("homepage.labels.eventMedium"),
     eventLow: t("homepage.labels.eventLow"),
@@ -144,8 +144,8 @@ export default async function SetupsPage({ params }: PageProps): Promise<JSX.Ele
                 directionShort: labels.directionShort,
                 confidence: labels.confidence,
                 entry: labels.entry,
-                stop: labels.stopLoss,
-                take: labels.takeProfit,
+                stop: labels.stop,
+                take: labels.take,
                 eventHigh: labels.eventHigh,
                 eventMedium: labels.eventMedium,
                 eventLow: labels.eventLow,
