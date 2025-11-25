@@ -58,26 +58,26 @@ export function SetupCard({ setup, highlight = false }: SetupCardProps): JSX.Ele
 
   return (
     <article
-      className={`flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 ${highlight ? "shadow-lg shadow-slate-200" : "shadow-md"}`}
+      className={`flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-4 ${highlight ? "shadow-lg shadow-black/30" : "shadow-md shadow-black/20"}`}
     >
-      <header className="flex items-center justify-between text-[0.7rem] uppercase tracking-[0.25em] text-slate-600">
-        <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[0.65rem] font-semibold text-slate-700">
+      <header className="flex items-center justify-between text-[0.7rem] uppercase tracking-[0.25em] text-slate-400">
+        <span className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-[0.65rem] font-semibold text-slate-100">
           {setup.type === "Regelbasiert" ? t("setups.type.ruleBased") : t("setups.type.ai")}
         </span>
         <div className="flex items-center gap-2">
-          <span className="text-[0.65rem] text-slate-600">Confidence</span>
+          <span className="text-[0.65rem] text-slate-300">Confidence</span>
           <MiniGauge value={setup.confidence} />
         </div>
       </header>
 
       <div className="flex items-center justify-between gap-2">
         <div className="space-y-1">
-          <div className="text-base font-semibold text-slate-900">
+          <div className="text-base font-semibold text-slate-100">
             {setup.symbol} · {setup.timeframe}
           </div>
           <span
             className={`inline-flex w-fit rounded-full border px-2 py-0.5 text-xs font-semibold ${
-              isLong ? "border-emerald-300 text-emerald-600" : "border-rose-300 text-rose-500"
+              isLong ? "border-emerald-500/60 text-emerald-300" : "border-rose-500/60 text-rose-300"
             }`}
           >
             {setup.direction}
@@ -117,27 +117,27 @@ function MiniGauge({ label, value }: GaugeProps): JSX.Element {
   return (
     <div className="flex flex-col items-center gap-1">
       <div
-        className="relative flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white"
+        className="relative flex h-12 w-12 items-center justify-center rounded-full border border-slate-700 bg-slate-900"
         style={{
-          background: `conic-gradient(#22c55e ${clamped}%, #e2e8f0 ${clamped}% 100%)`,
+          background: `conic-gradient(#22c55e ${clamped}%, rgba(100,116,139,0.4) ${clamped}% 100%)`,
         }}
       >
-        <div className="flex h-[68%] w-[68%] items-center justify-center rounded-full bg-white text-xs font-semibold text-slate-800">
+        <div className="flex h-[68%] w-[68%] items-center justify-center rounded-full bg-slate-950 text-xs font-semibold text-white">
           {display}%
         </div>
       </div>
-      {label ? <span className="text-[0.7rem] text-slate-600">{label}</span> : null}
+      {label ? <span className="text-[0.7rem] text-slate-400">{label}</span> : null}
     </div>
   );
 }
 
 function Level({ label, value, tone }: LevelProps): JSX.Element {
   const color =
-    tone === "danger" ? "text-rose-500" : tone === "success" ? "text-emerald-600" : "text-slate-900";
+    tone === "danger" ? "text-rose-400" : tone === "success" ? "text-emerald-400" : "text-slate-100";
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
-      <div className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-500">{label}</div>
+    <div className="rounded-xl border border-slate-800 bg-slate-900 px-3 py-2">
+      <div className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-400">{label}</div>
       <div className={`mt-1 text-sm font-semibold ${color}`}>{value}</div>
     </div>
   );

@@ -7,7 +7,7 @@ type Theme = "light" | "dark";
 
 function getInitialTheme(): Theme {
   if (typeof window === "undefined") {
-    return "light";
+    return "dark";
   }
   const stored = window.localStorage.getItem("theme");
   if (stored === "light" || stored === "dark") {
