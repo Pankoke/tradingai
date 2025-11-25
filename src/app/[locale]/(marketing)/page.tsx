@@ -12,6 +12,7 @@ import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import { clamp } from "@/src/lib/math";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
+import { ActivitySquare, BarChart3, Shield, Zap } from "lucide-react";
 
 type Labels = ReturnType<typeof buildLabels>;
 
@@ -275,6 +276,59 @@ export default function MarketingPage(): JSX.Element {
             </div>
           )}
         </section>
+
+        <section className="rounded-3xl border border-slate-800 bg-[#0b1325] p-6 shadow-inner shadow-black/40">
+          <div className="space-y-5 text-center">
+            <h2 className="text-xl font-semibold text-white md:text-2xl">{t("homepage.info.title")}</h2>
+            <p className="text-sm leading-relaxed text-slate-200">{t("homepage.info.p1")}</p>
+            <p className="text-sm leading-relaxed text-slate-200">{t("homepage.info.p2")}</p>
+            <p className="text-sm leading-relaxed text-slate-200">{t("homepage.info.p3")}</p>
+          </div>
+
+          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <InfoCard
+              icon={<Zap className="h-6 w-6 text-sky-300" />}
+              title={t("homepage.info.cards.analysis.title")}
+              text={t("homepage.info.cards.analysis.body")}
+            />
+            <InfoCard
+              icon={<BarChart3 className="h-6 w-6 text-sky-300" />}
+              title={t("homepage.info.cards.multi.title")}
+              text={t("homepage.info.cards.multi.body")}
+            />
+            <InfoCard
+              icon={<ActivitySquare className="h-6 w-6 text-sky-300" />}
+              title={t("homepage.info.cards.clear.title")}
+              text={t("homepage.info.cards.clear.body")}
+            />
+            <InfoCard
+              icon={<Shield className="h-6 w-6 text-sky-300" />}
+              title={t("homepage.info.cards.consistent.title")}
+              text={t("homepage.info.cards.consistent.body")}
+            />
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-slate-800 bg-[#071021] p-6 shadow-inner shadow-black/30">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-white md:text-xl">{t("homepage.cta.title")}</h3>
+              <p className="text-sm text-slate-200">{t("homepage.cta.subtitle")}</p>
+              <div className="flex flex-wrap gap-3 text-xs text-emerald-300">
+                <BadgeDot label={t("homepage.cta.badges.all")} />
+                <BadgeDot label={t("homepage.cta.badges.ai")} />
+                <BadgeDot label={t("homepage.cta.badges.multi")} />
+                <BadgeDot label={t("homepage.cta.badges.alerts")} />
+              </div>
+            </div>
+            <a
+              href="/perception"
+              className="inline-flex items-center justify-center rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(14,165,233,0.3)] transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
+            >
+              {t("homepage.cta.button")}
+            </a>
+          </div>
+        </section>
       </div>
     </main>
   );
@@ -297,5 +351,32 @@ function KpiCard({ icon, label, value }: KpiCardProps): JSX.Element {
         <div className="text-lg font-semibold text-slate-900 dark:text-slate-50">{value}</div>
       </div>
     </div>
+  );
+}
+
+type InfoCardProps = {
+  icon: JSX.Element;
+  title: string;
+  text: string;
+};
+
+function InfoCard({ icon, title, text }: InfoCardProps): JSX.Element {
+  return (
+    <div className="rounded-2xl border border-slate-800 bg-slate-900 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+      <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-sky-500/40 bg-sky-500/10 text-sky-200">
+        {icon}
+      </div>
+      <h4 className="text-sm font-semibold text-white">{title}</h4>
+      <p className="mt-1 text-sm text-slate-200">{text}</p>
+    </div>
+  );
+}
+
+function BadgeDot({ label }: { label: string }): JSX.Element {
+  return (
+    <span className="flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2 py-1 text-[11px] font-medium">
+      <span className="h-2 w-2 rounded-full bg-emerald-400" />
+      {label}
+    </span>
   );
 }
