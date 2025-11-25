@@ -276,7 +276,7 @@ export default function MarketingPage(): JSX.Element {
           )}
         </section>
 
-        <section className="rounded-3xl border border-slate-800 bg-[#0b1325] p-6 shadow-inner shadow-black/40">
+        <section id="perception-lab" className="rounded-3xl border border-slate-800 bg-[#0b1325] p-6 shadow-inner shadow-black/40">
           <div className="space-y-5 text-center">
             <h2 className="text-xl font-semibold text-white md:text-2xl">{t("homepage.info.title")}</h2>
             <p className="text-sm leading-relaxed text-slate-200">{t("homepage.info.p1")}</p>

@@ -33,6 +33,23 @@ function localePrefix(pathname: string): string {
   return `/${i18nConfig.defaultLocale}`;
 }
 
+function formatNumberText(value: string): string {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return value;
+  return num.toFixed(4);
+}
+
+function formatRangeText(value: string): string {
+  const matches = value.match(/-?\d+(\.\d+)?/g);
+  if (!matches || matches.length === 0) return value;
+  if (matches.length === 1) return Number(matches[0]).toFixed(4);
+  const [a, b] = matches.map((v) => Number(v));
+  if (Number.isFinite(a) && Number.isFinite(b)) {
+    return `${a.toFixed(4)} - ${b.toFixed(4)}`;
+  }
+  return value;
+}
+
 function toneClass(tone: LevelBoxPropsDay["tone"]): string {
   if (tone === "danger") return "text-red-400";
   if (tone === "success") return "text-emerald-400";
@@ -78,9 +95,9 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
 
       <div className="mt-2 rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
         <div className="grid gap-4 text-xs sm:grid-cols-3">
-          <LevelBox label={t("setups.entry")} value={setup.entryZone} tone="neutral" />
-          <LevelBox label={t("setups.stopLoss")} value={setup.stopLoss} tone="danger" />
-          <LevelBox label={t("setups.takeProfit")} value={setup.takeProfit} tone="success" />
+          <LevelBox label={t("setups.entry")} value={formatRangeText(setup.entryZone)} tone="neutral" />
+          <LevelBox label={t("setups.stopLoss")} value={formatNumberText(setup.stopLoss)} tone="danger" />
+          <LevelBox label={t("setups.takeProfit")} value={formatNumberText(setup.takeProfit)} tone="success" />
         </div>
       </div>
 

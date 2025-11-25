@@ -50,6 +50,23 @@ function localePrefix(pathname: string): string {
   return `/${i18nConfig.defaultLocale}`;
 }
 
+function formatNumberText(value: string): string {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return value;
+  return num.toFixed(4);
+}
+
+function formatRangeText(value: string): string {
+  const matches = value.match(/-?\d+(\.\d+)?/g);
+  if (!matches || matches.length === 0) return value;
+  if (matches.length === 1) return Number(matches[0]).toFixed(4);
+  const [a, b] = matches.map((v) => Number(v));
+  if (Number.isFinite(a) && Number.isFinite(b)) {
+    return `${a.toFixed(4)} - ${b.toFixed(4)}`;
+  }
+  return value;
+}
+
 export function SetupCard({ setup, highlight = false }: SetupCardProps): JSX.Element {
   const isLong = setup.direction === "Long";
   const pathname = usePathname();
@@ -93,9 +110,9 @@ export function SetupCard({ setup, highlight = false }: SetupCardProps): JSX.Ele
       </div>
 
       <div className="grid gap-3 text-xs sm:grid-cols-3">
-        <Level label={t("setups.entry")} value={setup.entryZone} tone="neutral" />
-        <Level label={t("setups.takeProfit")} value={setup.takeProfit} tone="success" />
-        <Level label={t("setups.stopLoss")} value={setup.stopLoss} tone="danger" />
+        <Level label={t("setups.entry")} value={formatRangeText(setup.entryZone)} tone="neutral" />
+        <Level label={t("setups.takeProfit")} value={formatNumberText(setup.takeProfit)} tone="success" />
+        <Level label={t("setups.stopLoss")} value={formatNumberText(setup.stopLoss)} tone="danger" />
       </div>
 
       <div className="flex justify-end">

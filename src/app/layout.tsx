@@ -14,6 +14,21 @@ const messagesByLocale: Record<string, Messages> = {
 
 const fallbackMessages = messagesByLocale[defaultLocale] ?? deMessages;
 
+const themeInitScript = `
+(() => {
+  try {
+    const stored = window.localStorage.getItem('theme');
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const theme = stored === 'light' || stored === 'dark' ? stored : prefersDark ? 'dark' : 'light';
+    const root = document.documentElement;
+    root.dataset.theme = theme;
+    root.classList.toggle('dark', theme === 'dark');
+  } catch {
+    // ignore
+  }
+})();
+`;
+
 export const metadata: Metadata = {
   title: fallbackMessages["meta.title"],
   description: fallbackMessages["meta.description"],
@@ -25,7 +40,10 @@ type RootLayoutProps = {
 
 export default function RootLayout({ children }: RootLayoutProps): JSX.Element {
   return (
-    <html lang="de" suppressHydrationWarning className="dark">
+    <html lang="de" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className="min-h-screen bg-[var(--bg-main)] text-[var(--text-primary)] antialiased">
         {children}
       </body>
