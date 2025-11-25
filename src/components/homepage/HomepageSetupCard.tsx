@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import type { JSX } from "react";
 import { Badge } from "@/src/components/ui/badge";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import { clamp } from "@/src/lib/math";
