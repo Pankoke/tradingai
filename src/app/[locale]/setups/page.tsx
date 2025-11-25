@@ -98,11 +98,12 @@ function toHomepageSetup(setup: Setup): HomepageSetup {
 }
 
 type PageProps = {
-  params: { locale?: string };
+  params: Promise<{ locale?: string }>;
 };
 
 export default async function SetupsPage({ params }: PageProps): Promise<JSX.Element> {
-  const localeParam = params?.locale ?? i18nConfig.defaultLocale;
+  const resolvedParams = await params;
+  const localeParam = resolvedParams?.locale ?? i18nConfig.defaultLocale;
   const locale: Locale = i18nConfig.locales.includes(localeParam as Locale)
     ? (localeParam as Locale)
     : i18nConfig.defaultLocale;

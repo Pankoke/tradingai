@@ -14,12 +14,12 @@ import deMessages from "@/src/messages/de.json";
 import enMessages from "@/src/messages/en.json";
 
 type PageProps = {
-  params: { locale?: string };
-  searchParams?: {
+  params: Promise<{ locale?: string }>;
+  searchParams?: Promise<{
     sort?: string;
     dir?: string;
     filter?: string;
-  };
+  }>;
 };
 
 function applyFilter(setups: Setup[], filter: string): Setup[] {
@@ -104,7 +104,9 @@ function toHomepageSetup(setup: Setup): HomepageSetup {
 }
 
 export default async function PremiumSetupsPage({ params, searchParams }: PageProps): Promise<JSX.Element> {
-  const localeParam = params?.locale ?? i18nConfig.defaultLocale;
+  const resolvedParams = await params;
+  const resolvedSearch = searchParams ? await searchParams : undefined;
+  const localeParam = resolvedParams?.locale ?? i18nConfig.defaultLocale;
   const locale: Locale = i18nConfig.locales.includes(localeParam as Locale)
     ? (localeParam as Locale)
     : i18nConfig.defaultLocale;
@@ -116,9 +118,9 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
   const { setups } = snapshot;
   const events = mockEvents;
 
-  const sort = searchParams?.sort ?? "confidence";
-  const dir = searchParams?.dir ?? "desc";
-  const filter = searchParams?.filter ?? "all";
+  const sort = resolvedSearch?.sort ?? "confidence";
+  const dir = resolvedSearch?.dir ?? "desc";
+  const filter = resolvedSearch?.filter ?? "all";
 
   const filtered = applyFilter(setups, filter);
   const sorted = applySort(filtered, sort, dir);
