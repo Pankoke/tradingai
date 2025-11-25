@@ -6,7 +6,7 @@ import { applyConfidenceScoring } from "@/src/lib/engine/modules/confidenceScori
 import { sortSetupsForToday } from "@/src/lib/engine/modules/ranking";
 import { mockEvents } from "@/src/lib/mockEvents";
 import { mockBiasSnapshot } from "@/src/lib/mockBias";
-import { perceptionSnapshotSchema, type PerceptionSnapshot, type Setup } from "@/src/lib/engine/types";
+import { perceptionSnapshotSchema, type AccessLevel, type PerceptionSnapshot, type Setup } from "@/src/lib/engine/types";
 
 const ENGINE_VERSION = "0.1.0";
 
@@ -29,6 +29,7 @@ export async function buildPerceptionSnapshot(): Promise<PerceptionSnapshot> {
       stopLoss: item.stopLoss,
       takeProfit: item.takeProfit,
       type: item.type,
+      accessLevel: "free",
     };
 
     const eventResult = applyEventScoring(base, events);
@@ -51,11 +52,24 @@ export async function buildPerceptionSnapshot(): Promise<PerceptionSnapshot> {
     };
   });
 
-  const setups = sortSetupsForToday(enriched);
+  const ranked = sortSetupsForToday(enriched);
 
-  if (setups.length === 0) {
+  if (ranked.length === 0) {
     throw new Error("No setups available to pick setup of the day.");
   }
+
+  const maxPremiumIndex = Math.min(ranked.length - 1, 9);
+  const setups = ranked.map((setup, index) => {
+    let accessLevel: AccessLevel;
+    if (index <= 3) {
+      accessLevel = "free";
+    } else if (index <= maxPremiumIndex) {
+      accessLevel = "premium";
+    } else {
+      accessLevel = "pro";
+    }
+    return { ...setup, accessLevel };
+  });
 
   const setupOfTheDay = setups[0];
 

@@ -6,6 +6,9 @@ export type Direction = z.infer<typeof directionEnum>;
 export const setupTypeEnum = z.enum(["Regelbasiert", "KI"]);
 export type SetupType = z.infer<typeof setupTypeEnum>;
 
+export const accessLevelSchema = z.enum(["free", "premium", "pro"]);
+export type AccessLevel = z.infer<typeof accessLevelSchema>;
+
 export const setupSchema = z.object({
   id: z.string(),
   symbol: z.string(),
@@ -20,6 +23,7 @@ export const setupSchema = z.object({
   stopLoss: z.string(),
   takeProfit: z.string(),
   type: setupTypeEnum,
+  accessLevel: accessLevelSchema,
 });
 
 export type Setup = z.infer<typeof setupSchema>;

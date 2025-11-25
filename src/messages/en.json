@@ -91,6 +91,9 @@
   "setups.takeProfit": "Take-Profit",
   "setups.type.ruleBased": "Rule-based",
   "setups.type.ai": "AI",
+  "setups.access.free": "Free",
+  "setups.access.premium": "Premium",
+  "setups.access.pro": "Pro",
   "perception.title": "Perception Lab – Analysis Engine",
   "perception.subtitle": "The Perception Engine blends market structure, events, bias and sentiment into clear setups.",
   "perception.intro1": "The Perception Engine processes market structure, events and sentiment to produce daily snapshots with clearly defined setups.",
@@ -368,5 +371,12 @@
   "perceptionHistory.table.direction": "Direction",
   "perceptionHistory.table.confidence": "Confidence",
   "perceptionHistory.table.totalSetups": "Total setups",
-  "perceptionHistory.table.events": "Events"
+  "perceptionHistory.table.events": "Events",
+  "setups.access.free": "Free",
+  "setups.access.premium": "Premium",
+  "setups.access.pro": "Pro",
+  "premium.info": "You see all setups for today, split into free, premium and pro.",
+  "premium.section.free": "Free setups today",
+  "premium.section.premium": "Premium setups today",
+  "premium.section.pro": "Pro setups today"
 }

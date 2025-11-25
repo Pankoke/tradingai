@@ -1,6 +1,6 @@
-import type { SetupCardSetup } from "../app/[locale]/(marketing)/components/SetupCard";
+import type { Setup } from "./engine/types";
 
-export const mockSetups: SetupCardSetup[] = [
+export const mockSetups: Setup[] = [
   {
     id: "setup-of-the-day",
     symbol: "WTI Crude",
@@ -15,6 +15,7 @@ export const mockSetups: SetupCardSetup[] = [
     stopLoss: "80.90",
     takeProfit: "87.50",
     type: "Regelbasiert",
+    accessLevel: "free",
   },
   {
     id: "btc-long",
@@ -30,6 +31,7 @@ export const mockSetups: SetupCardSetup[] = [
     stopLoss: "63.700",
     takeProfit: "69.000",
     type: "KI",
+    accessLevel: "free",
   },
   {
     id: "eth-short",
@@ -45,6 +47,7 @@ export const mockSetups: SetupCardSetup[] = [
     stopLoss: "3.210",
     takeProfit: "2.980",
     type: "Regelbasiert",
+    accessLevel: "free",
   },
   {
     id: "nasdaq-long",
@@ -60,6 +63,7 @@ export const mockSetups: SetupCardSetup[] = [
     stopLoss: "18.320",
     takeProfit: "18.780",
     type: "Regelbasiert",
+    accessLevel: "free",
   },
   {
     id: "dax-long",
@@ -75,6 +79,7 @@ export const mockSetups: SetupCardSetup[] = [
     stopLoss: "17.960",
     takeProfit: "18.380",
     type: "Regelbasiert",
+    accessLevel: "free",
   },
   {
     id: "gold-short",
@@ -90,11 +95,10 @@ export const mockSetups: SetupCardSetup[] = [
     stopLoss: "2.438",
     takeProfit: "2.372",
     type: "KI",
+    accessLevel: "free",
   },
 ];
 
-export function getSetupById(id: string): SetupCardSetup | undefined {
+export function getSetupById(id: string): Setup | undefined {
   return mockSetups.find((setup) => setup.id === id);
 }
-
-export type { SetupCardSetup };

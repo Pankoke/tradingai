@@ -7,24 +7,11 @@ import { usePathname } from "next/navigation";
 import { Lock } from "lucide-react";
 import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
 import { useT } from "@/src/lib/i18n/ClientProvider";
+import type { Setup } from "@/src/lib/engine/types";
 
 export type Direction = "Long" | "Short";
 
-export type SetupCardSetup = {
-  id: string;
-  symbol: string;
-  timeframe: string;
-  direction: Direction;
-  confidence: number;
-  eventScore: number;
-  biasScore: number;
-  sentimentScore: number;
-  balanceScore: number;
-  entryZone: string;
-  stopLoss: string;
-  takeProfit: string;
-  type: "Regelbasiert" | "KI";
-};
+export type SetupCardSetup = Setup;
 
 type SetupCardProps = {
   setup: SetupCardSetup;
@@ -73,6 +60,18 @@ export function SetupCard({ setup, highlight = false }: SetupCardProps): JSX.Ele
   const pathname = usePathname();
   const prefix = useMemo(() => localePrefix(pathname), [pathname]);
   const t = useT();
+  const accessTone =
+    setup.accessLevel === "free"
+      ? "border-slate-600 text-slate-200"
+      : setup.accessLevel === "premium"
+        ? "border-amber-500/60 text-amber-300"
+        : "border-emerald-500/70 text-emerald-300";
+  const accessLabel =
+    setup.accessLevel === "free"
+      ? t("setups.access.free")
+      : setup.accessLevel === "premium"
+        ? t("setups.access.premium")
+        : t("setups.access.pro");
 
   return (
     <article
@@ -81,6 +80,9 @@ export function SetupCard({ setup, highlight = false }: SetupCardProps): JSX.Ele
       <header className="flex items-center justify-between text-[0.7rem] uppercase tracking-[0.25em] text-slate-400">
         <span className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-[0.65rem] font-semibold text-slate-100">
           {setup.type === "Regelbasiert" ? t("setups.type.ruleBased") : t("setups.type.ai")}
+        </span>
+        <span className={`rounded-full border px-3 py-1 text-[0.65rem] font-semibold ${accessTone}`}>
+          {accessLabel}
         </span>
         <div className="flex items-center gap-2">
           <span className="text-[0.65rem] text-slate-300">Confidence</span>
