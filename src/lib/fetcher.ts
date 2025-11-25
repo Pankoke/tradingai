@@ -18,10 +18,12 @@ export async function fetcher<T>(url: string, schema: ZodSchema<T>): Promise<T> 
     const parsed = schema.safeParse(payload);
 
     if (!parsed.success) {
-      const message = parsed.error.errors.map((issue) => {
-        const path = issue.path.join(".") || "(root)";
-        return `${path}: ${issue.message}`;
-      }).join("; ");
+      const message = parsed.error.issues
+        .map((issue) => {
+          const path = issue.path.join(".") || "(root)";
+          return `${path}: ${issue.message}`;
+        })
+        .join("; ");
       throw new Error(`Response validation failed: ${message}`);
     }
 
