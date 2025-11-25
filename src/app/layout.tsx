@@ -25,7 +25,7 @@ type RootLayoutProps = {
 
 export default function RootLayout({ children }: RootLayoutProps): JSX.Element {
   return (
-    <html lang="de" suppressHydrationWarning>
+    <html lang="de" suppressHydrationWarning className="dark">
       <body className="min-h-screen bg-[var(--bg-main)] text-[var(--text-primary)] antialiased">
         {children}
       </body>

@@ -1,8 +1,8 @@
 "use client";
 
 import type { JSX } from "react";
-import { getSetupById } from "../../../../lib/mockSetups";
-import { useT } from "../../../../lib/i18n/ClientProvider";
+import { getSetupById } from "@/src/lib/mockSetups";
+import { useT } from "@/src/lib/i18n/ClientProvider";
 
 type PageProps = {
   params: { locale: string; id: string };
@@ -15,7 +15,7 @@ export default function SetupDetailPage({ params }: PageProps): JSX.Element {
 
   if (!setup) {
     return (
-      <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
+      <div className="bg-[#0b0f14] text-slate-100">
         <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("detail.notFound")}</h1>
         </div>
@@ -26,24 +26,24 @@ export default function SetupDetailPage({ params }: PageProps): JSX.Element {
   const isLong = setup.direction === "Long";
 
   return (
-    <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
+    <div className="bg-[#0b0f14] text-slate-100">
       <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
         <header className="space-y-3 pb-6">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             {setup.symbol} · {setup.timeframe}
           </h1>
-          <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--text-secondary)]">
+          <div className="flex flex-wrap items-center gap-3 text-sm text-slate-300">
             <span
               className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                isLong ? "border-emerald-500/40 text-emerald-400" : "border-red-500/40 text-red-400"
+                isLong ? "border-emerald-500/40 text-emerald-400" : "border-rose-500/40 text-rose-400"
               }`}
             >
               {setup.direction}
             </span>
-            <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-1 text-xs font-semibold">
+            <span className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-semibold">
               {setup.type}
             </span>
-            <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-1 text-xs">
+            <span className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs">
               Confidence: {setup.confidence}%
             </span>
             <span className="text-xs">{t("detail.header.snapshotLabel")}</span>
@@ -52,8 +52,8 @@ export default function SetupDetailPage({ params }: PageProps): JSX.Element {
 
         <div className="grid gap-4 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
           <div className="space-y-4">
-            <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-lg">
-              <h2 className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-lg">
+              <h2 className="text-sm font-semibold tracking-tight text-slate-100">
                 {t("detail.tradeSetupTitle")}
               </h2>
               <div className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
@@ -63,21 +63,21 @@ export default function SetupDetailPage({ params }: PageProps): JSX.Element {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-lg">
-              <h2 className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-lg">
+              <h2 className="text-sm font-semibold tracking-tight text-slate-100">
                 {t("detail.keyMetricsTitle")}
               </h2>
-              <div className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">
+              <div className="mt-3 space-y-2 text-sm text-slate-200">
                 <MetricRow label={t("setups.event")} value={setup.eventScore} />
                 <MetricRow label={t("setups.bias")} value={setup.biasScore} />
                 <MetricRow label={t("setups.sentiment")} value={setup.sentimentScore} />
                 <MetricRow label={t("setups.balance")} value={setup.balanceScore} />
               </div>
               <div className="mt-4">
-                <div className="mb-1 text-xs text-[var(--text-secondary)]">Confidence</div>
-                <div className="h-2 w-full rounded-full bg-[var(--bg-main)]">
+                <div className="mb-1 text-xs text-slate-300">Confidence</div>
+                <div className="h-2 w-full rounded-full bg-slate-800">
                   <div
-                    className="h-full rounded-full bg-[var(--accent)]"
+                    className="h-full rounded-full bg-[#0ea5e9]"
                     style={{ width: `${setup.confidence}%` }}
                   />
                 </div>
@@ -86,11 +86,11 @@ export default function SetupDetailPage({ params }: PageProps): JSX.Element {
           </div>
 
           <div className="space-y-4">
-            <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-lg">
-              <h2 className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-lg">
+              <h2 className="text-sm font-semibold tracking-tight text-slate-100">
                 {t("detail.chartTitle")}
               </h2>
-              <div className="mt-3 flex h-64 items-center justify-center rounded-xl bg-[var(--bg-main)] text-[var(--text-secondary)]">
+              <div className="mt-3 flex h-64 items-center justify-center rounded-xl bg-slate-800 text-slate-300">
                 Chart-Preview (Demo)
               </div>
             </div>
@@ -99,25 +99,25 @@ export default function SetupDetailPage({ params }: PageProps): JSX.Element {
 
         <div className="mt-6 grid gap-4 lg:grid-cols-2">
           <TabCard title={t("detail.tab.setup")}>
-            <p className="text-sm text-[var(--text-secondary)]">
+            <p className="text-sm text-slate-300">
               Dieses Setup fokussiert sich auf klare Entry-Zonen mit definiertem Stop-Loss und Take-Profit. Der Bias
               basiert auf Marktstruktur und Event-Kontext.
             </p>
           </TabCard>
           <TabCard title={t("detail.tab.scores")}>
-            <p className="text-sm text-[var(--text-secondary)]">
+            <p className="text-sm text-slate-300">
               Bias: {setup.biasScore}% · Sentiment: {setup.sentimentScore}% · Event: {setup.eventScore}% · Balance:{" "}
               {setup.balanceScore}%.
             </p>
           </TabCard>
           <TabCard title={t("detail.tab.analysis")}>
-            <p className="text-sm text-[var(--text-secondary)]">
+            <p className="text-sm text-slate-300">
               Hier wird später eine KI-generierte Erklärung des Setups erscheinen, inklusive Markt-Story und
               Begründung der Scores.
             </p>
           </TabCard>
           <TabCard title={t("detail.tab.risk")}>
-            <p className="text-sm text-[var(--text-secondary)]">
+            <p className="text-sm text-slate-300">
               Geplante Risk-Module zeigen hier künftige Metriken wie R:R, Positionsgrößen oder Szenario-Analysen.
             </p>
           </TabCard>
@@ -136,14 +136,14 @@ type LevelProps = {
 function Level({ label, value, tone }: LevelProps): JSX.Element {
   const color =
     tone === "danger"
-      ? "text-red-400"
+      ? "text-rose-400"
       : tone === "success"
         ? "text-emerald-400"
-        : "text-[var(--text-primary)]";
+        : "text-slate-100";
 
   return (
-    <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-main)] px-3 py-2">
-      <div className="text-[0.6rem] uppercase tracking-[0.2em] text-[var(--text-secondary)]">{label}</div>
+    <div className="rounded-xl border border-slate-800 bg-slate-900 px-3 py-2">
+      <div className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-400">{label}</div>
       <div className={`mt-1 text-sm font-semibold ${color}`}>{value}</div>
     </div>
   );
@@ -156,9 +156,9 @@ type MetricRowProps = {
 
 function MetricRow({ label, value }: MetricRowProps): JSX.Element {
   return (
-    <div className="flex items-center justify-between rounded-lg bg-[var(--bg-main)] px-3 py-2">
-      <span>{label}</span>
-      <span className="font-semibold text-[var(--text-primary)]">{value}%</span>
+    <div className="flex items-center justify-between rounded-lg bg-slate-900 px-3 py-2">
+      <span className="text-slate-200">{label}</span>
+      <span className="font-semibold text-slate-100">{value}%</span>
     </div>
   );
 }
@@ -170,8 +170,8 @@ type TabCardProps = {
 
 function TabCard({ title, children }: TabCardProps): JSX.Element {
   return (
-    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-md">
-      <div className="text-sm font-semibold text-[var(--text-primary)]">{title}</div>
+    <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-md">
+      <div className="text-sm font-semibold text-slate-100">{title}</div>
       <div className="mt-2">{children}</div>
     </div>
   );

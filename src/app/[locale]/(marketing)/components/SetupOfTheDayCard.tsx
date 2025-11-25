@@ -46,7 +46,7 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
   const prefix = useMemo(() => localePrefix(pathname), [pathname]);
 
   return (
-    <section className="flex flex-col gap-6 rounded-3xl border border-[#0f1a2f] bg-[radial-gradient(circle_at_20%_20%,rgba(34,197,94,0.12),transparent),linear-gradient(135deg,#0b1325,#050914)] p-6 shadow-[0_20px_40px_rgba(0,0,0,0.35)] ring-1 ring-[rgba(34,197,94,0.18)] sm:p-7">
+    <section className="flex flex-col gap-6 rounded-3xl border border-slate-800 bg-[#0b1325] p-6 shadow-[0_10px_30px_rgba(0,0,0,0.35)] sm:p-7">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex flex-1 flex-col gap-4">
           <div className="space-y-2">
@@ -56,10 +56,10 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
             <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
               {setup.symbol.toUpperCase()} · {setup.timeframe}
             </h2>
-            <p className={`text-3xl font-bold ${isLong ? "text-emerald-400" : "text-red-400"}`}>
+            <p className={`text-3xl font-bold ${isLong ? "text-emerald-400" : "text-rose-400"}`}>
               {setup.direction}
             </p>
-            <span className="inline-flex w-fit rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-200">
+            <span className="inline-flex w-fit rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-200">
               {setup.type === "Regelbasiert" ? t("setups.type.ruleBased") : t("setups.type.ai")}
             </span>
           </div>
@@ -76,7 +76,7 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
         </div>
       </div>
 
-      <div className="mt-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+      <div className="mt-2 rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
         <div className="grid gap-4 text-xs sm:grid-cols-3">
           <LevelBox label={t("setups.entry")} value={setup.entryZone} tone="neutral" />
           <LevelBox label={t("setups.stopLoss")} value={setup.stopLoss} tone="danger" />
@@ -87,7 +87,7 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
       <div className="mt-1 flex justify-end">
         <Link
           href={`${prefix}/setups/${setup.id}`}
-          className="rounded-full bg-gradient-to-r from-[#0ea5e9] to-[#0ea5e9] px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(14,165,233,0.35)] transition hover:brightness-110"
+          className="rounded-full bg-[#0ea5e9] px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(14,165,233,0.35)] transition hover:brightness-110"
         >
           {t("setups.openAnalysis")}
         </Link>
@@ -100,17 +100,17 @@ function SmallGauge({ label, value, tone = "accent" }: GaugeProps): JSX.Element 
   const clamped = Math.max(0, Math.min(100, value));
   const display = Math.round(clamped);
   const toneColor =
-    tone === "green" ? "#22c55e" : tone === "teal" ? "#14b8a6" : tone === "neutral" ? "#64748b" : "#0ea5e9";
+    tone === "green" ? "#22c55e" : tone === "teal" ? "#14b8a6" : tone === "neutral" ? "#475569" : "#0ea5e9";
 
   return (
     <div className="flex flex-col items-center gap-2">
       <div
         className="relative flex h-16 w-16 items-center justify-center rounded-full"
         style={{
-          background: `conic-gradient(${toneColor} ${clamped}%, rgba(10,14,26,0.85) ${clamped}% 100%)`,
+          background: `conic-gradient(${toneColor} ${clamped}%, rgba(226,232,240,0.15) ${clamped}% 100%)`,
         }}
       >
-        <div className="flex h-[68%] w-[68%] items-center justify-center rounded-full bg-[#0c1324]">
+        <div className="flex h-[68%] w-[68%] items-center justify-center rounded-full bg-slate-900">
           <span className="text-xs font-semibold text-white">{display}%</span>
         </div>
       </div>
@@ -128,10 +128,10 @@ function BigGauge({ value }: GaugeProps): JSX.Element {
       <div
         className="relative flex h-36 w-36 items-center justify-center rounded-full"
         style={{
-          background: `conic-gradient(#22c55e ${clamped}%, rgba(10,14,26,0.85) ${clamped}% 100%)`,
+          background: `conic-gradient(#22c55e ${clamped}%, rgba(226,232,240,0.15) ${clamped}% 100%)`,
         }}
       >
-        <div className="flex h-[68%] w-[68%] flex-col items-center justify-center rounded-full bg-[#0c1324] shadow-inner shadow-black/30">
+        <div className="flex h-[68%] w-[68%] flex-col items-center justify-center rounded-full bg-slate-900 shadow-inner shadow-black/40">
           <span className="text-3xl font-bold text-white">{display}%</span>
           <span className="text-[0.65rem] text-slate-300">Confidence</span>
         </div>
@@ -142,8 +142,8 @@ function BigGauge({ value }: GaugeProps): JSX.Element {
 
 function LevelBox({ label, value, tone = "neutral" }: LevelBoxPropsDay): JSX.Element {
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#0a1020] px-4 py-3">
-      <div className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-300">{label}</div>
+    <div className="rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3">
+      <div className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-400">{label}</div>
       <div className={`mt-1 text-lg font-semibold ${toneClass(tone)}`}>{value}</div>
     </div>
   );

@@ -46,11 +46,11 @@ export default async function PremiumSetupsPage({ searchParams }: PageProps): Pr
   const sorted = applySort(filtered, sort, dir);
 
   return (
-    <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
-      <div className="mx-auto max-w-6xl px-4 py-8 md:py-10 space-y-6">
+    <div className="bg-[#0b0f14] text-slate-100">
+      <div className="mx-auto max-w-6xl space-y-6 px-4 py-8 md:py-10">
         <div className="space-y-3">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Premium Setups</h1>
-          <p className="max-w-2xl text-sm text-[var(--text-secondary)] sm:text-base">
+          <p className="max-w-2xl text-sm text-slate-300 sm:text-base">
             Zugriff auf alle heutigen Setups. Filter, Historie und Alerts folgen im Premium-Bereich.
           </p>
         </div>
@@ -61,15 +61,15 @@ export default async function PremiumSetupsPage({ searchParams }: PageProps): Pr
           universe={snapshot.universe}
         />
 
-        <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 text-sm text-[var(--text-secondary)]">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-200">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[var(--text-primary)] font-semibold">Events & Bias</span>
+            <span className="text-slate-100 font-semibold">Events & Bias</span>
             <span>
               Heute {events.length} relevante Events. High-Impact-Events und Bias fließen ins Ranking ein.
             </span>
             <a
               href="/perception"
-              className="rounded-full border border-[var(--border-subtle)] px-3 py-1 text-[var(--text-primary)] hover:bg-[var(--bg-main)]"
+              className="rounded-full border border-slate-700 px-3 py-1 text-slate-100 hover:bg-slate-800"
             >
               Mehr erfahren
             </a>
@@ -78,7 +78,7 @@ export default async function PremiumSetupsPage({ searchParams }: PageProps): Pr
 
         <Suspense
           fallback={
-            <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 text-sm text-[var(--text-secondary)]">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-200">
               Lädt Filter ...
             </div>
           }
