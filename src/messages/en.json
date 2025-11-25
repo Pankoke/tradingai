@@ -385,6 +385,7 @@
   "proNotice.text.aiTools": "The AI tools will become a Pro-only feature in the future. Right now, you can still use them without any limitations.",
   "proNotice.text.backtesting": "Backtesting capabilities will become an exclusive Pro feature. Currently, they are still unlocked for everyone.",
   "proNotice.text.docs": "Extended documentation and deep-dive guides will be reserved for Pro members in the future. For now, everything remains open.",
+  "proNotice.text.alreadyPro": "You already have Pro access. Thanks for upgrading!",
   "proNotice.cta": "View Pro plans",
   "backtesting.overview.title": "Backtesting",
   "backtesting.overview.subtitle": "Quick access to all backtesting modules.",

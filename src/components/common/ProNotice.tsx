@@ -4,6 +4,7 @@ import React from "react";
 import type { JSX } from "react";
 import Link from "next/link";
 import { useT } from "@/src/lib/i18n/ClientProvider";
+import { useUserPlanClient } from "@/src/lib/auth/userPlanClient";
 
 type ProNoticeContext = "setupsPremium" | "aiTools" | "backtesting" | "docs" | "default";
 
@@ -13,7 +14,8 @@ type ProNoticeProps = {
 
 export function ProNotice({ context = "default" }: ProNoticeProps): JSX.Element {
   const t = useT();
-  const textKey = `proNotice.text.${context}`;
+  const plan = useUserPlanClient();
+  const textKey = plan === "pro" ? "proNotice.text.alreadyPro" : `proNotice.text.${context}`;
 
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-sm md:p-5">

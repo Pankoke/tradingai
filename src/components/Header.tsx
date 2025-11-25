@@ -4,11 +4,13 @@ import React, { useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { ThemeToggle } from "./ThemeToggle";
 import { LanguageToggle } from "./LanguageToggle";
 import { MobileMenu } from "./MobileMenu";
 import { i18nConfig, type Locale } from "../lib/i18n/config";
 import { useT } from "../lib/i18n/ClientProvider";
+import { useUserPlanClient } from "@/src/lib/auth/userPlanClient";
 
 type NavItem = {
   href: string;
@@ -33,6 +35,7 @@ export function Header(): JSX.Element {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const t = useT();
+  const plan = useUserPlanClient();
 
   const localePrefix = useMemo(() => buildLocalePrefix(pathname), [pathname]);
 
@@ -121,6 +124,26 @@ export function Header(): JSX.Element {
         <div className="flex items-center gap-3">
           <LanguageToggle />
           <ThemeToggle />
+          <SignedOut>
+            <Link
+              href={`${localePrefix}/sign-in`}
+              className="hidden rounded-md border border-[var(--border-subtle)] bg-[var(--bg-main)] px-3 py-1.5 text-sm font-semibold text-[var(--text-primary)] transition hover:border-[var(--accent)] hover:text-[var(--text-primary)] md:inline-flex"
+            >
+              Login
+            </Link>
+            <Link
+              href={`${localePrefix}/sign-up`}
+              className="hidden rounded-md bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-black transition hover:opacity-90 md:inline-flex"
+            >
+              Sign up
+            </Link>
+          </SignedOut>
+          <SignedIn>
+            <div className="hidden items-center gap-2 md:flex">
+              <span className="text-xs font-semibold text-[var(--text-secondary)]">Plan: {plan}</span>
+              <UserButton afterSignOutUrl={`${localePrefix}/`} />
+            </div>
+          </SignedIn>
           <button
             type="button"
             className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2 text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] md:hidden"

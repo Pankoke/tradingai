@@ -4,6 +4,7 @@ import { Header } from "../../components/Header";
 import { Footer } from "../../components/Footer";
 import { ClientI18nProvider } from "../../lib/i18n/ClientProvider";
 import { i18nConfig, type Locale } from "../../lib/i18n/config";
+import { ClerkRootProvider } from "@/src/components/layout/ClerkRootProvider";
 
 type LocaleLayoutProps = {
   children: ReactNode;
@@ -26,11 +27,13 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
 
   return (
     <ClientI18nProvider messages={messages}>
-      <div className="flex min-h-screen flex-col bg-[var(--bg-main)] text-[var(--text-primary)]">
-        <Header />
-        <main className="flex-1 bg-[var(--bg-main)]">{children}</main>
-        <Footer />
-      </div>
+      <ClerkRootProvider>
+        <div className="flex min-h-screen flex-col bg-[var(--bg-main)] text-[var(--text-primary)]">
+          <Header />
+          <main className="flex-1 bg-[var(--bg-main)]">{children}</main>
+          <Footer />
+        </div>
+      </ClerkRootProvider>
     </ClientI18nProvider>
   );
 }
