@@ -15,7 +15,7 @@ export const clerkAppearance: Appearance = {
     colorTextSecondary: "var(--text-muted)",
     colorInputBackground: "var(--bg-surface)",
     colorInputText: "var(--text-primary)",
-    colorInputBorder: "var(--border-subtle)",
+    colorBorder: "var(--border-subtle)",
     borderRadius: "16px",
     fontSize: "14px",
     fontFamily: "Inter, system-ui, -apple-system, sans-serif",
