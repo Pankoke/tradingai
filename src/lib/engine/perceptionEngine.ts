@@ -4,11 +4,16 @@ import { applyBiasScoring } from "@/src/lib/engine/modules/biasScoring";
 import { applySentimentScoring } from "@/src/lib/engine/modules/sentimentScoring";
 import { applyConfidenceScoring } from "@/src/lib/engine/modules/confidenceScoring";
 import { sortSetupsForToday } from "@/src/lib/engine/modules/ranking";
+import { mockEvents } from "@/src/lib/mockEvents";
+import { mockBiasSnapshot } from "@/src/lib/mockBias";
 import { perceptionSnapshotSchema, type PerceptionSnapshot, type Setup } from "@/src/lib/engine/types";
 
 const ENGINE_VERSION = "0.1.0";
 
 export async function buildPerceptionSnapshot(): Promise<PerceptionSnapshot> {
+  const events = mockEvents;
+  const biasSnapshot = mockBiasSnapshot;
+
   const enriched: Setup[] = mockSetups.map((item) => {
     const base: Setup = {
       id: item.id,
@@ -26,8 +31,8 @@ export async function buildPerceptionSnapshot(): Promise<PerceptionSnapshot> {
       type: item.type,
     };
 
-    const eventResult = applyEventScoring(base);
-    const biasResult = applyBiasScoring(base);
+    const eventResult = applyEventScoring(base, events);
+    const biasResult = applyBiasScoring(base, biasSnapshot);
     const sentimentResult = applySentimentScoring(base);
     const confidenceResult = applyConfidenceScoring({
       baseSetup: base,

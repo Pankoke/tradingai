@@ -104,6 +104,18 @@ export function Header(): JSX.Element {
                 { href: `${localePrefix}/account/saved-setups`, label: "Saved Setups" },
               ]}
             />
+            <Link
+              href={`${localePrefix}/events`}
+              className="inline-flex h-9 items-center rounded-md px-3 transition hover:bg-[var(--bg-main)] hover:text-[var(--text-primary)]"
+            >
+              {t("nav.events")}
+            </Link>
+            <Link
+              href={`${localePrefix}/bias`}
+              className="inline-flex h-9 items-center rounded-md px-3 transition hover:bg-[var(--bg-main)] hover:text-[var(--text-primary)]"
+            >
+              {t("nav.bias")}
+            </Link>
           </nav>
         </div>
         <div className="flex items-center gap-3">
