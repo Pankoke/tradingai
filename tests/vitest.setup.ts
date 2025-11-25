@@ -8,9 +8,9 @@ type TFunction = (key: string) => string;
 declare global {
   // Vitest replaces these via vi.stubGlobal; declarations keep TypeScript happy.
   // eslint-disable-next-line no-var
-  var fetch: FetchFn;
+  var __TEST_FETCH__: FetchFn | undefined;
   // eslint-disable-next-line no-var
-  var t: TFunction;
+  var __TEST_T__: TFunction | undefined;
 }
 
 const defaultFetchImpl: FetchFn = async () =>
@@ -23,8 +23,12 @@ function createFetchMock(): MockedFunction<FetchFn> {
 }
 
 beforeEach(() => {
-  vi.stubGlobal("fetch", createFetchMock());
-  vi.stubGlobal("t", ((key: string): string => key) as TFunction);
+  const fetchMock = createFetchMock();
+  vi.stubGlobal("__TEST_FETCH__", fetchMock);
+  vi.stubGlobal("fetch", fetchMock);
+  const tMock = ((key: string): string => key) as TFunction;
+  vi.stubGlobal("__TEST_T__", tMock);
+  vi.stubGlobal("t", tMock);
 });
 
 afterEach(() => {
