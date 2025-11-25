@@ -2,8 +2,10 @@ import React, { Suspense } from "react";
 import type { JSX } from "react";
 import { SetupCard } from "../../(marketing)/components/SetupCard";
 import { PremiumControls } from "@/src/components/setups/PremiumControls";
+import { EngineMetaPanel } from "@/src/components/perception/EngineMetaPanel";
 import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
 import type { Setup } from "@/src/lib/engine/types";
+import { mockEvents } from "@/src/lib/mockEvents";
 
 type PageProps = {
   searchParams?: {
@@ -34,6 +36,7 @@ function applySort(setups: Setup[], sort: string, dir: string): Setup[] {
 export default async function PremiumSetupsPage({ searchParams }: PageProps): Promise<JSX.Element> {
   const snapshot = await buildPerceptionSnapshot();
   const { setups } = snapshot;
+  const events = mockEvents;
 
   const sort = searchParams?.sort ?? "confidence";
   const dir = searchParams?.dir ?? "desc";
@@ -50,6 +53,27 @@ export default async function PremiumSetupsPage({ searchParams }: PageProps): Pr
           <p className="max-w-2xl text-sm text-[var(--text-secondary)] sm:text-base">
             Zugriff auf alle heutigen Setups. Filter, Historie und Alerts folgen im Premium-Bereich.
           </p>
+        </div>
+
+        <EngineMetaPanel
+          generatedAt={snapshot.generatedAt}
+          version={snapshot.version}
+          universe={snapshot.universe}
+        />
+
+        <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 text-sm text-[var(--text-secondary)]">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[var(--text-primary)] font-semibold">Events & Bias</span>
+            <span>
+              Heute {events.length} relevante Events. High-Impact-Events und Bias fließen ins Ranking ein.
+            </span>
+            <a
+              href="/perception"
+              className="rounded-full border border-[var(--border-subtle)] px-3 py-1 text-[var(--text-primary)] hover:bg-[var(--bg-main)]"
+            >
+              Mehr erfahren
+            </a>
+          </div>
         </div>
 
         <Suspense

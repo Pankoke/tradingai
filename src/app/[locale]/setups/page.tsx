@@ -2,6 +2,7 @@ import React from "react";
 import type { JSX } from "react";
 import { SetupCard } from "../(marketing)/components/SetupCard";
 import { SetupOfTheDayCard } from "../(marketing)/components/SetupOfTheDayCard";
+import { EngineMetaPanel } from "@/src/components/perception/EngineMetaPanel";
 import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
 import type { Setup } from "@/src/lib/engine/types";
 
@@ -20,6 +21,12 @@ export default async function SetupsPage(): Promise<JSX.Element> {
             Setup des Tages und freie Setups als Vorschau. Mehr Details per Analyse-Button.
           </p>
         </div>
+
+        <EngineMetaPanel
+          generatedAt={snapshot.generatedAt}
+          version={snapshot.version}
+          universe={snapshot.universe}
+        />
 
         <section className="space-y-4">
           <h2 className="text-lg font-semibold tracking-tight sm:text-xl">Setup des Tages</h2>

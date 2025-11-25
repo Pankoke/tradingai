@@ -258,5 +258,13 @@
   "premium.filter": "Filter",
   "premium.filter.all": "Alle",
   "premium.filter.long": "Long",
-  "premium.filter.short": "Short"
+  "premium.filter.short": "Short",
+  "perception.engineMeta.title": "Perception Engine Status",
+  "perception.engineMeta.lastUpdated": "Zuletzt aktualisiert",
+  "perception.engineMeta.version": "Version",
+  "perception.engineMeta.universe": "Universe",
+  "perception.refresh": "Aktualisieren",
+  "premium.eventsTeaser.title": "Events & Bias",
+  "premium.eventsTeaser.text": "Heutige High-Impact-Events und Bias flie?en in das Ranking der Setups ein.",
+  "premium.eventsTeaser.linkLabel": "Mehr erfahren"
 }
