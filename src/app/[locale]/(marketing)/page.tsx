@@ -179,13 +179,13 @@ export default function MarketingPage(): JSX.Element {
             <span className="inline-flex items-center justify-center rounded-full border border-sky-200 bg-sky-50 px-4 py-1.5 text-xs font-medium text-sky-700 shadow-sm dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300 dark:shadow-lg dark:shadow-sky-500/10">
               {t("hero.badge")}
             </span>
-            <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl md:text-5xl">
+            <h1 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)] sm:text-4xl md:text-5xl dark:text-white">
               {t("hero.title")}
             </h1>
-            <p className="max-w-3xl text-sm text-slate-200 sm:text-base">
+            <p className="max-w-3xl text-sm text-[var(--text-secondary)] sm:text-base dark:text-slate-200">
               {t("hero.subtitle")}
             </p>
-            <a href="#perception-lab" className="text-sm font-semibold text-sky-400 underline underline-offset-4">
+            <a href="#perception-lab" className="text-sm font-semibold text-sky-600 underline underline-offset-4 dark:text-sky-400">
               {t("hero.linkPerception")}
             </a>
           </div>
@@ -236,7 +236,7 @@ export default function MarketingPage(): JSX.Element {
         <section className="space-y-4">
           <div className="flex items-center gap-2">
             <span className="text-lg font-semibold text-emerald-500 dark:text-emerald-300">↗</span>
-            <h2 className="text-xl font-semibold text-white">{labels.listHeadline}</h2>
+            <h2 className="text-xl font-semibold text-[var(--text-primary)] dark:text-white">{labels.listHeadline}</h2>
           </div>
           {secondarySetups.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-1 xl:grid-cols-3">
