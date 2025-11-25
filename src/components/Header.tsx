@@ -170,26 +170,26 @@ function NavDropdown({ label, items }: NavDropdownProps): JSX.Element {
     <div className="relative" onMouseEnter={handleEnter} onMouseLeave={handleLeave} onFocus={handleEnter} onBlur={handleBlur}>
       <button
         type="button"
-        className="inline-flex h-9 items-center gap-1 rounded-md px-3 text-[var(--text-secondary)] transition hover:bg-[var(--bg-main)] hover:text-[var(--text-primary)]"
+        className="inline-flex h-9 items-center gap-1 rounded-md px-3 text-slate-200 transition hover:bg-slate-800 hover:text-white"
         aria-haspopup="true"
         aria-expanded={open}
       >
         {label}
         <span className="text-[10px]" aria-hidden="true">
-          ▾
+          ▼
         </span>
       </button>
       <div
-        className={`absolute left-0 top-full z-20 mt-2 min-w-[220px] rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 shadow-lg transition ${
+        className={`absolute left-0 top-full z-30 mt-3 min-w-[220px] rounded-xl border border-slate-600 bg-slate-900/95 p-3 shadow-[0_20px_40px_rgba(0,0,0,0.4)] backdrop-blur transition ${
           open ? "visible opacity-100 translate-y-0" : "invisible opacity-0 -translate-y-1"
         }`}
       >
-        <div className="flex flex-col gap-1 text-sm">
+        <div className="flex flex-col gap-1 text-sm text-slate-100">
           {items.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="rounded-lg px-3 py-2 text-[var(--text-secondary)] transition hover:bg-[var(--bg-main)] hover:text-[var(--text-primary)]"
+              className="rounded-lg px-3 py-2 text-slate-200 transition hover:bg-slate-800 hover:text-white"
             >
               {item.label}
             </Link>
