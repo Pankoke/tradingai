@@ -385,5 +385,16 @@
   "proNotice.text.aiTools": "The AI tools will become a Pro-only feature in the future. Right now, you can still use them without any limitations.",
   "proNotice.text.backtesting": "Backtesting capabilities will become an exclusive Pro feature. Currently, they are still unlocked for everyone.",
   "proNotice.text.docs": "Extended documentation and deep-dive guides will be reserved for Pro members in the future. For now, everything remains open.",
-  "proNotice.cta": "View Pro plans"
+  "proNotice.cta": "View Pro plans",
+  "backtesting.overview.title": "Backtesting",
+  "backtesting.overview.subtitle": "Quick access to all backtesting modules.",
+  "backtesting.overview.sections.title": "Modules",
+  "backtesting.overview.links.event": "Event backtester",
+  "backtesting.overview.links.eventDesc": "Analyze market reactions to events and evaluate setups.",
+  "backtesting.overview.links.history": "Setup history",
+  "backtesting.overview.links.historyDesc": "Browse and compare historical setups.",
+  "backtesting.overview.links.replay": "Replay mode",
+  "backtesting.overview.links.replayDesc": "Replay setups in historical market conditions.",
+  "backtesting.overview.links.ai": "AI backtesting",
+  "backtesting.overview.links.aiDesc": "Planned AI-assisted backtesting environment."
 }
