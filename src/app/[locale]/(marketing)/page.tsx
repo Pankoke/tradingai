@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
+import { usePathname } from "next/navigation";
 import { Activity, BarChart3, Shield, Zap } from "lucide-react";
 import HomepageHeroSetupCard from "@/src/components/homepage/HomepageHeroSetupCard";
 import HomepageSetupCard from "@/src/components/homepage/HomepageSetupCard";
