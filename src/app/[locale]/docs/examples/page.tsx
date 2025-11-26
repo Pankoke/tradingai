@@ -5,6 +5,7 @@ import type { JSX } from "react";
 import { useT } from "../../../../lib/i18n/ClientProvider";
 import { ProNotice } from "@/src/components/common/ProNotice";
 import { useUserPlanClient } from "@/src/lib/auth/userPlanClient";
+import { AppShell } from "@/src/components/layout/AppShell";
 
 type PageProps = {
   params: { locale: string };
@@ -33,16 +34,16 @@ print(resp.json())`;
 
   if (!isPro) {
     return (
-      <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
+      <AppShell section="docs">
         <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
           <ProNotice context="docs" />
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   return (
-    <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
+    <AppShell section="docs">
       <div className="mx-auto max-w-4xl px-4 py-10 lg:px-8">
         <header className="space-y-3 pb-6">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("docs.examples.title")}</h1>
@@ -70,6 +71,6 @@ print(resp.json())`;
           <p className="text-sm text-[var(--text-secondary)] sm:text-base">{t("docs.examples.notes.body")}</p>
         </section>
       </div>
-    </div>
+    </AppShell>
   );
 }

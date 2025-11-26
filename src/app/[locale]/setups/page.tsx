@@ -3,6 +3,7 @@ import type { JSX } from "react";
 import HomepageHeroSetupCard from "@/src/components/homepage/HomepageHeroSetupCard";
 import HomepageSetupCard from "@/src/components/homepage/HomepageSetupCard";
 import { EngineMetaPanel } from "@/src/components/perception/EngineMetaPanel";
+import { AppShell } from "@/src/components/layout/AppShell";
 import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import { clamp } from "@/src/lib/math";
@@ -65,7 +66,7 @@ function buildLabels(t: (key: string) => string): {
 }
 
 function parseEntryZone(value: string): { from: number; to: number } {
-  const matches = value.match(/-?\d+(\.\d+)?/g);
+  const matches = value.match(/-?\\d+(\\.\\d+)?/g);
   if (!matches || matches.length === 0) return { from: 0, to: 0 };
   if (matches.length === 1) {
     const num = parseFloat(matches[0]);
@@ -118,69 +119,69 @@ export default async function SetupsPage({ params }: PageProps): Promise<JSX.Ele
   const freeSetups = setups.filter((s) => s.accessLevel === "free" && s.id !== setupOfTheDayId);
   const freeHomepageSetups = freeSetups.map(toHomepageSetup);
 
-  return (
-    <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
-      <div className="mx-auto max-w-6xl px-4 py-8 md:py-10 space-y-6">
-        <div className="space-y-3 pb-2">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Setups</h1>
-          <p className="max-w-2xl text-sm text-[var(--text-secondary)] sm:text-base">
-            Setup des Tages und freie Setups als Vorschau. Mehr Details per Analyse-Button.
-          </p>
-        </div>
-
-        <EngineMetaPanel generatedAt={snapshot.generatedAt} version={snapshot.version} />
-
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold tracking-tight sm:text-xl">Setup des Tages</h2>
-          {setupOfTheDay ? (
-            <HomepageHeroSetupCard
-              setup={setupOfTheDay}
-              title={t("homepage.hero.headline")}
-              weakLabel={labels.weakSetup}
-              labels={{
-                directionLong: labels.directionLong,
-                directionShort: labels.directionShort,
-                confidence: labels.confidence,
-                entry: labels.entry,
-                stop: labels.stop,
-                take: labels.take,
-                eventHigh: labels.eventHigh,
-                eventMedium: labels.eventMedium,
-                eventLow: labels.eventLow,
-                biasBullish: labels.biasBullish,
-                biasBearish: labels.biasBearish,
-                biasNeutral: labels.biasNeutral,
-                sentimentPositive: labels.sentimentPositive,
-                sentimentNegative: labels.sentimentNegative,
-                sentimentNeutral: labels.sentimentNeutral,
-                orderflowBuyers: labels.orderflowBuyers,
-                orderflowSellers: labels.orderflowSellers,
-                orderflowBalanced: labels.orderflowBalanced,
-              }}
-              ctaLabel={t("homepage.hero.cta")}
-            />
-          ) : (
-            <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 text-sm text-[var(--text-secondary)]">
-              Aktuell kein Setup des Tages verfügbar.
-            </div>
-          )}
-        </section>
-
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold tracking-tight sm:text-xl">Weitere Setups</h2>
-          {freeHomepageSetups.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {freeHomepageSetups.map((setup) => (
-                <HomepageSetupCard key={setup.id} setup={setup} weakLabel={labels.weakSetup} labels={labels} />
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 text-sm text-[var(--text-secondary)]">
-              Aktuell nur Setup des Tages verfügbar.
-            </div>
-          )}
-        </section>
+  const content = (
+    <div className="space-y-6">
+      <div className="space-y-3 pb-2">
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Setups</h1>
+        <p className="max-w-2xl text-sm text-[var(--text-secondary)] sm:text-base">
+          Setup des Tages und freie Setups als Vorschau. Mehr Details per Analyse-Button.
+        </p>
       </div>
+
+      <EngineMetaPanel generatedAt={snapshot.generatedAt} version={snapshot.version} />
+
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold tracking-tight sm:text-xl">Setup des Tages</h2>
+        {setupOfTheDay ? (
+          <HomepageHeroSetupCard
+            setup={setupOfTheDay}
+            title={t("homepage.hero.headline")}
+            weakLabel={labels.weakSetup}
+            labels={{
+              directionLong: labels.directionLong,
+              directionShort: labels.directionShort,
+              confidence: labels.confidence,
+              entry: labels.entry,
+              stop: labels.stop,
+              take: labels.take,
+              eventHigh: labels.eventHigh,
+              eventMedium: labels.eventMedium,
+              eventLow: labels.eventLow,
+              biasBullish: labels.biasBullish,
+              biasBearish: labels.biasBearish,
+              biasNeutral: labels.biasNeutral,
+              sentimentPositive: labels.sentimentPositive,
+              sentimentNegative: labels.sentimentNegative,
+              sentimentNeutral: labels.sentimentNeutral,
+              orderflowBuyers: labels.orderflowBuyers,
+              orderflowSellers: labels.orderflowSellers,
+              orderflowBalanced: labels.orderflowBalanced,
+            }}
+            ctaLabel={t("homepage.hero.cta")}
+          />
+        ) : (
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 text-sm text-[var(--text-secondary)]">
+            Aktuell kein Setup des Tages verfügbar.
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold tracking-tight sm:text-xl">Weitere Setups</h2>
+        {freeHomepageSetups.length > 0 ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {freeHomepageSetups.map((setup) => (
+              <HomepageSetupCard key={setup.id} setup={setup} weakLabel={labels.weakSetup} labels={labels} />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 text-sm text-[var(--text-secondary)]">
+            Aktuell nur Setup des Tages verfügbar.
+          </div>
+        )}
+      </section>
     </div>
   );
+
+  return <AppShell section="setups">{content}</AppShell>;
 }

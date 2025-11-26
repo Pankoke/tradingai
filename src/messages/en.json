@@ -399,5 +399,11 @@
     "backtesting.overview.links.replay":  "Replay mode",
     "backtesting.overview.links.replayDesc":  "Replay setups in historical market conditions.",
     "backtesting.overview.links.ai":  "AI backtesting",
-    "backtesting.overview.links.aiDesc":  "Planned AI-assisted backtesting environment."
+    "backtesting.overview.links.aiDesc":  "Planned AI-assisted backtesting environment.",
+    "appNav.overview":  "Overview",
+    "appNav.setups":  "Setups",
+    "appNav.aiTools":  "AI Tools",
+    "appNav.backtesting":  "Backtesting",
+    "appNav.docs":  "Docs",
+    "appNav.planLabel":  "Plan"
 }

@@ -5,6 +5,7 @@ import type { JSX } from "react";
 import { useT } from "../../../lib/i18n/ClientProvider";
 import { ProNotice } from "@/src/components/common/ProNotice";
 import { useUserPlanClient } from "@/src/lib/auth/userPlanClient";
+import { AppShell } from "@/src/components/layout/AppShell";
 
 type CardProps = {
   title: string;
@@ -46,7 +47,7 @@ export default function DocsOverviewPage(): JSX.Element {
   ];
 
   return (
-    <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
+    <AppShell section="docs">
       <div className="mx-auto max-w-4xl px-4 py-10 lg:px-8">
         <header className="space-y-3 pb-6">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("docs.overview.title")}</h1>
@@ -118,6 +119,6 @@ export default function DocsOverviewPage(): JSX.Element {
           </>
         )}
       </div>
-    </div>
+    </AppShell>
   );
 }

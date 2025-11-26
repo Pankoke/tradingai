@@ -5,6 +5,7 @@ import HomepageSetupCard from "@/src/components/homepage/HomepageSetupCard";
 import { PremiumControls } from "@/src/components/setups/PremiumControls";
 import { EngineMetaPanel } from "@/src/components/perception/EngineMetaPanel";
 import { ProNotice } from "@/src/components/common/ProNotice";
+import { AppShell } from "@/src/components/layout/AppShell";
 import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
 import type { Setup } from "@/src/lib/engine/types";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
@@ -121,17 +122,15 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
 
   if (!isPremiumOrPro) {
     return (
-      <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
-        <div className="mx-auto max-w-6xl space-y-4 px-4 py-8 md:py-10">
+      <AppShell section="setups">
+        <div className="space-y-4">
           <div className="space-y-2">
             <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Premium Setups</h1>
-            <p className="max-w-2xl text-sm text-[var(--text-secondary)] sm:text-base">
-              {t("premium.info")}
-            </p>
+            <p className="max-w-2xl text-sm text-[var(--text-secondary)] sm:text-base">{t("premium.info")}</p>
           </div>
           <ProNotice context="setupsPremium" />
         </div>
-      </div>
+      </AppShell>
     );
   }
 
@@ -150,8 +149,8 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
   const proSetups = sorted.filter((s) => s.accessLevel === "pro").map(toHomepageSetup);
 
   return (
-    <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
-      <div className="mx-auto max-w-6xl space-y-6 px-4 py-8 md:py-10">
+    <AppShell section="setups">
+      <div className="space-y-6">
         <div className="space-y-3">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Premium Setups</h1>
           <p className="max-w-2xl text-sm text-[var(--text-secondary)] sm:text-base">{t("premium.info")}</p>
@@ -162,9 +161,7 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
         <div className="rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-surface)] p-4 text-sm text-[var(--text-primary)] shadow-[0_0_0_1px_rgba(14,165,233,0.15)]">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[var(--text-primary)] font-semibold">Events & Bias</span>
-            <span>
-              Heute {events.length} relevante Events. High-Impact-Events und Bias fließen ins Ranking ein.
-            </span>
+            <span>Heute {events.length} relevante Events. High-Impact-Events und Bias fließen ins Ranking ein.</span>
             <Link
               href="/perception"
               className="rounded-full border border-[var(--border-subtle)] px-3 py-1 text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
@@ -219,6 +216,6 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
           ) : null}
         </div>
       </div>
-    </div>
+    </AppShell>
   );
 }

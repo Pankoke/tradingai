@@ -399,5 +399,11 @@
     "backtesting.overview.links.replay": "Replay-Modus",
     "backtesting.overview.links.replayDesc": "Setups im historischen Marktumfeld nachspielen.",
     "backtesting.overview.links.ai": "KI-Backtesting",
-    "backtesting.overview.links.aiDesc": "Geplante KI-gestützte Backtesting-Umgebung."
+    "backtesting.overview.links.aiDesc": "Geplante KI-gestützte Backtesting-Umgebung.",
+    "appNav.overview": "Übersicht",
+    "appNav.setups": "Setups",
+    "appNav.aiTools": "KI-Tools",
+    "appNav.backtesting": "Backtesting",
+    "appNav.docs": "Docs",
+    "appNav.planLabel": "Plan"
 }

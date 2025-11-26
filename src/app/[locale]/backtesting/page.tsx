@@ -8,6 +8,7 @@ import { ProNotice } from "@/src/components/common/ProNotice";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
 import { useUserPlanClient } from "@/src/lib/auth/userPlanClient";
+import { AppShell } from "@/src/components/layout/AppShell";
 
 function getLocaleFromPath(pathname: string): Locale {
   const segments = pathname.split("/").filter(Boolean);
@@ -29,8 +30,8 @@ export default function BacktestingOverviewPage(): JSX.Element {
   const links = [{ href: `${localePrefix}/backtesting/event`, key: "links.event" }];
 
   return (
-    <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
-      <div className="mx-auto max-w-6xl px-4 py-8 md:py-10 space-y-6">
+    <AppShell section="backtesting">
+      <div className="space-y-6">
         <header className="space-y-3">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("backtesting.overview.title")}</h1>
           <p className="text-sm text-[var(--text-secondary)] sm:text-base">{t("backtesting.overview.subtitle")}</p>
@@ -60,6 +61,6 @@ export default function BacktestingOverviewPage(): JSX.Element {
           </section>
         )}
       </div>
-    </div>
+    </AppShell>
   );
 }
