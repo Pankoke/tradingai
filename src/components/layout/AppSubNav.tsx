@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import { useUserPlanClient } from "@/src/lib/auth/userPlanClient";
+import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
 
 export type AppSection = "overview" | "setups" | "aiTools" | "backtesting" | "docs";
 
@@ -22,8 +23,16 @@ type NavItem = {
 
 function buildLocalePrefix(pathname: string): string {
   const segments = pathname.split("/").filter(Boolean);
-  const maybeLocale = segments[0] ? `/${segments[0]}` : "";
-  return maybeLocale || "/";
+  const maybeLocale = segments[0];
+  if (maybeLocale && i18nConfig.locales.includes(maybeLocale as Locale)) {
+    return `/${maybeLocale}`;
+  }
+  return `/${i18nConfig.defaultLocale}`;
+}
+
+function isPathActive(pathname: string, href: string): boolean {
+  // Exact match or nested path (e.g., /en/docs matches /en/docs/api)
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 export function AppSubNav({ activeSection }: AppSubNavProps): JSX.Element {
@@ -58,7 +67,7 @@ export function AppSubNav({ activeSection }: AppSubNavProps): JSX.Element {
         <nav className="flex items-center overflow-x-auto scrollbar-none">
           <div className="flex items-center gap-1">
             {items.map((item) => {
-              const isActive = item.section === activeSection || pathname.startsWith(item.href);
+              const isActive = item.section === activeSection || isPathActive(pathname, item.href);
               const locked = item.proOnly && !isPro;
               return (
                 <Link
