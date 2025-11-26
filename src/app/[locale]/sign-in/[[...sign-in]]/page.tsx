@@ -1,17 +1,18 @@
 "use client";
 
-import React from "react";
+import React, { use } from "react";
 import type { JSX } from "react";
 import { SignIn } from "@clerk/nextjs";
 import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
 import { clerkAppearance } from "@/src/lib/auth/clerkAppearance";
 
 type SignInPageProps = {
-  params: { locale?: string };
+  params: Promise<{ locale?: string }>;
 };
 
 export default function SignInPage({ params }: SignInPageProps): JSX.Element {
-  const localeParam = params.locale;
+  const resolvedParams = use(params);
+  const localeParam = resolvedParams.locale ?? i18nConfig.defaultLocale;
   const locale: Locale = i18nConfig.locales.includes(localeParam as Locale)
     ? (localeParam as Locale)
     : i18nConfig.defaultLocale;

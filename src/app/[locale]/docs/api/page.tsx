@@ -3,6 +3,8 @@
 import React from "react";
 import type { JSX } from "react";
 import { useT } from "../../../../lib/i18n/ClientProvider";
+import { ProNotice } from "@/src/components/common/ProNotice";
+import { useUserPlanClient } from "@/src/lib/auth/userPlanClient";
 
 type PageProps = {
   params: { locale: string };
@@ -12,6 +14,18 @@ export default function DocsApiPage({ params }: PageProps): JSX.Element {
   const t = useT();
   const { locale } = params;
   void locale;
+  const plan = useUserPlanClient();
+  const isPro = plan === "pro";
+
+  if (!isPro) {
+    return (
+      <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
+        <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
+          <ProNotice context="docs" />
+        </div>
+      </div>
+    );
+  }
 
   const endpoints = [
     t("docs.api.endpoints.setups"),

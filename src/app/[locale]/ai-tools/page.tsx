@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { useT } from "../../../lib/i18n/ClientProvider";
 import { i18nConfig, type Locale } from "../../../lib/i18n/config";
 import { ProNotice } from "@/src/components/common/ProNotice";
+import { useUserPlanClient } from "@/src/lib/auth/userPlanClient";
 
 type ToolCard = {
   key: string;
@@ -28,6 +29,8 @@ export default function AiToolsHubPage({ params }: { params: { locale: string } 
   const pathname = usePathname();
   const locale = getLocaleFromPath(pathname || `/${params.locale ?? i18nConfig.defaultLocale}`);
   const localePrefix = `/${locale}`;
+  const plan = useUserPlanClient();
+  const isPro = plan === "pro";
 
   const tools: ToolCard[] = [
     { key: "setupGenerator", href: `${localePrefix}/ai-tools/setup-generator` },
@@ -51,38 +54,44 @@ export default function AiToolsHubPage({ params }: { params: { locale: string } 
 
         <ProNotice context="aiTools" />
 
-        <div className="grid gap-6 sm:grid-cols-2">
-          {tools.map((tool) => (
-            <article
-              key={tool.key}
-              className="flex flex-col gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5 shadow-md"
-            >
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-                    {t(`aiToolsHub.tools.${tool.key}.title`)}
-                  </h2>
-                  <p className="text-sm text-[var(--text-secondary)]">
-                    {t(`aiToolsHub.tools.${tool.key}.description`)}
-                  </p>
+        {!isPro ? (
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5 text-sm text-[var(--text-secondary)] shadow-md">
+            {t("proNotice.text.aiTools")}
+          </div>
+        ) : (
+          <div className="grid gap-6 sm:grid-cols-2">
+            {tools.map((tool) => (
+              <article
+                key={tool.key}
+                className="flex flex-col gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5 shadow-md"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                      {t(`aiToolsHub.tools.${tool.key}.title`)}
+                    </h2>
+                    <p className="text-sm text-[var(--text-secondary)]">
+                      {t(`aiToolsHub.tools.${tool.key}.description`)}
+                    </p>
+                  </div>
+                  {tool.badge ? (
+                    <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-main)] px-2 py-1 text-[0.65rem] uppercase tracking-wide text-[var(--text-secondary)]">
+                      {tool.badge}
+                    </span>
+                  ) : null}
                 </div>
-                {tool.badge ? (
-                  <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-main)] px-2 py-1 text-[0.65rem] uppercase tracking-wide text-[var(--text-secondary)]">
-                    {tool.badge}
-                  </span>
-                ) : null}
-              </div>
-              <div>
-                <Link
-                  href={tool.href}
-                  className="inline-flex items-center justify-center rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-black hover:opacity-90"
-                >
-                  {t("aiToolsHub.openTool")}
-                </Link>
-              </div>
-            </article>
-          ))}
-        </div>
+                <div>
+                  <Link
+                    href={tool.href}
+                    className="inline-flex items-center justify-center rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-black hover:opacity-90"
+                  >
+                    {t("aiToolsHub.openTool")}
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

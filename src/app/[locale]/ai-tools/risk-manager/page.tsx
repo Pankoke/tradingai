@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import type { JSX } from "react";
 import { useT } from "../../../../lib/i18n/ClientProvider";
+import { ProNotice } from "@/src/components/common/ProNotice";
+import { useUserPlanClient } from "@/src/lib/auth/userPlanClient";
 
 type RiskFormState = {
   accountSize: string;
@@ -24,7 +26,8 @@ export default function RiskManagerPage({ params }: { params: { locale: string }
   const t = useT();
   const { locale } = params;
   void locale;
-
+  const plan = useUserPlanClient();
+  const isPro = plan === "pro";
   const [form, setForm] = useState<RiskFormState>({
     accountSize: "",
     riskPercent: "",
@@ -50,6 +53,16 @@ export default function RiskManagerPage({ params }: { params: { locale: string }
     const calculation = calculateRisk({ accountSize, riskPercent, stopDistance, leverage });
     setResult(calculation);
   };
+
+  if (!isPro) {
+    return (
+      <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
+        <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
+          <ProNotice context="aiTools" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">

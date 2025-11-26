@@ -3,6 +3,8 @@
 import React, { useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useT } from "../../../../lib/i18n/ClientProvider";
+import { ProNotice } from "@/src/components/common/ProNotice";
+import { useUserPlanClient } from "@/src/lib/auth/userPlanClient";
 
 type EventFormState = {
   event: EventOption;
@@ -36,7 +38,8 @@ export default function EventInterpreterPage({ params }: { params: { locale: str
   const t = useT();
   const { locale } = params;
   void locale;
-
+  const plan = useUserPlanClient();
+  const isPro = plan === "pro";
   const [form, setForm] = useState<EventFormState>({
     event: "Zinserhoehung",
     asset: "BTCUSD",
@@ -44,7 +47,6 @@ export default function EventInterpreterPage({ params }: { params: { locale: str
     timing: "24h",
   });
   const [result, setResult] = useState<EventInterpretation | null>(null);
-
   const biasStyle = useMemo(() => {
     if (!result) return "";
     if (result.bias === "Bullish") return "text-emerald-400 border-emerald-500/50 bg-emerald-500/10";
@@ -66,6 +68,16 @@ export default function EventInterpreterPage({ params }: { params: { locale: str
     });
     setResult(generated);
   };
+
+  if (!isPro) {
+    return (
+      <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
+        <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
+          <ProNotice context="aiTools" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">

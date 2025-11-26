@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import type { JSX } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -15,11 +15,7 @@ import { useUserPlanClient } from "@/src/lib/auth/userPlanClient";
 type NavItem = {
   href: string;
   label: string;
-};
-
-type NavDropdownProps = {
-  label: string;
-  items: NavItem[];
+  locked?: boolean;
 };
 
 function buildLocalePrefix(pathname: string): string {
@@ -36,8 +32,17 @@ export function Header(): JSX.Element {
   const pathname = usePathname();
   const t = useT();
   const plan = useUserPlanClient();
+  const isPro = plan === "pro";
 
   const localePrefix = useMemo(() => buildLocalePrefix(pathname), [pathname]);
+
+  const navItems: NavItem[] = [
+    { href: `${localePrefix}/setups`, label: t("nav.setups") },
+    { href: `${localePrefix}/ai-tools`, label: t("nav.kiTools"), locked: !isPro },
+    { href: `${localePrefix}/backtesting`, label: t("nav.backtesting"), locked: !isPro },
+    { href: `${localePrefix}/docs`, label: t("nav.docs"), locked: !isPro },
+    { href: `${localePrefix}/pricing`, label: t("nav.pricing") },
+  ];
 
   return (
     <header className="border-b border-[var(--border-subtle)] bg-[var(--bg-surface)]/95 backdrop-blur">
@@ -46,79 +51,27 @@ export function Header(): JSX.Element {
           <Link href={`${localePrefix}/`} className="text-sm font-extrabold tracking-tight text-[var(--text-primary)]">
             TradingAI
           </Link>
-          <nav className="hidden items-center gap-1 text-sm text-[var(--text-secondary)] md:flex">
-            <Link
-              href={`${localePrefix}/`}
-              className="inline-flex h-9 items-center rounded-md px-3 transition hover:bg-[var(--bg-main)] hover:text-[var(--text-primary)]"
-            >
-              {t("nav.home")}
-            </Link>
-            <NavDropdown
-              label={t("nav.setups")}
-              items={[
-                { href: `${localePrefix}/setups`, label: "Setup of the Day" },
-                { href: `${localePrefix}/setups/premium`, label: "Premium Setups" },
-                { href: `${localePrefix}/perception`, label: "Perception Lab" },
-              ]}
-            />
-            <NavDropdown
-              label={t("nav.backtesting")}
-              items={[
-                { href: `${localePrefix}/backtesting/event`, label: "Event-Backtester" },
-                { href: `${localePrefix}/backtesting/history`, label: "Setup-Historie" },
-                { href: `${localePrefix}/backtesting/replay`, label: "Replay-Modus" },
-                { href: `${localePrefix}/backtesting/ai`, label: "KI-Backtesting" },
-              ]}
-            />
-            <NavDropdown
-              label={t("nav.kiTools")}
-              items={[
-                { href: `${localePrefix}/ai-tools`, label: t("nav.kiTools") },
-                { href: `${localePrefix}/ai-tools/setup-generator`, label: "Setup Generator" },
-                { href: `${localePrefix}/ai-tools/market-summary`, label: "Market Summary AI" },
-                { href: `${localePrefix}/ai-tools/event-interpreter`, label: "Event Interpreter" },
-                { href: `${localePrefix}/ai-tools/risk-manager`, label: "Risk Manager" },
-                { href: `${localePrefix}/ai-tools/screenshot-analysis`, label: "Screenshot-Analyse" },
-              ]}
-            />
-            <Link
-              href={`${localePrefix}/pricing`}
-              className="inline-flex h-9 items-center rounded-md px-3 transition hover:bg-[var(--bg-main)] hover:text-[var(--text-primary)]"
-            >
-              {t("nav.pricing")}
-            </Link>
-            <NavDropdown
-              label={t("nav.docs")}
-              items={[
-                { href: `${localePrefix}/docs`, label: t("docs.overview.title") },
-                { href: `${localePrefix}/docs/api`, label: "API" },
-                { href: `${localePrefix}/docs/webhooks`, label: "Webhooks" },
-                { href: `${localePrefix}/docs/sdks`, label: "SDKs" },
-                { href: `${localePrefix}/docs/examples`, label: "Beispiele" },
-              ]}
-            />
-            <NavDropdown
-              label={t("nav.account")}
-              items={[
-                { href: `${localePrefix}/account/profile`, label: "Profil" },
-                { href: `${localePrefix}/account/api-keys`, label: "API Keys" },
-                { href: `${localePrefix}/account/billing`, label: "Billing" },
-                { href: `${localePrefix}/account/alerts`, label: "Alerts" },
-                { href: `${localePrefix}/account/saved-setups`, label: "Saved Setups" },
-              ]}
-            />
-            <Link
-              href={`${localePrefix}/events`}
-              className="inline-flex h-9 items-center rounded-md px-3 transition hover:bg-[var(--bg-main)] hover:text-[var(--text-primary)]"
-            >
-              {t("nav.events")}
-            </Link>
-            <Link
-              href={`${localePrefix}/bias`}
-              className="inline-flex h-9 items-center rounded-md px-3 transition hover:bg-[var(--bg-main)] hover:text-[var(--text-primary)]"
-            >
-              {t("nav.bias")}
-            </Link>
+          <nav className="hidden items-center gap-1 text-sm md:flex">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`inline-flex h-9 items-center rounded-md px-3 transition hover:bg-[var(--bg-main)] ${
+                  item.locked
+                    ? "text-[var(--text-secondary)] hover:text-[var(--text-secondary)]"
+                    : "text-[var(--text-primary)] hover:text-[var(--text-primary)]"
+                }`}
+              >
+                <span className="inline-flex items-center gap-1">
+                  <span>{item.label}</span>
+                  {item.locked ? (
+                    <span aria-hidden="true" className="text-xs">
+                      {"\u{1f512}"}
+                    </span>
+                  ) : null}
+                </span>
+              </Link>
+            ))}
           </nav>
         </div>
         <div className="flex items-center gap-3">
@@ -161,64 +114,5 @@ export function Header(): JSX.Element {
       </div>
       <MobileMenu open={mobileOpen} onClose={() => setMobileOpen(false)} />
     </header>
-  );
-}
-
-function NavDropdown({ label, items }: NavDropdownProps): JSX.Element {
-  const [open, setOpen] = useState(false);
-  const closeTimer = useRef<number | null>(null);
-
-  const clearTimer = (): void => {
-    if (closeTimer.current) {
-      window.clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
-  };
-
-  const handleEnter = (): void => {
-    clearTimer();
-    setOpen(true);
-  };
-
-  const handleLeave = (): void => {
-    clearTimer();
-    closeTimer.current = window.setTimeout(() => setOpen(false), 120);
-  };
-
-  const handleBlur = (): void => {
-    handleLeave();
-  };
-
-  return (
-    <div className="relative" onMouseEnter={handleEnter} onMouseLeave={handleLeave} onFocus={handleEnter} onBlur={handleBlur}>
-      <button
-        type="button"
-        className="inline-flex h-9 items-center gap-1 rounded-md px-3 text-slate-200 transition hover:bg-slate-800 hover:text-white"
-        aria-haspopup="true"
-        aria-expanded={open}
-      >
-        {label}
-        <span className="text-[10px]" aria-hidden="true">
-          ▼
-        </span>
-      </button>
-      <div
-        className={`absolute left-0 top-full z-30 mt-3 min-w-[220px] rounded-xl border border-slate-600 bg-slate-900/95 p-3 shadow-[0_20px_40px_rgba(0,0,0,0.4)] backdrop-blur transition ${
-          open ? "visible opacity-100 translate-y-0" : "invisible opacity-0 -translate-y-1"
-        }`}
-      >
-        <div className="flex flex-col gap-1 text-sm text-slate-100">
-          {items.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-lg px-3 py-2 text-slate-200 transition hover:bg-slate-800 hover:text-white"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </div>
-      </div>
-    </div>
   );
 }

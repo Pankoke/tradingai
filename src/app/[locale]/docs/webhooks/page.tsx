@@ -3,6 +3,8 @@
 import React from "react";
 import type { JSX } from "react";
 import { useT } from "../../../../lib/i18n/ClientProvider";
+import { ProNotice } from "@/src/components/common/ProNotice";
+import { useUserPlanClient } from "@/src/lib/auth/userPlanClient";
 
 type PageProps = {
   params: { locale: string };
@@ -12,6 +14,8 @@ export default function DocsWebhooksPage({ params }: PageProps): JSX.Element {
   const t = useT();
   const { locale } = params;
   void locale;
+  const plan = useUserPlanClient();
+  const isPro = plan === "pro";
 
   const steps = [
     t("docs.webhooks.howItWorks.step1"),
@@ -20,6 +24,16 @@ export default function DocsWebhooksPage({ params }: PageProps): JSX.Element {
   ];
 
   const events = [t("docs.webhooks.events.setupsCreated"), t("docs.webhooks.events.scoreChanged")];
+
+  if (!isPro) {
+    return (
+      <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
+        <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
+          <ProNotice context="docs" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">

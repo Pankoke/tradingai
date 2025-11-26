@@ -4,6 +4,7 @@ import React from "react";
 import type { JSX } from "react";
 import { useT } from "../../../lib/i18n/ClientProvider";
 import { ProNotice } from "@/src/components/common/ProNotice";
+import { useUserPlanClient } from "@/src/lib/auth/userPlanClient";
 
 type CardProps = {
   title: string;
@@ -12,6 +13,8 @@ type CardProps = {
 
 export default function DocsOverviewPage(): JSX.Element {
   const t = useT();
+  const plan = useUserPlanClient();
+  const isPro = plan === "pro";
 
   const whatYouCanDo: CardProps[] = [
     { title: t("docs.overview.whatYouCanDo.setups.title"), body: t("docs.overview.whatYouCanDo.setups.body") },
@@ -52,60 +55,68 @@ export default function DocsOverviewPage(): JSX.Element {
 
         <ProNotice context="docs" />
 
-        <section className="space-y-3 pb-8">
-          <h2 className="text-lg font-semibold tracking-tight sm:text-xl">{t("docs.overview.whatYouCanDo.title")}</h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            {whatYouCanDo.map((item) => (
-              <article
-                key={item.title}
-                className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-md"
-              >
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">{item.title}</h3>
-                <p className="mt-2 text-xs text-[var(--text-secondary)] sm:text-sm">{item.body}</p>
-              </article>
-            ))}
+        {!isPro ? (
+          <div className="mt-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 text-sm text-[var(--text-secondary)] shadow-sm">
+            {t("proNotice.text.docs")}
           </div>
-        </section>
+        ) : (
+          <>
+            <section className="space-y-3 pb-8">
+              <h2 className="text-lg font-semibold tracking-tight sm:text-xl">{t("docs.overview.whatYouCanDo.title")}</h2>
+              <div className="grid gap-4 md:grid-cols-2">
+                {whatYouCanDo.map((item) => (
+                  <article
+                    key={item.title}
+                    className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-md"
+                  >
+                    <h3 className="text-sm font-semibold text-[var(--text-primary)]">{item.title}</h3>
+                    <p className="mt-2 text-xs text-[var(--text-secondary)] sm:text-sm">{item.body}</p>
+                  </article>
+                ))}
+              </div>
+            </section>
 
-        <section className="space-y-3 pb-8">
-          <h2 className="text-lg font-semibold tracking-tight sm:text-xl">{t("docs.overview.quickstart.title")}</h2>
-          <ol className="space-y-3 text-sm text-[var(--text-secondary)] sm:text-base">
-            {quickstart.map((step) => (
-              <li key={step.title} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3">
-                <div className="font-semibold text-[var(--text-primary)]">{step.title}</div>
-                <div className="text-xs sm:text-sm">{step.body}</div>
-              </li>
-            ))}
-          </ol>
-        </section>
+            <section className="space-y-3 pb-8">
+              <h2 className="text-lg font-semibold tracking-tight sm:text-xl">{t("docs.overview.quickstart.title")}</h2>
+              <ol className="space-y-3 text-sm text-[var(--text-secondary)] sm:text-base">
+                {quickstart.map((step) => (
+                  <li key={step.title} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3">
+                    <div className="font-semibold text-[var(--text-primary)]">{step.title}</div>
+                    <div className="text-xs sm:text-sm">{step.body}</div>
+                  </li>
+                ))}
+              </ol>
+            </section>
 
-        <section className="space-y-3 pb-8">
-          <h2 className="text-lg font-semibold tracking-tight sm:text-xl">{t("docs.overview.concepts.title")}</h2>
-          <ul className="space-y-2 text-sm text-[var(--text-secondary)] sm:text-base">
-            {concepts.map((item) => (
-              <li key={item} className="flex items-start gap-2">
-                <span aria-hidden="true" className="mt-0.5 text-[var(--accent)]">
-                  •
-                </span>
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
+            <section className="space-y-3 pb-8">
+              <h2 className="text-lg font-semibold tracking-tight sm:text-xl">{t("docs.overview.concepts.title")}</h2>
+              <ul className="space-y-2 text-sm text-[var(--text-secondary)] sm:text-base">
+                {concepts.map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <span aria-hidden="true" className="mt-0.5 text-[var(--accent)]">
+                      •
+                    </span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
 
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold tracking-tight sm:text-xl">{t("docs.overview.limits.title")}</h2>
-          <ul className="space-y-2 text-sm text-[var(--text-secondary)] sm:text-base">
-            {limits.map((item) => (
-              <li key={item} className="flex items-start gap-2">
-                <span aria-hidden="true" className="mt-0.5 text-[var(--accent)]">
-                  •
-                </span>
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
+            <section className="space-y-3">
+              <h2 className="text-lg font-semibold tracking-tight sm:text-xl">{t("docs.overview.limits.title")}</h2>
+              <ul className="space-y-2 text-sm text-[var(--text-secondary)] sm:text-base">
+                {limits.map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <span aria-hidden="true" className="mt-0.5 text-[var(--accent)]">
+                      •
+                    </span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </>
+        )}
       </div>
     </div>
   );

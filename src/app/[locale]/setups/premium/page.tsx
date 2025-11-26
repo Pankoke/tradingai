@@ -8,6 +8,7 @@ import { ProNotice } from "@/src/components/common/ProNotice";
 import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
 import type { Setup } from "@/src/lib/engine/types";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
+import { getUserPlanServer } from "@/src/lib/auth/userPlanServer";
 import { clamp } from "@/src/lib/math";
 import { mockEvents } from "@/src/lib/mockEvents";
 import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
@@ -115,6 +116,25 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
   const t = (key: string): string => messages[key] ?? key;
   const labels = buildLabels(t);
 
+  const plan = await getUserPlanServer();
+  const isPremiumOrPro = plan === "premium" || plan === "pro";
+
+  if (!isPremiumOrPro) {
+    return (
+      <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
+        <div className="mx-auto max-w-6xl space-y-4 px-4 py-8 md:py-10">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Premium Setups</h1>
+            <p className="max-w-2xl text-sm text-[var(--text-secondary)] sm:text-base">
+              {t("premium.info")}
+            </p>
+          </div>
+          <ProNotice context="setupsPremium" />
+        </div>
+      </div>
+    );
+  }
+
   const snapshot = await buildPerceptionSnapshot();
   const { setups } = snapshot;
   const events = mockEvents;
@@ -163,8 +183,6 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
         >
           <PremiumControls currentSort={sort} currentDir={dir} currentFilter={filter} />
         </Suspense>
-
-        <ProNotice context="setupsPremium" />
 
         <div className="space-y-8">
           {freeSetups.length > 0 ? (

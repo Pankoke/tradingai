@@ -3,6 +3,8 @@
 import React, { useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useT } from "../../../../lib/i18n/ClientProvider";
+import { ProNotice } from "@/src/components/common/ProNotice";
+import { useUserPlanClient } from "@/src/lib/auth/userPlanClient";
 
 type FormState = {
   asset: AssetOption;
@@ -27,14 +29,14 @@ export default function MarketSummaryPage({ params }: { params: { locale: string
   const t = useT();
   const { locale } = params;
   void locale;
-
+  const plan = useUserPlanClient();
+  const isPro = plan === "pro";
   const [form, setForm] = useState<FormState>({
     asset: "BTCUSD",
     range: "24h",
     mode: "global",
   });
   const [result, setResult] = useState<MarketSummaryResult | null>(null);
-
   const sentimentStyles = useMemo(() => {
     if (!result) return "";
     if (result.sentiment === "Bullish") return "text-emerald-400 border-emerald-500/50 bg-emerald-500/10";
@@ -55,6 +57,16 @@ export default function MarketSummaryPage({ params }: { params: { locale: string
     });
     setResult(generated);
   };
+
+  if (!isPro) {
+    return (
+      <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
+        <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
+          <ProNotice context="aiTools" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">

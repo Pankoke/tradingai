@@ -3,6 +3,8 @@
 import React, { useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useT } from "../../../../lib/i18n/ClientProvider";
+import { ProNotice } from "@/src/components/common/ProNotice";
+import { useUserPlanClient } from "@/src/lib/auth/userPlanClient";
 
 type Direction = "Long" | "Short";
 
@@ -37,7 +39,8 @@ export default function SetupGeneratorPage({ params }: { params: { locale: strin
   const t = useT();
   const { locale } = params;
   void locale;
-
+  const plan = useUserPlanClient();
+  const isPro = plan === "pro";
   const [form, setForm] = useState<FormState>({
     asset: "BTCUSD",
     timeframe: "H1",
@@ -68,6 +71,16 @@ export default function SetupGeneratorPage({ params }: { params: { locale: strin
         : "text-red-400 border-red-400/50 bg-red-500/10",
     [result?.direction],
   );
+
+  if (!isPro) {
+    return (
+      <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
+        <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
+          <ProNotice context="aiTools" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">

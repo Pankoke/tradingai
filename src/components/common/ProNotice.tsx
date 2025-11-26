@@ -16,17 +16,15 @@ export function ProNotice({ context = "default" }: ProNoticeProps): JSX.Element 
   const t = useT();
   const plan = useUserPlanClient();
   const isProUser = plan === "pro";
-  const baseTextKey = context ? `proNotice.text.${context}` : "proNotice.text.default";
+  const baseTextKey = `proNotice.text.${context}`;
   const textKey = isProUser ? `${baseTextKey}.pro` : baseTextKey;
   const titleKey = isProUser ? "proNotice.titleProUser" : "proNotice.title";
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-sm md:p-5">
-      <div className="text-sm font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
-        {t(titleKey)}
-      </div>
+    <div className="flex flex-col gap-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-sm sm:p-5">
+      <div className="text-sm font-semibold text-[var(--text-primary)] sm:text-base">{t(titleKey)}</div>
       <p className="text-sm text-[var(--text-secondary)] md:text-base">{t(textKey)}</p>
-      <div>
+      <div className="pt-1">
         <Link
           href="/pricing"
           className="inline-flex items-center text-sm font-semibold text-[var(--accent)] underline underline-offset-4 hover:opacity-90"
