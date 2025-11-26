@@ -5,6 +5,7 @@ import type { JSX } from "react";
 import { useT } from "../../../../lib/i18n/ClientProvider";
 import { ProNotice } from "@/src/components/common/ProNotice";
 import { useUserPlanClient } from "@/src/lib/auth/userPlanClient";
+import { AppShell } from "@/src/components/layout/AppShell";
 
 export default function ScreenshotAnalysisPage({ params }: { params: { locale: string } }): JSX.Element {
   const t = useT();
@@ -15,16 +16,16 @@ export default function ScreenshotAnalysisPage({ params }: { params: { locale: s
 
   if (!isPro) {
     return (
-      <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
+      <AppShell section="aiTools">
         <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
           <ProNotice context="aiTools" />
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   return (
-    <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
+    <AppShell section="aiTools">
       <div className="mx-auto max-w-4xl px-4 py-10 space-y-8">
         <header className="space-y-3">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("screenshotAnalysis.title")}</h1>
@@ -41,6 +42,6 @@ export default function ScreenshotAnalysisPage({ params }: { params: { locale: s
           </div>
         </section>
       </div>
-    </div>
+    </AppShell>
   );
 }

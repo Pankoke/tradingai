@@ -8,6 +8,7 @@ import { useT } from "../../../lib/i18n/ClientProvider";
 import { i18nConfig, type Locale } from "../../../lib/i18n/config";
 import { ProNotice } from "@/src/components/common/ProNotice";
 import { useUserPlanClient } from "@/src/lib/auth/userPlanClient";
+import { AppShell } from "@/src/components/layout/AppShell";
 
 type ToolCard = {
   key: string;
@@ -45,8 +46,8 @@ export default function AiToolsHubPage({ params }: { params: { locale: string } 
   ];
 
   return (
-    <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
-      <div className="mx-auto max-w-5xl px-4 py-10 space-y-8">
+    <AppShell section="aiTools">
+      <div className="mx-auto max-w-5xl space-y-8">
         <header className="space-y-3">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("aiToolsHub.title")}</h1>
           <p className="text-sm text-[var(--text-secondary)] sm:text-base">{t("aiToolsHub.intro")}</p>
@@ -93,6 +94,6 @@ export default function AiToolsHubPage({ params }: { params: { locale: string } 
           </div>
         )}
       </div>
-    </div>
+    </AppShell>
   );
 }

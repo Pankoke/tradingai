@@ -5,6 +5,7 @@ import type { JSX } from "react";
 import { useT } from "../../../../lib/i18n/ClientProvider";
 import { ProNotice } from "@/src/components/common/ProNotice";
 import { useUserPlanClient } from "@/src/lib/auth/userPlanClient";
+import { AppShell } from "@/src/components/layout/AppShell";
 
 type FormState = {
   asset: AssetOption;
@@ -60,16 +61,16 @@ export default function MarketSummaryPage({ params }: { params: { locale: string
 
   if (!isPro) {
     return (
-      <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
+      <AppShell section="aiTools">
         <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
           <ProNotice context="aiTools" />
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   return (
-    <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
+    <AppShell section="aiTools">
       <div className="mx-auto max-w-4xl px-4 py-10 space-y-8">
         <header className="space-y-3">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("marketSummary.title")}</h1>
@@ -151,7 +152,7 @@ export default function MarketSummaryPage({ params }: { params: { locale: string
           </section>
         ) : null}
       </div>
-    </div>
+    </AppShell>
   );
 }
 
