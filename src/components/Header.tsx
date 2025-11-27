@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import type { JSX } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -9,18 +9,9 @@ import { ThemeToggle } from "./ThemeToggle";
 import { LanguageToggle } from "./LanguageToggle";
 import { MobileMenu } from "./MobileMenu";
 import { i18nConfig, type Locale } from "../lib/i18n/config";
-import { useT } from "../lib/i18n/ClientProvider";
 import { useUserPlanClient } from "@/src/lib/auth/userPlanClient";
 
-type NavItem = {
-  href: string;
-  label: string;
-};
-
-type NavDropdownProps = {
-  label: string;
-  items: NavItem[];
-};
+type Plan = "free" | "premium" | "pro";
 
 function buildLocalePrefix(pathname: string): string {
   const segments = pathname.split("/").filter(Boolean);
@@ -31,194 +22,324 @@ function buildLocalePrefix(pathname: string): string {
   return `/${i18nConfig.defaultLocale}`;
 }
 
+function getPlanFlags(plan: Plan | null): { isFree: boolean; isPremium: boolean; isPro: boolean } {
+  if (plan === "premium") {
+    return { isFree: false, isPremium: true, isPro: false };
+  }
+  if (plan === "pro") {
+    return { isFree: false, isPremium: false, isPro: true };
+  }
+  // treat null/unknown as free
+  return { isFree: true, isPremium: false, isPro: false };
+}
+
 export function Header(): JSX.Element {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
-  const t = useT();
-  const plan = useUserPlanClient();
+  const plan = useUserPlanClient() as Plan | null;
 
   const localePrefix = useMemo(() => buildLocalePrefix(pathname), [pathname]);
+  const { isFree, isPremium, isPro } = getPlanFlags(plan);
+
+  const planLabel = plan ?? "free";
 
   return (
-    <header className="border-b border-[var(--border-subtle)] bg-[var(--bg-surface)]/95 backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-        <div className="flex items-center gap-5">
-          <Link href={`${localePrefix}/`} className="text-sm font-extrabold tracking-tight text-[var(--text-primary)]">
+    <header className="sticky top-0 z-40 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)]/80 backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
+        {/* LEFT: Logo + Desktop Navigation */}
+        <div className="flex items-center gap-6">
+          <Link
+            href={`${localePrefix}/`}
+            className="text-lg font-extrabold tracking-tight text-[var(--text-primary)]"
+          >
             TradingAI
           </Link>
-          <nav className="hidden items-center gap-1 text-sm text-[var(--text-secondary)] md:flex">
-            <Link
-              href={`${localePrefix}/`}
-              className="inline-flex h-9 items-center rounded-md px-3 transition hover:bg-[var(--bg-main)] hover:text-[var(--text-primary)]"
-            >
-              {t("nav.home")}
-            </Link>
-            <NavDropdown
-              label={t("nav.setups")}
-              items={[
-                { href: `${localePrefix}/setups`, label: "Setup of the Day" },
-                { href: `${localePrefix}/setups/premium`, label: "Premium Setups" },
-                { href: `${localePrefix}/perception`, label: "Perception Lab" },
-              ]}
-            />
-            <NavDropdown
-              label={t("nav.backtesting")}
-              items={[
-                { href: `${localePrefix}/backtesting/event`, label: "Event-Backtester" },
-                { href: `${localePrefix}/backtesting/history`, label: "Setup-Historie" },
-                { href: `${localePrefix}/backtesting/replay`, label: "Replay-Modus" },
-                { href: `${localePrefix}/backtesting/ai`, label: "KI-Backtesting" },
-              ]}
-            />
-            <NavDropdown
-              label={t("nav.kiTools")}
-              items={[
-                { href: `${localePrefix}/ai-tools`, label: t("nav.kiTools") },
-                { href: `${localePrefix}/ai-tools/setup-generator`, label: "Setup Generator" },
-                { href: `${localePrefix}/ai-tools/market-summary`, label: "Market Summary AI" },
-                { href: `${localePrefix}/ai-tools/event-interpreter`, label: "Event Interpreter" },
-                { href: `${localePrefix}/ai-tools/risk-manager`, label: "Risk Manager" },
-                { href: `${localePrefix}/ai-tools/screenshot-analysis`, label: "Screenshot-Analyse" },
-              ]}
-            />
+
+          {/* Desktop Navigation */}
+          <nav className="hidden items-center gap-2 text-sm md:flex">
+            {/* Products dropdown */}
+            <div className="relative group">
+              <button
+                type="button"
+                className="inline-flex items-center rounded-full px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] transition hover:bg-white/5 hover:text-[var(--text-primary)]"
+              >
+                <span>Products</span>
+                <span className="ml-1 text-[10px]">▾</span>
+              </button>
+
+              {/* Products Panel */}
+              <div className="pointer-events-none absolute left-0 top-full mt-3 w-[540px] translate-y-1 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-main)]/95 p-4 opacity-0 shadow-2xl shadow-black/50 ring-1 ring-black/40 transition-all group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100">
+                <div className="grid gap-4 md:grid-cols-2">
+                  {/* Column 1: Setups & Perception */}
+                  <div className="rounded-xl bg-white/5 p-3">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
+                      Setups &amp; Perception
+                    </p>
+                    <ul className="space-y-2 text-sm">
+                      <li>
+                        <Link
+                          href={`${localePrefix}/setups`}
+                          className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
+                        >
+                          <div className="font-medium">Free Setups</div>
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            Setup des Tages und freie Setups als Vorschau.
+                          </p>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          href={`${localePrefix}/setups/premium`}
+                          className="group/link block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
+                        >
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">Premium Setups</span>
+                            {isFree ? (
+                              <span className="rounded-full bg-[var(--accent)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent)]">
+                                Premium
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            Alle täglichen Setups für aktive Trader.
+                          </p>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          href={`${localePrefix}/premium/perception`}
+                          className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
+                        >
+                          <div className="font-medium">Perception Engine Status</div>
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            Überblick über Snapshot, Version und Universe.
+                          </p>
+                        </Link>
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* Column 2: AI Tools & Backtesting */}
+                  <div className="rounded-xl bg-white/5 p-3">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
+                      AI Tools &amp; Backtesting
+                    </p>
+                    <ul className="space-y-2 text-sm">
+                      <li>
+                        <Link
+                          href={`${localePrefix}/ai-tools`}
+                          className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
+                        >
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">AI Tools</span>
+                            {!isPro ? (
+                              <span className="rounded-full bg-[var(--accent)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent)]">
+                                Pro
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            KI-Module für Event-Interpretation, Marktanalysen und Risiko.
+                          </p>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          href={`${localePrefix}/backtesting`}
+                          className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
+                        >
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">Backtesting</span>
+                            {!isPro ? (
+                              <span className="rounded-full bg-[var(--accent)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent)]">
+                                Pro
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            Geplante Module für Event-Replays, Historie und KI-Backtests.
+                          </p>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          href={`${localePrefix}/docs`}
+                          className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
+                        >
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">Docs</span>
+                            {!isPro ? (
+                              <span className="rounded-full bg-[var(--accent)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent)]">
+                                Pro
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            API &amp; Integrationsdokumentation für Pro-User.
+                          </p>
+                        </Link>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Resources dropdown */}
+            <div className="relative group">
+              <button
+                type="button"
+                className="inline-flex items-center rounded-full px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] transition hover:bg-white/5 hover:text-[var(--text-primary)]"
+              >
+                <span>Resources</span>
+                <span className="ml-1 text-[10px]">▾</span>
+              </button>
+
+              {/* Resources Panel */}
+              <div className="pointer-events-none absolute left-0 top-full mt-3 w-[520px] translate-y-1 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-main)]/95 p-4 opacity-0 shadow-2xl shadow-black/50 ring-1 ring-black/40 transition-all group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100">
+                <div className="grid gap-4 md:grid-cols-2">
+                  {/* Column 1: Getting started */}
+                  <div className="rounded-xl bg-white/5 p-3">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
+                      Getting started
+                    </p>
+                    <ul className="space-y-2 text-sm">
+                      <li>
+                        <Link
+                          href={`${localePrefix}/how-it-works`}
+                          className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
+                        >
+                          <div className="font-medium">How it works</div>
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            Wie das Perception Lab Setups aus Regeln &amp; KI erzeugt.
+                          </p>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          href={`${localePrefix}/how-it-works/perception`}
+                          className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
+                        >
+                          <div className="font-medium">Perception Lab Deep Dive</div>
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            Detaillierte Erklärung der Analyse-Module und Scores.
+                          </p>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          href={`${localePrefix}/pricing`}
+                          className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
+                        >
+                          <div className="font-medium">Free vs. Premium vs. Pro</div>
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            Vergleiche Features, Setups und API-Zugriff.
+                          </p>
+                        </Link>
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* Column 2: Market context */}
+                  <div className="rounded-xl bg-white/5 p-3">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
+                      Market context
+                    </p>
+                    <ul className="space-y-2 text-sm">
+                      <li>
+                        <Link
+                          href={`${localePrefix}/events`}
+                          className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
+                        >
+                          <div className="font-medium">Events</div>
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            Heutige High-Impact-Events, die ins Ranking einfließen.
+                          </p>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          href={`${localePrefix}/bias`}
+                          className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
+                        >
+                          <div className="font-medium">Bias</div>
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            Markt-Bias je Asset &amp; Timeframe im Überblick.
+                          </p>
+                        </Link>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Pricing */}
             <Link
               href={`${localePrefix}/pricing`}
-              className="inline-flex h-9 items-center rounded-md px-3 transition hover:bg-[var(--bg-main)] hover:text-[var(--text-primary)]"
+              className="inline-flex items-center rounded-full px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] transition hover:bg-white/5 hover:text-[var(--text-primary)]"
             >
-              {t("nav.pricing")}
+              Pricing
             </Link>
-            <NavDropdown
-              label={t("nav.docs")}
-              items={[
-                { href: `${localePrefix}/docs`, label: t("docs.overview.title") },
-                { href: `${localePrefix}/docs/api`, label: "API" },
-                { href: `${localePrefix}/docs/webhooks`, label: "Webhooks" },
-                { href: `${localePrefix}/docs/sdks`, label: "SDKs" },
-                { href: `${localePrefix}/docs/examples`, label: "Beispiele" },
-              ]}
-            />
-            <NavDropdown
-              label={t("nav.account")}
-              items={[
-                { href: `${localePrefix}/account/profile`, label: "Profil" },
-                { href: `${localePrefix}/account/api-keys`, label: "API Keys" },
-                { href: `${localePrefix}/account/billing`, label: "Billing" },
-                { href: `${localePrefix}/account/alerts`, label: "Alerts" },
-                { href: `${localePrefix}/account/saved-setups`, label: "Saved Setups" },
-              ]}
-            />
+
+            {/* Contact */}
             <Link
-              href={`${localePrefix}/events`}
-              className="inline-flex h-9 items-center rounded-md px-3 transition hover:bg-[var(--bg-main)] hover:text-[var(--text-primary)]"
+              href={`${localePrefix}/contact`}
+              className="inline-flex items-center rounded-full px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] transition hover:bg-white/5 hover:text-[var(--text-primary)]"
             >
-              {t("nav.events")}
-            </Link>
-            <Link
-              href={`${localePrefix}/bias`}
-              className="inline-flex h-9 items-center rounded-md px-3 transition hover:bg-[var(--bg-main)] hover:text-[var(--text-primary)]"
-            >
-              {t("nav.bias")}
+              Contact
             </Link>
           </nav>
         </div>
+
+        {/* RIGHT: Toggles + Auth */}
         <div className="flex items-center gap-3">
           <LanguageToggle />
           <ThemeToggle />
+
           <SignedOut>
             <Link
               href={`${localePrefix}/sign-in`}
-              className="hidden rounded-md border border-[var(--border-subtle)] bg-[var(--bg-main)] px-3 py-1.5 text-sm font-semibold text-[var(--text-primary)] transition hover:border-[var(--accent)] hover:text-[var(--text-primary)] md:inline-flex"
+              className="hidden rounded-full border border-[var(--border-subtle)] bg-[var(--bg-main)]/70 px-4 py-1.5 text-sm font-semibold text-[var(--text-primary)] shadow-sm md:inline-flex"
             >
-              Login
+              Log in
             </Link>
             <Link
               href={`${localePrefix}/sign-up`}
-              className="hidden rounded-md bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-black transition hover:opacity-90 md:inline-flex"
+              className="hidden rounded-full bg-[var(--accent)] px-4 py-1.5 text-sm font-semibold text-black shadow-sm md:inline-flex"
             >
               Sign up
             </Link>
           </SignedOut>
+
           <SignedIn>
             <div className="hidden items-center gap-2 md:flex">
-              <span className="text-xs font-semibold text-[var(--text-secondary)]">Plan: {plan}</span>
+              <span className="rounded-full bg-[var(--bg-main)]/80 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
+                Plan {planLabel}
+              </span>
               <UserButton afterSignOutUrl={`${localePrefix}/`} />
             </div>
           </SignedIn>
+
+          {/* Mobile menu button */}
           <button
             type="button"
             className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2 text-sm text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] md:hidden"
-            aria-label="Menue oeffnen"
+            aria-label="Menü öffnen"
             onClick={() => setMobileOpen(true)}
           >
-            <span className="sr-only">Menue</span>
-            <span className="flex flex-col gap-1">
-              <span className="block h-0.5 w-5 bg-[var(--text-primary)]" />
-              <span className="block h-0.5 w-5 bg-[var(--text-primary)]" />
-              <span className="block h-0.5 w-5 bg-[var(--text-primary)]" />
+            <span className="sr-only">Menü</span>
+            <span className="flex flex-col gap-[3px]">
+              <span className="block h-[2px] w-5 bg-[var(--text-primary)]" />
+              <span className="block h-[2px] w-5 bg-[var(--text-primary)]" />
+              <span className="block h-[2px] w-5 bg-[var(--text-primary)]" />
             </span>
           </button>
         </div>
       </div>
+
+      {/* Mobile full-screen menu (bestehende Komponente) */}
       <MobileMenu open={mobileOpen} onClose={() => setMobileOpen(false)} />
     </header>
-  );
-}
-
-function NavDropdown({ label, items }: NavDropdownProps): JSX.Element {
-  const [open, setOpen] = useState(false);
-  const closeTimer = useRef<number | null>(null);
-
-  const clearTimer = (): void => {
-    if (closeTimer.current) {
-      window.clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
-  };
-
-  const handleEnter = (): void => {
-    clearTimer();
-    setOpen(true);
-  };
-
-  const handleLeave = (): void => {
-    clearTimer();
-    closeTimer.current = window.setTimeout(() => setOpen(false), 120);
-  };
-
-  const handleBlur = (): void => {
-    handleLeave();
-  };
-
-  return (
-    <div className="relative" onMouseEnter={handleEnter} onMouseLeave={handleLeave} onFocus={handleEnter} onBlur={handleBlur}>
-      <button
-        type="button"
-        className="inline-flex h-9 items-center gap-1 rounded-md px-3 text-slate-200 transition hover:bg-slate-800 hover:text-white"
-        aria-haspopup="true"
-        aria-expanded={open}
-      >
-        {label}
-        <span className="text-[10px]" aria-hidden="true">
-          ▼
-        </span>
-      </button>
-      <div
-        className={`absolute left-0 top-full z-30 mt-3 min-w-[220px] rounded-xl border border-slate-600 bg-slate-900/95 p-3 shadow-[0_20px_40px_rgba(0,0,0,0.4)] backdrop-blur transition ${
-          open ? "visible opacity-100 translate-y-0" : "invisible opacity-0 -translate-y-1"
-        }`}
-      >
-        <div className="flex flex-col gap-1 text-sm text-slate-100">
-          {items.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-lg px-3 py-2 text-slate-200 transition hover:bg-slate-800 hover:text-white"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </div>
-      </div>
-    </div>
   );
 }
