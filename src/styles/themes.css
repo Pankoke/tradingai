@@ -9,13 +9,19 @@
   --border-subtle: #e5e7eb;
 }
 
+/* Dark-Theme – näher an Linear: sehr dunkles, neutrales Grau statt Blau-Ton */
 .dark,
 [data-theme="dark"] {
-  --bg-main: #020617;
-  --bg-surface: #0b1220;
-  --text-primary: #e5e7eb;
-  --text-secondary: #9ca3af;
+  /* Hintergrund: fast schwarz mit ganz leichtem Stich ins Violett/Grau */
+  --bg-main: #050509;        /* Page-Hintergrund (ähnlich Linear) */
+  --bg-surface: #111118;     /* Panels / Header / Cards */
+  --text-primary: #f3f4f6;   /* fast weiß */
+  --text-secondary: #9ca3af; /* dezentes Grau */
+
+  /* Trading-Akzent bleibt grün */
   --accent: #22c55e;
   --accent-soft: #052e16;
-  --border-subtle: #1f2937;
+
+  /* Subtile Umrandungen */
+  --border-subtle: #26262f;
 }

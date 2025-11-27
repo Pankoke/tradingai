@@ -1,22 +1,18 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React from "react";
 import type { JSX } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { i18nConfig, type Locale } from "../lib/i18n/config";
-import { useT } from "../lib/i18n/ClientProvider";
-
-type NavItem = {
-  label: string;
-  href?: string;
-  children?: NavItem[];
-};
+import { useUserPlanClient } from "@/src/lib/auth/userPlanClient";
 
 type MobileMenuProps = {
   open: boolean;
   onClose: () => void;
 };
+
+type Plan = "free" | "premium" | "pro";
 
 function buildLocalePrefix(pathname: string): string {
   const segments = pathname.split("/").filter(Boolean);
@@ -27,145 +23,271 @@ function buildLocalePrefix(pathname: string): string {
   return `/${i18nConfig.defaultLocale}`;
 }
 
-export function MobileMenu({ open, onClose }: MobileMenuProps): JSX.Element {
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+export function MobileMenu({ open, onClose }: MobileMenuProps): JSX.Element | null {
   const pathname = usePathname();
-  const localePrefix = useMemo(() => buildLocalePrefix(pathname), [pathname]);
-  const t = useT();
+  const localePrefix = buildLocalePrefix(pathname);
+  const plan = useUserPlanClient() as Plan | null;
 
-  const navItems: NavItem[] = [
-    { label: t("nav.home"), href: "/" },
-    {
-      label: t("nav.setups"),
-      children: [
-        { label: "Setup of the Day", href: "/setups" },
-        { label: "Premium Setups", href: "/setups/premium" },
-        { label: "Perception Lab", href: "/perception" },
-      ],
-    },
-    {
-      label: t("nav.backtesting"),
-      children: [
-        { label: "Event-Backtester", href: "/backtesting/event" },
-        { label: "Setup-Historie", href: "/backtesting/history" },
-        { label: "Replay-Modus", href: "/backtesting/replay" },
-        { label: "KI-Backtesting", href: "/backtesting/ai" },
-      ],
-    },
-    {
-      label: t("nav.kiTools"),
-      children: [
-        { label: "Setup Generator", href: "/ai-tools/setup-generator" },
-        { label: "Market Summary AI", href: "/ai-tools/market-summary" },
-        { label: "Event Interpreter", href: "/ai-tools/event-interpreter" },
-        { label: "Risk Manager", href: "/ai-tools/risk-manager" },
-        { label: "Screenshot-Analyse", href: "/ai-tools/screenshot-analysis" },
-      ],
-    },
-    { label: t("nav.pricing"), href: "/pricing" },
-    {
-      label: t("nav.docs"),
-      children: [
-        { label: t("docs.overview.title"), href: "/docs" },
-        { label: "API", href: "/docs/api" },
-        { label: "Webhooks", href: "/docs/webhooks" },
-        { label: "SDKs", href: "/docs/sdks" },
-        { label: "Beispiele", href: "/docs/examples" },
-      ],
-    },
-    {
-      label: t("nav.account"),
-      children: [
-        { label: "Profil", href: "/account/profile" },
-        { label: "API Keys", href: "/account/api-keys" },
-        { label: "Billing", href: "/account/billing" },
-        { label: "Alerts", href: "/account/alerts" },
-        { label: "Saved Setups", href: "/account/saved-setups" },
-      ],
-    },
-  ];
+  const isPro = plan === "pro";
+  const isFree = plan === null || plan === "free";
 
-  const toggleSection = (label: string): void => {
-    setOpenSections((prev) => ({ ...prev, [label]: !prev[label] }));
-  };
+  if (!open) {
+    return null;
+  }
 
   return (
-    <>
-      <div
-        className={`fixed inset-0 z-30 bg-black/40 backdrop-blur-sm transition-opacity duration-200 ${
-          open ? "opacity-100 pointer-events-auto" : "pointer-events-none opacity-0"
-        } md:hidden`}
-        onClick={onClose}
-        aria-hidden="true"
-      />
-      <aside
-        className={`fixed inset-y-0 right-0 z-40 w-4/5 max-w-xs transform bg-[var(--bg-surface)] shadow-xl transition-transform duration-300 ${
-          open ? "translate-x-0" : "translate-x-full"
-        } md:hidden`}
-        aria-hidden={!open}
-      >
-        <div className="flex items-center justify-between px-4 py-4">
-          <span className="text-base font-semibold text-[var(--text-primary)]">TradingAI</span>
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm md:hidden">
+      <div className="absolute inset-y-0 right-0 w-full max-w-xs bg-[#050509] text-[var(--text-primary)] shadow-xl">
+        <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-4 py-3">
+          <span className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">
+            TradingAI Menu
+          </span>
           <button
             type="button"
-            className="rounded-md border border-[var(--border-subtle)] px-3 py-1 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             onClick={onClose}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border-subtle)] text-sm text-[var(--text-secondary)]"
             aria-label="Menü schließen"
           >
             ✕
           </button>
         </div>
-        <div className="h-[1px] bg-[var(--border-subtle)]" />
-        <nav className="flex flex-col gap-1 px-4 py-4 text-sm text-[var(--text-secondary)]">
-          {navItems.map((item) =>
-            item.children ? (
-              <div key={item.label} className="flex flex-col">
-                <button
-                  type="button"
-                  onClick={() => toggleSection(item.label)}
-                  className="flex items-center justify-between rounded-lg px-3 py-2 text-left hover:bg-[var(--bg-main)] hover:text-[var(--text-primary)]"
-                >
-                  <span>{item.label}</span>
-                  <span
-                    className={`text-xs transition-transform ${
-                      openSections[item.label] ? "rotate-90" : ""
-                    }`}
-                  >
-                    ›
-                  </span>
-                </button>
-                <div
-                  className={`overflow-hidden transition-[max-height,opacity] duration-200 ${
-                    openSections[item.label] ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-                  }`}
-                >
-                  <div className="flex flex-col gap-1 pb-2 pl-3">
-                    {item.children.map((child) => (
-                      <Link
-                        key={child.href}
-                        href={`${localePrefix}${child.href ?? "#"}`}
-                        className="rounded-lg px-3 py-2 text-[var(--text-secondary)] hover:bg-[var(--bg-main)] hover:text-[var(--text-primary)]"
-                        onClick={onClose}
-                      >
-                        {child.label}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
+
+        <nav className="h-[calc(100vh-48px)] overflow-y-auto px-4 py-4 text-sm">
+          {/* Products */}
+          <details className="group" open>
+            <summary className="flex cursor-pointer list-none items-center justify-between rounded-lg px-2 py-2 text-sm font-medium text-[var(--text-secondary)] hover:bg-white/5 hover:text-[var(--text-primary)]">
+              <span>Products</span>
+              <span className="text-xs text-[var(--text-secondary)] group-open:rotate-180 transition-transform">
+                ▾
+              </span>
+            </summary>
+            <div className="mt-1 space-y-4 border-l border-[var(--border-subtle)]/60 pl-3">
+              {/* Setups & Perception */}
+              <div>
+                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
+                  Setups &amp; Perception
+                </p>
+                <ul className="mt-1 space-y-1">
+                  <li>
+                    <Link
+                      href={`${localePrefix}/setups`}
+                      className="block rounded-md px-2 py-1.5 text-[var(--text-primary)] hover:bg-white/5"
+                      onClick={onClose}
+                    >
+                      <div className="text-xs font-medium">Free Setups</div>
+                      <p className="mt-0.5 text-[0.7rem] text-[var(--text-secondary)]">
+                        Setup des Tages und freie Setups.
+                      </p>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href={`${localePrefix}/setups/premium`}
+                      className="block rounded-md px-2 py-1.5 text-[var(--text-primary)] hover:bg-white/5"
+                      onClick={onClose}
+                    >
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs font-medium">Premium Setups</span>
+                        {isFree ? (
+                          <span className="rounded-full bg-[var(--accent)]/10 px-1.5 py-0.5 text-[0.6rem] font-semibold text-[var(--accent)]">
+                            Premium
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-0.5 text-[0.7rem] text-[var(--text-secondary)]">
+                        Alle täglichen Setups für aktive Trader.
+                      </p>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href={`${localePrefix}/premium/perception`}
+                      className="block rounded-md px-2 py-1.5 text-[var(--text-primary)] hover:bg-white/5"
+                      onClick={onClose}
+                    >
+                      <div className="text-xs font-medium">Perception Engine Status</div>
+                      <p className="mt-0.5 text-[0.7rem] text-[var(--text-secondary)]">
+                        Snapshot, Version und Universe im Überblick.
+                      </p>
+                    </Link>
+                  </li>
+                </ul>
               </div>
-            ) : (
-              <Link
-                key={item.href}
-                href={`${localePrefix}${item.href ?? "#"}`}
-                className="rounded-lg px-3 py-2 hover:bg-[var(--bg-main)] hover:text-[var(--text-primary)]"
-                onClick={onClose}
-              >
-                {item.label}
-              </Link>
-            )
-          )}
+
+              {/* AI Tools & Backtesting */}
+              <div>
+                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
+                  AI Tools &amp; Backtesting
+                </p>
+                <ul className="mt-1 space-y-1">
+                  <li>
+                    <Link
+                      href={`${localePrefix}/ai-tools`}
+                      className="block rounded-md px-2 py-1.5 text-[var(--text-primary)] hover:bg-white/5"
+                      onClick={onClose}
+                    >
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs font-medium">AI Tools</span>
+                        {!isPro ? (
+                          <span className="rounded-full bg-[var(--accent)]/10 px-1.5 py-0.5 text-[0.6rem] font-semibold text-[var(--accent)]">
+                            Pro
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-0.5 text-[0.7rem] text-[var(--text-secondary)]">
+                        Event-Interpretation, Marktanalysen, Risiko.
+                      </p>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href={`${localePrefix}/backtesting`}
+                      className="block rounded-md px-2 py-1.5 text-[var(--text-primary)] hover:bg-white/5"
+                      onClick={onClose}
+                    >
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs font-medium">Backtesting</span>
+                        {!isPro ? (
+                          <span className="rounded-full bg-[var(--accent)]/10 px-1.5 py-0.5 text-[0.6rem] font-semibold text-[var(--accent)]">
+                            Pro
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-0.5 text-[0.7rem] text-[var(--text-secondary)]">
+                        Geplante Event-Replays und KI-Backtests.
+                      </p>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href={`${localePrefix}/docs`}
+                      className="block rounded-md px-2 py-1.5 text-[var(--text-primary)] hover:bg-white/5"
+                      onClick={onClose}
+                    >
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs font-medium">Docs</span>
+                        {!isPro ? (
+                          <span className="rounded-full bg-[var(--accent)]/10 px-1.5 py-0.5 text-[0.6rem] font-semibold text-[var(--accent)]">
+                            Pro
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-0.5 text-[0.7rem] text-[var(--text-secondary)]">
+                        API &amp; Integrationen für Pro-User.
+                      </p>
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </details>
+
+          {/* Resources */}
+          <details className="group mt-4">
+            <summary className="flex cursor-pointer list-none items-center justify-between rounded-lg px-2 py-2 text-sm font-medium text-[var(--text-secondary)] hover:bg-white/5 hover:text-[var(--text-primary)]">
+              <span>Resources</span>
+              <span className="text-xs text-[var(--text-secondary)] group-open:rotate-180 transition-transform">
+                ▾
+              </span>
+            </summary>
+            <div className="mt-1 space-y-4 border-l border-[var(--border-subtle)]/60 pl-3">
+              <div>
+                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
+                  Getting started
+                </p>
+                <ul className="mt-1 space-y-1">
+                  <li>
+                    <Link
+                      href={`${localePrefix}/how-it-works`}
+                      className="block rounded-md px-2 py-1.5 text-[var(--text-primary)] hover:bg-white/5"
+                      onClick={onClose}
+                    >
+                      <div className="text-xs font-medium">How it works</div>
+                      <p className="mt-0.5 text-[0.7rem] text-[var(--text-secondary)]">
+                        Wie das Perception Lab Setups erzeugt.
+                      </p>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href={`${localePrefix}/how-it-works/perception`}
+                      className="block rounded-md px-2 py-1.5 text-[var(--text-primary)] hover:bg-white/5"
+                      onClick={onClose}
+                    >
+                      <div className="text-xs font-medium">Perception Lab Deep Dive</div>
+                      <p className="mt-0.5 text-[0.7rem] text-[var(--text-secondary)]">
+                        Details zu Modulen, Scores und Ranking.
+                      </p>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href={`${localePrefix}/pricing`}
+                      className="block rounded-md px-2 py-1.5 text-[var(--text-primary)] hover:bg-white/5"
+                      onClick={onClose}
+                    >
+                      <div className="text-xs font-medium">Free vs. Premium vs. Pro</div>
+                      <p className="mt-0.5 text-[0.7rem] text-[var(--text-secondary)]">
+                        Feature-Vergleich der Pläne.
+                      </p>
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
+                  Market context
+                </p>
+                <ul className="mt-1 space-y-1">
+                  <li>
+                    <Link
+                      href={`${localePrefix}/events`}
+                      className="block rounded-md px-2 py-1.5 text-[var(--text-primary)] hover:bg-white/5"
+                      onClick={onClose}
+                    >
+                      <div className="text-xs font-medium">Events</div>
+                      <p className="mt-0.5 text-[0.7rem] text-[var(--text-secondary)]">
+                        Heutige High-Impact-Events im Überblick.
+                      </p>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href={`${localePrefix}/bias`}
+                      className="block rounded-md px-2 py-1.5 text-[var(--text-primary)] hover:bg-white/5"
+                      onClick={onClose}
+                    >
+                      <div className="text-xs font-medium">Bias</div>
+                      <p className="mt-0.5 text-[0.7rem] text-[var(--text-secondary)]">
+                        Markt-Bias je Asset &amp; Timeframe.
+                      </p>
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </details>
+
+          {/* Simple Links */}
+          <div className="mt-6 space-y-1 border-t border-[var(--border-subtle)]/60 pt-4">
+            <Link
+              href={`${localePrefix}/pricing`}
+              className="block rounded-md px-2 py-1.5 text-sm text-[var(--text-secondary)] hover:bg-white/5 hover:text-[var(--text-primary)]"
+              onClick={onClose}
+            >
+              Pricing
+            </Link>
+            <Link
+              href={`${localePrefix}/contact`}
+              className="block rounded-md px-2 py-1.5 text-sm text-[var(--text-secondary)] hover:bg-white/5 hover:text-[var(--text-primary)]"
+              onClick={onClose}
+            >
+              Contact
+            </Link>
+          </div>
         </nav>
-      </aside>
-    </>
+      </div>
+    </div>
   );
 }
