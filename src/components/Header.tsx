@@ -6,7 +6,6 @@ import type { JSX } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
-import { ThemeToggle } from "./ThemeToggle";
 import { LanguageToggle } from "./LanguageToggle";
 import { MobileMenu } from "./MobileMenu";
 import { i18nConfig, type Locale } from "../lib/i18n/config";
@@ -50,7 +49,6 @@ export function Header(): JSX.Element {
   const { isFree, isPro } = getPlanFlags(plan);
   const planLabel = plan ?? "free";
 
-  // --------- Active-State Ermittlung ----------
   const pathWithoutQuery = pathname.split("?")[0];
   const sectionPath = pathWithoutQuery.startsWith(localePrefix)
     ? pathWithoutQuery.slice(localePrefix.length) || "/"
@@ -91,295 +89,309 @@ export function Header(): JSX.Element {
 
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--border-subtle)]/60 bg-[#050509]/95 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-        {/* LEFT: Logo + Desktop Navigation */}
-        <div className="flex items-center gap-6">
+      <div className="mx-auto flex h-16 max-w-6xl items-center px-4">
+        {/* LEFT: Logo + Brand */}
+        <div className="flex items-center gap-3">
           <Link
             href={`${localePrefix}/`}
-            className="text-lg font-extrabold tracking-tight text-[var(--text-primary)]"
+            className="group flex items-center gap-2 text-lg font-extrabold tracking-tight text-[var(--text-primary)]"
             onClick={closeMenus}
           >
-            Trading AI
+            <div className="relative flex h-8 w-8 items-center justify-center">
+              <div className="absolute inset-0 rounded-full bg-[var(--accent)]/0 opacity-0 blur-xl transition-all duration-200 group-hover:bg-[var(--accent)]/10 group-hover:opacity-100" />
+              <Image
+                src="/logo-header.png"
+                alt="TradingAI Logo"
+                width={32}
+                height={32}
+                className="relative h-8 w-8 rounded-full ring-0 ring-[var(--accent)]/0 shadow-none transition-all duration-200 group-hover:scale-[1.03] group-hover:ring group-hover:ring-[var(--accent)]/40 group-hover:shadow-[0_0_14px_rgba(170,190,178,0.45)]"
+                priority
+              />
+            </div>
+            <span className="relative inline-flex items-center">
+              {/* Normalzustand: AI richtig weiß */}
+              <span className="transition-opacity duration-200 group-hover:opacity-0">
+                Trading <span className="text-white">AI</span>
+              </span>
+              {/* Hover: sehr dezenter grau-grüner Gradient */}
+              <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#c4c9c6] via-[#d5ddd8] to-[#c4c9c6] bg-clip-text text-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                Trading AI
+              </span>
+            </span>
           </Link>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden items-center gap-2 text-sm md:flex">
-            {/* Products dropdown */}
-            <div className="relative">
-              <button
-                type="button"
-                className={`${navButtonBase} ${
-                  productsActive ? navButtonActive : navButtonInactive
-                }`}
-                onClick={() => toggleMenu("products")}
-              >
-                <span>Products</span>
-                <span className="ml-1 text-[10px]">▾</span>
-              </button>
-
-              {openMenu === "products" ? (
-                <div className="absolute left-0 top-full mt-2 w-[540px] rounded-2xl border border-[var(--border-subtle)] bg-[#050509] p-4 shadow-[0_24px_60px_rgba(0,0,0,0.85)] ring-1 ring-black/60">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {/* Column 1: Setups & Perception */}
-                    <div className="rounded-xl bg-white/5 p-3">
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
-                        Setups &amp; Perception
-                      </p>
-                      <ul className="space-y-2 text-sm">
-                        <li>
-                          <Link
-                            href={`${localePrefix}/setups`}
-                            className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
-                            onClick={closeMenus}
-                          >
-                            <div className="font-medium">Free Setups</div>
-                            <p className="text-xs text-[var(--text-secondary)]">
-                              Setup des Tages und freie Setups als Vorschau.
-                            </p>
-                          </Link>
-                        </li>
-                        <li>
-                          <Link
-                            href={`${localePrefix}/setups/premium`}
-                            className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
-                            onClick={closeMenus}
-                          >
-                            <div className="flex items-center gap-1">
-                              <span className="font-medium">Premium Setups</span>
-                              {isFree ? (
-                                <span className="rounded-full bg-[var(--accent)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent)]">
-                                  Premium
-                                </span>
-                              ) : null}
-                            </div>
-                            <p className="text-xs text-[var(--text-secondary)]">
-                              Alle täglichen Setups für aktive Trader.
-                            </p>
-                          </Link>
-                        </li>
-                        <li>
-                          <Link
-                            href={`${localePrefix}/premium/perception`}
-                            className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
-                            onClick={closeMenus}
-                          >
-                            <div className="font-medium">Perception Engine Status</div>
-                            <p className="text-xs text-[var(--text-secondary)]">
-                              Überblick über Snapshot, Version und Universe.
-                            </p>
-                          </Link>
-                        </li>
-                      </ul>
-                    </div>
-
-                    {/* Column 2: AI Tools & Backtesting */}
-                    <div className="rounded-xl bg-white/5 p-3">
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
-                        AI Tools &amp; Backtesting
-                      </p>
-                      <ul className="space-y-2 text-sm">
-                        <li>
-                          <Link
-                            href={`${localePrefix}/ai-tools`}
-                            className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
-                            onClick={closeMenus}
-                          >
-                            <div className="flex items-center gap-1">
-                              <span className="font-medium">AI Tools</span>
-                              {!isPro ? (
-                                <span className="rounded-full bg-[var(--accent)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent)]">
-                                  Pro
-                                </span>
-                              ) : null}
-                            </div>
-                            <p className="text-xs text-[var(--text-secondary)]">
-                              KI-Module für Event-Interpretation, Marktanalysen und Risiko.
-                            </p>
-                          </Link>
-                        </li>
-                        <li>
-                          <Link
-                            href={`${localePrefix}/backtesting`}
-                            className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
-                            onClick={closeMenus}
-                          >
-                            <div className="flex items-center gap-1">
-                              <span className="font-medium">Backtesting</span>
-                              {!isPro ? (
-                                <span className="rounded-full bg-[var(--accent)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent)]">
-                                  Pro
-                                </span>
-                              ) : null}
-                            </div>
-                            <p className="text-xs text-[var(--text-secondary)]">
-                              Geplante Module für Event-Replays, Historie und KI-Backtests.
-                            </p>
-                          </Link>
-                        </li>
-                        <li>
-                          <Link
-                            href={`${localePrefix}/docs`}
-                            className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
-                            onClick={closeMenus}
-                          >
-                            <div className="flex items-center gap-1">
-                              <span className="font-medium">Docs</span>
-                              {!isPro ? (
-                                <span className="rounded-full bg-[var(--accent)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent)]">
-                                  Pro
-                                </span>
-                              ) : null}
-                            </div>
-                            <p className="text-xs text-[var(--text-secondary)]">
-                              API &amp; Integrationsdokumentation für Pro-User.
-                            </p>
-                          </Link>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-
-            {/* Resources dropdown */}
-            <div className="relative">
-              <button
-                type="button"
-                className={`${navButtonBase} ${
-                  resourcesActive ? navButtonActive : navButtonInactive
-                }`}
-                onClick={() => toggleMenu("resources")}
-              >
-                <span>Resources</span>
-                <span className="ml-1 text-[10px]">▾</span>
-              </button>
-
-              {openMenu === "resources" ? (
-                <div className="absolute left-0 top-full mt-2 w-[520px] rounded-2xl border border-[var(--border-subtle)] bg-[#050509] p-4 shadow-[0_24px_60px_rgba(0,0,0,0.85)] ring-1 ring-black/60">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {/* Column 1: Getting started */}
-                    <div className="rounded-xl bg-white/5 p-3">
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
-                        Getting started
-                      </p>
-                      <ul className="space-y-2 text-sm">
-                        <li>
-                          <Link
-                            href={`${localePrefix}/how-it-works`}
-                            className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
-                            onClick={closeMenus}
-                          >
-                            <div className="font-medium">How it works</div>
-                            <p className="text-xs text-[var(--text-secondary)]">
-                              Wie das Perception Lab Setups aus Regeln &amp; KI erzeugt.
-                            </p>
-                          </Link>
-                        </li>
-                        <li>
-                          <Link
-                            href={`${localePrefix}/how-it-works/perception`}
-                            className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
-                            onClick={closeMenus}
-                          >
-                            <div className="font-medium">Perception Lab Deep Dive</div>
-                            <p className="text-xs text-[var(--text-secondary)]">
-                              Detaillierte Erklärung der Analyse-Module und Scores.
-                            </p>
-                          </Link>
-                        </li>
-                        <li>
-                          <Link
-                            href={`${localePrefix}/pricing`}
-                            className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
-                            onClick={closeMenus}
-                          >
-                            <div className="font-medium">Free vs. Premium vs. Pro</div>
-                            <p className="text-xs text-[var(--text-secondary)]">
-                              Vergleiche Features, Setups und API-Zugriff.
-                            </p>
-                          </Link>
-                        </li>
-                      </ul>
-                    </div>
-
-                    {/* Column 2: Market context */}
-                    <div className="rounded-xl bg-white/5 p-3">
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
-                        Market context
-                      </p>
-                      <ul className="space-y-2 text-sm">
-                        <li>
-                          <Link
-                            href={`${localePrefix}/events`}
-                            className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
-                            onClick={closeMenus}
-                          >
-                            <div className="font-medium">Events</div>
-                            <p className="text-xs text-[var(--text-secondary)]">
-                              Heutige High-Impact-Events, die ins Ranking einfließen.
-                            </p>
-                          </Link>
-                        </li>
-                        <li>
-                          <Link
-                            href={`${localePrefix}/bias`}
-                            className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
-                            onClick={closeMenus}
-                          >
-                            <div className="font-medium">Bias</div>
-                            <p className="text-xs text-[var(--text-secondary)]">
-                              Markt-Bias je Asset &amp; Timeframe im Überblick.
-                            </p>
-                          </Link>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-
-            {/* Pricing */}
-            <Link
-              href={`${localePrefix}/pricing`}
-              className={`${navButtonBase} ${
-                isPricingSection ? navButtonActive : navButtonInactive
-              }`}
-              onClick={closeMenus}
-            >
-              Pricing
-            </Link>
-
-            {/* Contact */}
-            <Link
-              href={`${localePrefix}/contact`}
-              className={`${navButtonBase} ${
-                isContactSection ? navButtonActive : navButtonInactive
-              }`}
-              onClick={closeMenus}
-            >
-              Contact
-            </Link>
-          </nav>
         </div>
 
-        {/* RIGHT: Toggles + Auth */}
-        <div className="flex items-center gap-3">
+        {/* CENTER: Navigation (zentriert) */}
+        <nav className="hidden flex-1 items-center justify-center gap-2 text-sm md:flex">
+          {/* Products */}
+          <div className="relative">
+            <button
+              type="button"
+              className={`${navButtonBase} ${
+                productsActive ? navButtonActive : navButtonInactive
+              }`}
+              onClick={() => toggleMenu("products")}
+            >
+              <span>Products</span>
+              <span className="ml-1 text-[10px]">▾</span>
+            </button>
+            {openMenu === "products" ? (
+              <div className="absolute left-0 top-full mt-2 w-[540px] rounded-2xl border border-[var(--border-subtle)] bg-[#050509] p-4 shadow-[0_24px_60px_rgba(0,0,0,0.85)] ring-1 ring-black/60">
+                <div className="grid gap-4 md:grid-cols-2">
+                  {/* Column 1 */}
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
+                      Setups &amp; Perception
+                    </p>
+                    <ul className="space-y-2 text-sm">
+                      <li>
+                        <Link
+                          href={`${localePrefix}/setups`}
+                          className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
+                          onClick={closeMenus}
+                        >
+                          <div className="font-medium">Free Setups</div>
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            Setup des Tages und freie Setups als Vorschau.
+                          </p>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          href={`${localePrefix}/setups/premium`}
+                          className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
+                          onClick={closeMenus}
+                        >
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">Premium Setups</span>
+                            {isFree ? (
+                              <span className="rounded-full bg-[var(--accent)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent)]">
+                                Premium
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            Alle täglichen Setups für aktive Trader.
+                          </p>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          href={`${localePrefix}/premium/perception`}
+                          className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
+                          onClick={closeMenus}
+                        >
+                          <div className="font-medium">Perception Engine Status</div>
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            Überblick über Snapshot, Version und Universe.
+                          </p>
+                        </Link>
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* Column 2 */}
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
+                      AI Tools &amp; Backtesting
+                    </p>
+                    <ul className="space-y-2 text-sm">
+                      <li>
+                        <Link
+                          href={`${localePrefix}/ai-tools`}
+                          className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
+                          onClick={closeMenus}
+                        >
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">AI Tools</span>
+                            {!isPro ? (
+                              <span className="rounded-full bg-[var(--accent)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent)]">
+                                Pro
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            KI-Module für Event-Interpretation, Marktanalysen und Risiko.
+                          </p>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          href={`${localePrefix}/backtesting`}
+                          className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
+                          onClick={closeMenus}
+                        >
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">Backtesting</span>
+                            {!isPro ? (
+                              <span className="rounded-full bg-[var(--accent)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent)]">
+                                Pro
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            Geplante Module für Event-Replays, Historie und KI-Backtests.
+                          </p>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          href={`${localePrefix}/docs`}
+                          className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
+                          onClick={closeMenus}
+                        >
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">Docs</span>
+                            {!isPro ? (
+                              <span className="rounded-full bg-[var(--accent)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent)]">
+                                Pro
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            API &amp; Integrationsdokumentation für Pro-User.
+                          </p>
+                        </Link>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Resources */}
+          <div className="relative">
+            <button
+              type="button"
+              className={`${navButtonBase} ${
+                resourcesActive ? navButtonActive : navButtonInactive
+              }`}
+              onClick={() => toggleMenu("resources")}
+            >
+              <span>Resources</span>
+              <span className="ml-1 text-[10px]">▾</span>
+            </button>
+            {openMenu === "resources" ? (
+              <div className="absolute left-0 top-full mt-2 w-[520px] rounded-2xl border border-[var(--border-subtle)] bg-[#050509] p-4 shadow-[0_24px_60px_rgba(0,0,0,0.85)] ring-1 ring-black/60">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
+                      Getting started
+                    </p>
+                    <ul className="space-y-2 text-sm">
+                      <li>
+                        <Link
+                          href={`${localePrefix}/how-it-works`}
+                          className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
+                          onClick={closeMenus}
+                        >
+                          <div className="font-medium">How it works</div>
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            Wie das Perception Lab Setups aus Regeln &amp; KI erzeugt.
+                          </p>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          href={`${localePrefix}/how-it-works/perception`}
+                          className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
+                          onClick={closeMenus}
+                        >
+                          <div className="font-medium">Perception Lab Deep Dive</div>
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            Detaillierte Erklärung der Analyse-Module und Scores.
+                          </p>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          href={`${localePrefix}/pricing`}
+                          className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
+                          onClick={closeMenus}
+                        >
+                          <div className="font-medium">Free vs. Premium vs. Pro</div>
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            Vergleiche Features, Setups und API-Zugriff.
+                          </p>
+                        </Link>
+                      </li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
+                      Market context
+                    </p>
+                    <ul className="space-y-2 text-sm">
+                      <li>
+                        <Link
+                          href={`${localePrefix}/events`}
+                          className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
+                          onClick={closeMenus}
+                        >
+                          <div className="font-medium">Events</div>
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            Heutige High-Impact-Events, die ins Ranking einfließen.
+                          </p>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          href={`${localePrefix}/bias`}
+                          className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
+                          onClick={closeMenus}
+                        >
+                          <div className="font-medium">Bias</div>
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            Markt-Bias je Asset &amp; Timeframe im Überblick.
+                          </p>
+                        </Link>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Pricing */}
+          <Link
+            href={`${localePrefix}/pricing`}
+            className={`${navButtonBase} ${
+              isPricingSection ? navButtonActive : navButtonInactive
+            }`}
+            onClick={closeMenus}
+          >
+            Pricing
+          </Link>
+
+          {/* Contact */}
+          <Link
+            href={`${localePrefix}/contact`}
+            className={`${navButtonBase} ${
+              isContactSection ? navButtonActive : navButtonInactive
+            }`}
+            onClick={closeMenus}
+          >
+            Contact
+          </Link>
+        </nav>
+
+        {/* RIGHT: Language + Auth + Mobile */}
+        <div className="ml-auto flex items-center gap-3">
           <LanguageToggle />
-          <ThemeToggle />
 
           <SignedOut>
             <Link
               href={`${localePrefix}/sign-in`}
-              className="hidden rounded-full border border-[var(--border-subtle)] bg-[var(--bg-main)]/70 px-4 py-1.5 text-sm font-semibold text-[var(--text-primary)] shadow-sm md:inline-flex"
+              className="hidden rounded-full border border-[var(--border-subtle)] bg-white/10 px-4 py-1.5 text-sm font-semibold text-white shadow-sm md:inline-flex hover:bg-white/16"
               onClick={closeMenus}
             >
               Log in
             </Link>
             <Link
               href={`${localePrefix}/sign-up`}
-              className="hidden rounded-full bg-[var(--accent)] px-4 py-1.5 text-sm font-semibold text-black shadow-sm md:inline-flex"
+              className="hidden rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-black shadow-sm md:inline-flex hover:bg-white/90"
               onClick={closeMenus}
             >
               Sign up
@@ -391,7 +403,7 @@ export function Header(): JSX.Element {
               <span className="rounded-full bg-[var(--bg-main)]/80 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
                 Plan {planLabel}
               </span>
-            <UserButton afterSignOutUrl={`${localePrefix}/`} />
+              <UserButton afterSignOutUrl={`${localePrefix}/`} />
             </div>
           </SignedIn>
 
@@ -415,7 +427,6 @@ export function Header(): JSX.Element {
         </div>
       </div>
 
-      {/* Mobile full-screen menu */}
       <MobileMenu open={mobileOpen} onClose={() => setMobileOpen(false)} />
     </header>
   );

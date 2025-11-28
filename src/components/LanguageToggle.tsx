@@ -25,16 +25,19 @@ export function LanguageToggle(): JSX.Element {
     router.push(newPath);
   };
 
+  const baseBtn =
+    "rounded-full px-3 py-1 font-semibold text-[11px] transition-colors";
+  const active =
+    "bg-white text-black shadow-sm";
+  const inactive =
+    "text-[var(--text-secondary)] hover:bg-white/5";
+
   return (
-    <div className="inline-flex h-9 items-center gap-1 rounded-full border border-slate-600 bg-slate-900 px-2 text-xs shadow-sm">
+    <div className="inline-flex items-center rounded-full border border-[var(--border-subtle)] bg-[var(--bg-main)]/80 px-1 text-xs shadow-sm">
       <button
         type="button"
         onClick={() => switchLocale("de")}
-        className={`rounded-full px-3 py-1 font-semibold ${
-          current === "de"
-            ? "bg-slate-100 text-slate-900"
-            : "text-slate-200 hover:bg-slate-800"
-        }`}
+        className={`${baseBtn} ${current === "de" ? active : inactive}`}
         aria-pressed={current === "de"}
       >
         DE
@@ -42,11 +45,7 @@ export function LanguageToggle(): JSX.Element {
       <button
         type="button"
         onClick={() => switchLocale("en")}
-        className={`rounded-full px-3 py-1 font-semibold ${
-          current === "en"
-            ? "bg-slate-100 text-slate-900"
-            : "text-slate-200 hover:bg-slate-800"
-        }`}
+        className={`${baseBtn} ${current === "en" ? active : inactive}`}
         aria-pressed={current === "en"}
       >
         EN

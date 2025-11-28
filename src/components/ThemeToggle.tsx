@@ -17,7 +17,9 @@ function resolveTheme(): Theme {
     if (stored === "light" || stored === "dark") {
       return stored;
     }
-    const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const prefersDark =
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches;
     return prefersDark ? "dark" : "light";
   }
   // SSR fallback matches default HTML markup
@@ -52,16 +54,22 @@ export function ThemeToggle(): JSX.Element {
 
   const baseClasses =
     "inline-flex h-9 items-center rounded-full border px-3 text-xs font-semibold shadow-sm transition-colors";
-  const activeClasses = "border-[var(--accent)] bg-[var(--accent)] text-white";
+  // Dezent, neutral – kein Accent-Grün
+  const activeClasses =
+    "border-[var(--border-subtle)] bg-white text-black";
   const inactiveClasses =
-    "border-[var(--border-subtle)] bg-[var(--bg-main)] text-[var(--text-primary)] hover:border-[var(--text-primary)]/50";
+    "border-[var(--border-subtle)] bg-[var(--bg-main)] text-[var(--text-secondary)] hover:bg-white/5";
 
   return (
     <button
       type="button"
       onClick={handleToggle}
-      className={`${baseClasses} ${isDark ? activeClasses : inactiveClasses}`}
-      aria-label={isDark ? "Auf helles Theme wechseln" : "Auf dunkles Theme wechseln"}
+      className={`${baseClasses} ${
+        isDark ? activeClasses : inactiveClasses
+      }`}
+      aria-label={
+        isDark ? "Auf helles Theme wechseln" : "Auf dunkles Theme wechseln"
+      }
       aria-pressed={isDark}
       suppressHydrationWarning
     >

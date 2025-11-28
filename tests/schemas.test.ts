@@ -5,7 +5,11 @@ import {
   biasEntrySchema,
   biasSnapshotSchema,
 } from "@/src/schemas/biasSchema";
-import { eventCategoryEnum, eventSchema, eventSeverityEnum } from "@/src/schemas/eventsSchema";
+import {
+  eventCategoryEnum,
+  eventSchema,
+  eventSeverityEnum,
+} from "@/src/schemas/eventsSchema";
 
 describe("setupSchema", () => {
   it("parses a valid setup", () => {
@@ -23,6 +27,7 @@ describe("setupSchema", () => {
       stopLoss: "63000",
       takeProfit: "67000",
       type: "Regelbasiert",
+      accessLevel: "free",
     };
 
     const parsed = setupSchema.parse(validSetup);
@@ -33,18 +38,19 @@ describe("setupSchema", () => {
   it("rejects values outside numeric bounds", () => {
     const invalidSetup: unknown = {
       id: "setup-2",
-      symbol: "ETHUSDT",
-      timeframe: "H4",
-      direction: "Short",
-      confidence: 120,
-      eventScore: 10,
-      biasScore: 20,
-      sentimentScore: 30,
-      balanceScore: 40,
-      entryZone: "3000-3100",
-      stopLoss: "3150",
-      takeProfit: "2800",
-      type: "KI",
+      symbol: "BTCUSDT",
+      timeframe: "H1",
+      direction: "Long",
+      confidence: 120, // > 100 -> invalid
+      eventScore: 71,
+      biasScore: 68,
+      sentimentScore: 64,
+      balanceScore: 70,
+      entryZone: "64000-64200",
+      stopLoss: "63000",
+      takeProfit: "67000",
+      type: "Regelbasiert",
+      accessLevel: "free",
     };
 
     expect(() => setupSchema.parse(invalidSetup)).toThrow();
@@ -59,7 +65,7 @@ describe("biasSchema", () => {
       entries: [
         {
           symbol: "BTCUSDT",
-          timeframe: "D1",
+          timeframe: "H1",
           direction: biasDirectionEnum.enum.Bullish,
           confidence: 75,
           comment: "Trend intact",
@@ -70,7 +76,9 @@ describe("biasSchema", () => {
 
     const parsed = biasSnapshotSchema.parse(snapshot);
 
-    expect(parsed.entries[0].direction).toBe(biasDirectionEnum.enum.Bullish);
+    expect(parsed.entries[0].direction).toBe(
+      biasDirectionEnum.enum.Bullish,
+    );
     expect(parsed.universe).toContain("ETHUSDT");
   });
 
@@ -80,7 +88,7 @@ describe("biasSchema", () => {
       timeframe: "H1",
       direction: "Sideways",
       confidence: 50,
-      comment: "Invalid direction",
+      comment: "Range",
     };
 
     expect(() => biasEntrySchema.parse(invalidEntry)).toThrow();
@@ -91,13 +99,13 @@ describe("eventsSchema", () => {
   it("parses a valid event", () => {
     const event = {
       id: "evt-1",
-      title: "FOMC Statement",
-      description: "Rate update",
+      title: "CPI Release",
+      description: "US CPI data",
       category: eventCategoryEnum.enum.macro,
       severity: eventSeverityEnum.enum.high,
       startTime: new Date().toISOString(),
       endTime: null,
-      symbols: ["SPX500"],
+      symbols: ["BTCUSDT"],
       source: "calendar",
     };
 
@@ -111,7 +119,7 @@ describe("eventsSchema", () => {
     const invalidEvent: unknown = {
       id: "evt-2",
       title: "Broken",
-      // missing description and category
+      // description und category fehlen absichtlich
       severity: "low",
       startTime: new Date().toISOString(),
       endTime: null,
