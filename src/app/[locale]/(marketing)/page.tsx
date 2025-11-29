@@ -15,33 +15,7 @@ import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
 
 type Labels = ReturnType<typeof buildLabels>;
 
-function buildLabels(t: (key: string) => string): {
-  directionLong: string;
-  directionShort: string;
-  confidence: string;
-  entry: string;
-  stopLoss: string;
-  takeProfit: string;
-  eventHigh: string;
-  eventMedium: string;
-  eventLow: string;
-  biasBullish: string;
-  biasBearish: string;
-  biasNeutral: string;
-  sentimentPositive: string;
-  sentimentNegative: string;
-  sentimentNeutral: string;
-  sourceRuleBased: string;
-  orderflowBuyers: string;
-  orderflowSellers: string;
-  orderflowBalanced: string;
-  weakSetup: string;
-  heroHeadline: string;
-  heroCta: string;
-  heroFallback: string;
-  listHeadline: string;
-  listEmpty: string;
-} {
+function buildLabels(t: (key: string) => string) {
   return {
     directionLong: t("homepage.labels.directionLong"),
     directionShort: t("homepage.labels.directionShort"),
@@ -90,10 +64,20 @@ function toHomepageSetup(setup: Setup): HomepageSetup {
     direction: setup.direction,
     confidence: clamp(setup.confidence, 0, 100),
     weakSignal: setup.confidence < 60,
-    eventLevel: setup.eventScore >= 70 ? "high" : setup.eventScore >= 40 ? "medium" : "low",
+    eventLevel:
+      setup.eventScore >= 70
+        ? "high"
+        : setup.eventScore >= 40
+        ? "medium"
+        : "low",
     orderflowMode: "balanced",
     bias: {
-      direction: setup.biasScore >= 55 ? "Bullish" : setup.biasScore <= 45 ? "Bearish" : "Neutral",
+      direction:
+        setup.biasScore >= 55
+          ? "Bullish"
+          : setup.biasScore <= 45
+          ? "Bearish"
+          : "Neutral",
       strength: clamp(setup.biasScore, 0, 100),
     },
     sentimentScore: clamp((setup.sentimentScore - 50) / 50, -1, 1),
@@ -107,7 +91,8 @@ function toHomepageSetup(setup: Setup): HomepageSetup {
 export default function MarketingPage(): JSX.Element {
   const t = useT();
   const pathname = usePathname();
-  const [setupOfTheDay, setSetupOfTheDay] = useState<HomepageSetup | null>(null);
+  const [setupOfTheDay, setSetupOfTheDay] =
+    useState<HomepageSetup | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
 
   const locale = useMemo(() => {
@@ -126,7 +111,8 @@ export default function MarketingPage(): JSX.Element {
       try {
         const { setups, setupOfTheDayId } = await fetchTodaySetups();
         const mapped = setups.map(toHomepageSetup);
-        const hero = mapped.find((s) => s.id === setupOfTheDayId) ?? mapped[0] ?? null;
+        const hero =
+          mapped.find((s) => s.id === setupOfTheDayId) ?? mapped[0] ?? null;
         setSetupOfTheDay(hero);
         setState("ready");
       } catch (error) {
@@ -137,22 +123,30 @@ export default function MarketingPage(): JSX.Element {
     void load();
   }, []);
 
-  const allSetups = useMemo(() => (setupOfTheDay ? [setupOfTheDay] : []), [setupOfTheDay]);
+  const allSetups = useMemo(
+    () => (setupOfTheDay ? [setupOfTheDay] : []),
+    [setupOfTheDay],
+  );
   const assetsAnalyzed = new Set(allSetups.map((s) => s.symbol)).size;
   const activeSetups = allSetups.length;
   const strongSignals = allSetups.filter((s) => !s.weakSignal).length;
   const weakSignals = allSetups.filter((s) => s.weakSignal).length;
-  const todayHuman = new Date().toLocaleDateString(locale === "de" ? "de-DE" : "en-US", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  const todayHuman = new Date().toLocaleDateString(
+    locale === "de" ? "de-DE" : "en-US",
+    {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    },
+  );
 
   if (state === "loading") {
     return (
       <div className="bg-background text-foreground">
-        <div className="mx-auto max-w-7xl px-4 py-12 text-sm text-muted-foreground">{t("marketing.loading")}</div>
+        <div className="mx-auto max-w-7xl px-4 py-12 text-sm text-muted-foreground">
+          {t("marketing.loading")}
+        </div>
       </div>
     );
   }
@@ -160,7 +154,9 @@ export default function MarketingPage(): JSX.Element {
   if (state === "error" || !setupOfTheDay) {
     return (
       <div className="bg-background text-foreground">
-        <div className="mx-auto max-w-7xl px-4 py-12 text-sm text-muted-foreground">{labels.heroFallback}</div>
+        <div className="mx-auto max-w-7xl px-4 py-12 text-sm text-muted-foreground">
+          {labels.heroFallback}
+        </div>
       </div>
     );
   }
@@ -168,29 +164,48 @@ export default function MarketingPage(): JSX.Element {
   return (
     <main className="bg-background text-foreground">
       <div className="mx-auto max-w-7xl space-y-10 px-4 py-10">
-        <header className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+        {/* HERO: Text + KPIs */}
+        <header className="flex flex-col gap-6 md:grid md:grid-cols-[minmax(0,1.7fr)_minmax(0,1.3fr)] md:items-start">
           <div className="space-y-3 text-left">
-            <span className="inline-flex items-center justify-center rounded-full border border-sky-200 bg-sky-50 px-4 py-1.5 text-xs font-medium text-sky-700 shadow-sm dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300 dark:shadow-lg dark:shadow-sky-500/10">
-              {t("hero.badge")}
-            </span>
             <h1 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)] sm:text-4xl md:text-5xl dark:text-white">
               {t("hero.title")}
             </h1>
             <p className="max-w-3xl text-sm text-[var(--text-secondary)] sm:text-base dark:text-slate-200">
               {t("hero.subtitle")}
             </p>
-            <a href="#perception-lab" className="text-sm font-semibold text-sky-600 underline underline-offset-4 dark:text-sky-400">
+            <a
+              href="#perception-lab"
+              className="text-sm font-semibold text-sky-600 underline underline-offset-4 dark:text-sky-400"
+            >
               {t("hero.linkPerception")}
             </a>
           </div>
+
           <div className="grid w-full max-w-xl grid-cols-2 gap-3 self-start md:mt-6">
-            <KpiCard icon={<BarChart3 className="h-4 w-4 text-sky-300" />} label={t("homepage.kpi.assets")} value={assetsAnalyzed} />
-            <KpiCard icon={<Activity className="h-4 w-4 text-emerald-300" />} label={t("homepage.kpi.active")} value={activeSetups} />
-            <KpiCard icon={<Zap className="h-4 w-4 text-emerald-300" />} label={t("homepage.kpi.strong")} value={strongSignals} />
-            <KpiCard icon={<Shield className="h-4 w-4 text-amber-300" />} label={t("homepage.kpi.weak")} value={weakSignals} />
+            <KpiCard
+              icon={<BarChart3 className="h-4 w-4 text-sky-300" />}
+              label={t("homepage.kpi.assets")}
+              value={assetsAnalyzed}
+            />
+            <KpiCard
+              icon={<Activity className="h-4 w-4 text-emerald-300" />}
+              label={t("homepage.kpi.active")}
+              value={activeSetups}
+            />
+            <KpiCard
+              icon={<Zap className="h-4 w-4 text-emerald-300" />}
+              label={t("homepage.kpi.strong")}
+              value={strongSignals}
+            />
+            <KpiCard
+              icon={<Shield className="h-4 w-4 text-amber-300" />}
+              label={t("homepage.kpi.weak")}
+              value={weakSignals}
+            />
           </div>
         </header>
 
+        {/* SETUP OF THE DAY */}
         <section className="space-y-4">
           <div className="flex items-center gap-2">
             <span className="ml-auto rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200">
@@ -227,62 +242,91 @@ export default function MarketingPage(): JSX.Element {
           </div>
         </section>
 
-        <section id="perception-lab" className="rounded-3xl border border-slate-800 bg-[#0b1325] p-6 shadow-inner shadow-black/40">
-          <div className="space-y-5 text-center">
-            <h2 className="text-xl font-semibold text-white md:text-2xl">{t("homepage.info.title")}</h2>
-            <p className="text-sm leading-relaxed text-slate-200">{t("homepage.info.p1")}</p>
-            <p className="text-sm leading-relaxed text-slate-200">{t("homepage.info.p2")}</p>
-            <p className="text-sm leading-relaxed text-slate-200">{t("homepage.info.p3")}</p>
-          </div>
+        {/* WHAT IS THE PERCEPTION LAB – mit exakt gleichem Card-Container */}
+        <section>
+          <div className="mt-6 rounded-2xl border border-slate-200 bg-gradient-to-br from-sky-50 via-white to-emerald-50 p-[1.5px] shadow-sm dark:border-transparent dark:from-sky-500/15 dark:via-transparent dark:to-emerald-500/10 dark:shadow-[0_0_25px_rgba(56,189,248,0.15)]">
+            <div
+              id="perception-lab"
+              className="flex flex-col gap-6 rounded-3xl bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),_transparent_55%),_rgba(4,7,15,0.98)] px-5 py-7 shadow-[0_24px_80px_rgba(0,0,0,0.85)] md:px-8 md:py-8"
+            >
+              <div className="space-y-5 text-center">
+                <h2 className="text-xl font-semibold text-white md:text-2xl">
+                  {t("homepage.info.title")}
+                </h2>
+                <p className="text-sm leading-relaxed text-slate-200">
+                  {t("homepage.info.p1")}
+                </p>
+                <p className="text-sm leading-relaxed text-slate-200">
+                  {t("homepage.info.p2")}
+                </p>
+                <p className="text-sm leading-relaxed text-slate-200">
+                  {t("homepage.info.p3")}
+                </p>
+              </div>
 
-          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <InfoCard
-              icon={<Zap className="h-6 w-6 text-sky-300" />}
-              title={t("homepage.info.cards.analysis.title")}
-              text={t("homepage.info.cards.analysis.body")}
-            />
-            <InfoCard
-              icon={<BarChart3 className="h-6 w-6 text-sky-300" />}
-              title={t("homepage.info.cards.multi.title")}
-              text={t("homepage.info.cards.multi.body")}
-            />
-            <InfoCard
-              icon={<ActivitySquare className="h-6 w-6 text-sky-300" />}
-              title={t("homepage.info.cards.clear.title")}
-              text={t("homepage.info.cards.clear.body")}
-            />
-            <InfoCard
-              icon={<Shield className="h-6 w-6 text-sky-300" />}
-              title={t("homepage.info.cards.consistent.title")}
-              text={t("homepage.info.cards.consistent.body")}
-            />
+              <div className="mt-2 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <InfoCard
+                  icon={<Zap className="h-6 w-6 text-sky-300" />}
+                  title={t("homepage.info.cards.analysis.title")}
+                  text={t("homepage.info.cards.analysis.body")}
+                />
+                <InfoCard
+                  icon={<BarChart3 className="h-6 w-6 text-sky-300" />}
+                  title={t("homepage.info.cards.multi.title")}
+                  text={t("homepage.info.cards.multi.body")}
+                />
+                <InfoCard
+                  icon={<ActivitySquare className="h-6 w-6 text-sky-300" />}
+                  title={t("homepage.info.cards.clear.title")}
+                  text={t("homepage.info.cards.clear.body")}
+                />
+                <InfoCard
+                  icon={<Shield className="h-6 w-6 text-sky-300" />}
+                  title={t("homepage.info.cards.consistent.title")}
+                  text={t("homepage.info.cards.consistent.body")}
+                />
+              </div>
+            </div>
           </div>
         </section>
 
-        <section className="rounded-3xl border border-slate-800 bg-[#071021] p-6 shadow-inner shadow-black/30">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="space-y-3">
-              <h3 className="text-lg font-semibold text-white md:text-xl">{t("homepage.cta.title")}</h3>
-              <p className="text-sm text-slate-200">{t("homepage.cta.subtitle")}</p>
-              <div className="flex flex-wrap gap-3 text-xs text-emerald-300">
-                <BadgeDot label={t("homepage.cta.badges.all")} />
-                <BadgeDot label={t("homepage.cta.badges.ai")} />
-                <BadgeDot label={t("homepage.cta.badges.multi")} />
-                <BadgeDot label={t("homepage.cta.badges.alerts")} />
+        {/* UNLOCK MORE SETUPS – gleicher Card-Container wie oben & wie Setup des Tages */}
+        <section>
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-gradient-to-br from-sky-50 via-white to-emerald-50 p-[1.5px] shadow-sm dark:border-transparent dark:from-sky-500/15 dark:via-transparent dark:to-emerald-500/10 dark:shadow-[0_0_25px_rgba(56,189,248,0.15)]">
+            <div className="flex flex-col gap-6 rounded-3xl bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),_transparent_55%),_rgba(4,7,15,0.98)] px-5 py-7 shadow-[0_24px_80px_rgba(0,0,0,0.85)] md:px-8 md:py-8">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-white md:text-xl">
+                    {t("homepage.cta.title")}
+                  </h3>
+                  <p className="text-sm text-slate-200">
+                    {t("homepage.cta.subtitle")}
+                  </p>
+                  <div className="flex flex-wrap gap-3 text-xs text-emerald-300">
+                    <BadgeDot label={t("homepage.cta.badges.all")} />
+                    <BadgeDot label={t("homepage.cta.badges.ai")} />
+                    <BadgeDot label={t("homepage.cta.badges.multi")} />
+                    <BadgeDot label={t("homepage.cta.badges.alerts")} />
+                  </div>
+                </div>
+                <Link
+                  href="/perception"
+                  className="inline-flex items-center justify-center rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(14,165,233,0.3)] transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  {t("homepage.cta.button")}
+                </Link>
               </div>
             </div>
-            <Link
-              href="/perception"
-              className="inline-flex items-center justify-center rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(14,165,233,0.3)] transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
-            >
-              {t("homepage.cta.button")}
-            </Link>
           </div>
         </section>
       </div>
     </main>
   );
 }
+
+// -----------------------------------------------------------------------------
+// Kleinkomponenten
+// -----------------------------------------------------------------------------
 
 type KpiCardProps = {
   icon: React.ReactNode;
@@ -292,17 +336,22 @@ type KpiCardProps = {
 
 function KpiCard({ icon, label, value }: KpiCardProps): JSX.Element {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm dark:border-slate-800/80 dark:bg-slate-900/60 dark:shadow-lg dark:shadow-black/10">
-      <div className="flex flex-col items-center gap-1 text-center">
-        <div className="flex items-center justify-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+    <div className="h-full rounded-2xl border border-slate-700 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),_transparent_55%),_rgba(4,7,15,0.98)] px-3 py-2.5 shadow-[0_18px_50px_rgba(0,0,0,0.8)]">
+      <div className="flex flex-col items-center gap-1.5 text-center">
+        <div className="flex items-center justify-center gap-1.5 text-sm text-slate-100">
           {icon}
-          <span>{label}</span>
+          <span className="font-medium">{label}</span>
         </div>
-        <div className="text-lg font-semibold text-slate-900 dark:text-slate-50">{value}</div>
+        <div className="text-2xl font-semibold leading-tight text-white">
+          {value}
+        </div>
       </div>
     </div>
   );
 }
+
+
+
 
 type InfoCardProps = {
   icon: JSX.Element;
@@ -312,8 +361,8 @@ type InfoCardProps = {
 
 function InfoCard({ icon, title, text }: InfoCardProps): JSX.Element {
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
-      <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-sky-500/40 bg-sky-500/10 text-sky-200">
+    <div className="h-full rounded-2xl border border-slate-700 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.12),_transparent_55%),_rgba(3,7,18,0.98)] px-4 py-4 shadow-[0_18px_50px_rgba(0,0,0,0.75)]">
+      <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-sky-500/60 bg-sky-500/10 text-sky-200">
         {icon}
       </div>
       <h4 className="text-sm font-semibold text-white">{title}</h4>
@@ -321,6 +370,7 @@ function InfoCard({ icon, title, text }: InfoCardProps): JSX.Element {
     </div>
   );
 }
+
 
 function BadgeDot({ label }: { label: string }): JSX.Element {
   return (
