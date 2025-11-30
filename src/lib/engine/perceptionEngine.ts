@@ -11,6 +11,20 @@ import { computeRingsForSetup } from "@/src/lib/engine/rings";
 const ENGINE_VERSION = "0.1.0";
 const dataSource = createPerceptionDataSource();
 
+const defaultRings = {
+  trendScore: 50,
+  eventScore: 50,
+  biasScore: 50,
+  sentimentScore: 50,
+  orderflowScore: 50,
+  confidenceScore: 50,
+  event: 50,
+  bias: 50,
+  sentiment: 50,
+  orderflow: 50,
+  confidence: 50,
+};
+
 export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promise<PerceptionSnapshot> {
   const asOf = options?.asOf ?? new Date();
   const setups = await dataSource.getSetupsForToday({ asOf });
@@ -39,7 +53,7 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
     };
 
   const enriched: Setup[] = setups.map((item) => {
-    const base: Omit<Setup, "rings"> = {
+    const base: Setup = {
       id: item.id,
       assetId: item.assetId ?? item.symbol,
       symbol: item.symbol,
@@ -55,6 +69,7 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
       takeProfit: item.takeProfit,
       type: item.type,
       accessLevel: "free",
+      rings: defaultRings,
     };
 
     const eventResult = applyEventScoring(base, events);
