@@ -7,6 +7,8 @@ import { usePathname } from "next/navigation";
 import { useT } from "../../../../lib/i18n/ClientProvider";
 import type { SetupCardSetup } from "./SetupCard";
 import { i18nConfig, type Locale } from "../../../../lib/i18n/config";
+import { PerceptionCard } from "@/src/components/perception/PerceptionCard";
+import { formatAssetLabel, getAssetMeta } from "@/src/lib/formatters/asset";
 
 type SetupOfTheDayCardProps = {
   setup: SetupCardSetup;
@@ -61,9 +63,11 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
   const isLong = setup.direction === "Long";
   const pathname = usePathname();
   const prefix = useMemo(() => localePrefix(pathname), [pathname]);
+  const meta = getAssetMeta(setup.assetId, setup.symbol);
+  const headline = formatAssetLabel(setup.assetId, setup.symbol);
 
   return (
-    <section className="flex flex-col gap-6 rounded-3xl border border-slate-800 bg-[#0b1325] p-6 shadow-[0_10px_30px_rgba(0,0,0,0.35)] sm:p-7">
+    <PerceptionCard className="p-0" innerClassName="p-6">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex flex-1 flex-col gap-4">
           <div className="space-y-2">
@@ -71,11 +75,12 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
               {t("setups.setupOfTheDay")}
             </p>
             <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-              {setup.symbol.toUpperCase()} · {setup.timeframe}
+              {headline} · {setup.timeframe}
             </h2>
             <p className={`text-3xl font-bold ${isLong ? "text-emerald-400" : "text-rose-400"}`}>
               {setup.direction}
             </p>
+            <p className="text-sm text-slate-400">{meta.name}</p>
             <span className="inline-flex w-fit rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-200">
               {setup.type === "Regelbasiert" ? t("setups.type.ruleBased") : t("setups.type.ai")}
             </span>
@@ -93,12 +98,10 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
         </div>
       </div>
 
-      <div className="mt-2 rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
-        <div className="grid gap-4 text-xs sm:grid-cols-3">
-          <LevelBox label={t("setups.entry")} value={formatRangeText(setup.entryZone)} tone="neutral" />
-          <LevelBox label={t("setups.stopLoss")} value={formatNumberText(setup.stopLoss)} tone="danger" />
-          <LevelBox label={t("setups.takeProfit")} value={formatNumberText(setup.takeProfit)} tone="success" />
-        </div>
+      <div className="mt-4 grid gap-4 text-xs sm:grid-cols-3">
+        <LevelBox label={t("setups.entry")} value={formatRangeText(setup.entryZone)} tone="neutral" />
+        <LevelBox label={t("setups.stopLoss")} value={formatNumberText(setup.stopLoss)} tone="danger" />
+        <LevelBox label={t("setups.takeProfit")} value={formatNumberText(setup.takeProfit)} tone="success" />
       </div>
 
       <div className="mt-1 flex justify-end">
@@ -109,7 +112,7 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
           {t("setups.openAnalysis")}
         </Link>
       </div>
-    </section>
+    </PerceptionCard>
   );
 }
 
@@ -157,9 +160,11 @@ function BigGauge({ value }: GaugeProps): JSX.Element {
   );
 }
 
+const detailBoxClass = "rounded-2xl border border-slate-800 bg-[#0f172a]/80 px-4 py-3 shadow-[inset_0_0_25px_rgba(15,23,42,0.9)]";
+
 function LevelBox({ label, value, tone = "neutral" }: LevelBoxPropsDay): JSX.Element {
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3">
+    <div className={detailBoxClass}>
       <div className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-400">{label}</div>
       <div className={`mt-1 text-lg font-semibold ${toneClass(tone)}`}>{value}</div>
     </div>

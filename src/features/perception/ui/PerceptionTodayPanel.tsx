@@ -5,24 +5,10 @@ import type { ComponentType, JSX, SVGProps } from "react";
 import { ArrowDown, ArrowRight, ArrowUp } from "lucide-react";
 import { z } from "zod";
 import { useT } from "@/src/lib/i18n/ClientProvider";
+import { formatAssetLabel, getAssetMeta } from "@/src/lib/formatters/asset";
+import { PerceptionCard } from "@/src/components/perception/PerceptionCard";
 
 const TIMEOUT_MS = 10_000;
-
-const ASSET_REFERENCE: Record<string, { displaySymbol: string; name: string; assetClass: string }> = {
-  dax: { displaySymbol: "DAX", name: "DAX Index", assetClass: "Index" },
-  spx: { displaySymbol: "S&P 500", name: "S&P 500 Index", assetClass: "Index" },
-  ndx: { displaySymbol: "Nasdaq 100", name: "Nasdaq 100 Index", assetClass: "Index" },
-  dow: { displaySymbol: "Dow Jones", name: "Dow Jones Index", assetClass: "Index" },
-  eurusd: { displaySymbol: "EUR/USD", name: "Euro vs. US Dollar", assetClass: "FX" },
-  gbpusd: { displaySymbol: "GBP/USD", name: "British Pound vs. US Dollar", assetClass: "FX" },
-  usdjpy: { displaySymbol: "USD/JPY", name: "US Dollar vs. Japanese Yen", assetClass: "FX" },
-  eurjpy: { displaySymbol: "EUR/JPY", name: "Euro vs. Japanese Yen", assetClass: "FX" },
-  gold: { displaySymbol: "Gold", name: "Gold Futures", assetClass: "Commodity" },
-  silver: { displaySymbol: "Silver", name: "Silver Futures", assetClass: "Commodity" },
-  wti: { displaySymbol: "WTI", name: "Crude Oil WTI", assetClass: "Commodity" },
-  btc: { displaySymbol: "BTC/USD", name: "Bitcoin", assetClass: "Crypto" },
-  eth: { displaySymbol: "ETH/USD", name: "Ethereum", assetClass: "Crypto" },
-};
 
 type LucideIcon = ComponentType<SVGProps<SVGSVGElement>>;
 
@@ -123,11 +109,6 @@ function formatTimestamp(value: string): string {
     return value;
   }
   return date.toLocaleString();
-}
-
-function getAssetMeta(assetId: string) {
-  const fallback = { displaySymbol: assetId, name: assetId, assetClass: "Asset" };
-  return ASSET_REFERENCE[assetId] ?? fallback;
 }
 
 type StatusMessageProps = {
@@ -258,8 +239,9 @@ export function PerceptionTodayPanel(): JSX.Element {
 
           {status === "ready" && heroItem && data && (
             <>
-              <div className="mt-6 grid gap-5 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-                <div className="rounded-2xl border border-slate-700 bg-slate-900/90 p-6 shadow-[0_25px_70px_rgba(0,0,0,0.7)]">
+            <PerceptionCard className="mt-6" innerClassName="p-6">
+              <div className="grid gap-5 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+                <div>
                   <div className="flex items-center justify-between gap-4">
                     <div className="space-y-1">
                       <p className="text-[11px] uppercase tracking-wide text-slate-400">
@@ -267,7 +249,7 @@ export function PerceptionTodayPanel(): JSX.Element {
                       </p>
                       <div className="flex items-center gap-3">
                         <h3 className="text-2xl font-semibold text-white">
-                          {getAssetMeta(heroItem.assetId).displaySymbol}
+                          {formatAssetLabel(heroItem.assetId)}
                         </h3>
                         <span className="rounded-full bg-slate-800/60 px-2 py-0.5 text-[11px] uppercase tracking-[0.2em] text-slate-300">
                           {getAssetMeta(heroItem.assetId).assetClass}
@@ -307,7 +289,7 @@ export function PerceptionTodayPanel(): JSX.Element {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-700 bg-slate-900/80 p-5 text-sm text-slate-300 shadow-[0_18px_45px_rgba(0,0,0,0.65)]">
+                <div>
                   <p className="text-[11px] uppercase tracking-wide text-slate-400">
                     {t("perception.today.metaLabel")}
                   </p>
@@ -329,6 +311,7 @@ export function PerceptionTodayPanel(): JSX.Element {
                   </div>
                 </div>
               </div>
+            </PerceptionCard>
 
               {additionalItems.length > 0 && (
                 <div className="mt-8 space-y-4">
@@ -343,36 +326,35 @@ export function PerceptionTodayPanel(): JSX.Element {
                       const asset = getAssetMeta(item.assetId);
                       const { Icon, accent } = DIRECTION_META[item.direction];
                       return (
-                        <div
-                          key={item.id}
-                          className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-[0_12px_35px_rgba(0,0,0,0.65)]"
-                        >
-                          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                            <div>
-                              <p className="text-sm font-semibold text-white">{asset.displaySymbol}</p>
-                              <p className="text-xs text-slate-400">{asset.name}</p>
+                        <PerceptionCard key={item.id} innerClassName="p-4" className="">
+                          <div>
+                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                              <div>
+                                <p className="text-sm font-semibold text-white">{asset.displaySymbol}</p>
+                                <p className="text-xs text-slate-400">{asset.name}</p>
+                              </div>
+                              <div
+                                className={`flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.2em] ${accent}`}
+                              >
+                                <Icon className="h-3 w-3" />
+                                {t(`perception.today.direction.${item.direction}`)}
+                              </div>
                             </div>
-                            <div
-                              className={`flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.2em] ${accent}`}
-                            >
-                              <Icon className="h-3 w-3" />
-                              {t(`perception.today.direction.${item.direction}`)}
+                            <div className="mt-3 grid gap-2 text-[11px] text-slate-400 sm:grid-cols-3">
+                              <ScoreChip label={t("perception.today.scoreTrend")} value={item.scoreTrend} />
+                              <ScoreChip label={t("perception.today.scoreMomentum")} value={item.scoreMomentum} />
+                              <ScoreChip label={t("perception.today.scoreVolatility")} value={item.scoreVolatility} />
+                            </div>
+                            <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400">
+                              <span>
+                                {t("perception.today.rankLabel")}: {item.rankOverall}
+                              </span>
+                              <span>
+                                {t("perception.today.confidenceLabel")}: {Math.round(item.confidence)}%
+                              </span>
                             </div>
                           </div>
-                          <div className="mt-3 grid gap-2 text-[11px] text-slate-400 sm:grid-cols-3">
-                            <ScoreChip label={t("perception.today.scoreTrend")} value={item.scoreTrend} />
-                            <ScoreChip label={t("perception.today.scoreMomentum")} value={item.scoreMomentum} />
-                            <ScoreChip label={t("perception.today.scoreVolatility")} value={item.scoreVolatility} />
-                          </div>
-                          <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400">
-                            <span>
-                              {t("perception.today.rankLabel")}: {item.rankOverall}
-                            </span>
-                            <span>
-                              {t("perception.today.confidenceLabel")}: {Math.round(item.confidence)}%
-                            </span>
-                          </div>
-                        </div>
+                        </PerceptionCard>
                       );
                     })}
                   </div>

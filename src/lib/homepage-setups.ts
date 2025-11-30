@@ -4,6 +4,7 @@ import { clamp } from "@/src/lib/math";
 
 export type HomepageSetup = {
   id: string;
+  assetId: string;
   symbol: string;
   timeframe: string;
   direction: Setup["direction"];
@@ -55,6 +56,7 @@ function parseEntryZone(value: string): { from: number; to: number } {
 function mapSetup(setup: Setup, timestamp: string): HomepageSetup {
   return {
     id: setup.id,
+    assetId: setup.assetId,
     symbol: setup.symbol,
     timeframe: setup.timeframe,
     direction: setup.direction,

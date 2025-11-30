@@ -13,6 +13,7 @@ import { mockEvents } from "@/src/lib/mockEvents";
 import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
 import deMessages from "@/src/messages/de.json";
 import enMessages from "@/src/messages/en.json";
+import { PerceptionTodayPanel } from "@/src/features/perception/ui/PerceptionTodayPanel";
 
 type PageProps = {
   params: Promise<{ locale?: string }>;
@@ -85,6 +86,7 @@ function parseEntryZone(value: string): { from: number; to: number } {
 function toHomepageSetup(setup: Setup): HomepageSetup {
   return {
     id: setup.id,
+    assetId: setup.assetId,
     symbol: setup.symbol,
     timeframe: setup.timeframe,
     direction: setup.direction,
@@ -136,6 +138,16 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Premium Setups</h1>
           <p className="max-w-2xl text-sm text-[var(--text-secondary)] sm:text-base">{t("premium.info")}</p>
         </div>
+
+        <Suspense
+          fallback={
+            <div className="rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-surface)] p-4 text-sm text-[var(--text-primary)]">
+              Loading live snapshot ...
+            </div>
+          }
+        >
+          <PerceptionTodayPanel />
+        </Suspense>
 
         <EngineMetaPanel generatedAt={snapshot.generatedAt} version={snapshot.version} />
 

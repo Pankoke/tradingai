@@ -3,7 +3,6 @@
 import React from "react";
 import type { JSX } from "react";
 import { usePathname } from "next/navigation";
-import { Badge } from "@/src/components/ui/badge";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
 import { clamp } from "@/src/lib/math";
@@ -11,7 +10,6 @@ import { clamp } from "@/src/lib/math";
 type Props = {
   setup: HomepageSetup;
   title: string;
-  weakLabel: string;
   ctaLabel: string;
   labels: {
     directionLong: string;
@@ -116,7 +114,6 @@ function ConfidenceRing({
 export default function HomepageHeroSetupCard({
   setup,
   title,
-  weakLabel,
   ctaLabel,
   labels,
 }: Props): JSX.Element {

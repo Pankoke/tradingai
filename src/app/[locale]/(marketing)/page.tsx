@@ -5,14 +5,13 @@ import type { JSX } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Activity, BarChart3, Shield, Zap, ActivitySquare } from "lucide-react";
-import HomepageHeroSetupCard from "@/src/components/homepage/HomepageHeroSetupCard";
 import { fetchTodaySetups } from "@/src/lib/api/perceptionClient";
 import type { Setup } from "@/src/lib/engine/types";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import { clamp } from "@/src/lib/math";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
-import { PerceptionTodayPanel } from "@/src/features/perception/ui/PerceptionTodayPanel";
+import { SetupOfTheDayCard } from "@/src/app/[locale]/(marketing)/components/SetupOfTheDayCard";
 
 type Labels = ReturnType<typeof buildLabels>;
 
@@ -60,6 +59,7 @@ function parseEntryZone(value: string): { from: number; to: number } {
 function toHomepageSetup(setup: Setup): HomepageSetup {
   return {
     id: setup.id,
+    assetId: setup.assetId,
     symbol: setup.symbol,
     timeframe: setup.timeframe,
     direction: setup.direction,
@@ -94,6 +94,7 @@ export default function MarketingPage(): JSX.Element {
   const pathname = usePathname();
   const [setupOfTheDay, setSetupOfTheDay] =
     useState<HomepageSetup | null>(null);
+  const [setupOfTheDayRaw, setSetupOfTheDayRaw] = useState<Setup | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
 
   const locale = useMemo(() => {
@@ -115,6 +116,9 @@ export default function MarketingPage(): JSX.Element {
         const hero =
           mapped.find((s) => s.id === setupOfTheDayId) ?? mapped[0] ?? null;
         setSetupOfTheDay(hero);
+        const heroRaw =
+          setups.find((s) => s.id === setupOfTheDayId) ?? setups[0] ?? null;
+        setSetupOfTheDayRaw(heroRaw);
         setState("ready");
       } catch (error) {
         console.error(error);
@@ -213,33 +217,14 @@ export default function MarketingPage(): JSX.Element {
               {todayHuman}
             </span>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-sky-50 via-white to-emerald-50 p-[1.5px] shadow-sm dark:border-transparent dark:from-sky-500/15 dark:via-transparent dark:to-emerald-500/10 dark:shadow-[0_0_25px_rgba(56,189,248,0.15)]">
-            <HomepageHeroSetupCard
-              setup={setupOfTheDay}
-              title={labels.heroHeadline}
-              weakLabel={labels.weakSetup}
-              labels={{
-                directionLong: labels.directionLong,
-                directionShort: labels.directionShort,
-                confidence: labels.confidence,
-                entry: labels.entry,
-                stop: labels.stopLoss,
-                take: labels.takeProfit,
-                eventHigh: labels.eventHigh,
-                eventMedium: labels.eventMedium,
-                eventLow: labels.eventLow,
-                biasBullish: labels.biasBullish,
-                biasBearish: labels.biasBearish,
-                biasNeutral: labels.biasNeutral,
-                sentimentPositive: labels.sentimentPositive,
-                sentimentNegative: labels.sentimentNegative,
-                sentimentNeutral: labels.sentimentNeutral,
-                orderflowBuyers: labels.orderflowBuyers,
-                orderflowSellers: labels.orderflowSellers,
-                orderflowBalanced: labels.orderflowBalanced,
-              }}
-              ctaLabel={labels.heroCta}
-            />
+          <div>
+            {setupOfTheDayRaw ? (
+              <SetupOfTheDayCard setup={setupOfTheDayRaw} />
+            ) : (
+              <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 text-sm text-[var(--text-secondary)]">
+                {labels.heroFallback}
+              </div>
+            )}
           </div>
         </section>
 
@@ -290,9 +275,6 @@ export default function MarketingPage(): JSX.Element {
             </div>
           </div>
         </section>
-
-        {/* LIVE PERCEPTION SNAPSHOT */}
-        <PerceptionTodayPanel />
 
         {/* UNLOCK MORE SETUPS – gleicher Card-Container wie oben & wie Setup des Tages */}
         <section>

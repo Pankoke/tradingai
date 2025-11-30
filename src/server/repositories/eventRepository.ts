@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lte } from "drizzle-orm";
+import { and, desc, gte, lte } from "drizzle-orm";
 import { db } from "../db/db";
 import { events } from "../db/schema/events";
 import { excluded } from "../db/sqlHelpers";

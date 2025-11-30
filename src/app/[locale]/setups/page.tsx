@@ -1,6 +1,6 @@
 import React from "react";
 import type { JSX } from "react";
-import HomepageHeroSetupCard from "@/src/components/homepage/HomepageHeroSetupCard";
+import { SetupOfTheDayCard } from "@/src/app/[locale]/(marketing)/components/SetupOfTheDayCard";
 import HomepageSetupCard from "@/src/components/homepage/HomepageSetupCard";
 import { EngineMetaPanel } from "@/src/components/perception/EngineMetaPanel";
 import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
@@ -78,6 +78,7 @@ function parseEntryZone(value: string): { from: number; to: number } {
 function toHomepageSetup(setup: Setup): HomepageSetup {
   return {
     id: setup.id,
+    assetId: setup.assetId,
     symbol: setup.symbol,
     timeframe: setup.timeframe,
     direction: setup.direction,
@@ -97,6 +98,12 @@ function toHomepageSetup(setup: Setup): HomepageSetup {
   };
 }
 
+function pickRandom<T>(items: T[], count: number): T[] {
+  const pool = [...items];
+  pool.sort(() => Math.random() - 0.5);
+  return pool.slice(0, count);
+}
+
 type PageProps = {
   params: Promise<{ locale?: string }>;
 };
@@ -113,10 +120,11 @@ export default async function SetupsPage({ params }: PageProps): Promise<JSX.Ele
 
   const snapshot = await buildPerceptionSnapshot();
   const { setups, setupOfTheDayId } = snapshot;
-  const setupOfTheDayRaw = setups.find((s) => s.id === setupOfTheDayId) ?? null;
-  const setupOfTheDay = setupOfTheDayRaw ? toHomepageSetup(setupOfTheDayRaw) : null;
-  const freeSetups = setups.filter((s) => s.accessLevel === "free" && s.id !== setupOfTheDayId);
-  const freeHomepageSetups = freeSetups.map(toHomepageSetup);
+  const setupOfTheDayRaw = setups.find((s) => s.id === setupOfTheDayId) ?? setups[0] ?? null;
+  const randomSetups = pickRandom(
+    setups.filter((s) => s.accessLevel === "free" && s.id !== setupOfTheDayRaw?.id),
+    3,
+  ).map(toHomepageSetup);
 
   return (
     <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
@@ -132,33 +140,8 @@ export default async function SetupsPage({ params }: PageProps): Promise<JSX.Ele
 
         <section className="space-y-4">
           <h2 className="text-lg font-semibold tracking-tight sm:text-xl">Setup des Tages</h2>
-          {setupOfTheDay ? (
-            <HomepageHeroSetupCard
-              setup={setupOfTheDay}
-              title={t("homepage.hero.headline")}
-              weakLabel={labels.weakSetup}
-              labels={{
-                directionLong: labels.directionLong,
-                directionShort: labels.directionShort,
-                confidence: labels.confidence,
-                entry: labels.entry,
-                stop: labels.stop,
-                take: labels.take,
-                eventHigh: labels.eventHigh,
-                eventMedium: labels.eventMedium,
-                eventLow: labels.eventLow,
-                biasBullish: labels.biasBullish,
-                biasBearish: labels.biasBearish,
-                biasNeutral: labels.biasNeutral,
-                sentimentPositive: labels.sentimentPositive,
-                sentimentNegative: labels.sentimentNegative,
-                sentimentNeutral: labels.sentimentNeutral,
-                orderflowBuyers: labels.orderflowBuyers,
-                orderflowSellers: labels.orderflowSellers,
-                orderflowBalanced: labels.orderflowBalanced,
-              }}
-              ctaLabel={t("homepage.hero.cta")}
-            />
+          {setupOfTheDayRaw ? (
+            <SetupOfTheDayCard setup={setupOfTheDayRaw} />
           ) : (
             <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 text-sm text-[var(--text-secondary)]">
               Aktuell kein Setup des Tages verfügbar.
@@ -168,9 +151,9 @@ export default async function SetupsPage({ params }: PageProps): Promise<JSX.Ele
 
         <section className="space-y-3">
           <h2 className="text-lg font-semibold tracking-tight sm:text-xl">Weitere Setups</h2>
-          {freeHomepageSetups.length > 0 ? (
+          {randomSetups.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {freeHomepageSetups.map((setup) => (
+              {randomSetups.map((setup) => (
                 <HomepageSetupCard key={setup.id} setup={setup} weakLabel={labels.weakSetup} labels={labels} />
               ))}
             </div>

@@ -5,6 +5,7 @@ import type { JSX } from "react";
 import { Badge } from "@/src/components/ui/badge";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import { clamp } from "@/src/lib/math";
+import { formatAssetLabel } from "@/src/lib/formatters/asset";
 
 type RingProps = { value: number; label: string; color: string };
 
@@ -56,6 +57,7 @@ type Props = {
 
 export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): JSX.Element {
   const confidence = clamp(setup.confidence, 0, 100);
+  const assetHeadline = formatAssetLabel(setup.assetId, setup.symbol);
   const eventLabel =
     setup.eventLevel === "high"
       ? labels.eventHigh
@@ -86,13 +88,16 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
   const orderflowPercent =
     setup.orderflowMode === "buyers_dominant" ? 80 : setup.orderflowMode === "sellers_dominant" ? 30 : 55;
 
+  const detailBoxClass = "rounded-2xl border border-slate-800 bg-[#0f172a]/80 px-4 py-3 shadow-[inset_0_0_25px_rgba(15,23,42,0.9)]";
+  const baseCardClass = "flex h-full flex-col justify-between rounded-3xl border border-slate-800 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),_transparent_55%),_rgba(4,7,15,0.98)] px-5 py-7 shadow-[0_24px_80px_rgba(0,0,0,0.85)] md:px-8 md:py-8";
+
   return (
-    <div className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950/80 dark:shadow-none dark:hover:border-slate-600 dark:hover:bg-slate-900/90">
+    <div className={baseCardClass}>
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-1">
           <p className="text-[11px] uppercase tracking-[0.2em] text-slate-600 dark:text-slate-500">{labels.sourceRuleBased}</p>
           <p className="text-lg font-semibold text-slate-900 dark:text-white">
-            {setup.symbol} · {setup.timeframe}
+            {assetHeadline} · {setup.timeframe}
           </p>
           <div className="mt-1 flex flex-wrap gap-2 text-[11px]">
             <Badge
@@ -134,20 +139,20 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
         <Ring value={orderflowPercent} label={orderflowLabel} color="#22d3ee" />
       </div>
 
-      <div className="mt-4 grid gap-3 text-sm md:grid-cols-3">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.25em] text-slate-600 dark:text-slate-500">{labels.entry}</p>
-          <p className="text-base font-semibold text-slate-900 dark:text-white">
+      <div className="mt-4 grid gap-4 text-sm md:grid-cols-3">
+        <div className={detailBoxClass}>
+          <div className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-400">{labels.entry}</div>
+          <div className="mt-1 text-lg font-semibold text-white">
             {setup.entryZone.from.toFixed(4)} - {setup.entryZone.to.toFixed(4)}
-          </p>
+          </div>
         </div>
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.25em] text-slate-600 dark:text-slate-500">{labels.take}</p>
-          <p className="text-base font-semibold text-emerald-600 dark:text-emerald-400">{setup.takeProfit.toFixed(4)}</p>
+        <div className={detailBoxClass}>
+          <div className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-400">{labels.take}</div>
+          <div className="mt-1 text-lg font-semibold text-emerald-400">{setup.takeProfit.toFixed(4)}</div>
         </div>
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.25em] text-slate-600 dark:text-slate-500">{labels.stop}</p>
-          <p className="text-base font-semibold text-rose-600 dark:text-rose-400">{setup.stopLoss.toFixed(4)}</p>
+        <div className={detailBoxClass}>
+          <div className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-400">{labels.stop}</div>
+          <div className="mt-1 text-lg font-semibold text-rose-400">{setup.stopLoss.toFixed(4)}</div>
         </div>
       </div>
     </div>
