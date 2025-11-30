@@ -7,6 +7,7 @@ import { z } from "zod";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import { formatAssetLabel, getAssetMeta } from "@/src/lib/formatters/asset";
 import { PerceptionCard } from "@/src/components/perception/PerceptionCard";
+import { computeRingsForSnapshotItem } from "@/src/lib/engine/rings";
 
 const TIMEOUT_MS = 10_000;
 
@@ -177,6 +178,7 @@ export function PerceptionTodayPanel(): JSX.Element {
 
     return data.items.find((item) => item.isSetupOfTheDay) ?? data.items[0] ?? null;
   }, [data]);
+  const heroRings = useMemo(() => (heroItem ? computeRingsForSnapshotItem(heroItem) : undefined), [heroItem]);
 
   const additionalItems = useMemo(() => {
     if (!data) {
@@ -287,6 +289,13 @@ export function PerceptionTodayPanel(): JSX.Element {
                     <ScoreChip label={t("perception.today.scoreMomentum")} value={heroItem.scoreMomentum} />
                     <ScoreChip label={t("perception.today.scoreVolatility")} value={heroItem.scoreVolatility} />
                   </div>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-5">
+                    <ScoreChip label={t("perception.today.eventRing")} value={heroRings?.event ?? null} />
+                    <ScoreChip label={t("perception.today.biasRing")} value={heroRings?.bias ?? null} />
+                    <ScoreChip label={t("perception.today.sentimentRing")} value={heroRings?.sentiment ?? null} />
+                    <ScoreChip label={t("perception.today.orderflowRing")} value={heroRings?.orderflow ?? null} />
+                    <ScoreChip label={t("perception.today.confidenceRing")} value={heroRings?.confidence ?? null} />
+                  </div>
                 </div>
 
                 <div>
@@ -325,6 +334,7 @@ export function PerceptionTodayPanel(): JSX.Element {
                     {additionalItems.map((item) => {
                       const asset = getAssetMeta(item.assetId);
                       const { Icon, accent } = DIRECTION_META[item.direction];
+                      const itemRings = computeRingsForSnapshotItem(item);
                       return (
                         <PerceptionCard key={item.id} innerClassName="p-4" className="">
                           <div>
@@ -344,6 +354,13 @@ export function PerceptionTodayPanel(): JSX.Element {
                               <ScoreChip label={t("perception.today.scoreTrend")} value={item.scoreTrend} />
                               <ScoreChip label={t("perception.today.scoreMomentum")} value={item.scoreMomentum} />
                               <ScoreChip label={t("perception.today.scoreVolatility")} value={item.scoreVolatility} />
+                            </div>
+                            <div className="mt-2 grid gap-2 text-[11px] text-slate-400 sm:grid-cols-5">
+                              <ScoreChip label={t("perception.today.eventRing")} value={itemRings.event} />
+                              <ScoreChip label={t("perception.today.biasRing")} value={itemRings.bias} />
+                              <ScoreChip label={t("perception.today.sentimentRing")} value={itemRings.sentiment} />
+                              <ScoreChip label={t("perception.today.orderflowRing")} value={itemRings.orderflow} />
+                              <ScoreChip label={t("perception.today.confidenceRing")} value={itemRings.confidence} />
                             </div>
                             <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400">
                               <span>

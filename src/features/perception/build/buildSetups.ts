@@ -13,6 +13,7 @@ import {
 } from "@/src/server/repositories/perceptionSnapshotRepository";
 import { getActiveAssets } from "@/src/server/repositories/assetRepository";
 import { PerceptionDataMode } from "@/src/lib/engine/perceptionDataSource";
+import { computeRingsForSetup } from "@/src/lib/engine/rings";
 
 export type PerceptionSnapshotEngineResult = PerceptionSnapshot;
 
@@ -72,9 +73,18 @@ export async function buildAndStorePerceptionSnapshot(
       pattern: setup.balanceScore,
     });
 
+    const rings = computeRingsForSetup({
+      breakdown,
+      biasScore: setup.biasScore,
+      sentimentScore: setup.sentimentScore,
+      balanceScore: setup.balanceScore,
+      confidence: setup.confidence,
+      direction: setup.direction?.toLowerCase() as "long" | "short" | "neutral" | null,
+    });
     const confidence = computeSetupConfidence({
       setupId: setup.id,
       score: breakdown,
+      rings,
     });
 
     const assetId = setup.assetId ?? symbolToAssetId.get(setup.symbol);

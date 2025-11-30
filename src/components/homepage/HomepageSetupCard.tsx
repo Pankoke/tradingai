@@ -6,6 +6,7 @@ import { Badge } from "@/src/components/ui/badge";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import { clamp } from "@/src/lib/math";
 import { formatAssetLabel } from "@/src/lib/formatters/asset";
+import { computeRingsForSetup } from "@/src/lib/engine/rings";
 
 type RingProps = { value: number; label: string; color: string };
 
@@ -56,7 +57,6 @@ type Props = {
 };
 
 export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): JSX.Element {
-  const confidence = clamp(setup.confidence, 0, 100);
   const assetHeadline = formatAssetLabel(setup.assetId, setup.symbol);
   const eventLabel =
     setup.eventLevel === "high"
@@ -85,8 +85,15 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
   const eventPercent = setup.eventLevel === "high" ? 85 : setup.eventLevel === "medium" ? 60 : 35;
   const biasPercent = clamp(setup.bias.strength, 0, 100);
   const sentimentPercent = clamp(Math.round(((setup.sentimentScore + 1) / 2) * 100), 0, 100);
-  const orderflowPercent =
-    setup.orderflowMode === "buyers_dominant" ? 80 : setup.orderflowMode === "sellers_dominant" ? 30 : 55;
+  const rings = computeRingsForSetup({
+    eventScore: eventPercent,
+    biasScore: biasPercent,
+    sentimentScore: sentimentPercent,
+    orderflowMode: setup.orderflowMode,
+    confidence: setup.confidence,
+    direction: setup.direction?.toLowerCase() as "long" | "short" | "neutral" | null,
+  });
+  const confidence = rings.confidence;
 
   const detailBoxClass = "rounded-2xl border border-slate-800 bg-[#0f172a]/80 px-4 py-3 shadow-[inset_0_0_25px_rgba(15,23,42,0.9)]";
   const baseCardClass = "flex h-full flex-col justify-between rounded-3xl border border-slate-800 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),_transparent_55%),_rgba(4,7,15,0.98)] px-5 py-7 shadow-[0_24px_80px_rgba(0,0,0,0.85)] md:px-8 md:py-8";
@@ -126,18 +133,20 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
             title={`${Math.round(confidence)}% ${labels.confidence}`}
           >
             <div className="flex h-13 w-13 items-center justify-center rounded-full bg-white dark:bg-slate-950/90">
-              <span className="text-sm font-semibold text-slate-900 dark:text-white">{Math.round(confidence)}%</span>
+              <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                {Math.round(confidence)}%
+              </span>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="mt-4 grid gap-4 text-xs text-slate-700 dark:text-slate-200 md:grid-cols-4">
-        <Ring value={eventPercent} label={eventLabel} color="#38bdf8" />
-        <Ring value={biasPercent} label={biasLabel} color="#22c55e" />
-        <Ring value={sentimentPercent} label={sentimentLabel} color="#10b981" />
-        <Ring value={orderflowPercent} label={orderflowLabel} color="#22d3ee" />
-      </div>
+        <div className="mt-4 grid gap-4 text-xs text-slate-700 dark:text-slate-200 md:grid-cols-4">
+          <Ring value={rings.event} label={eventLabel} color="#38bdf8" />
+          <Ring value={rings.bias} label={biasLabel} color="#22c55e" />
+          <Ring value={rings.sentiment} label={sentimentLabel} color="#10b981" />
+          <Ring value={rings.orderflow} label={orderflowLabel} color="#22d3ee" />
+        </div>
 
       <div className="mt-4 grid gap-4 text-sm md:grid-cols-3">
         <div className={detailBoxClass}>

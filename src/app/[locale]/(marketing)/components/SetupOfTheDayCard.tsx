@@ -9,6 +9,7 @@ import type { SetupCardSetup } from "./SetupCard";
 import { i18nConfig, type Locale } from "../../../../lib/i18n/config";
 import { PerceptionCard } from "@/src/components/perception/PerceptionCard";
 import { formatAssetLabel, getAssetMeta } from "@/src/lib/formatters/asset";
+import { computeRingsForSetup } from "@/src/lib/engine/rings";
 
 type SetupOfTheDayCardProps = {
   setup: SetupCardSetup;
@@ -65,6 +66,14 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
   const prefix = useMemo(() => localePrefix(pathname), [pathname]);
   const meta = getAssetMeta(setup.assetId, setup.symbol);
   const headline = formatAssetLabel(setup.assetId, setup.symbol);
+  const rings = computeRingsForSetup({
+    eventScore: setup.eventScore,
+    biasScore: setup.biasScore,
+    sentimentScore: setup.sentimentScore,
+    balanceScore: setup.balanceScore,
+    confidence: setup.confidence,
+    direction: setup.direction?.toLowerCase() as "long" | "short" | "neutral" | null,
+  });
 
   return (
     <PerceptionCard className="p-0" innerClassName="p-6">
@@ -86,10 +95,10 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
             </span>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <SmallGauge label={`${t("setups.event")}: schwach`} value={setup.eventScore} tone="accent" />
-            <SmallGauge label={`${t("setups.bias")}: bullish`} value={setup.biasScore} tone="green" />
-            <SmallGauge label={`${t("setups.sentiment")}: positiv`} value={setup.sentimentScore} tone="green" />
-            <SmallGauge label={t("setups.balance")} value={setup.balanceScore} tone="accent" />
+            <SmallGauge label={`${t("setups.event")}: schwach`} value={rings.event} tone="accent" />
+            <SmallGauge label={`${t("setups.bias")}: bullish`} value={rings.bias} tone="green" />
+            <SmallGauge label={`${t("setups.sentiment")}: positiv`} value={rings.sentiment} tone="green" />
+            <SmallGauge label={t("setups.balance")} value={rings.orderflow} tone="accent" />
           </div>
         </div>
 
@@ -104,14 +113,14 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
         <LevelBox label={t("setups.takeProfit")} value={formatNumberText(setup.takeProfit)} tone="success" />
       </div>
 
-      <div className="mt-1 flex justify-end">
-        <Link
-          href={`${prefix}/setups/${setup.id}`}
-          className="rounded-full bg-[#0ea5e9] px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(14,165,233,0.35)] transition hover:brightness-110"
-        >
-          {t("setups.openAnalysis")}
-        </Link>
-      </div>
+          <div className="mt-1 flex justify-end">
+            <Link
+              href={`${prefix}/setups/${setup.id}`}
+              className="rounded-full bg-[#0ea5e9] px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(14,165,233,0.35)] transition hover:brightness-110"
+            >
+              {t("setups.openAnalysis")}
+            </Link>
+          </div>
     </PerceptionCard>
   );
 }

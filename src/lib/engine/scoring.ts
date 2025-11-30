@@ -1,5 +1,6 @@
 import { clamp } from "@/src/lib/math";
 import { setupDefinitions, type SetupDefinition } from "@/src/lib/engine/setupDefinitions";
+import type { SetupRings } from "@/src/lib/engine/rings";
 
 export type BaseScoreInput = {
   trendStrength?: number;
@@ -89,9 +90,29 @@ function getDefinition(setupId: string): SetupDefinition | undefined {
   return setupDefinitions.find((def) => def.id === setupId);
 }
 
+export function computeAggregatedConfidence(totalScore: number, rings: SetupRings): number {
+  const weights = {
+    totalScore: 0.4,
+    bias: 0.2,
+    event: 0.15,
+    sentiment: 0.15,
+    orderflow: 0.1,
+  };
+
+  const aggregated =
+    clamp(Math.round(totalScore), 0, 100) * weights.totalScore +
+    rings.bias * weights.bias +
+    rings.event * weights.event +
+    rings.sentiment * weights.sentiment +
+    rings.orderflow * weights.orderflow;
+
+  return clamp(Math.round(aggregated), 0, 100);
+}
+
 export function computeSetupConfidence(params: {
   setupId: string;
   score: SetupScoreBreakdown;
+  rings: SetupRings;
 }): number {
   const definition = getDefinition(params.setupId);
   const categoryBase = definition
@@ -99,8 +120,9 @@ export function computeSetupConfidence(params: {
     : 60;
   const override = setupOverrides[params.setupId];
   const baseConfidence = override ?? categoryBase;
-  const adjustment = Math.round((params.score.total - 60) * 0.15);
-  return clamp(baseConfidence + adjustment, 0, 100);
+  const aggregated = computeAggregatedConfidence(params.score.total, params.rings);
+  const combined = Math.round((baseConfidence + aggregated) / 2);
+  return clamp(combined, 0, 100);
 }
 
 export function computeSetupBalanceScore(values: number[]): number {

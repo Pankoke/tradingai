@@ -6,6 +6,7 @@ import { createPerceptionDataSource } from "@/src/lib/engine/perceptionDataSourc
 import { computeSetupBalanceScore, computeSetupConfidence, computeSetupScore } from "@/src/lib/engine/scoring";
 import { perceptionSnapshotSchema, type AccessLevel, type PerceptionSnapshot, type Setup } from "@/src/lib/engine/types";
 import type { BiasSnapshot } from "@/src/lib/engine/eventsBiasTypes";
+import { computeRingsForSetup } from "@/src/lib/engine/rings";
 
 const ENGINE_VERSION = "0.1.0";
 const dataSource = createPerceptionDataSource();
@@ -66,9 +67,18 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
       volatility: Math.abs(eventResult.eventScore - biasResult.biasScore),
       pattern: base.balanceScore,
     });
+    const rings = computeRingsForSetup({
+      breakdown: scoreBreakdown,
+      biasScore: biasResult.biasScore,
+      sentimentScore: sentimentResult.sentimentScore,
+      balanceScore: base.balanceScore,
+      confidence: base.confidence,
+      direction: (base.direction?.toLowerCase() as "long" | "short" | "neutral") ?? null,
+    });
     const confidence = computeSetupConfidence({
       setupId: base.id,
       score: scoreBreakdown,
+      rings,
     });
     const balanceScore = computeSetupBalanceScore([
       eventResult.eventScore,
