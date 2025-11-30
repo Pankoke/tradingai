@@ -12,6 +12,7 @@ import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import { clamp } from "@/src/lib/math";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
+import { PerceptionTodayPanel } from "@/src/features/perception/ui/PerceptionTodayPanel";
 
 type Labels = ReturnType<typeof buildLabels>;
 
@@ -289,6 +290,9 @@ export default function MarketingPage(): JSX.Element {
             </div>
           </div>
         </section>
+
+        {/* LIVE PERCEPTION SNAPSHOT */}
+        <PerceptionTodayPanel />
 
         {/* UNLOCK MORE SETUPS – gleicher Card-Container wie oben & wie Setup des Tages */}
         <section>
