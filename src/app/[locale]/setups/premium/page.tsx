@@ -4,6 +4,7 @@ import Link from "next/link";
 import HomepageSetupCard from "@/src/components/homepage/HomepageSetupCard";
 import { PremiumControls } from "@/src/components/setups/PremiumControls";
 import { EngineMetaPanel } from "@/src/components/perception/EngineMetaPanel";
+import { FiveRingsExplainer } from "@/src/components/perception/FiveRingsExplainer";
 import { ProNotice } from "@/src/components/common/ProNotice";
 import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
 import type { Setup } from "@/src/lib/engine/types";
@@ -150,6 +151,7 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
         </Suspense>
 
         <EngineMetaPanel generatedAt={snapshot.generatedAt} version={snapshot.version} />
+        <FiveRingsExplainer t={t} />
 
         <div className="rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-surface)] p-4 text-sm text-[var(--text-primary)] shadow-[0_0_0_1px_rgba(14,165,233,0.15)]">
           <div className="flex flex-wrap items-center gap-2">

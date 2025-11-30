@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ComponentType, JSX, SVGProps } from "react";
-import { ArrowDown, ArrowRight, ArrowUp } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp, Info } from "lucide-react";
 import { z } from "zod";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import { formatAssetLabel, getAssetMeta } from "@/src/lib/formatters/asset";
 import { PerceptionCard } from "@/src/components/perception/PerceptionCard";
 import { computeRingsForSnapshotItem } from "@/src/lib/engine/rings";
+import { Tooltip } from "@/src/components/ui/tooltip";
 
 const TIMEOUT_MS = 10_000;
 
@@ -127,12 +128,22 @@ function StatusMessage({ message }: StatusMessageProps): JSX.Element {
 type ScoreChipProps = {
   label: string;
   value: number | null;
+  tooltip?: string;
 };
 
-function ScoreChip({ label, value }: ScoreChipProps): JSX.Element {
+function ScoreChip({ label, value, tooltip }: ScoreChipProps): JSX.Element {
   return (
     <div className="flex flex-col gap-1 rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-2 text-[11px] uppercase tracking-wide text-slate-400">
-      <span>{label}</span>
+      <div className="flex items-center gap-1">
+        <span>{label}</span>
+        {tooltip ? (
+          <Tooltip content={tooltip}>
+            <span className="rounded-full border border-slate-700 bg-slate-800/60 p-0.5 text-slate-400">
+              <Info className="h-3 w-3" />
+            </span>
+          </Tooltip>
+        ) : null}
+      </div>
       <span className="text-base font-semibold text-white">{formatScore(value)}</span>
     </div>
   );
@@ -199,6 +210,13 @@ export function PerceptionTodayPanel(): JSX.Element {
     modeKey === "live"
       ? "text-emerald-300 border-emerald-500/60 bg-emerald-500/10"
       : "text-amber-300 border-amber-500/60 bg-amber-500/10";
+  const ringTooltips = {
+    event: t("perception.rings.eventTooltip"),
+    bias: t("perception.rings.biasTooltip"),
+    sentiment: t("perception.rings.sentimentTooltip"),
+    orderflow: t("perception.rings.orderflowTooltip"),
+    confidence: t("perception.rings.confidenceTooltip"),
+  };
 
   return (
     <section>
@@ -290,11 +308,31 @@ export function PerceptionTodayPanel(): JSX.Element {
                     <ScoreChip label={t("perception.today.scoreVolatility")} value={heroItem.scoreVolatility} />
                   </div>
                   <div className="mt-4 grid gap-3 sm:grid-cols-5">
-                    <ScoreChip label={t("perception.today.eventRing")} value={heroRings?.event ?? null} />
-                    <ScoreChip label={t("perception.today.biasRing")} value={heroRings?.bias ?? null} />
-                    <ScoreChip label={t("perception.today.sentimentRing")} value={heroRings?.sentiment ?? null} />
-                    <ScoreChip label={t("perception.today.orderflowRing")} value={heroRings?.orderflow ?? null} />
-                    <ScoreChip label={t("perception.today.confidenceRing")} value={heroRings?.confidence ?? null} />
+                    <ScoreChip
+                      label={t("perception.today.eventRing")}
+                      value={heroRings?.event ?? null}
+                      tooltip={ringTooltips.event}
+                    />
+                    <ScoreChip
+                      label={t("perception.today.biasRing")}
+                      value={heroRings?.bias ?? null}
+                      tooltip={ringTooltips.bias}
+                    />
+                    <ScoreChip
+                      label={t("perception.today.sentimentRing")}
+                      value={heroRings?.sentiment ?? null}
+                      tooltip={ringTooltips.sentiment}
+                    />
+                    <ScoreChip
+                      label={t("perception.today.orderflowRing")}
+                      value={heroRings?.orderflow ?? null}
+                      tooltip={ringTooltips.orderflow}
+                    />
+                    <ScoreChip
+                      label={t("perception.today.confidenceRing")}
+                      value={heroRings?.confidence ?? null}
+                      tooltip={ringTooltips.confidence}
+                    />
                   </div>
                 </div>
 
@@ -356,11 +394,31 @@ export function PerceptionTodayPanel(): JSX.Element {
                               <ScoreChip label={t("perception.today.scoreVolatility")} value={item.scoreVolatility} />
                             </div>
                             <div className="mt-2 grid gap-2 text-[11px] text-slate-400 sm:grid-cols-5">
-                              <ScoreChip label={t("perception.today.eventRing")} value={itemRings.event} />
-                              <ScoreChip label={t("perception.today.biasRing")} value={itemRings.bias} />
-                              <ScoreChip label={t("perception.today.sentimentRing")} value={itemRings.sentiment} />
-                              <ScoreChip label={t("perception.today.orderflowRing")} value={itemRings.orderflow} />
-                              <ScoreChip label={t("perception.today.confidenceRing")} value={itemRings.confidence} />
+                              <ScoreChip
+                                label={t("perception.today.eventRing")}
+                                value={itemRings.event}
+                                tooltip={ringTooltips.event}
+                              />
+                              <ScoreChip
+                                label={t("perception.today.biasRing")}
+                                value={itemRings.bias}
+                                tooltip={ringTooltips.bias}
+                              />
+                              <ScoreChip
+                                label={t("perception.today.sentimentRing")}
+                                value={itemRings.sentiment}
+                                tooltip={ringTooltips.sentiment}
+                              />
+                              <ScoreChip
+                                label={t("perception.today.orderflowRing")}
+                                value={itemRings.orderflow}
+                                tooltip={ringTooltips.orderflow}
+                              />
+                              <ScoreChip
+                                label={t("perception.today.confidenceRing")}
+                                value={itemRings.confidence}
+                                tooltip={ringTooltips.confidence}
+                              />
                             </div>
                             <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400">
                               <span>

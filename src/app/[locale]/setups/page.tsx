@@ -3,6 +3,7 @@ import type { JSX } from "react";
 import { SetupOfTheDayCard } from "@/src/app/[locale]/(marketing)/components/SetupOfTheDayCard";
 import HomepageSetupCard from "@/src/components/homepage/HomepageSetupCard";
 import { EngineMetaPanel } from "@/src/components/perception/EngineMetaPanel";
+import { FiveRingsExplainer } from "@/src/components/perception/FiveRingsExplainer";
 import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import { clamp } from "@/src/lib/math";
@@ -163,6 +164,7 @@ export default async function SetupsPage({ params }: PageProps): Promise<JSX.Ele
             </div>
           )}
         </section>
+        <FiveRingsExplainer t={t} />
       </div>
     </div>
   );

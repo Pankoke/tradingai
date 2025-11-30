@@ -4,10 +4,12 @@ import React, { useMemo } from "react";
 import type { JSX } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Info } from "lucide-react";
 import { useT } from "../../../../lib/i18n/ClientProvider";
 import type { SetupCardSetup } from "./SetupCard";
 import { i18nConfig, type Locale } from "../../../../lib/i18n/config";
 import { PerceptionCard } from "@/src/components/perception/PerceptionCard";
+import { Tooltip } from "@/src/components/ui/tooltip";
 import { formatAssetLabel, getAssetMeta } from "@/src/lib/formatters/asset";
 import { computeRingsForSetup } from "@/src/lib/engine/rings";
 
@@ -19,6 +21,7 @@ type GaugeProps = {
   label?: string;
   value: number;
   tone?: "accent" | "green" | "teal" | "neutral";
+  tooltip?: string;
 };
 
 type LevelBoxPropsDay = {
@@ -66,6 +69,12 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
   const prefix = useMemo(() => localePrefix(pathname), [pathname]);
   const meta = getAssetMeta(setup.assetId, setup.symbol);
   const headline = formatAssetLabel(setup.assetId, setup.symbol);
+  const ringTooltips = {
+    event: t("perception.rings.eventTooltip"),
+    bias: t("perception.rings.biasTooltip"),
+    sentiment: t("perception.rings.sentimentTooltip"),
+    orderflow: t("perception.rings.orderflowTooltip"),
+  };
   const rings = computeRingsForSetup({
     eventScore: setup.eventScore,
     biasScore: setup.biasScore,
@@ -95,10 +104,30 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
             </span>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <SmallGauge label={`${t("setups.event")}: schwach`} value={rings.event} tone="accent" />
-            <SmallGauge label={`${t("setups.bias")}: bullish`} value={rings.bias} tone="green" />
-            <SmallGauge label={`${t("setups.sentiment")}: positiv`} value={rings.sentiment} tone="green" />
-            <SmallGauge label={t("setups.balance")} value={rings.orderflow} tone="accent" />
+            <SmallGauge
+              label={`${t("setups.event")}: schwach`}
+              value={rings.event}
+              tone="accent"
+              tooltip={ringTooltips.event}
+            />
+            <SmallGauge
+              label={`${t("setups.bias")}: bullish`}
+              value={rings.bias}
+              tone="green"
+              tooltip={ringTooltips.bias}
+            />
+            <SmallGauge
+              label={`${t("setups.sentiment")}: positiv`}
+              value={rings.sentiment}
+              tone="green"
+              tooltip={ringTooltips.sentiment}
+            />
+            <SmallGauge
+              label={t("setups.balance")}
+              value={rings.orderflow}
+              tone="accent"
+              tooltip={ringTooltips.orderflow}
+            />
           </div>
         </div>
 
@@ -125,7 +154,7 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
   );
 }
 
-function SmallGauge({ label, value, tone = "accent" }: GaugeProps): JSX.Element {
+function SmallGauge({ label, value, tone = "accent", tooltip }: GaugeProps): JSX.Element {
   const clamped = Math.max(0, Math.min(100, value));
   const display = Math.round(clamped);
   const toneColor =
@@ -143,7 +172,18 @@ function SmallGauge({ label, value, tone = "accent" }: GaugeProps): JSX.Element 
           <span className="text-xs font-semibold text-white">{display}%</span>
         </div>
       </div>
-      {label ? <span className="text-[0.7rem] text-slate-300">{label}</span> : null}
+      {label ? (
+        <div className="flex items-center gap-1 text-[0.7rem] text-slate-300">
+          <span>{label}</span>
+          {tooltip ? (
+            <Tooltip content={tooltip}>
+              <span className="rounded-full border border-slate-700 bg-slate-800/60 p-0.5 text-slate-400">
+                <Info className="h-3 w-3" />
+              </span>
+            </Tooltip>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
