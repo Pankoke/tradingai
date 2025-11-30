@@ -8,7 +8,7 @@ import { FiveRingsExplainer } from "@/src/components/perception/FiveRingsExplain
 import { PerceptionRingsExplainer } from "@/src/components/perception/PerceptionRingsExplainer";
 
 type PageProps = {
-  params: { locale?: string };
+  params: Promise<{ locale?: string }>;
 };
 
 function getMessages(locale: string): Record<string, string> {
@@ -17,7 +17,8 @@ function getMessages(locale: string): Record<string, string> {
 }
 
 export default async function PremiumPerceptionPage({ params }: PageProps): Promise<JSX.Element> {
-  const localeParam = params?.locale ?? i18nConfig.defaultLocale;
+  const resolvedParams = await params;
+  const localeParam = resolvedParams?.locale ?? i18nConfig.defaultLocale;
   const locale: Locale = i18nConfig.locales.includes(localeParam as Locale)
     ? (localeParam as Locale)
     : i18nConfig.defaultLocale;
