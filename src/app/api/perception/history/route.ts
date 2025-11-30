@@ -1,5 +1,3 @@
-"use server";
-
 import { NextRequest, NextResponse } from "next/server";
 import { getPerceptionHistory, type PerceptionHistoryEntry } from "@/src/lib/cache/perceptionHistory";
 

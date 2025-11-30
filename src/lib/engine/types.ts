@@ -11,6 +11,7 @@ export type AccessLevel = z.infer<typeof accessLevelSchema>;
 
 export const setupSchema = z.object({
   id: z.string(),
+  assetId: z.string(),
   symbol: z.string(),
   timeframe: z.string(),
   direction: directionEnum,

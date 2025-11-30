@@ -1,5 +1,3 @@
-"use server";
-
 import { NextResponse } from "next/server";
 import { mockEvents } from "@/src/lib/mockEvents";
 import type { Event } from "@/src/lib/engine/eventsBiasTypes";

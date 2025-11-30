@@ -1,9 +1,9 @@
 import { db } from "../db/db";
 import { biasSnapshots } from "../db/schema/biasSnapshots";
-import { and, eq } from "drizzle-orm";
+import { and, eq, gte, lte, sql } from "drizzle-orm";
 import { excluded } from "../db/sqlHelpers";
 
-type BiasSnapshot = typeof biasSnapshots["$inferSelect"];
+export type BiasSnapshot = typeof biasSnapshots["$inferSelect"];
 type BiasSnapshotInput = typeof biasSnapshots["$inferInsert"];
 
 export async function getBiasSnapshot(params: {
@@ -24,6 +24,28 @@ export async function getBiasSnapshot(params: {
     )
     .limit(1);
   return snapshot;
+}
+
+export async function getBiasSnapshotsForRange(params: {
+  assetId: string;
+  from: Date;
+  to: Date;
+  timeframe: string;
+}): Promise<BiasSnapshot[]> {
+  const fromDate = params.from.toISOString().slice(0, 10);
+  const toDate = params.to.toISOString().slice(0, 10);
+  return db
+    .select()
+    .from(biasSnapshots)
+    .where(
+      and(
+        eq(biasSnapshots.assetId, params.assetId),
+        eq(biasSnapshots.timeframe, params.timeframe),
+        gte(biasSnapshots.date, fromDate),
+        lte(biasSnapshots.date, toDate),
+      ),
+    )
+    .orderBy(sql`${biasSnapshots.date} asc`);
 }
 
 export async function upsertBiasSnapshot(input: BiasSnapshotInput): Promise<void> {

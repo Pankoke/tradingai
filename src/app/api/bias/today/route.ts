@@ -1,5 +1,3 @@
-"use server";
-
 import { NextResponse } from "next/server";
 import { mockBiasSnapshot } from "@/src/lib/mockBias";
 import type { BiasSnapshot } from "@/src/lib/engine/eventsBiasTypes";

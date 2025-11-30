@@ -1,4 +1,4 @@
-import { index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 export const perceptionSnapshots = pgTable("perception_snapshots", {
   id: text("id").primaryKey(),
@@ -10,6 +10,3 @@ export const perceptionSnapshots = pgTable("perception_snapshots", {
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow()
 });
-
-export const snapshotTimeIndex = index("snapshot_time_idx")
-  .on(perceptionSnapshots.snapshotTime);

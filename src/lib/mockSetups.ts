@@ -3,6 +3,7 @@ import type { Setup } from "./engine/types";
 export const mockSetups: Setup[] = [
   {
     id: "setup-of-the-day",
+    assetId: "wti",
     symbol: "WTI Crude",
     timeframe: "D1",
     direction: "Long",
@@ -19,6 +20,7 @@ export const mockSetups: Setup[] = [
   },
   {
     id: "btc-long",
+    assetId: "btc",
     symbol: "BTCUSD",
     timeframe: "H4",
     direction: "Long",
@@ -35,6 +37,7 @@ export const mockSetups: Setup[] = [
   },
   {
     id: "eth-short",
+    assetId: "eth",
     symbol: "ETHUSD",
     timeframe: "H1",
     direction: "Short",
@@ -51,6 +54,7 @@ export const mockSetups: Setup[] = [
   },
   {
     id: "nasdaq-long",
+    assetId: "ndx",
     symbol: "NAS100",
     timeframe: "M30",
     direction: "Long",
@@ -67,6 +71,7 @@ export const mockSetups: Setup[] = [
   },
   {
     id: "dax-long",
+    assetId: "dax",
     symbol: "DAX40",
     timeframe: "H1",
     direction: "Long",
@@ -83,6 +88,7 @@ export const mockSetups: Setup[] = [
   },
   {
     id: "gold-short",
+    assetId: "gold",
     symbol: "XAUUSD",
     timeframe: "H4",
     direction: "Short",

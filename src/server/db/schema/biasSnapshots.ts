@@ -1,4 +1,4 @@
-import { date, jsonb, integer, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { date, jsonb, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { assets } from "./assets";
 
 export const biasSnapshots = pgTable("bias_snapshots", {
@@ -13,9 +13,4 @@ export const biasSnapshots = pgTable("bias_snapshots", {
   rangeScore: integer("range_score"),
   meta: jsonb("meta"),
   createdAt: timestamp("created_at").defaultNow()
-}, () => ({
-  biasAssetDateTimeframe
-}));
-
-export const biasAssetDateTimeframe = uniqueIndex("bias_asset_date_tf")
-  .on(biasSnapshots.assetId, biasSnapshots.date, biasSnapshots.timeframe);
+});

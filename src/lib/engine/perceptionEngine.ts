@@ -40,6 +40,7 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
   const enriched: Setup[] = setups.map((item) => {
     const base: Setup = {
       id: item.id,
+      assetId: item.assetId ?? item.symbol,
       symbol: item.symbol,
       timeframe: item.timeframe,
       direction: item.direction,

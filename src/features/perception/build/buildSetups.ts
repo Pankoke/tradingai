@@ -11,6 +11,7 @@ import {
   getSnapshotByTime,
   insertSnapshotWithItems,
 } from "@/src/server/repositories/perceptionSnapshotRepository";
+import { getActiveAssets } from "@/src/server/repositories/assetRepository";
 import { PerceptionDataMode } from "@/src/lib/engine/perceptionDataSource";
 
 export type PerceptionSnapshotEngineResult = PerceptionSnapshot;
@@ -57,8 +58,12 @@ export async function buildAndStorePerceptionSnapshot(
 
   const snapshotId = createId("snapshot");
 
+  const activeAssets = await getActiveAssets();
+  const symbolToAssetId = new Map(activeAssets.map((asset) => [asset.symbol, asset.id]));
   const itemRankCounters = new Map<string, number>();
-  const items: PerceptionSnapshotItemInput[] = engineResult.setups.map((setup, index) => {
+  const items: PerceptionSnapshotItemInput[] = [];
+  let overallRank = 0;
+  for (const setup of engineResult.setups) {
     const breakdown = computeSetupScore({
       trendStrength: setup.eventScore,
       biasScore: setup.biasScore,
@@ -72,16 +77,25 @@ export async function buildAndStorePerceptionSnapshot(
       score: breakdown,
     });
 
+    const assetId = setup.assetId ?? symbolToAssetId.get(setup.symbol);
+    if (!assetId) {
+      console.warn("[snapshotBuilder] skipping setup without assetId", {
+        setupId: setup.id,
+        symbol: setup.symbol,
+      });
+      continue;
+    }
+
     const assetRank = (itemRankCounters.get(setup.symbol) ?? 0) + 1;
     itemRankCounters.set(setup.symbol, assetRank);
-
-    return {
+    overallRank += 1;
+    items.push({
       id: createId("item"),
       snapshotId,
-      assetId: setup.symbol,
+      assetId,
       setupId: setup.id,
       direction: normalizeDirection(setup.direction),
-      rankOverall: index + 1,
+      rankOverall: overallRank,
       rankWithinAsset: assetRank,
       scoreTotal: breakdown.total,
       scoreTrend: breakdown.trend ?? null,
@@ -91,10 +105,10 @@ export async function buildAndStorePerceptionSnapshot(
       confidence,
       biasScoreAtTime: setup.biasScore ?? null,
       eventContext: null,
-      isSetupOfTheDay: index === 0,
+      isSetupOfTheDay: items.length === 0,
       createdAt: snapshotTime,
-    };
-  });
+    });
+  }
 
   const snapshot: PerceptionSnapshotInput = {
     id: snapshotId,

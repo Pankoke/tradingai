@@ -1,5 +1,3 @@
-"use server";
-
 import { NextResponse } from "next/server";
 import { getPerceptionSnapshot } from "@/src/lib/cache/perceptionCache";
 import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";

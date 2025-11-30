@@ -1,4 +1,9 @@
 import type { Timeframe } from "./marketDataProvider";
+import {
+  getBiasSnapshot,
+  getBiasSnapshotsForRange,
+  type BiasSnapshot as BiasSnapshotRow,
+} from "@/src/server/repositories/biasRepository";
 
 export type BiasDomainModel = {
   assetId: string;
@@ -10,6 +15,19 @@ export type BiasDomainModel = {
   volatilityScore?: number;
   rangeScore?: number;
 };
+
+function mapRow(row: BiasSnapshotRow): BiasDomainModel {
+  return {
+    assetId: row.assetId,
+    date: new Date(`${row.date}T00:00:00Z`),
+    timeframe: row.timeframe as Timeframe,
+    biasScore: row.biasScore,
+    confidence: row.confidence,
+    trendScore: row.trendScore ?? undefined,
+    volatilityScore: row.volatilityScore ?? undefined,
+    rangeScore: row.rangeScore ?? undefined,
+  };
+}
 
 export interface BiasProvider {
   getBiasSnapshot(params: {
@@ -23,4 +41,37 @@ export interface BiasProvider {
     to: Date;
     timeframe: Timeframe;
   }): Promise<BiasDomainModel[]>;
+}
+
+export class DbBiasProvider implements BiasProvider {
+  async getBiasSnapshot(params: {
+    assetId: string;
+    date: Date;
+    timeframe: Timeframe;
+  }): Promise<BiasDomainModel | null> {
+    const row = await getBiasSnapshot({
+      assetId: params.assetId,
+      date: params.date,
+      timeframe: params.timeframe,
+    });
+
+    if (!row) return null;
+    return mapRow(row);
+  }
+
+  async getBiasForDateRange(params: {
+    assetId: string;
+    from: Date;
+    to: Date;
+    timeframe: Timeframe;
+  }): Promise<BiasDomainModel[]> {
+    const rows = await getBiasSnapshotsForRange({
+      assetId: params.assetId,
+      from: params.from,
+      to: params.to,
+      timeframe: params.timeframe,
+    });
+
+    return rows.map(mapRow);
+  }
 }
