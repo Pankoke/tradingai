@@ -1,16 +1,16 @@
-TradingAI – Perception Lab
+TradingAI â€“ Perception Lab
 
-TradingAI ist eine KI-gestützte Trading-Plattform, die täglich regelbasierte und KI-basierte Setups generiert. Kern des Systems ist eine Setup-Engine, die Marktstruktur, Bias, Sentiment und Events auswertet, daraus Trades ableitet und sie mit Confidence-Scores, Entry/SL/TP und klaren Erklärungen versieht.
+TradingAI ist eine KI-gestÃ¼tzte Trading-Plattform, die tÃ¤glich regelbasierte und KI-basierte Setups generiert. Kern des Systems ist eine Setup-Engine, die Marktstruktur, Bias, Sentiment und Events auswertet, daraus Trades ableitet und sie mit Confidence-Scores, Entry/SL/TP und klaren ErklÃ¤rungen versieht.
 
-Dieses Repository enthält die Web-App (Next.js App Router) inklusive UI, API-Routen, Cron-Endpunkten und der modularen Perception-Engine.
+Dieses Repository enthÃ¤lt die Web-App (Next.js App Router) inklusive UI, API-Routen, Cron-Endpunkten und der modularen Perception-Engine.
 
 Ziele des Projekts
 
-Tägliche Setups für wichtige Assets
+TÃ¤gliche Setups fÃ¼r wichtige Assets
 
 Kombination aus regelbasierten Signalen und KI-Auswertung
 
-Klar verständliche "Setup des Tages"-Ansicht
+Klar verstÃ¤ndliche "Setup des Tages"-Ansicht
 
 Free-Tier und Premium-Tier
 
@@ -24,17 +24,17 @@ Setup-Engine:
 
 Analyse von Marktstruktur, Events, Sentiment, Volumen
 
-Scoring-System für Setups
+Scoring-System fÃ¼r Setups
 
 Entry, Stop-Loss, Take-Profit
 
-KI-generierte Kurzbegründungen
+KI-generierte KurzbegrÃ¼ndungen
 
 UI:
 
 Landing Page mit Setup des Tages
 
-Premium-Ansicht mit 20–40 Setups pro Tag
+Premium-Ansicht mit 20â€“40 Setups pro Tag
 
 Setup-Detailseiten
 
@@ -54,7 +54,7 @@ Favoriten und Trading-Journal
 
 Infra:
 
-Cron-Jobs zur täglichen Snapshot-Erzeugung
+Cron-Jobs zur tÃ¤glichen Snapshot-Erzeugung
 
 Cache-Schicht (z. B. Redis)
 
@@ -76,7 +76,7 @@ Redis (geplant)
 
 Vitest (Tests geplant)
 
-Projektstruktur (Kurzüberblick)
+Projektstruktur (KurzÃ¼berblick)
 
 src/app: UI, Routing, API-Routen
 src/features: Setup-Engine, KI-Module, Cache
@@ -93,7 +93,7 @@ Repository klonen, dann:
 npm install
 npm run dev
 
-Die App läuft unter http://localhost:3000
+Die App lÃ¤uft unter http://localhost:3000
 
 Tests
 
@@ -104,7 +104,7 @@ Env-Variablen (geplant)
 REDIS_URL
 DATABASE_URL
 AUTH_SECRET
-API-Keys für Datenquellen / KI
+API-Keys fÃ¼r Datenquellen / KI
 
 Roadmap
 
@@ -127,3 +127,10 @@ Disclaimer
 TradingAI stellt keine Finanzberatung dar.
 Alle Setups dienen nur der Information.
 Trading ist mit Risiken verbunden.
+
+Neon + Drizzle
+
+1. Lege ein neues Neon Postgres-Projekt an und kopiere den dort angezeigten Connection-String.
+2. Trage den Connection-String als `DATABASE_URL` in `.env.local` ein.
+3. Verwende denselben Wert in den Vercel-Umgebungsvariablen (Preview und Production).
+4. FÃ¼hre `npx drizzle-kit push` aus, um die Schema-Definitionen in Neon anzuwenden.

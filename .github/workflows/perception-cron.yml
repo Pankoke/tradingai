@@ -1,0 +1,25 @@
+name: Perception Snapshot Cron
+
+on:
+  # GitHub-Zeit ist immer UTC
+  schedule:
+    - cron: "0 8 * * *"   # 08:00 UTC
+    - cron: "0 13 * * *"  # 13:00 UTC
+    - cron: "0 21 * * *"  # 21:00 UTC
+  # Manuelles Auslösen zum Testen möglich
+  workflow_dispatch:
+
+jobs:
+  call-perception-endpoint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Call perception endpoint
+        env:
+          CRON_ENDPOINT_URL: ${{ secrets.CRON_ENDPOINT_URL }}
+        run: |
+          echo "Calling $CRON_ENDPOINT_URL ..."
+          curl -sS -m 30 "$CRON_ENDPOINT_URL" || {
+            echo "Request failed";
+            exit 1;
+          }
