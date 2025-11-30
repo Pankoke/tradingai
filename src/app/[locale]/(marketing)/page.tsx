@@ -86,6 +86,7 @@ function toHomepageSetup(setup: Setup): HomepageSetup {
     stopLoss: parseFloat(setup.stopLoss) || 0,
     takeProfit: parseFloat(setup.takeProfit) || 0,
     snapshotTimestamp: new Date().toISOString(),
+    rings: setup.rings,
   };
 }
 

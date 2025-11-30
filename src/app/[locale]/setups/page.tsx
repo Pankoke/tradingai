@@ -96,6 +96,7 @@ function toHomepageSetup(setup: Setup): HomepageSetup {
     stopLoss: parseFloat(setup.stopLoss) || 0,
     takeProfit: parseFloat(setup.takeProfit) || 0,
     snapshotTimestamp: new Date().toISOString(),
+    rings: setup.rings,
   };
 }
 
@@ -153,7 +154,7 @@ export default async function SetupsPage({ params }: PageProps): Promise<JSX.Ele
         <section className="space-y-3">
           <h2 className="text-lg font-semibold tracking-tight sm:text-xl">Weitere Setups</h2>
           {randomSetups.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="flex flex-col gap-4">
               {randomSetups.map((setup) => (
                 <HomepageSetupCard key={setup.id} setup={setup} weakLabel={labels.weakSetup} labels={labels} />
               ))}

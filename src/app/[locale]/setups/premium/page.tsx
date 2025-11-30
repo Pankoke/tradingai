@@ -1,20 +1,15 @@
 import React, { Suspense } from "react";
 import type { JSX } from "react";
-import Link from "next/link";
 import HomepageSetupCard from "@/src/components/homepage/HomepageSetupCard";
 import { PremiumControls } from "@/src/components/setups/PremiumControls";
-import { EngineMetaPanel } from "@/src/components/perception/EngineMetaPanel";
-import { FiveRingsExplainer } from "@/src/components/perception/FiveRingsExplainer";
 import { ProNotice } from "@/src/components/common/ProNotice";
 import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
 import type { Setup } from "@/src/lib/engine/types";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import { clamp } from "@/src/lib/math";
-import { mockEvents } from "@/src/lib/mockEvents";
 import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
 import deMessages from "@/src/messages/de.json";
 import enMessages from "@/src/messages/en.json";
-import { PerceptionTodayPanel } from "@/src/features/perception/ui/PerceptionTodayPanel";
 
 type PageProps = {
   params: Promise<{ locale?: string }>;
@@ -104,6 +99,7 @@ function toHomepageSetup(setup: Setup): HomepageSetup {
     stopLoss: parseFloat(setup.stopLoss) || 0,
     takeProfit: parseFloat(setup.takeProfit) || 0,
     snapshotTimestamp: new Date().toISOString(),
+    rings: setup.rings,
   };
 }
 
@@ -120,7 +116,6 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
 
   const snapshot = await buildPerceptionSnapshot();
   const { setups } = snapshot;
-  const events = mockEvents;
 
   const sort = resolvedSearch?.sort ?? "confidence";
   const dir = resolvedSearch?.dir ?? "desc";
@@ -128,9 +123,7 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
 
   const filtered = applyFilter(setups, filter);
   const sorted = applySort(filtered, sort, dir);
-  const freeSetups = sorted.filter((s) => s.accessLevel === "free").map(toHomepageSetup);
-  const premiumSetups = sorted.filter((s) => s.accessLevel === "premium").map(toHomepageSetup);
-  const proSetups = sorted.filter((s) => s.accessLevel === "pro").map(toHomepageSetup);
+  const allSetups = sorted.map(toHomepageSetup);
 
   return (
     <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
@@ -140,33 +133,7 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
           <p className="max-w-2xl text-sm text-[var(--text-secondary)] sm:text-base">{t("premium.info")}</p>
         </div>
 
-        <Suspense
-          fallback={
-            <div className="rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-surface)] p-4 text-sm text-[var(--text-primary)]">
-              Loading live snapshot ...
-            </div>
-          }
-        >
-          <PerceptionTodayPanel />
-        </Suspense>
-
-        <EngineMetaPanel generatedAt={snapshot.generatedAt} version={snapshot.version} />
-        <FiveRingsExplainer t={t} />
-
-        <div className="rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-surface)] p-4 text-sm text-[var(--text-primary)] shadow-[0_0_0_1px_rgba(14,165,233,0.15)]">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[var(--text-primary)] font-semibold">Events & Bias</span>
-            <span>
-              Heute {events.length} relevante Events. High-Impact-Events und Bias fließen ins Ranking ein.
-            </span>
-            <Link
-              href="/perception"
-              className="rounded-full border border-[var(--border-subtle)] px-3 py-1 text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
-            >
-              Mehr erfahren
-            </Link>
-          </div>
-        </div>
+        <ProNotice context="setupsPremium" />
 
         <Suspense
           fallback={
@@ -178,41 +145,21 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
           <PremiumControls currentSort={sort} currentDir={dir} currentFilter={filter} />
         </Suspense>
 
-        <ProNotice context="setupsPremium" />
-
         <div className="space-y-8">
-          {freeSetups.length > 0 ? (
-            <section className="space-y-3">
-              <h2 className="text-lg font-semibold">{t("premium.section.free")}</h2>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {freeSetups.map((setup) => (
+          <section className="space-y-3">
+            <h2 className="text-lg font-semibold">Setups heute</h2>
+            {allSetups.length > 0 ? (
+              <div className="flex flex-col gap-4">
+                {allSetups.map((setup) => (
                   <HomepageSetupCard key={setup.id} setup={setup} weakLabel={labels.weakSetup} labels={labels} />
                 ))}
               </div>
-            </section>
-          ) : null}
-
-          {premiumSetups.length > 0 ? (
-            <section className="space-y-3">
-              <h2 className="text-lg font-semibold">{t("premium.section.premium")}</h2>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {premiumSetups.map((setup) => (
-                  <HomepageSetupCard key={setup.id} setup={setup} weakLabel={labels.weakSetup} labels={labels} />
-                ))}
+            ) : (
+              <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 text-sm text-[var(--text-secondary)]">
+                {t("perception.today.empty")}
               </div>
-            </section>
-          ) : null}
-
-          {proSetups.length > 0 ? (
-            <section className="space-y-3">
-              <h2 className="text-lg font-semibold">{t("premium.section.pro")}</h2>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {proSetups.map((setup) => (
-                  <HomepageSetupCard key={setup.id} setup={setup} weakLabel={labels.weakSetup} labels={labels} />
-                ))}
-              </div>
-            </section>
-          ) : null}
+            )}
+          </section>
         </div>
       </div>
     </div>

@@ -21,6 +21,7 @@ export type HomepageSetup = {
   stopLoss: number;
   takeProfit: number;
   snapshotTimestamp: string;
+  rings: Setup["rings"];
 };
 
 export type HomepageSetups = {
@@ -73,6 +74,7 @@ function mapSetup(setup: Setup, timestamp: string): HomepageSetup {
     stopLoss: parseNumber(setup.stopLoss),
     takeProfit: parseNumber(setup.takeProfit),
     snapshotTimestamp: timestamp,
+    rings: setup.rings,
   };
 }
 

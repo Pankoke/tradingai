@@ -1,5 +1,21 @@
 import type { Setup } from "./engine/types";
 
+const buildMockRings = (scores: {
+  trendScore: number;
+  eventScore: number;
+  biasScore: number;
+  sentimentScore: number;
+  orderflowScore: number;
+  confidenceScore: number;
+}): Setup["rings"] => ({
+  ...scores,
+  event: scores.eventScore,
+  bias: scores.biasScore,
+  sentiment: scores.sentimentScore,
+  orderflow: scores.orderflowScore,
+  confidence: scores.confidenceScore,
+});
+
 export const mockSetups: Setup[] = [
   {
     id: "setup-of-the-day",
@@ -12,6 +28,14 @@ export const mockSetups: Setup[] = [
     biasScore: 82,
     sentimentScore: 69,
     balanceScore: 74,
+    rings: buildMockRings({
+      trendScore: 75,
+      eventScore: 78,
+      biasScore: 82,
+      sentimentScore: 69,
+      orderflowScore: 73,
+      confidenceScore: 87,
+    }),
     entryZone: "82.40 – 83.10",
     stopLoss: "80.90",
     takeProfit: "87.50",
@@ -29,6 +53,14 @@ export const mockSetups: Setup[] = [
     biasScore: 85,
     sentimentScore: 63,
     balanceScore: 70,
+    rings: buildMockRings({
+      trendScore: 70,
+      eventScore: 72,
+      biasScore: 85,
+      sentimentScore: 63,
+      orderflowScore: 68,
+      confidenceScore: 81,
+    }),
     entryZone: "64.800 – 65.400",
     stopLoss: "63.700",
     takeProfit: "69.000",
@@ -46,6 +78,14 @@ export const mockSetups: Setup[] = [
     biasScore: 71,
     sentimentScore: 59,
     balanceScore: 67,
+    rings: buildMockRings({
+      trendScore: 60,
+      eventScore: 68,
+      biasScore: 71,
+      sentimentScore: 59,
+      orderflowScore: 62,
+      confidenceScore: 76,
+    }),
     entryZone: "3.120 – 3.160",
     stopLoss: "3.210",
     takeProfit: "2.980",
@@ -63,6 +103,14 @@ export const mockSetups: Setup[] = [
     biasScore: 77,
     sentimentScore: 58,
     balanceScore: 66,
+    rings: buildMockRings({
+      trendScore: 65,
+      eventScore: 65,
+      biasScore: 77,
+      sentimentScore: 58,
+      orderflowScore: 64,
+      confidenceScore: 73,
+    }),
     entryZone: "18.420 – 18.480",
     stopLoss: "18.320",
     takeProfit: "18.780",
@@ -80,6 +128,14 @@ export const mockSetups: Setup[] = [
     biasScore: 72,
     sentimentScore: 55,
     balanceScore: 63,
+    rings: buildMockRings({
+      trendScore: 58,
+      eventScore: 61,
+      biasScore: 72,
+      sentimentScore: 55,
+      orderflowScore: 60,
+      confidenceScore: 69,
+    }),
     entryZone: "18.050 – 18.120",
     stopLoss: "17.960",
     takeProfit: "18.380",
@@ -97,6 +153,14 @@ export const mockSetups: Setup[] = [
     biasScore: 69,
     sentimentScore: 57,
     balanceScore: 64,
+    rings: buildMockRings({
+      trendScore: 55,
+      eventScore: 66,
+      biasScore: 69,
+      sentimentScore: 57,
+      orderflowScore: 61,
+      confidenceScore: 71,
+    }),
     entryZone: "2.415 – 2.428",
     stopLoss: "2.438",
     takeProfit: "2.372",

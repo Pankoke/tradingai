@@ -9,6 +9,22 @@ export type SetupType = z.infer<typeof setupTypeEnum>;
 export const accessLevelSchema = z.enum(["free", "premium", "pro"]);
 export type AccessLevel = z.infer<typeof accessLevelSchema>;
 
+const ringPercentSchema = z.number().min(0).max(100);
+
+const setupRingsSchema = z.object({
+  trendScore: ringPercentSchema,
+  eventScore: ringPercentSchema,
+  biasScore: ringPercentSchema,
+  sentimentScore: ringPercentSchema,
+  orderflowScore: ringPercentSchema,
+  confidenceScore: ringPercentSchema,
+  event: ringPercentSchema,
+  bias: ringPercentSchema,
+  sentiment: ringPercentSchema,
+  orderflow: ringPercentSchema,
+  confidence: ringPercentSchema,
+});
+
 export const setupSchema = z.object({
   id: z.string(),
   assetId: z.string(),
@@ -25,6 +41,7 @@ export const setupSchema = z.object({
   takeProfit: z.string(),
   type: setupTypeEnum,
   accessLevel: accessLevelSchema,
+  rings: setupRingsSchema,
 });
 
 export type Setup = z.infer<typeof setupSchema>;

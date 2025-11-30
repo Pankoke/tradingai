@@ -1,6 +1,15 @@
 import { clamp } from "@/src/lib/math";
 
-export type SetupRings = {
+export type SetupRingScores = {
+  trendScore: number;
+  eventScore: number;
+  biasScore: number;
+  sentimentScore: number;
+  orderflowScore: number;
+  confidenceScore: number;
+};
+
+export type SetupRings = SetupRingScores & {
   event: number;
   bias: number;
   sentiment: number;
@@ -27,6 +36,7 @@ type RingSource = {
   eventContext?: unknown | null;
   confidence?: number | null;
   direction?: "long" | "short" | "neutral" | null;
+  trendScore?: number | null;
 };
 
 const PATTERN_MAP: Record<string, number> = {
@@ -123,13 +133,32 @@ function resolveConfidence(source: RingSource): number {
   return clampPercent(source.confidence);
 }
 
+function resolveTrendScore(source: RingSource): number {
+  if (typeof source.trendScore === "number" && !Number.isNaN(source.trendScore)) {
+    return clampPercent(source.trendScore);
+  }
+  return clampPercent(source.breakdown?.trend);
+}
+
 function computeRingsFromSource(source: RingSource): SetupRings {
+  const trendScore = resolveTrendScore(source);
+  const eventScore = resolveEventScore(source);
+  const biasScore = resolveBiasScore(source);
+  const sentimentScore = resolveSentimentScore(source);
+  const orderflowScore = resolveOrderflowScore(source);
+  const confidenceScore = resolveConfidence(source);
   return {
-    event: resolveEventScore(source),
-    bias: resolveBiasScore(source),
-    sentiment: resolveSentimentScore(source),
-    orderflow: resolveOrderflowScore(source),
-    confidence: resolveConfidence(source),
+    trendScore,
+    eventScore,
+    biasScore,
+    sentimentScore,
+    orderflowScore,
+    confidenceScore,
+    event: eventScore,
+    bias: biasScore,
+    sentiment: sentimentScore,
+    orderflow: orderflowScore,
+    confidence: confidenceScore,
   };
 }
 

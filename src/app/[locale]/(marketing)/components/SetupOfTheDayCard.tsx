@@ -4,24 +4,15 @@ import React, { useMemo } from "react";
 import type { JSX } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Info } from "lucide-react";
 import { useT } from "../../../../lib/i18n/ClientProvider";
 import type { SetupCardSetup } from "./SetupCard";
 import { i18nConfig, type Locale } from "../../../../lib/i18n/config";
 import { PerceptionCard } from "@/src/components/perception/PerceptionCard";
-import { Tooltip } from "@/src/components/ui/tooltip";
 import { formatAssetLabel, getAssetMeta } from "@/src/lib/formatters/asset";
-import { computeRingsForSetup } from "@/src/lib/engine/rings";
+import { BigGauge, SmallGauge } from "@/src/components/perception/RingGauges";
 
 type SetupOfTheDayCardProps = {
   setup: SetupCardSetup;
-};
-
-type GaugeProps = {
-  label?: string;
-  value: number;
-  tone?: "accent" | "green" | "teal" | "neutral";
-  tooltip?: string;
 };
 
 type LevelBoxPropsDay = {
@@ -69,20 +60,39 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
   const prefix = useMemo(() => localePrefix(pathname), [pathname]);
   const meta = getAssetMeta(setup.assetId, setup.symbol);
   const headline = formatAssetLabel(setup.assetId, setup.symbol);
-  const ringTooltips = {
-    event: t("perception.rings.eventTooltip"),
-    bias: t("perception.rings.biasTooltip"),
-    sentiment: t("perception.rings.sentimentTooltip"),
-    orderflow: t("perception.rings.orderflowTooltip"),
-  };
-  const rings = computeRingsForSetup({
-    eventScore: setup.eventScore,
-    biasScore: setup.biasScore,
-    sentimentScore: setup.sentimentScore,
-    balanceScore: setup.balanceScore,
-    confidence: setup.confidence,
-    direction: setup.direction?.toLowerCase() as "long" | "short" | "neutral" | null,
-  });
+  const rings = setup.rings;
+  const compactRings = [
+    {
+      label: t("perception.today.scoreTrend"),
+      value: rings.trendScore,
+      tone: "teal" as const,
+      tooltip: t("perception.rings.tooltip.trend"),
+    },
+    {
+      label: t("perception.today.eventRing"),
+      value: rings.eventScore,
+      tone: "accent" as const,
+      tooltip: t("perception.rings.tooltip.event"),
+    },
+    {
+      label: t("perception.today.biasRing"),
+      value: rings.biasScore,
+      tone: "green" as const,
+      tooltip: t("perception.rings.tooltip.bias"),
+    },
+    {
+      label: t("perception.today.sentimentRing"),
+      value: rings.sentimentScore,
+      tone: "teal" as const,
+      tooltip: t("perception.rings.tooltip.sentiment"),
+    },
+    {
+      label: t("perception.today.orderflowRing"),
+      value: rings.orderflowScore,
+      tone: "accent" as const,
+      tooltip: t("perception.rings.tooltip.orderflow"),
+    },
+  ];
 
   return (
     <PerceptionCard className="p-0" innerClassName="p-6">
@@ -103,109 +113,38 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
               {setup.type === "Regelbasiert" ? t("setups.type.ruleBased") : t("setups.type.ai")}
             </span>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <SmallGauge
-              label={`${t("setups.event")}: schwach`}
-              value={rings.event}
-              tone="accent"
-              tooltip={ringTooltips.event}
-            />
-            <SmallGauge
-              label={`${t("setups.bias")}: bullish`}
-              value={rings.bias}
-              tone="green"
-              tooltip={ringTooltips.bias}
-            />
-            <SmallGauge
-              label={`${t("setups.sentiment")}: positiv`}
-              value={rings.sentiment}
-              tone="green"
-              tooltip={ringTooltips.sentiment}
-            />
-            <SmallGauge
-              label={t("setups.balance")}
-              value={rings.orderflow}
-              tone="accent"
-              tooltip={ringTooltips.orderflow}
-            />
-          </div>
         </div>
 
-        <div className="mt-4 flex flex-col items-center lg:mt-0 lg:w-64 lg:items-end">
-          <BigGauge value={setup.confidence} />
+        <div className="mt-4 flex flex-col items-center gap-3 lg:mt-0 lg:w-64 lg:items-end">
+          <BigGauge
+            value={rings.confidenceScore}
+            label={t("perception.today.confidenceRing")}
+            tooltip={t("perception.rings.tooltip.confidence")}
+          />
         </div>
       </div>
 
-      <div className="mt-4 grid gap-4 text-xs sm:grid-cols-3">
+      <div className="mt-6 grid gap-3 text-[0.65rem] sm:grid-cols-2 lg:grid-cols-5">
+        {compactRings.map((ring) => (
+          <SmallGauge key={ring.label} label={ring.label} value={ring.value} tone={ring.tone} tooltip={ring.tooltip} />
+        ))}
+      </div>
+
+      <div className="mt-6 grid gap-4 text-xs sm:grid-cols-3">
         <LevelBox label={t("setups.entry")} value={formatRangeText(setup.entryZone)} tone="neutral" />
         <LevelBox label={t("setups.stopLoss")} value={formatNumberText(setup.stopLoss)} tone="danger" />
         <LevelBox label={t("setups.takeProfit")} value={formatNumberText(setup.takeProfit)} tone="success" />
       </div>
 
-          <div className="mt-1 flex justify-end">
-            <Link
-              href={`${prefix}/setups/${setup.id}`}
-              className="rounded-full bg-[#0ea5e9] px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(14,165,233,0.35)] transition hover:brightness-110"
-            >
-              {t("setups.openAnalysis")}
-            </Link>
-          </div>
+      <div className="mt-4 flex justify-end">
+        <Link
+          href={`${prefix}/setups/${setup.id}`}
+          className="rounded-full bg-[#0ea5e9] px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(14,165,233,0.35)] transition hover:brightness-110"
+        >
+          {t("setups.openAnalysis")}
+        </Link>
+      </div>
     </PerceptionCard>
-  );
-}
-
-function SmallGauge({ label, value, tone = "accent", tooltip }: GaugeProps): JSX.Element {
-  const clamped = Math.max(0, Math.min(100, value));
-  const display = Math.round(clamped);
-  const toneColor =
-    tone === "green" ? "#22c55e" : tone === "teal" ? "#14b8a6" : tone === "neutral" ? "#475569" : "#0ea5e9";
-
-  return (
-    <div className="flex flex-col items-center gap-2">
-      <div
-        className="relative flex h-16 w-16 items-center justify-center rounded-full"
-        style={{
-          background: `conic-gradient(${toneColor} ${clamped}%, rgba(226,232,240,0.15) ${clamped}% 100%)`,
-        }}
-      >
-        <div className="flex h-[68%] w-[68%] items-center justify-center rounded-full bg-slate-900">
-          <span className="text-xs font-semibold text-white">{display}%</span>
-        </div>
-      </div>
-      {label ? (
-        <div className="flex items-center gap-1 text-[0.7rem] text-slate-300">
-          <span>{label}</span>
-          {tooltip ? (
-            <Tooltip content={tooltip}>
-              <span className="rounded-full border border-slate-700 bg-slate-800/60 p-0.5 text-slate-400">
-                <Info className="h-3 w-3" />
-              </span>
-            </Tooltip>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function BigGauge({ value }: GaugeProps): JSX.Element {
-  const clamped = Math.max(0, Math.min(100, value));
-  const display = Math.round(clamped);
-
-  return (
-    <div className="flex flex-col items-center gap-2 lg:items-end">
-      <div
-        className="relative flex h-36 w-36 items-center justify-center rounded-full"
-        style={{
-          background: `conic-gradient(#22c55e ${clamped}%, rgba(226,232,240,0.15) ${clamped}% 100%)`,
-        }}
-      >
-        <div className="flex h-[68%] w-[68%] flex-col items-center justify-center rounded-full bg-slate-900 shadow-inner shadow-black/40">
-          <span className="text-3xl font-bold text-white">{display}%</span>
-          <span className="text-[0.65rem] text-slate-300">Confidence</span>
-        </div>
-      </div>
-    </div>
   );
 }
 

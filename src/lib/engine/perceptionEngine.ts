@@ -39,7 +39,7 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
     };
 
   const enriched: Setup[] = setups.map((item) => {
-    const base: Setup = {
+    const base: Omit<Setup, "rings"> = {
       id: item.id,
       assetId: item.assetId ?? item.symbol,
       symbol: item.symbol,
@@ -93,6 +93,7 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
       sentimentScore: sentimentResult.sentimentScore,
       confidence,
       balanceScore,
+      rings,
     };
   });
 

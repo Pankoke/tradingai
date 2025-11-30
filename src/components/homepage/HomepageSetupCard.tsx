@@ -4,31 +4,9 @@ import React from "react";
 import type { JSX } from "react";
 import { Badge } from "@/src/components/ui/badge";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
-import { clamp } from "@/src/lib/math";
 import { formatAssetLabel } from "@/src/lib/formatters/asset";
-import { computeRingsForSetup } from "@/src/lib/engine/rings";
-
-type RingProps = { value: number; label: string; color: string };
-
-function Ring({ value, label, color }: RingProps): JSX.Element {
-  return (
-    <div className="flex flex-col items-center gap-1" title={label || undefined}>
-      <div
-        className="relative flex h-14 w-14 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-900/60"
-        style={{
-          backgroundImage: `conic-gradient(${color} ${clamp(value, 0, 100)}%, #e2e8f0 ${clamp(value, 0, 100)}%)`,
-        }}
-      >
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-inner shadow-slate-300/60 dark:bg-slate-950/80 dark:shadow-black/30">
-          <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-100">
-            {clamp(value, 0, 100)}%
-          </span>
-        </div>
-      </div>
-      {label ? <p className="text-[10px] text-slate-600 dark:text-slate-300">{label}</p> : null}
-    </div>
-  );
-}
+import { useT } from "@/src/lib/i18n/ClientProvider";
+import { BigGauge, SmallGauge } from "@/src/components/perception/RingGauges";
 
 type Props = {
   setup: HomepageSetup;
@@ -57,43 +35,42 @@ type Props = {
 };
 
 export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): JSX.Element {
+  const t = useT();
   const assetHeadline = formatAssetLabel(setup.assetId, setup.symbol);
-  const eventLabel =
-    setup.eventLevel === "high"
-      ? labels.eventHigh
-      : setup.eventLevel === "medium"
-        ? labels.eventMedium
-        : labels.eventLow;
-  const biasLabel =
-    setup.bias.direction === "Bullish"
-      ? labels.biasBullish
-      : setup.bias.direction === "Bearish"
-        ? labels.biasBearish
-        : labels.biasNeutral;
-  const sentimentLabel =
-    setup.sentimentScore > 0.2
-      ? labels.sentimentPositive
-      : setup.sentimentScore < -0.2
-        ? labels.sentimentNegative
-        : labels.sentimentNeutral;
-  const orderflowLabel =
-    setup.orderflowMode === "buyers_dominant"
-      ? labels.orderflowBuyers
-      : setup.orderflowMode === "sellers_dominant"
-        ? labels.orderflowSellers
-        : labels.orderflowBalanced;
-  const eventPercent = setup.eventLevel === "high" ? 85 : setup.eventLevel === "medium" ? 60 : 35;
-  const biasPercent = clamp(setup.bias.strength, 0, 100);
-  const sentimentPercent = clamp(Math.round(((setup.sentimentScore + 1) / 2) * 100), 0, 100);
-  const rings = computeRingsForSetup({
-    eventScore: eventPercent,
-    biasScore: biasPercent,
-    sentimentScore: sentimentPercent,
-    orderflowMode: setup.orderflowMode,
-    confidence: setup.confidence,
-    direction: setup.direction?.toLowerCase() as "long" | "short" | "neutral" | null,
-  });
-  const confidence = rings.confidence;
+  const rings = setup.rings;
+  const smallRingDefinitions = [
+    {
+      key: "trendScore" as const,
+      label: t("perception.today.scoreTrend"),
+      tone: "teal" as const,
+      tooltip: t("perception.rings.tooltip.trend"),
+    },
+    {
+      key: "eventScore" as const,
+      label: t("perception.today.eventRing"),
+      tone: "accent" as const,
+      tooltip: t("perception.rings.tooltip.event"),
+    },
+    {
+      key: "biasScore" as const,
+      label: t("perception.today.biasRing"),
+      tone: "green" as const,
+      tooltip: t("perception.rings.tooltip.bias"),
+    },
+    {
+      key: "sentimentScore" as const,
+      label: t("perception.today.sentimentRing"),
+      tone: "teal" as const,
+      tooltip: t("perception.rings.tooltip.sentiment"),
+    },
+    {
+      key: "orderflowScore" as const,
+      label: t("perception.today.orderflowRing"),
+      tone: "accent" as const,
+      tooltip: t("perception.rings.tooltip.orderflow"),
+    },
+  ];
+  const confidenceValue = rings.confidenceScore;
 
   const detailBoxClass = "rounded-2xl border border-slate-800 bg-[#0f172a]/80 px-4 py-3 shadow-[inset_0_0_25px_rgba(15,23,42,0.9)]";
   const baseCardClass = "flex h-full flex-col justify-between rounded-3xl border border-slate-800 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),_transparent_55%),_rgba(4,7,15,0.98)] px-5 py-7 shadow-[0_24px_80px_rgba(0,0,0,0.85)] md:px-8 md:py-8";
@@ -123,30 +100,24 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
             ) : null}
           </div>
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <p className="text-[10px] uppercase tracking-[0.25em] text-slate-600 dark:text-slate-500">{labels.confidence}</p>
-          <div
-            className="relative flex h-16 w-16 items-center justify-center rounded-full bg-slate-200 shadow-inner shadow-slate-300/60 dark:bg-slate-900/60 dark:shadow-black/20"
-            style={{
-              backgroundImage: `conic-gradient(#22c55e ${confidence}%, #e2e8f0 ${confidence}%)`,
-            }}
-            title={`${Math.round(confidence)}% ${labels.confidence}`}
-          >
-            <div className="flex h-13 w-13 items-center justify-center rounded-full bg-white dark:bg-slate-950/90">
-              <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                {Math.round(confidence)}%
-              </span>
-            </div>
-          </div>
-        </div>
+        <BigGauge
+          value={confidenceValue}
+          label={labels.confidence}
+          tooltip={t("perception.rings.tooltip.confidence")}
+        />
       </div>
 
-        <div className="mt-4 grid gap-4 text-xs text-slate-700 dark:text-slate-200 md:grid-cols-4">
-          <Ring value={rings.event} label={eventLabel} color="#38bdf8" />
-          <Ring value={rings.bias} label={biasLabel} color="#22c55e" />
-          <Ring value={rings.sentiment} label={sentimentLabel} color="#10b981" />
-          <Ring value={rings.orderflow} label={orderflowLabel} color="#22d3ee" />
-        </div>
+      <div className="mt-4 grid grid-cols-3 gap-2 text-[0.65rem] sm:grid-cols-4 md:grid-cols-6">
+        {smallRingDefinitions.map((ring) => (
+          <SmallGauge
+            key={ring.label}
+            label={ring.label}
+            value={rings[ring.key]}
+            tone={ring.tone}
+            tooltip={ring.tooltip}
+          />
+        ))}
+      </div>
 
       <div className="mt-4 grid gap-4 text-sm md:grid-cols-3">
         <div className={detailBoxClass}>

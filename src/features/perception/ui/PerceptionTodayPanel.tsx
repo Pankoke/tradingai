@@ -2,13 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ComponentType, JSX, SVGProps } from "react";
-import { ArrowDown, ArrowRight, ArrowUp, Info } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp } from "lucide-react";
 import { z } from "zod";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import { formatAssetLabel, getAssetMeta } from "@/src/lib/formatters/asset";
 import { PerceptionCard } from "@/src/components/perception/PerceptionCard";
+import type { Setup } from "@/src/lib/engine/types";
+import type { SetupRingScores, SetupRings } from "@/src/lib/engine/rings";
 import { computeRingsForSnapshotItem } from "@/src/lib/engine/rings";
-import { Tooltip } from "@/src/components/ui/tooltip";
+import { fetchTodaySetups } from "@/src/lib/api/perceptionClient";
+import { BigGauge, SmallGauge } from "@/src/components/perception/RingGauges";
 
 const TIMEOUT_MS = 10_000;
 
@@ -20,6 +23,27 @@ const DIRECTION_META: Record<Direction, { Icon: LucideIcon; accent: string }> = 
   long: { Icon: ArrowUp, accent: "text-emerald-300 border-emerald-500/60 bg-emerald-500/10" },
   short: { Icon: ArrowDown, accent: "text-rose-300 border-rose-500/60 bg-rose-500/10" },
   neutral: { Icon: ArrowRight, accent: "text-slate-300 border-slate-500/40 bg-slate-500/10" },
+};
+
+const DEFAULT_RING_VALUES: SetupRings = {
+  trendScore: 50,
+  eventScore: 50,
+  biasScore: 50,
+  sentimentScore: 50,
+  orderflowScore: 50,
+  confidenceScore: 50,
+  event: 50,
+  bias: 50,
+  sentiment: 50,
+  orderflow: 50,
+  confidence: 50,
+};
+
+type RingDefinition = {
+  key: keyof SetupRingScores;
+  label: string;
+  tone: "accent" | "green" | "teal" | "neutral";
+  tooltip: string;
 };
 
 const itemSchema = z.object({
@@ -125,33 +149,10 @@ function StatusMessage({ message }: StatusMessageProps): JSX.Element {
   );
 }
 
-type ScoreChipProps = {
-  label: string;
-  value: number | null;
-  tooltip?: string;
-};
-
-function ScoreChip({ label, value, tooltip }: ScoreChipProps): JSX.Element {
-  return (
-    <div className="flex flex-col gap-1 rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-2 text-[11px] uppercase tracking-wide text-slate-400">
-      <div className="flex items-center gap-1">
-        <span>{label}</span>
-        {tooltip ? (
-          <Tooltip content={tooltip}>
-            <span className="rounded-full border border-slate-700 bg-slate-800/60 p-0.5 text-slate-400">
-              <Info className="h-3 w-3" />
-            </span>
-          </Tooltip>
-        ) : null}
-      </div>
-      <span className="text-base font-semibold text-white">{formatScore(value)}</span>
-    </div>
-  );
-}
-
 export function PerceptionTodayPanel(): JSX.Element {
   const t = useT();
   const [data, setData] = useState<PerceptionTodayResponse | null>(null);
+  const [setups, setSetups] = useState<Setup[] | null>(null);
   const [status, setStatus] = useState<"loading" | "error" | "ready">("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -161,11 +162,15 @@ export function PerceptionTodayPanel(): JSX.Element {
       setStatus("loading");
       setErrorMessage(null);
       try {
-        const payload = await fetchPerceptionToday();
+        const [perceptionPayload, todaySetups] = await Promise.all([
+          fetchPerceptionToday(),
+          fetchTodaySetups(),
+        ]);
         if (!isMounted) {
           return;
         }
-        setData(payload);
+        setData(perceptionPayload);
+        setSetups(todaySetups.setups);
         setStatus("ready");
       } catch (error) {
         if (!isMounted) {
@@ -186,10 +191,44 @@ export function PerceptionTodayPanel(): JSX.Element {
     if (!data) {
       return null;
     }
-
     return data.items.find((item) => item.isSetupOfTheDay) ?? data.items[0] ?? null;
   }, [data]);
-  const heroRings = useMemo(() => (heroItem ? computeRingsForSnapshotItem(heroItem) : undefined), [heroItem]);
+
+  const setupLookup = useMemo(
+    () => new Map((setups ?? []).map((setup) => [setup.id, setup])),
+    [setups],
+  );
+
+  const heroSetup = useMemo(
+    () => (heroItem ? setupLookup.get(heroItem.setupId) : undefined),
+    [heroItem, setupLookup],
+  );
+
+  const heroBaseRings = useMemo(() => {
+    const rings = heroSetup?.rings ?? (heroItem ? computeRingsForSnapshotItem(heroItem) : undefined);
+    return rings ?? DEFAULT_RING_VALUES;
+  }, [heroSetup, heroItem]);
+
+  const heroRingDefinitions = useMemo<RingDefinition[]>(() => [
+    { key: "trendScore", label: t("perception.today.scoreTrend"), tone: "teal", tooltip: t("perception.rings.tooltip.trend") },
+    { key: "eventScore", label: t("perception.today.eventRing"), tone: "accent", tooltip: t("perception.rings.tooltip.event") },
+    { key: "biasScore", label: t("perception.today.biasRing"), tone: "green", tooltip: t("perception.rings.tooltip.bias") },
+    { key: "sentimentScore", label: t("perception.today.sentimentRing"), tone: "teal", tooltip: t("perception.rings.tooltip.sentiment") },
+    { key: "orderflowScore", label: t("perception.today.orderflowRing"), tone: "accent", tooltip: t("perception.rings.tooltip.orderflow") },
+  ], [t]);
+
+  const itemRingDefinitions = useMemo<RingDefinition[]>(
+    () => [
+      ...heroRingDefinitions,
+      {
+        key: "confidenceScore",
+        label: t("perception.today.confidenceRing"),
+        tone: "green",
+        tooltip: t("perception.rings.tooltip.confidence"),
+      },
+    ],
+    [heroRingDefinitions, t],
+  );
 
   const additionalItems = useMemo(() => {
     if (!data) {
@@ -201,6 +240,16 @@ export function PerceptionTodayPanel(): JSX.Element {
     return data.items.filter((item) => item.id !== heroItem.id);
   }, [data, heroItem]);
 
+  const additionalEntries = useMemo(
+    () =>
+      additionalItems.map((item) => {
+        const setup = setupLookup.get(item.setupId);
+        const rings = setup?.rings ?? computeRingsForSnapshotItem(item);
+        return { item, setup, rings };
+      }),
+    [additionalItems, setupLookup],
+  );
+
   const heroDirectionMeta = heroItem ? DIRECTION_META[heroItem.direction] : DIRECTION_META.neutral;
   const HeroDirectionIcon = heroDirectionMeta.Icon;
 
@@ -210,13 +259,6 @@ export function PerceptionTodayPanel(): JSX.Element {
     modeKey === "live"
       ? "text-emerald-300 border-emerald-500/60 bg-emerald-500/10"
       : "text-amber-300 border-amber-500/60 bg-amber-500/10";
-  const ringTooltips = {
-    event: t("perception.rings.eventTooltip"),
-    bias: t("perception.rings.biasTooltip"),
-    sentiment: t("perception.rings.sentimentTooltip"),
-    orderflow: t("perception.rings.orderflowTooltip"),
-    confidence: t("perception.rings.confidenceTooltip"),
-  };
 
   return (
     <section>
@@ -260,107 +302,78 @@ export function PerceptionTodayPanel(): JSX.Element {
           {status === "ready" && heroItem && data && (
             <>
             <PerceptionCard className="mt-6" innerClassName="p-6">
-              <div className="grid gap-5 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-                <div>
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="space-y-1">
-                      <p className="text-[11px] uppercase tracking-wide text-slate-400">
-                        {t("perception.today.heroLabel")}
-                      </p>
-                      <div className="flex items-center gap-3">
-                        <h3 className="text-2xl font-semibold text-white">
-                          {formatAssetLabel(heroItem.assetId)}
-                        </h3>
-                        <span className="rounded-full bg-slate-800/60 px-2 py-0.5 text-[11px] uppercase tracking-[0.2em] text-slate-300">
-                          {getAssetMeta(heroItem.assetId).assetClass}
-                        </span>
-                      </div>
-                      <p className="text-sm text-slate-400">
-                        {getAssetMeta(heroItem.assetId).name}
-                      </p>
-                    </div>
-                    <div
-                      className={`flex items-center gap-1 rounded-full border px-3 py-1 text-xs uppercase tracking-[0.15em] ${heroDirectionMeta.accent}`}
-                    >
-                      <HeroDirectionIcon className="h-3.5 w-3.5" />
-                      {t(`perception.today.direction.${heroItem.direction}`)}
-                    </div>
+                <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                <div className="space-y-2">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                    {t("perception.today.heroLabel")}
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-2xl font-semibold text-white">
+                      {formatAssetLabel(heroItem.assetId)}
+                    </h3>
+                    <span className="rounded-full bg-slate-800/60 px-2 py-0.5 text-[11px] uppercase tracking-[0.2em] text-slate-300">
+                      {getAssetMeta(heroItem.assetId).assetClass}
+                    </span>
                   </div>
-
-                  <div className="mt-6 flex flex-col gap-2">
-                    <p className="text-xs uppercase tracking-wide text-slate-400">
-                      {t("perception.today.scoreTotal")}
-                    </p>
-                    <p className="text-4xl font-bold text-white">{formatScore(heroItem.scoreTotal)}</p>
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400">
-                      <span>
-                        {t("perception.today.rankLabel")}: {heroItem.rankOverall}
-                      </span>
-                      <span className="text-slate-300">
-                        {t("perception.today.confidenceLabel")}: {Math.round(heroItem.confidence)}%
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                    <ScoreChip label={t("perception.today.scoreTrend")} value={heroItem.scoreTrend} />
-                    <ScoreChip label={t("perception.today.scoreMomentum")} value={heroItem.scoreMomentum} />
-                    <ScoreChip label={t("perception.today.scoreVolatility")} value={heroItem.scoreVolatility} />
-                  </div>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-5">
-                    <ScoreChip
-                      label={t("perception.today.eventRing")}
-                      value={heroRings?.event ?? null}
-                      tooltip={ringTooltips.event}
-                    />
-                    <ScoreChip
-                      label={t("perception.today.biasRing")}
-                      value={heroRings?.bias ?? null}
-                      tooltip={ringTooltips.bias}
-                    />
-                    <ScoreChip
-                      label={t("perception.today.sentimentRing")}
-                      value={heroRings?.sentiment ?? null}
-                      tooltip={ringTooltips.sentiment}
-                    />
-                    <ScoreChip
-                      label={t("perception.today.orderflowRing")}
-                      value={heroRings?.orderflow ?? null}
-                      tooltip={ringTooltips.orderflow}
-                    />
-                    <ScoreChip
-                      label={t("perception.today.confidenceRing")}
-                      value={heroRings?.confidence ?? null}
-                      tooltip={ringTooltips.confidence}
-                    />
+                  <p className="text-sm text-slate-400">{getAssetMeta(heroItem.assetId).name}</p>
+                  <div
+                    className={`flex items-center gap-1 rounded-full border px-3 py-1 text-xs uppercase tracking-[0.15em] ${heroDirectionMeta.accent}`}
+                  >
+                    <HeroDirectionIcon className="h-3.5 w-3.5" />
+                    {t(`perception.today.direction.${heroItem.direction}`)}
                   </div>
                 </div>
+                  <BigGauge
+                    value={heroBaseRings.confidenceScore}
+                    label={t("perception.today.confidenceRing")}
+                    tooltip={t("perception.rings.tooltip.confidence")}
+                  />
+                </div>
 
-                <div>
-                  <p className="text-[11px] uppercase tracking-wide text-slate-400">
-                    {t("perception.today.metaLabel")}
-                  </p>
-                  <p className="mt-3 text-lg font-semibold text-white">{formatTimestamp(data.snapshot.snapshotTime)}</p>
-                  <p className="text-xs text-slate-500">{`${t("perception.today.lastUpdated")}`}</p>
-                  <div className="mt-4 grid gap-2 text-xs text-slate-400">
-                    <div className="flex items-center justify-between">
-                      <span>ID</span>
-                      <span className="font-semibold text-white">{data.snapshot.id}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>{t("perception.today.scoreTotal")}</span>
-                      <span className="font-semibold text-white">{formatScore(heroItem.scoreTotal)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>{t("perception.today.scoreMomentum")}</span>
-                      <span className="font-semibold text-white">{formatScore(heroItem.scoreMomentum)}</span>
-                    </div>
-                  </div>
+              <div className="mt-6 flex flex-col gap-2">
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  {t("perception.today.scoreTotal")}
+                </p>
+                <p className="text-4xl font-bold text-white">{formatScore(heroItem.scoreTotal)}</p>
+                <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400">
+                  <span>
+                    {t("perception.today.rankLabel")}: {heroItem.rankOverall}
+                  </span>
+                  <span className="text-slate-300">
+                    {t("perception.today.confidenceLabel")}: {Math.round(heroItem.confidence)}%
+                  </span>
+                </div>
+              </div>
+
+                <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {heroRingDefinitions.map((ring) => (
+                  <SmallGauge
+                    key={ring.label}
+                    label={ring.label}
+                    value={heroBaseRings[ring.key]}
+                    tone={ring.tone}
+                    tooltip={ring.tooltip}
+                  />
+                ))}
+              </div>
+
+              <div className="mt-6 grid gap-2 text-xs text-slate-400">
+                <div className="flex items-center justify-between">
+                  <span>ID</span>
+                  <span className="font-semibold text-white">{data.snapshot.id}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>{t("perception.today.scoreTotal")}</span>
+                  <span className="font-semibold text-white">{formatScore(heroItem.scoreTotal)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>{t("perception.today.scoreMomentum")}</span>
+                  <span className="font-semibold text-white">{formatScore(heroItem.scoreMomentum)}</span>
                 </div>
               </div>
             </PerceptionCard>
 
-              {additionalItems.length > 0 && (
+              {additionalEntries.length > 0 && (
                 <div className="mt-8 space-y-4">
                   <div className="flex flex-col gap-1 text-xs uppercase tracking-[0.2em] text-slate-400">
                     <span>{t("perception.today.tableTitle")}</span>
@@ -369,10 +382,9 @@ export function PerceptionTodayPanel(): JSX.Element {
                     </span>
                   </div>
                   <div className="space-y-3">
-                    {additionalItems.map((item) => {
+                    {additionalEntries.map(({ item, rings }) => {
                       const asset = getAssetMeta(item.assetId);
                       const { Icon, accent } = DIRECTION_META[item.direction];
-                      const itemRings = computeRingsForSnapshotItem(item);
                       return (
                         <PerceptionCard key={item.id} innerClassName="p-4" className="">
                           <div>
@@ -388,44 +400,23 @@ export function PerceptionTodayPanel(): JSX.Element {
                                 {t(`perception.today.direction.${item.direction}`)}
                               </div>
                             </div>
-                            <div className="mt-3 grid gap-2 text-[11px] text-slate-400 sm:grid-cols-3">
-                              <ScoreChip label={t("perception.today.scoreTrend")} value={item.scoreTrend} />
-                              <ScoreChip label={t("perception.today.scoreMomentum")} value={item.scoreMomentum} />
-                              <ScoreChip label={t("perception.today.scoreVolatility")} value={item.scoreVolatility} />
-                            </div>
-                            <div className="mt-2 grid gap-2 text-[11px] text-slate-400 sm:grid-cols-5">
-                              <ScoreChip
-                                label={t("perception.today.eventRing")}
-                                value={itemRings.event}
-                                tooltip={ringTooltips.event}
-                              />
-                              <ScoreChip
-                                label={t("perception.today.biasRing")}
-                                value={itemRings.bias}
-                                tooltip={ringTooltips.bias}
-                              />
-                              <ScoreChip
-                                label={t("perception.today.sentimentRing")}
-                                value={itemRings.sentiment}
-                                tooltip={ringTooltips.sentiment}
-                              />
-                              <ScoreChip
-                                label={t("perception.today.orderflowRing")}
-                                value={itemRings.orderflow}
-                                tooltip={ringTooltips.orderflow}
-                              />
-                              <ScoreChip
-                                label={t("perception.today.confidenceRing")}
-                                value={itemRings.confidence}
-                                tooltip={ringTooltips.confidence}
-                              />
+                            <div className="mt-3 grid grid-cols-3 gap-2 text-[10px] sm:grid-cols-4 md:grid-cols-6">
+                              {itemRingDefinitions.map((ring) => (
+                                <SmallGauge
+                                  key={ring.label}
+                                  label={ring.label}
+                                  value={rings[ring.key]}
+                                  tone={ring.tone}
+                                  tooltip={ring.tooltip}
+                                />
+                              ))}
                             </div>
                             <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400">
                               <span>
                                 {t("perception.today.rankLabel")}: {item.rankOverall}
                               </span>
                               <span>
-                                {t("perception.today.confidenceLabel")}: {Math.round(item.confidence)}%
+                                {t("perception.today.confidenceLabel")}: {Math.round(rings.confidenceScore)}%
                               </span>
                             </div>
                           </div>
