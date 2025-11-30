@@ -49,6 +49,22 @@ class MockPerceptionDataSource implements PerceptionDataSource {
 class LivePerceptionDataSource implements PerceptionDataSource {
   private biasProvider = new DbBiasProvider();
 
+  private createDefaultRings(): Setup["rings"] {
+    return {
+      trendScore: 50,
+      eventScore: 50,
+      biasScore: 50,
+      sentimentScore: 50,
+      orderflowScore: 50,
+      confidenceScore: 50,
+      event: 50,
+      bias: 50,
+      sentiment: 50,
+      orderflow: 50,
+      confidence: 50,
+    };
+  }
+
   async getSetupsForToday(): Promise<Setup[]> {
     const assets = await getActiveAssets();
     return assets.map((asset, index) => {
@@ -69,6 +85,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
         takeProfit: "0",
         type: "Regelbasiert",
         accessLevel: "free",
+        rings: this.createDefaultRings(),
       } satisfies Setup;
     });
   }
