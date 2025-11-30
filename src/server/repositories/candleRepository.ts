@@ -1,6 +1,7 @@
-import { and, desc, excluded, eq, gte, lte } from "drizzle-orm";
+import { and, desc, eq, gte, lte } from "drizzle-orm";
 import { candles } from "../db/schema/candles";
 import { db as drizzleDb } from "../db/db";
+import { excluded } from "../db/sqlHelpers";
 
 type Candle = typeof candles["$inferSelect"];
 type CandleInsert = typeof candles["$inferInsert"];
@@ -56,15 +57,15 @@ export async function upsertCandles(candleInputs: CandleInput[]): Promise<void> 
   await drizzleDb
     .insert(candles)
     .values(rows)
-    .onConflictDoUpdate({
-      target: candles.id,
-      set: {
-        open: excluded(candles.open),
-        high: excluded(candles.high),
-        low: excluded(candles.low),
-        close: excluded(candles.close),
-        volume: excluded(candles.volume),
-        source: excluded(candles.source)
-      }
-    });
+      .onConflictDoUpdate({
+        target: candles.id,
+        set: {
+          open: excluded(candles.open.name),
+          high: excluded(candles.high.name),
+          low: excluded(candles.low.name),
+          close: excluded(candles.close.name),
+          volume: excluded(candles.volume.name),
+          source: excluded(candles.source.name)
+        }
+      });
 }

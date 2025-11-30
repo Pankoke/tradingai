@@ -2,23 +2,6 @@ import { boolean, index, integer, jsonb, pgTable, text, timestamp } from "drizzl
 import { assets } from "./assets";
 import { perceptionSnapshots } from "./perceptionSnapshots";
 
-type IndexColumn = {
-  defaultConfig?: {
-    order?: "asc" | "desc";
-    nulls?: "first" | "last";
-    opClass?: string;
-  };
-};
-
-const ensureIndexDefaults = (column: IndexColumn) => {
-  if (column.defaultConfig) return;
-  column.defaultConfig = {
-    order: "asc",
-    nulls: "last",
-    opClass: undefined
-  };
-};
-
 export const perceptionSnapshotItems = pgTable("perception_snapshot_items", {
   id: text("id").primaryKey(),
   snapshotId: text("snapshot_id").notNull().references(() => perceptionSnapshots.id),
@@ -41,10 +24,6 @@ export const perceptionSnapshotItems = pgTable("perception_snapshot_items", {
   snapshotRankIndex,
   snapshotAssetIndex
 }));
-
-ensureIndexDefaults(perceptionSnapshotItems.snapshotId);
-ensureIndexDefaults(perceptionSnapshotItems.rankOverall);
-ensureIndexDefaults(perceptionSnapshotItems.assetId);
 
 export const snapshotRankIndex = index("items_snapshot_rank_idx")
   .on(perceptionSnapshotItems.snapshotId, perceptionSnapshotItems.rankOverall);

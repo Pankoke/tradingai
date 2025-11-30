@@ -3,10 +3,6 @@ import type { BiasSnapshot, Event } from "./eventsBiasTypes";
 import { mockSetups } from "@/src/lib/mockSetups";
 import { mockEvents } from "@/src/lib/mockEvents";
 import { mockBiasSnapshot } from "@/src/lib/mockBias";
-import { getAllAssets } from "@/src/server/repositories/assetRepository";
-import { getCandlesForAsset } from "@/src/server/repositories/candleRepository";
-import { getEventsInRange } from "@/src/server/repositories/eventRepository";
-import { getBiasSnapshot } from "@/src/server/repositories/biasRepository";
 
 export type PerceptionDataMode = "mock" | "live";
 
@@ -38,12 +34,21 @@ export class MockPerceptionDataSource implements PerceptionDataSource {
 
 export class LivePerceptionDataSource implements PerceptionDataSource {
   async getSetupsForToday(_params: { asOf: Date }): Promise<Setup[]> {
+    const { getAllAssets } = await import(
+      "@/src/server/repositories/assetRepository"
+    );
+    const { getCandlesForAsset } = await import(
+      "@/src/server/repositories/candleRepository"
+    );
     void getAllAssets;
     void getCandlesForAsset;
     throw new Error("LivePerceptionDataSource.getSetupsForToday not implemented yet");
   }
 
   async getEventsForWindow(_params: { from: Date; to: Date }): Promise<Event[]> {
+    const { getEventsInRange } = await import(
+      "@/src/server/repositories/eventRepository"
+    );
     void getEventsInRange;
     throw new Error("LivePerceptionDataSource.getEventsForWindow not implemented yet");
   }
@@ -52,6 +57,9 @@ export class LivePerceptionDataSource implements PerceptionDataSource {
     assetIds: string[];
     date: Date;
   }): Promise<BiasSnapshot[]> {
+    const { getBiasSnapshot } = await import(
+      "@/src/server/repositories/biasRepository"
+    );
     void getBiasSnapshot;
     throw new Error("LivePerceptionDataSource.getBiasSnapshotForAssets not implemented yet");
   }

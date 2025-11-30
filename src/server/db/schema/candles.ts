@@ -17,15 +17,13 @@ export const candles = pgTable(
     volume: numeric("volume"),
     source: text("source").notNull(),
     createdAt: timestamp("created_at").defaultNow()
-  },
-  (table) => ({
-    // Unique Index: assetId + timeframe + timestamp
-    candlesUnique: uniqueIndex("candles_asset_tf_ts").on(
-      table.assetId,
-      table.timeframe,
-      table.timestamp
-    )
-  })
+  }
+);
+
+export const candlesUnique = uniqueIndex("candles_asset_tf_ts").on(
+  candles.assetId,
+  candles.timeframe,
+  candles.timestamp
 );
 
 // Optional: Typen für später im Code

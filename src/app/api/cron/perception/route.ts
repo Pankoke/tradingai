@@ -22,7 +22,7 @@ export async function GET(): Promise<NextResponse<CronSuccessBody | CronErrorBod
   try {
     const snapshot: PerceptionSnapshot = await buildPerceptionSnapshot();
     const [events, biasSnapshot] = await Promise.all([
-      fetchTodayEvents(),
+      fetchTodayEvents().catch(() => []),
       fetchTodayBiasSnapshot().catch(() => null),
     ]);
     addPerceptionHistoryEntry({ snapshot, events, biasSnapshot });

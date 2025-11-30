@@ -1,6 +1,7 @@
 import { db } from "../db/db";
 import { biasSnapshots } from "../db/schema/biasSnapshots";
-import { eq, excluded } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import { excluded } from "../db/sqlHelpers";
 
 type BiasSnapshot = typeof biasSnapshots["$inferSelect"];
 type BiasSnapshotInput = typeof biasSnapshots["$inferInsert"];
@@ -10,13 +11,16 @@ export async function getBiasSnapshot(params: {
   date: Date;
   timeframe: string;
 }): Promise<BiasSnapshot | undefined> {
+  const targetDate = params.date.toISOString().slice(0, 10);
   const [snapshot] = await db
     .select()
     .from(biasSnapshots)
     .where(
-      eq(biasSnapshots.assetId, params.assetId),
-      eq(biasSnapshots.date, params.date),
-      eq(biasSnapshots.timeframe, params.timeframe)
+      and(
+        eq(biasSnapshots.assetId, params.assetId),
+        eq(biasSnapshots.date, targetDate),
+        eq(biasSnapshots.timeframe, params.timeframe),
+      ),
     )
     .limit(1);
   return snapshot;
@@ -29,15 +33,15 @@ export async function upsertBiasSnapshot(input: BiasSnapshotInput): Promise<void
     .onConflictDoUpdate({
       target: biasSnapshots.id,
       set: {
-        assetId: excluded(biasSnapshots.assetId),
-        date: excluded(biasSnapshots.date),
-        timeframe: excluded(biasSnapshots.timeframe),
-        biasScore: excluded(biasSnapshots.biasScore),
-        confidence: excluded(biasSnapshots.confidence),
-        trendScore: excluded(biasSnapshots.trendScore),
-        volatilityScore: excluded(biasSnapshots.volatilityScore),
-        rangeScore: excluded(biasSnapshots.rangeScore),
-        meta: excluded(biasSnapshots.meta)
+        assetId: excluded(biasSnapshots.assetId.name),
+        date: excluded(biasSnapshots.date.name),
+        timeframe: excluded(biasSnapshots.timeframe.name),
+        biasScore: excluded(biasSnapshots.biasScore.name),
+        confidence: excluded(biasSnapshots.confidence.name),
+        trendScore: excluded(biasSnapshots.trendScore.name),
+        volatilityScore: excluded(biasSnapshots.volatilityScore.name),
+        rangeScore: excluded(biasSnapshots.rangeScore.name),
+        meta: excluded(biasSnapshots.meta.name)
       }
     });
 }

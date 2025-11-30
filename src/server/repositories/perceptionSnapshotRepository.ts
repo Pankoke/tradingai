@@ -1,7 +1,8 @@
 import { db } from "../db/db";
-import { desc, excluded, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { perceptionSnapshotItems } from "../db/schema/perceptionSnapshotItems";
 import { perceptionSnapshots } from "../db/schema/perceptionSnapshots";
+import { excluded } from "../db/sqlHelpers";
 
 type PerceptionSnapshot = typeof perceptionSnapshots["$inferSelect"];
 export type PerceptionSnapshotInput = typeof perceptionSnapshots["$inferInsert"];
@@ -64,12 +65,12 @@ export async function insertSnapshotWithItems(params: {
       .onConflictDoUpdate({
         target: perceptionSnapshots.id,
         set: {
-          snapshotTime: excluded(perceptionSnapshots.snapshotTime),
-          label: excluded(perceptionSnapshots.label),
-          version: excluded(perceptionSnapshots.version),
-          dataMode: excluded(perceptionSnapshots.dataMode),
-          generatedMs: excluded(perceptionSnapshots.generatedMs),
-          notes: excluded(perceptionSnapshots.notes)
+          snapshotTime: excluded(perceptionSnapshots.snapshotTime.name),
+          label: excluded(perceptionSnapshots.label.name),
+          version: excluded(perceptionSnapshots.version.name),
+          dataMode: excluded(perceptionSnapshots.dataMode.name),
+          generatedMs: excluded(perceptionSnapshots.generatedMs.name),
+          notes: excluded(perceptionSnapshots.notes.name)
         }
       });
 
