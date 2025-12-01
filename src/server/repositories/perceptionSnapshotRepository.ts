@@ -3,6 +3,7 @@ import { desc, eq } from "drizzle-orm";
 import { perceptionSnapshotItems } from "../db/schema/perceptionSnapshotItems";
 import { perceptionSnapshots } from "../db/schema/perceptionSnapshots";
 import { excluded } from "../db/sqlHelpers";
+import type { Setup } from "@/src/lib/engine/types";
 
 type PerceptionSnapshot = typeof perceptionSnapshots["$inferSelect"];
 export type PerceptionSnapshotInput = typeof perceptionSnapshots["$inferInsert"];
@@ -12,6 +13,7 @@ export type PerceptionSnapshotItemInput = typeof perceptionSnapshotItems["$infer
 export type PerceptionSnapshotWithItems = {
   snapshot: PerceptionSnapshot;
   items: PerceptionSnapshotItem[];
+  setups: Setup[];
 };
 
 async function loadSnapshotItems(snapshotId: string) {
@@ -34,7 +36,8 @@ export async function getLatestSnapshot(): Promise<PerceptionSnapshotWithItems |
   }
 
   const items = await loadSnapshotItems(snapshot.id);
-  return { snapshot, items };
+  const setups = (snapshot.setups ?? []) as Setup[];
+  return { snapshot, items, setups };
 }
 
 export async function getSnapshotByTime(params: {
@@ -51,7 +54,8 @@ export async function getSnapshotByTime(params: {
   }
 
   const items = await loadSnapshotItems(snapshot.id);
-  return { snapshot, items };
+  const setups = (snapshot.setups ?? []) as Setup[];
+  return { snapshot, items, setups };
 }
 
 export async function insertSnapshotWithItems(params: {
@@ -70,7 +74,8 @@ export async function insertSnapshotWithItems(params: {
           version: excluded(perceptionSnapshots.version.name),
           dataMode: excluded(perceptionSnapshots.dataMode.name),
           generatedMs: excluded(perceptionSnapshots.generatedMs.name),
-          notes: excluded(perceptionSnapshots.notes.name)
+          notes: excluded(perceptionSnapshots.notes.name),
+          setups: excluded(perceptionSnapshots.setups.name)
         }
       });
 

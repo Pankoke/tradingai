@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ComponentType, JSX, SVGProps } from "react";
 import { ArrowDown, ArrowRight, ArrowUp } from "lucide-react";
-import { z } from "zod";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import { formatAssetLabel, getAssetMeta } from "@/src/lib/formatters/asset";
 import { LevelDebugBlock } from "@/src/components/perception/LevelDebugBlock";
@@ -12,10 +11,8 @@ import { PerceptionCard } from "@/src/components/perception/PerceptionCard";
 import type { Setup } from "@/src/lib/engine/types";
 import type { SetupRingScores, SetupRings } from "@/src/lib/engine/rings";
 import { computeRingsForSnapshotItem } from "@/src/lib/engine/rings";
-import { fetchTodaySetups } from "@/src/lib/api/perceptionClient";
+import { fetchPerceptionToday, type PerceptionTodayResponse } from "@/src/lib/api/perceptionClient";
 import { BigGauge, SmallGauge } from "@/src/components/perception/RingGauges";
-
-const TIMEOUT_MS = 10_000;
 
 type LucideIcon = ComponentType<SVGProps<SVGSVGElement>>;
 
@@ -48,89 +45,7 @@ type RingDefinition = {
   tooltip: string;
 };
 
-const riskRewardSchema = z.object({
-  rrr: z.number().nullable(),
-  riskPercent: z.number().nullable(),
-  rewardPercent: z.number().nullable(),
-  volatilityLabel: z.enum(["low", "medium", "high"]).nullable(),
-});
-
-const itemSchema = z.object({
-  id: z.string(),
-  snapshotId: z.string(),
-  assetId: z.string(),
-  setupId: z.string(),
-  direction: z.enum(["long", "short", "neutral"]),
-  rankOverall: z.number(),
-  rankWithinAsset: z.number(),
-  scoreTotal: z.number(),
-  scoreTrend: z.number().nullable(),
-  scoreMomentum: z.number().nullable(),
-  scoreVolatility: z.number().nullable(),
-  scorePattern: z.number().nullable(),
-  confidence: z.number(),
-  biasScoreAtTime: z.number().nullable(),
-  eventContext: z.unknown().nullable(),
-  isSetupOfTheDay: z.boolean(),
-  createdAt: z.string(),
-  riskReward: riskRewardSchema.nullable(),
-});
-
-const perceptionTodaySchema = z.object({
-  snapshot: z.object({
-    id: z.string(),
-    snapshotTime: z.string(),
-    label: z.string().nullable(),
-    version: z.string(),
-    dataMode: z.string(),
-    generatedMs: z.number().nullable(),
-    notes: z.string().nullable(),
-    createdAt: z.string(),
-  }),
-  items: itemSchema.array(),
-});
-
-type PerceptionTodayResponse = z.infer<typeof perceptionTodaySchema>;
 type PerceptionTodayItem = PerceptionTodayResponse["items"][number];
-
-function resolveApiUrl(path: string): string {
-  const base =
-    process.env.NEXT_PUBLIC_APP_URL ??
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-  return new URL(path, base).toString();
-}
-
-async function fetchPerceptionToday(): Promise<PerceptionTodayResponse> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
-  try {
-    const response = await fetch(resolveApiUrl("/api/perception/today"), {
-      cache: "no-store",
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      throw new Error(`Request failed with status ${response.status}`);
-    }
-
-    const payload = (await response.json()) as unknown;
-    const parsed = perceptionTodaySchema.safeParse(payload);
-    if (!parsed.success) {
-      const formatted = parsed.error.issues
-        .map((issue) => {
-          const path = issue.path.join(".") || "(root)";
-          return `${path}: ${issue.message}`;
-        })
-        .join("; ");
-      throw new Error(`Response validation failed: ${formatted}`);
-    }
-
-    return parsed.data;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
 
 function formatScore(value: number | null): string {
   if (value === null || Number.isNaN(value)) {
@@ -172,15 +87,12 @@ export function PerceptionTodayPanel(): JSX.Element {
       setStatus("loading");
       setErrorMessage(null);
       try {
-        const [perceptionPayload, todaySetups] = await Promise.all([
-          fetchPerceptionToday(),
-          fetchTodaySetups(),
-        ]);
+        const perceptionPayload = await fetchPerceptionToday();
         if (!isMounted) {
           return;
         }
         setData(perceptionPayload);
-        setSetups(todaySetups.setups);
+        setSetups(perceptionPayload.setups);
         setStatus("ready");
       } catch (error) {
         if (!isMounted) {

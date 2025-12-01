@@ -36,7 +36,7 @@ const levelDebugSchema = z.object({
 const volatilityLabelEnum = z.enum(["low", "medium", "high"]);
 export type VolatilityLabel = z.infer<typeof volatilityLabelEnum>;
 
-const riskRewardSchema = z.object({
+export const riskRewardSchema = z.object({
   riskPercent: z.number().nullable(),
   rewardPercent: z.number().nullable(),
   rrr: z.number().nullable(),

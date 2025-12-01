@@ -1,4 +1,4 @@
-import { integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 export const perceptionSnapshots = pgTable("perception_snapshots", {
   id: text("id").primaryKey(),
@@ -7,6 +7,7 @@ export const perceptionSnapshots = pgTable("perception_snapshots", {
   version: text("version").notNull(),
   dataMode: text("data_mode").notNull(),
   generatedMs: integer("generated_ms"),
+  setups: jsonb("setups"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow()
 });

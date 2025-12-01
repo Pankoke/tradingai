@@ -46,9 +46,11 @@ export async function GET(): Promise<NextResponse<PerceptionSnapshotWithItems | 
         dataMode: "mock",
         generatedMs: null,
         notes: null,
+        setups: snapshot.setups,
         createdAt: new Date(),
       },
       items: [],
+      setups: snapshot.setups,
     };
     return NextResponse.json(fallback);
   }

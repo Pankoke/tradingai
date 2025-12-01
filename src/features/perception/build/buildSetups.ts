@@ -129,6 +129,7 @@ export async function buildAndStorePerceptionSnapshot(
     dataMode: mode,
     generatedMs,
     notes: null,
+    setups: engineResult.setups,
   };
 
   await insertSnapshotWithItems({ snapshot, items });
