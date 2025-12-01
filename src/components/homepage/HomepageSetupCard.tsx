@@ -4,6 +4,7 @@ import React from "react";
 import type { JSX } from "react";
 import { Badge } from "@/src/components/ui/badge";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
+import { LevelDebugBlock } from "@/src/components/perception/LevelDebugBlock";
 import { formatAssetLabel } from "@/src/lib/formatters/asset";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import { BigGauge, SmallGauge } from "@/src/components/perception/RingGauges";
@@ -135,6 +136,18 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
           <div className="mt-1 text-lg font-semibold text-rose-400">{setup.stopLoss.toFixed(4)}</div>
         </div>
       </div>
+
+      <LevelDebugBlock
+        category={setup.category ?? setup.levelDebug?.category}
+        referencePrice={setup.levelDebug?.referencePrice ?? null}
+        bandPct={setup.levelDebug?.bandPct ?? null}
+        volatilityScore={setup.levelDebug?.volatilityScore ?? null}
+        scoreVolatility={setup.levelDebug?.volatilityScore ?? null}
+        entryZone={`${setup.entryZone.from.toFixed(4)} - ${setup.entryZone.to.toFixed(4)}`}
+        stopLoss={setup.stopLoss.toFixed(4)}
+        takeProfit={setup.takeProfit.toFixed(4)}
+        rings={setup.rings}
+      />
     </div>
   );
 }

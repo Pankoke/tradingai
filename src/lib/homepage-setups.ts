@@ -20,6 +20,8 @@ export type HomepageSetup = {
   entryZone: { from: number; to: number };
   stopLoss: number;
   takeProfit: number;
+  category?: string | null;
+  levelDebug?: Setup["levelDebug"];
   snapshotTimestamp: string;
   rings: Setup["rings"];
 };
@@ -73,6 +75,8 @@ function mapSetup(setup: Setup, timestamp: string): HomepageSetup {
     entryZone: parseEntryZone(setup.entryZone),
     stopLoss: parseNumber(setup.stopLoss),
     takeProfit: parseNumber(setup.takeProfit),
+    category: setup.category ?? null,
+    levelDebug: setup.levelDebug,
     snapshotTimestamp: timestamp,
     rings: setup.rings,
   };

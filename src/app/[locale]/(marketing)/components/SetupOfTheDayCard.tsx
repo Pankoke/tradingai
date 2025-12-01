@@ -8,6 +8,7 @@ import { useT } from "../../../../lib/i18n/ClientProvider";
 import type { SetupCardSetup } from "./SetupCard";
 import { i18nConfig, type Locale } from "../../../../lib/i18n/config";
 import { PerceptionCard } from "@/src/components/perception/PerceptionCard";
+import { LevelDebugBlock } from "@/src/components/perception/LevelDebugBlock";
 import { formatAssetLabel, getAssetMeta } from "@/src/lib/formatters/asset";
 import { BigGauge, SmallGauge } from "@/src/components/perception/RingGauges";
 
@@ -135,6 +136,18 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
         <LevelBox label={t("setups.stopLoss")} value={formatNumberText(setup.stopLoss)} tone="danger" />
         <LevelBox label={t("setups.takeProfit")} value={formatNumberText(setup.takeProfit)} tone="success" />
       </div>
+
+      <LevelDebugBlock
+        category={setup.category ?? setup.levelDebug?.category}
+        referencePrice={setup.levelDebug?.referencePrice ?? null}
+        bandPct={setup.levelDebug?.bandPct ?? null}
+        volatilityScore={setup.levelDebug?.volatilityScore ?? null}
+        scoreVolatility={setup.levelDebug?.volatilityScore ?? null}
+        entryZone={setup.entryZone}
+        stopLoss={setup.stopLoss}
+        takeProfit={setup.takeProfit}
+        rings={setup.rings}
+      />
 
       <div className="mt-4 flex justify-end">
         <Link

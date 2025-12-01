@@ -25,6 +25,13 @@ const setupRingsSchema = z.object({
   confidence: ringPercentSchema,
 });
 
+const levelDebugSchema = z.object({
+  bandPct: z.number(),
+  referencePrice: z.number(),
+  category: z.string(),
+  volatilityScore: z.number(),
+});
+
 export const setupSchema = z.object({
   id: z.string(),
   assetId: z.string(),
@@ -39,6 +46,8 @@ export const setupSchema = z.object({
   entryZone: z.string(),
   stopLoss: z.string(),
   takeProfit: z.string(),
+  category: z.string().optional(),
+  levelDebug: levelDebugSchema.optional(),
   type: setupTypeEnum,
   accessLevel: accessLevelSchema,
   rings: setupRingsSchema,

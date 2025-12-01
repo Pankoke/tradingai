@@ -3,8 +3,8 @@ import type { BiasSnapshot, Event } from "./eventsBiasTypes";
 import { mockSetups } from "@/src/lib/mockSetups";
 import { mockEvents } from "@/src/lib/mockEvents";
 import { mockBiasSnapshot } from "@/src/lib/mockBias";
-import { setupDefinitions } from "@/src/lib/engine/setupDefinitions";
-import { computeLevelsForSetup } from "@/src/lib/engine/levels";
+import { setupDefinitions, type SetupDefinition } from "@/src/lib/engine/setupDefinitions";
+import { computeLevelsForSetup, type SetupLevelCategory } from "@/src/lib/engine/levels";
 import { getActiveAssets } from "@/src/server/repositories/assetRepository";
 import { getEventsInRange } from "@/src/server/repositories/eventRepository";
 import { DbBiasProvider, type BiasDomainModel } from "@/src/server/providers/biasProvider";
@@ -26,6 +26,21 @@ function mapCategory(value: string): EventCategory {
     return value as EventCategory;
   }
   return "other";
+}
+
+const TEMPLATE_LEVEL_CATEGORY: Record<SetupDefinition["id"], SetupLevelCategory> = {
+  trend_breakout: "breakout",
+  trend_pullback: "pullback",
+  mean_reversion_overshoot: "range",
+  range_compression: "range",
+  momentum_strong: "trendContinuation",
+};
+
+function resolveLevelCategory(definition?: SetupDefinition): SetupLevelCategory {
+  if (!definition) {
+    return "unknown";
+  }
+  return TEMPLATE_LEVEL_CATEGORY[definition.id] ?? "unknown";
 }
 
 class MockPerceptionDataSource implements PerceptionDataSource {
@@ -79,10 +94,12 @@ class LivePerceptionDataSource implements PerceptionDataSource {
           assetId: asset.id,
           timeframe,
         });
+        const levelCategory = resolveLevelCategory(template);
         const computedLevels = computeLevelsForSetup({
           direction: normalizedDirection,
           referencePrice: candle ? Number(candle.close) : 0,
           volatilityScore: 50,
+          category: levelCategory,
         });
 
         return {
@@ -99,6 +116,8 @@ class LivePerceptionDataSource implements PerceptionDataSource {
           entryZone: computedLevels.entryZone,
           stopLoss: computedLevels.stopLoss,
           takeProfit: computedLevels.takeProfit,
+          category: levelCategory,
+          levelDebug: computedLevels.debug,
           type: "Regelbasiert",
           accessLevel: "free",
           rings: this.createDefaultRings(),

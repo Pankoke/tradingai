@@ -6,6 +6,7 @@ import { ArrowDown, ArrowRight, ArrowUp } from "lucide-react";
 import { z } from "zod";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import { formatAssetLabel, getAssetMeta } from "@/src/lib/formatters/asset";
+import { LevelDebugBlock } from "@/src/components/perception/LevelDebugBlock";
 import { PerceptionCard } from "@/src/components/perception/PerceptionCard";
 import type { Setup } from "@/src/lib/engine/types";
 import type { SetupRingScores, SetupRings } from "@/src/lib/engine/rings";
@@ -345,7 +346,7 @@ export function PerceptionTodayPanel(): JSX.Element {
                 </div>
               </div>
 
-                <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {heroRingDefinitions.map((ring) => (
                   <SmallGauge
                     key={ring.label}
@@ -356,6 +357,20 @@ export function PerceptionTodayPanel(): JSX.Element {
                   />
                 ))}
               </div>
+
+              {heroSetup ? (
+                <LevelDebugBlock
+                  category={heroSetup.category ?? heroSetup.levelDebug?.category}
+                  referencePrice={heroSetup.levelDebug?.referencePrice ?? null}
+                  bandPct={heroSetup.levelDebug?.bandPct ?? null}
+                  volatilityScore={heroSetup.levelDebug?.volatilityScore ?? null}
+                  scoreVolatility={heroItem.scoreVolatility ?? heroSetup.levelDebug?.volatilityScore ?? null}
+                  entryZone={heroSetup.entryZone}
+                  stopLoss={heroSetup.stopLoss}
+                  takeProfit={heroSetup.takeProfit}
+                  rings={heroBaseRings}
+                />
+              ) : null}
 
               <div className="mt-6 grid gap-2 text-xs text-slate-400">
                 <div className="flex items-center justify-between">
@@ -382,7 +397,7 @@ export function PerceptionTodayPanel(): JSX.Element {
                     </span>
                   </div>
                   <div className="space-y-3">
-                    {additionalEntries.map(({ item, rings }) => {
+                    {additionalEntries.map(({ item, setup, rings }) => {
                       const asset = getAssetMeta(item.assetId);
                       const { Icon, accent } = DIRECTION_META[item.direction];
                       return (
@@ -411,6 +426,19 @@ export function PerceptionTodayPanel(): JSX.Element {
                                 />
                               ))}
                             </div>
+                            {setup ? (
+                              <LevelDebugBlock
+                                category={setup.category ?? setup.levelDebug?.category}
+                                referencePrice={setup.levelDebug?.referencePrice ?? null}
+                                bandPct={setup.levelDebug?.bandPct ?? null}
+                                volatilityScore={setup.levelDebug?.volatilityScore ?? null}
+                                scoreVolatility={item.scoreVolatility ?? setup.levelDebug?.volatilityScore ?? null}
+                                entryZone={setup.entryZone}
+                                stopLoss={setup.stopLoss}
+                                takeProfit={setup.takeProfit}
+                                rings={rings}
+                              />
+                            ) : null}
                             <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400">
                               <span>
                                 {t("perception.today.rankLabel")}: {item.rankOverall}
