@@ -48,6 +48,13 @@ type RingDefinition = {
   tooltip: string;
 };
 
+const riskRewardSchema = z.object({
+  rrr: z.number().nullable(),
+  riskPercent: z.number().nullable(),
+  rewardPercent: z.number().nullable(),
+  volatilityLabel: z.enum(["low", "medium", "high"]).nullable(),
+});
+
 const itemSchema = z.object({
   id: z.string(),
   snapshotId: z.string(),
@@ -66,6 +73,7 @@ const itemSchema = z.object({
   eventContext: z.unknown().nullable(),
   isSetupOfTheDay: z.boolean(),
   createdAt: z.string(),
+  riskReward: riskRewardSchema.nullable(),
 });
 
 const perceptionTodaySchema = z.object({
@@ -372,8 +380,8 @@ export function PerceptionTodayPanel(): JSX.Element {
                     takeProfit={heroSetup.takeProfit}
                     rings={heroBaseRings}
                   />
-                  <div className="mt-4">
-                    <RiskRewardBlock riskReward={heroSetup.riskReward ?? null} />
+                <div className="mt-4">
+                    <RiskRewardBlock riskReward={heroSetup?.riskReward ?? heroItem?.riskReward ?? null} />
                   </div>
                 </>
               ) : null}
@@ -446,7 +454,7 @@ export function PerceptionTodayPanel(): JSX.Element {
                                   rings={rings}
                                 />
                                 <div className="mt-3">
-                                  <RiskRewardBlock riskReward={setup.riskReward ?? null} />
+                                  <RiskRewardBlock riskReward={setup?.riskReward ?? item.riskReward ?? null} />
                                 </div>
                               </>
                             ) : null}
