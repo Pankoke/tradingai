@@ -32,6 +32,24 @@ export async function getCandlesForAsset(params: {
     .orderBy(desc(candles.timestamp));
 }
 
+export async function getLatestCandleForAsset(params: {
+  assetId: string;
+  timeframe: string;
+}): Promise<Candle | null> {
+  const [candle] = await drizzleDb
+    .select()
+    .from(candles)
+    .where(
+      and(
+        eq(candles.assetId, params.assetId),
+        eq(candles.timeframe, params.timeframe)
+      )
+    )
+    .orderBy(desc(candles.timestamp))
+    .limit(1);
+  return candle ?? null;
+}
+
 export async function upsertCandles(candleInputs: CandleInput[]): Promise<void> {
   if (!candleInputs.length) {
     return;

@@ -4,9 +4,11 @@ import { mockSetups } from "@/src/lib/mockSetups";
 import { mockEvents } from "@/src/lib/mockEvents";
 import { mockBiasSnapshot } from "@/src/lib/mockBias";
 import { setupDefinitions } from "@/src/lib/engine/setupDefinitions";
+import { computeLevelsForSetup } from "@/src/lib/engine/levels";
 import { getActiveAssets } from "@/src/server/repositories/assetRepository";
 import { getEventsInRange } from "@/src/server/repositories/eventRepository";
 import { DbBiasProvider, type BiasDomainModel } from "@/src/server/providers/biasProvider";
+import { getLatestCandleForAsset } from "@/src/server/repositories/candleRepository";
 
 export type PerceptionDataMode = "mock" | "live";
 
@@ -67,27 +69,43 @@ class LivePerceptionDataSource implements PerceptionDataSource {
 
   async getSetupsForToday(): Promise<Setup[]> {
     const assets = await getActiveAssets();
-    return assets.map((asset, index) => {
-      const template = setupDefinitions[index % setupDefinitions.length];
-      return {
-        id: `${asset.id}-${template.id}`,
-        assetId: asset.id,
-        symbol: asset.symbol,
-        timeframe: template.defaultTimeframe ?? "1D",
-        direction: index % 2 === 0 ? "Long" : "Short",
-        confidence: 50,
-        eventScore: 50,
-        biasScore: 50,
-        sentimentScore: 50,
-        balanceScore: 50,
-        entryZone: `${asset.symbol} zone`,
-        stopLoss: "0",
-        takeProfit: "0",
-        type: "Regelbasiert",
-        accessLevel: "free",
-        rings: this.createDefaultRings(),
-      } satisfies Setup;
-    });
+    const setups = await Promise.all(
+      assets.map(async (asset, index) => {
+        const template = setupDefinitions[index % setupDefinitions.length];
+        const direction = index % 2 === 0 ? "Long" : "Short";
+        const normalizedDirection = direction.toLowerCase() as "long" | "short";
+        const timeframe = template.defaultTimeframe ?? "1D";
+        const candle = await getLatestCandleForAsset({
+          assetId: asset.id,
+          timeframe,
+        });
+        const computedLevels = computeLevelsForSetup({
+          direction: normalizedDirection,
+          referencePrice: candle ? Number(candle.close) : 0,
+          volatilityScore: 50,
+        });
+
+        return {
+          id: `${asset.id}-${template.id}`,
+          assetId: asset.id,
+          symbol: asset.symbol,
+          timeframe,
+          direction,
+          confidence: 50,
+          eventScore: 50,
+          biasScore: 50,
+          sentimentScore: 50,
+          balanceScore: 50,
+          entryZone: computedLevels.entryZone,
+          stopLoss: computedLevels.stopLoss,
+          takeProfit: computedLevels.takeProfit,
+          type: "Regelbasiert",
+          accessLevel: "free",
+          rings: this.createDefaultRings(),
+        } satisfies Setup;
+      }),
+    );
+    return setups;
   }
 
   async getEventsForWindow(params: { from: Date; to: Date }): Promise<Event[]> {
