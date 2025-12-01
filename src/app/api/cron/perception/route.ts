@@ -4,6 +4,7 @@ import { setPerceptionSnapshot } from "@/src/lib/cache/perceptionCache";
 import { addPerceptionHistoryEntry } from "@/src/lib/cache/perceptionHistory";
 import { fetchTodayEvents, fetchTodayBiasSnapshot } from "@/src/lib/api/eventsBiasClient";
 import type { PerceptionSnapshot } from "@/src/lib/engine/types";
+import { buildAndStorePerceptionSnapshot } from "@/src/features/perception/build/buildSetups";
 
 type CronSuccessBody = {
   ok: true;
@@ -25,6 +26,7 @@ export async function GET(): Promise<NextResponse<CronSuccessBody | CronErrorBod
     ]);
     addPerceptionHistoryEntry({ snapshot, events, biasSnapshot });
     setPerceptionSnapshot(snapshot);
+    await buildAndStorePerceptionSnapshot({ snapshotTime: new Date(snapshot.generatedAt) });
 
     const body: CronSuccessBody = {
       ok: true,
