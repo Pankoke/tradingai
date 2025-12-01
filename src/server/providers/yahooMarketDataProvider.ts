@@ -75,10 +75,10 @@ export class YahooMarketDataProvider implements MarketDataProvider {
       const low = quote.low?.[i];
       const close = quote.close?.[i];
       if (
-        open === undefined ||
-        high === undefined ||
-        low === undefined ||
-        close === undefined
+        open == null ||
+        high == null ||
+        low == null ||
+        close == null
       ) {
         continue;
       }

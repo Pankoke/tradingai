@@ -5,6 +5,7 @@ import type { JSX } from "react";
 import { Badge } from "@/src/components/ui/badge";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import { LevelDebugBlock } from "@/src/components/perception/LevelDebugBlock";
+import { RiskRewardBlock } from "@/src/components/perception/RiskRewardBlock";
 import { formatAssetLabel } from "@/src/lib/formatters/asset";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import { BigGauge, SmallGauge } from "@/src/components/perception/RingGauges";
@@ -34,6 +35,25 @@ type Props = {
     orderflowBalanced: string;
   };
 };
+
+function formatOptionalDecimal(value?: number | null): string {
+  if (value === undefined || value === null || !Number.isFinite(value)) {
+    return "n/a";
+  }
+  return value.toFixed(4);
+}
+
+function formatEntryZoneRange(value: { from: number | null; to: number | null }): string {
+  if (
+    value.from === null ||
+    value.to === null ||
+    !Number.isFinite(value.from) ||
+    !Number.isFinite(value.to)
+  ) {
+    return "n/a";
+  }
+  return `${value.from.toFixed(4)} - ${value.to.toFixed(4)}`;
+}
 
 export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): JSX.Element {
   const t = useT();
@@ -120,20 +140,24 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
         ))}
       </div>
 
-      <div className="mt-4 grid gap-4 text-sm md:grid-cols-3">
+  <div className="mt-4 grid gap-4 text-sm md:grid-cols-3">
         <div className={detailBoxClass}>
           <div className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-400">{labels.entry}</div>
           <div className="mt-1 text-lg font-semibold text-white">
-            {setup.entryZone.from.toFixed(4)} - {setup.entryZone.to.toFixed(4)}
+            {formatEntryZoneRange(setup.entryZone)}
           </div>
         </div>
         <div className={detailBoxClass}>
           <div className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-400">{labels.take}</div>
-          <div className="mt-1 text-lg font-semibold text-emerald-400">{setup.takeProfit.toFixed(4)}</div>
+          <div className="mt-1 text-lg font-semibold text-emerald-400">
+            {formatOptionalDecimal(setup.takeProfit)}
+          </div>
         </div>
         <div className={detailBoxClass}>
           <div className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-400">{labels.stop}</div>
-          <div className="mt-1 text-lg font-semibold text-rose-400">{setup.stopLoss.toFixed(4)}</div>
+          <div className="mt-1 text-lg font-semibold text-rose-400">
+            {formatOptionalDecimal(setup.stopLoss)}
+          </div>
         </div>
       </div>
 
@@ -142,12 +166,15 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
         referencePrice={setup.levelDebug?.referencePrice ?? null}
         bandPct={setup.levelDebug?.bandPct ?? null}
         volatilityScore={setup.levelDebug?.volatilityScore ?? null}
-        scoreVolatility={setup.levelDebug?.volatilityScore ?? null}
-        entryZone={`${setup.entryZone.from.toFixed(4)} - ${setup.entryZone.to.toFixed(4)}`}
-        stopLoss={setup.stopLoss.toFixed(4)}
-        takeProfit={setup.takeProfit.toFixed(4)}
+        scoreVolatility={setup.levelDebug?.scoreVolatility ?? null}
+        entryZone={formatEntryZoneRange(setup.entryZone)}
+        stopLoss={formatOptionalDecimal(setup.stopLoss)}
+        takeProfit={formatOptionalDecimal(setup.takeProfit)}
         rings={setup.rings}
       />
+      <div className="mt-4">
+        <RiskRewardBlock riskReward={setup.riskReward ?? null} />
+      </div>
     </div>
   );
 }

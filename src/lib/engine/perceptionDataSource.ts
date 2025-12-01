@@ -5,6 +5,7 @@ import { mockEvents } from "@/src/lib/mockEvents";
 import { mockBiasSnapshot } from "@/src/lib/mockBias";
 import { setupDefinitions, type SetupDefinition } from "@/src/lib/engine/setupDefinitions";
 import { computeLevelsForSetup, type SetupLevelCategory } from "@/src/lib/engine/levels";
+import { syncDailyCandlesForAsset } from "@/src/features/marketData/syncDailyCandles";
 import { getActiveAssets } from "@/src/server/repositories/assetRepository";
 import { getEventsInRange } from "@/src/server/repositories/eventRepository";
 import { DbBiasProvider, type BiasDomainModel } from "@/src/server/providers/biasProvider";
@@ -42,6 +43,8 @@ function resolveLevelCategory(definition?: SetupDefinition): SetupLevelCategory 
   }
   return TEMPLATE_LEVEL_CATEGORY[definition.id] ?? "unknown";
 }
+
+const MARKETDATA_SYNC_WINDOW_DAYS = 30;
 
 class MockPerceptionDataSource implements PerceptionDataSource {
   async getSetupsForToday(): Promise<Setup[]> {
@@ -90,10 +93,10 @@ class LivePerceptionDataSource implements PerceptionDataSource {
         const direction = index % 2 === 0 ? "Long" : "Short";
         const normalizedDirection = direction.toLowerCase() as "long" | "short";
         const timeframe = template.defaultTimeframe ?? "1D";
-        const candle = await getLatestCandleForAsset({
-          assetId: asset.id,
-          timeframe,
-        });
+        const candle = await this.ensureLatestCandle(
+          { id: asset.id, symbol: asset.symbol },
+          timeframe
+        );
         const levelCategory = resolveLevelCategory(template);
         const computedLevels = computeLevelsForSetup({
           direction: normalizedDirection,
@@ -118,6 +121,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
           takeProfit: computedLevels.takeProfit,
           category: levelCategory,
           levelDebug: computedLevels.debug,
+          riskReward: computedLevels.riskReward,
           type: "Regelbasiert",
           accessLevel: "free",
           rings: this.createDefaultRings(),
@@ -175,6 +179,59 @@ class LivePerceptionDataSource implements PerceptionDataSource {
         ],
         version: "live",
       }));
+  }
+
+  private async ensureLatestCandle(
+    asset: { id: string; symbol: string },
+    timeframe: string
+  ) {
+    let candle = await getLatestCandleForAsset({
+      assetId: asset.id,
+      timeframe,
+    });
+    if (this.isCandleValid(candle)) {
+      return candle;
+    }
+
+    await this.syncCandlesForAsset(asset);
+    candle = await getLatestCandleForAsset({
+      assetId: asset.id,
+      timeframe,
+    });
+    if (!this.isCandleValid(candle)) {
+      console.error(
+        `[LivePerceptionDataSource] no candle available for ${asset.symbol} (${timeframe}) after fallback`,
+      );
+    }
+    return candle;
+  }
+
+  private async syncCandlesForAsset(asset: { id: string; symbol: string }) {
+    const to = new Date();
+    const from = new Date(to);
+    from.setDate(to.getDate() - MARKETDATA_SYNC_WINDOW_DAYS + 1);
+
+    try {
+      await syncDailyCandlesForAsset({
+        assetId: asset.id,
+        symbol: asset.symbol,
+        from,
+        to,
+      });
+    } catch (error) {
+      console.warn(
+        `[LivePerceptionDataSource] failed to sync candles for ${asset.symbol}:`,
+        error
+      );
+    }
+  }
+
+  private isCandleValid(candle?: { close?: string | number | null } | null) {
+    if (!candle) {
+      return false;
+    }
+    const close = Number(candle.close);
+    return Number.isFinite(close) && close > 0;
   }
 }
 

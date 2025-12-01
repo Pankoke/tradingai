@@ -4,6 +4,7 @@ import React from "react";
 import type { JSX } from "react";
 import { usePathname } from "next/navigation";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
+import { RiskRewardBlock } from "@/src/components/perception/RiskRewardBlock";
 import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
 import { clamp } from "@/src/lib/math";
 
@@ -32,6 +33,25 @@ type Props = {
     orderflowBalanced: string;
   };
 };
+
+function formatOptionalDecimal(value?: number | null): string {
+  if (value === undefined || value === null || !Number.isFinite(value)) {
+    return "n/a";
+  }
+  return value.toFixed(4);
+}
+
+function formatEntryZoneRange(value: { from: number | null; to: number | null }): string {
+  if (
+    value.from === null ||
+    value.to === null ||
+    !Number.isFinite(value.from) ||
+    !Number.isFinite(value.to)
+  ) {
+    return "n/a";
+  }
+  return `${value.from.toFixed(4)} – ${value.to.toFixed(4)}`;
+}
 
 // -----------------------------------------------------
 // Ring für Event/Bias/Sentiment/Orderflow
@@ -261,7 +281,7 @@ export default function HomepageHeroSetupCard({
             {labels.entry}
           </div>
           <div className="text-lg font-semibold text-white">
-            {setup.entryZone.from.toFixed(4)} – {setup.entryZone.to.toFixed(4)}
+            {formatEntryZoneRange(setup.entryZone)}
           </div>
         </div>
 
@@ -270,7 +290,7 @@ export default function HomepageHeroSetupCard({
             {labels.stop}
           </div>
           <div className="text-lg font-semibold text-rose-400">
-            {setup.stopLoss.toFixed(4)}
+            {formatOptionalDecimal(setup.stopLoss)}
           </div>
         </div>
 
@@ -279,9 +299,13 @@ export default function HomepageHeroSetupCard({
             {labels.take}
           </div>
           <div className="text-lg font-semibold text-emerald-400">
-            {setup.takeProfit.toFixed(4)}
+            {formatOptionalDecimal(setup.takeProfit)}
           </div>
         </div>
+      </div>
+
+      <div className="mt-6">
+        <RiskRewardBlock riskReward={setup.riskReward ?? null} />
       </div>
 
       {/* CTA Button */}

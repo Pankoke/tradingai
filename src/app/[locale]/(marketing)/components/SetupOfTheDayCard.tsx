@@ -11,6 +11,8 @@ import { PerceptionCard } from "@/src/components/perception/PerceptionCard";
 import { LevelDebugBlock } from "@/src/components/perception/LevelDebugBlock";
 import { formatAssetLabel, getAssetMeta } from "@/src/lib/formatters/asset";
 import { BigGauge, SmallGauge } from "@/src/components/perception/RingGauges";
+import { formatNumberText, formatRangeText } from "@/src/lib/formatters/levels";
+import { RiskRewardBlock } from "@/src/components/perception/RiskRewardBlock";
 
 type SetupOfTheDayCardProps = {
   setup: SetupCardSetup;
@@ -29,23 +31,6 @@ function localePrefix(pathname: string): string {
     return `/${maybeLocale}`;
   }
   return `/${i18nConfig.defaultLocale}`;
-}
-
-function formatNumberText(value: string): string {
-  const num = Number(value);
-  if (!Number.isFinite(num)) return value;
-  return num.toFixed(4);
-}
-
-function formatRangeText(value: string): string {
-  const matches = value.match(/-?\d+(\.\d+)?/g);
-  if (!matches || matches.length === 0) return value;
-  if (matches.length === 1) return Number(matches[0]).toFixed(4);
-  const [a, b] = matches.map((v) => Number(v));
-  if (Number.isFinite(a) && Number.isFinite(b)) {
-    return `${a.toFixed(4)} - ${b.toFixed(4)}`;
-  }
-  return value;
 }
 
 function toneClass(tone: LevelBoxPropsDay["tone"]): string {
@@ -137,17 +122,21 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
         <LevelBox label={t("setups.takeProfit")} value={formatNumberText(setup.takeProfit)} tone="success" />
       </div>
 
-      <LevelDebugBlock
-        category={setup.category ?? setup.levelDebug?.category}
-        referencePrice={setup.levelDebug?.referencePrice ?? null}
-        bandPct={setup.levelDebug?.bandPct ?? null}
-        volatilityScore={setup.levelDebug?.volatilityScore ?? null}
-        scoreVolatility={setup.levelDebug?.volatilityScore ?? null}
-        entryZone={setup.entryZone}
-        stopLoss={setup.stopLoss}
-        takeProfit={setup.takeProfit}
-        rings={setup.rings}
-      />
+      <div className="mt-4">
+        <RiskRewardBlock riskReward={setup.riskReward ?? null} />
+      </div>
+
+        <LevelDebugBlock
+          category={setup.category ?? setup.levelDebug?.category}
+          referencePrice={setup.levelDebug?.referencePrice ?? null}
+          bandPct={setup.levelDebug?.bandPct ?? null}
+          volatilityScore={setup.levelDebug?.volatilityScore ?? null}
+          scoreVolatility={setup.levelDebug?.scoreVolatility ?? null}
+          entryZone={setup.entryZone}
+          stopLoss={setup.stopLoss}
+          takeProfit={setup.takeProfit}
+          rings={setup.rings}
+        />
 
       <div className="mt-4 flex justify-end">
         <Link

@@ -10,16 +10,27 @@ export type SetupLevelCategory =
   | "liquidityGrab"
   | "unknown";
 
+export type VolatilityLabel = "low" | "medium" | "high";
+
+export type RiskRewardSummary = {
+  riskPercent: number | null;
+  rewardPercent: number | null;
+  rrr: number | null;
+  volatilityLabel: VolatilityLabel | null;
+};
+
 export interface ComputedLevels {
-  entryZone: string;
-  stopLoss: string;
-  takeProfit: string;
+  entryZone: string | null;
+  stopLoss: string | null;
+  takeProfit: string | null;
   debug: {
-    bandPct: number;
-    referencePrice: number;
+    bandPct: number | null;
+    referencePrice: number | null;
     category: SetupLevelCategory;
-    volatilityScore: number;
+    volatilityScore: number | null;
+    scoreVolatility: number | null;
   };
+  riskReward: RiskRewardSummary;
 }
 
 function clampPercent(value?: number): number {
@@ -53,6 +64,64 @@ function ensureOrder(values: [number, number]): [number, number] {
   return a <= b ? [a, b] : [b, a];
 }
 
+type RiskRewardInput = {
+  direction: Direction;
+  entryPrice: number;
+  stopLossValue: number;
+  takeProfitValue: number;
+  volatilityScore: number;
+};
+
+function determineVolatilityLabel(score?: number | null): VolatilityLabel | null {
+  if (score === undefined || score === null || Number.isNaN(score)) {
+    return null;
+  }
+  if (score >= 70) {
+    return "high";
+  }
+  if (score >= 40) {
+    return "medium";
+  }
+  return "low";
+}
+
+function computeRiskReward(input: RiskRewardInput): RiskRewardSummary {
+  const { direction, entryPrice, stopLossValue, takeProfitValue, volatilityScore } = input;
+  if (!Number.isFinite(entryPrice) || entryPrice <= 0) {
+    return {
+      riskPercent: null,
+      rewardPercent: null,
+      rrr: null,
+      volatilityLabel: determineVolatilityLabel(volatilityScore),
+    };
+  }
+
+  const riskDelta =
+    direction === "short" ? stopLossValue - entryPrice : entryPrice - stopLossValue;
+  const rewardDelta =
+    direction === "short" ? entryPrice - takeProfitValue : takeProfitValue - entryPrice;
+
+  if (!Number.isFinite(riskDelta) || !Number.isFinite(rewardDelta) || riskDelta <= 0 || rewardDelta <= 0) {
+    return {
+      riskPercent: null,
+      rewardPercent: null,
+      rrr: null,
+      volatilityLabel: determineVolatilityLabel(volatilityScore),
+    };
+  }
+
+  const riskPercent = (riskDelta / entryPrice) * 100;
+  const rewardPercent = (rewardDelta / entryPrice) * 100;
+  const rrr = rewardPercent / riskPercent;
+
+  return {
+    riskPercent,
+    rewardPercent,
+    rrr: Number.isFinite(rrr) ? rrr : null,
+    volatilityLabel: determineVolatilityLabel(volatilityScore),
+  };
+}
+
 export function computeLevelsForSetup(params: {
   direction: Direction;
   referencePrice: number;
@@ -61,18 +130,26 @@ export function computeLevelsForSetup(params: {
 }): ComputedLevels {
   const price = Number(params.referencePrice);
   const category = params.category ?? "unknown";
-  const volatilityScore = clampPercent(params.volatilityScore ?? 50);
+  const volatilityScore = clampPercent(params.volatilityScore);
+
   if (!Number.isFinite(price) || price <= 0) {
     badgeLogging(`invalid reference price (${params.referencePrice}) for direction ${params.direction}`);
     return {
-      entryZone: "0 - 0",
-      stopLoss: "0",
-      takeProfit: "0",
+      entryZone: null,
+      stopLoss: null,
+      takeProfit: null,
       debug: {
-        bandPct: 0,
-        referencePrice: price || 0,
+        bandPct: null,
+        referencePrice: null,
         category,
-        volatilityScore,
+        volatilityScore: null,
+        scoreVolatility: null,
+      },
+      riskReward: {
+        riskPercent: null,
+        rewardPercent: null,
+        rrr: null,
+        volatilityLabel: null,
       },
     };
   }
@@ -201,6 +278,14 @@ export function computeLevelsForSetup(params: {
   const [finalEntryLow, finalEntryHigh] = ensureOrder([entryLow, entryHigh]);
   const precision = determinePrecision(price);
   const entryZoneText = `${formatPrice(finalEntryLow, precision)} - ${formatPrice(finalEntryHigh, precision)}`;
+  const entryPrice = (finalEntryLow + finalEntryHigh) / 2;
+  const riskReward = computeRiskReward({
+    direction,
+    entryPrice,
+    stopLossValue,
+    takeProfitValue,
+    volatilityScore,
+  });
 
   return {
     entryZone: entryZoneText,
@@ -211,6 +296,8 @@ export function computeLevelsForSetup(params: {
       referencePrice: price,
       category,
       volatilityScore,
+      scoreVolatility: null,
     },
+    riskReward,
   };
 }

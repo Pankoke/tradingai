@@ -26,11 +26,23 @@ const setupRingsSchema = z.object({
 });
 
 const levelDebugSchema = z.object({
-  bandPct: z.number(),
-  referencePrice: z.number(),
+  bandPct: z.number().nullable(),
+  referencePrice: z.number().nullable(),
   category: z.string(),
-  volatilityScore: z.number(),
+  volatilityScore: z.number().nullable(),
+  scoreVolatility: z.number().nullable(),
 });
+
+const volatilityLabelEnum = z.enum(["low", "medium", "high"]);
+export type VolatilityLabel = z.infer<typeof volatilityLabelEnum>;
+
+const riskRewardSchema = z.object({
+  riskPercent: z.number().nullable(),
+  rewardPercent: z.number().nullable(),
+  rrr: z.number().nullable(),
+  volatilityLabel: volatilityLabelEnum.nullable(),
+});
+export type RiskRewardSummary = z.infer<typeof riskRewardSchema>;
 
 export const setupSchema = z.object({
   id: z.string(),
@@ -43,14 +55,15 @@ export const setupSchema = z.object({
   biasScore: z.number().min(0).max(100),
   sentimentScore: z.number().min(0).max(100),
   balanceScore: z.number().min(0).max(100),
-  entryZone: z.string(),
-  stopLoss: z.string(),
-  takeProfit: z.string(),
+  entryZone: z.string().nullable(),
+  stopLoss: z.string().nullable(),
+  takeProfit: z.string().nullable(),
   category: z.string().optional(),
   levelDebug: levelDebugSchema.optional(),
   type: setupTypeEnum,
   accessLevel: accessLevelSchema,
   rings: setupRingsSchema,
+  riskReward: riskRewardSchema,
 });
 
 export type Setup = z.infer<typeof setupSchema>;

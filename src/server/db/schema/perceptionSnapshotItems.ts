@@ -3,7 +3,7 @@ import { assets } from "./assets";
 import { perceptionSnapshots } from "./perceptionSnapshots";
 
 export const perceptionSnapshotItems = pgTable("perception_snapshot_items", {
-    id: text("id").primaryKey(),
+  id: text("id").primaryKey(),
   snapshotId: text("snapshot_id").notNull().references(() => perceptionSnapshots.id),
   assetId: text("asset_id").notNull().references(() => assets.id),
   setupId: text("setup_id").notNull(), // references future setups table
@@ -18,6 +18,7 @@ export const perceptionSnapshotItems = pgTable("perception_snapshot_items", {
   confidence: integer("confidence").notNull(),
   biasScoreAtTime: integer("bias_score_at_time"),
   eventContext: jsonb("event_context"),
+  riskReward: jsonb("risk_reward"),
   isSetupOfTheDay: boolean("is_setup_of_the_day").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow()
 });

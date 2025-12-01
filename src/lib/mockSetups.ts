@@ -41,6 +41,12 @@ export const mockSetups: Setup[] = [
     takeProfit: "87.50",
     type: "Regelbasiert",
     accessLevel: "free",
+    riskReward: {
+      riskPercent: null,
+      rewardPercent: null,
+      rrr: null,
+      volatilityLabel: null,
+    },
   },
   {
     id: "btc-long",
@@ -66,6 +72,12 @@ export const mockSetups: Setup[] = [
     takeProfit: "69.000",
     type: "KI",
     accessLevel: "free",
+    riskReward: {
+      riskPercent: null,
+      rewardPercent: null,
+      rrr: null,
+      volatilityLabel: null,
+    },
   },
   {
     id: "eth-short",
@@ -91,6 +103,12 @@ export const mockSetups: Setup[] = [
     takeProfit: "2.980",
     type: "Regelbasiert",
     accessLevel: "free",
+    riskReward: {
+      riskPercent: null,
+      rewardPercent: null,
+      rrr: null,
+      volatilityLabel: null,
+    },
   },
   {
     id: "nasdaq-long",
@@ -116,6 +134,12 @@ export const mockSetups: Setup[] = [
     takeProfit: "18.780",
     type: "Regelbasiert",
     accessLevel: "free",
+    riskReward: {
+      riskPercent: null,
+      rewardPercent: null,
+      rrr: null,
+      volatilityLabel: null,
+    },
   },
   {
     id: "dax-long",
@@ -141,6 +165,12 @@ export const mockSetups: Setup[] = [
     takeProfit: "18.380",
     type: "Regelbasiert",
     accessLevel: "free",
+    riskReward: {
+      riskPercent: null,
+      rewardPercent: null,
+      rrr: null,
+      volatilityLabel: null,
+    },
   },
   {
     id: "gold-short",
@@ -166,6 +196,12 @@ export const mockSetups: Setup[] = [
     takeProfit: "2.372",
     type: "KI",
     accessLevel: "free",
+    riskReward: {
+      riskPercent: null,
+      rewardPercent: null,
+      rrr: null,
+      volatilityLabel: null,
+    },
   },
 ];
 

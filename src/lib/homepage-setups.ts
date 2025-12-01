@@ -17,11 +17,12 @@ export type HomepageSetup = {
     strength: number;
   };
   sentimentScore: number;
-  entryZone: { from: number; to: number };
-  stopLoss: number;
-  takeProfit: number;
+  entryZone: { from: number | null; to: number | null };
+  stopLoss: number | null;
+  takeProfit: number | null;
   category?: string | null;
   levelDebug?: Setup["levelDebug"];
+  riskReward?: Setup["riskReward"];
   snapshotTimestamp: string;
   rings: Setup["rings"];
 };
@@ -37,23 +38,31 @@ const EVENT_LEVEL = (score: number): HomepageSetup["eventLevel"] => {
   return "low";
 };
 
-function parseNumber(value: string): number {
+function parseNumber(value?: string | null): number | null {
+  if (!value) return null;
   const match = value.match(/-?\d+(\.\d+)?/);
-  if (!match) return 0;
-  return parseFloat(match[0]);
+  if (!match) return null;
+  const parsed = parseFloat(match[0]);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
-function parseEntryZone(value: string): { from: number; to: number } {
+function parseEntryZone(value?: string | null): { from: number | null; to: number | null } {
+  if (!value) {
+    return { from: null, to: null };
+  }
   const matches = value.match(/-?\d+(\.\d+)?/g);
   if (!matches || matches.length === 0) {
-    return { from: 0, to: 0 };
+    return { from: null, to: null };
   }
   if (matches.length === 1) {
     const num = parseFloat(matches[0]);
-    return { from: num, to: num };
+    const safe = Number.isFinite(num) ? num : null;
+    return { from: safe, to: safe };
   }
   const nums = matches.map((m) => parseFloat(m));
-  return { from: nums[0], to: nums[1] };
+  const first = Number.isFinite(nums[0]) ? nums[0] : null;
+  const second = Number.isFinite(nums[1]) ? nums[1] : null;
+  return { from: first, to: second };
 }
 
 function mapSetup(setup: Setup, timestamp: string): HomepageSetup {
@@ -79,6 +88,7 @@ function mapSetup(setup: Setup, timestamp: string): HomepageSetup {
     levelDebug: setup.levelDebug,
     snapshotTimestamp: timestamp,
     rings: setup.rings,
+    riskReward: setup.riskReward,
   };
 }
 

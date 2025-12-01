@@ -45,15 +45,29 @@ function buildLabels(t: (key: string) => string) {
   };
 }
 
-function parseEntryZone(value: string): { from: number; to: number } {
+function parseEntryZone(value?: string | null): { from: number | null; to: number | null } {
+  if (!value) {
+    return { from: null, to: null };
+  }
   const matches = value.match(/-?\d+(\.\d+)?/g);
-  if (!matches || matches.length === 0) return { from: 0, to: 0 };
+  if (!matches || matches.length === 0) {
+    return { from: null, to: null };
+  }
   if (matches.length === 1) {
     const num = parseFloat(matches[0]);
-    return { from: num, to: num };
+    const safe = Number.isFinite(num) ? num : null;
+    return { from: safe, to: safe };
   }
   const nums = matches.map((m) => parseFloat(m));
-  return { from: nums[0], to: nums[1] };
+  const first = Number.isFinite(nums[0]) ? nums[0] : null;
+  const second = Number.isFinite(nums[1]) ? nums[1] : null;
+  return { from: first, to: second };
+}
+
+function parseNumber(value?: string | null): number | null {
+  if (!value) return null;
+  const parsed = parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function toHomepageSetup(setup: Setup): HomepageSetup {
@@ -83,8 +97,11 @@ function toHomepageSetup(setup: Setup): HomepageSetup {
     },
     sentimentScore: clamp((setup.sentimentScore - 50) / 50, -1, 1),
     entryZone: parseEntryZone(setup.entryZone),
-    stopLoss: parseFloat(setup.stopLoss) || 0,
-    takeProfit: parseFloat(setup.takeProfit) || 0,
+    stopLoss: parseNumber(setup.stopLoss),
+    takeProfit: parseNumber(setup.takeProfit),
+    category: setup.category ?? null,
+    levelDebug: setup.levelDebug,
+    riskReward: setup.riskReward,
     snapshotTimestamp: new Date().toISOString(),
     rings: setup.rings,
   };

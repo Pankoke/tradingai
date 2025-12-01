@@ -70,6 +70,8 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
       type: item.type,
       accessLevel: "free",
       rings: defaultRings,
+      riskReward: item.riskReward,
+      levelDebug: item.levelDebug,
     };
 
     const eventResult = applyEventScoring(base, events);
@@ -101,6 +103,18 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
       sentimentResult.sentimentScore,
     ]);
 
+    const fallbackLevelDebug = base.levelDebug ?? {
+      bandPct: null,
+      referencePrice: null,
+      category: base.category ?? "unknown",
+      volatilityScore: null,
+    };
+    const levelDebug = {
+      ...fallbackLevelDebug,
+      category: fallbackLevelDebug.category ?? base.category ?? "unknown",
+      scoreVolatility: scoreBreakdown.volatility ?? null,
+    };
+
     return {
       ...base,
       eventScore: eventResult.eventScore,
@@ -109,6 +123,7 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
       confidence,
       balanceScore,
       rings,
+      levelDebug,
     };
   });
 

@@ -7,6 +7,7 @@ import { z } from "zod";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import { formatAssetLabel, getAssetMeta } from "@/src/lib/formatters/asset";
 import { LevelDebugBlock } from "@/src/components/perception/LevelDebugBlock";
+import { RiskRewardBlock } from "@/src/components/perception/RiskRewardBlock";
 import { PerceptionCard } from "@/src/components/perception/PerceptionCard";
 import type { Setup } from "@/src/lib/engine/types";
 import type { SetupRingScores, SetupRings } from "@/src/lib/engine/rings";
@@ -359,17 +360,22 @@ export function PerceptionTodayPanel(): JSX.Element {
               </div>
 
               {heroSetup ? (
-                <LevelDebugBlock
-                  category={heroSetup.category ?? heroSetup.levelDebug?.category}
-                  referencePrice={heroSetup.levelDebug?.referencePrice ?? null}
-                  bandPct={heroSetup.levelDebug?.bandPct ?? null}
-                  volatilityScore={heroSetup.levelDebug?.volatilityScore ?? null}
-                  scoreVolatility={heroItem.scoreVolatility ?? heroSetup.levelDebug?.volatilityScore ?? null}
-                  entryZone={heroSetup.entryZone}
-                  stopLoss={heroSetup.stopLoss}
-                  takeProfit={heroSetup.takeProfit}
-                  rings={heroBaseRings}
-                />
+                <>
+                  <LevelDebugBlock
+                    category={heroSetup.category ?? heroSetup.levelDebug?.category}
+                    referencePrice={heroSetup.levelDebug?.referencePrice ?? null}
+                    bandPct={heroSetup.levelDebug?.bandPct ?? null}
+                    volatilityScore={heroSetup.levelDebug?.volatilityScore ?? null}
+                    scoreVolatility={heroItem.scoreVolatility ?? heroSetup.levelDebug?.scoreVolatility ?? null}
+                    entryZone={heroSetup.entryZone}
+                    stopLoss={heroSetup.stopLoss}
+                    takeProfit={heroSetup.takeProfit}
+                    rings={heroBaseRings}
+                  />
+                  <div className="mt-4">
+                    <RiskRewardBlock riskReward={heroSetup.riskReward ?? null} />
+                  </div>
+                </>
               ) : null}
 
               <div className="mt-6 grid gap-2 text-xs text-slate-400">
@@ -427,17 +433,22 @@ export function PerceptionTodayPanel(): JSX.Element {
                               ))}
                             </div>
                             {setup ? (
-                              <LevelDebugBlock
-                                category={setup.category ?? setup.levelDebug?.category}
-                                referencePrice={setup.levelDebug?.referencePrice ?? null}
-                                bandPct={setup.levelDebug?.bandPct ?? null}
-                                volatilityScore={setup.levelDebug?.volatilityScore ?? null}
-                                scoreVolatility={item.scoreVolatility ?? setup.levelDebug?.volatilityScore ?? null}
-                                entryZone={setup.entryZone}
-                                stopLoss={setup.stopLoss}
-                                takeProfit={setup.takeProfit}
-                                rings={rings}
-                              />
+                              <>
+                                <LevelDebugBlock
+                                  category={setup.category ?? setup.levelDebug?.category}
+                                  referencePrice={setup.levelDebug?.referencePrice ?? null}
+                                  bandPct={setup.levelDebug?.bandPct ?? null}
+                                  volatilityScore={setup.levelDebug?.volatilityScore ?? null}
+                                  scoreVolatility={item.scoreVolatility ?? setup.levelDebug?.scoreVolatility ?? null}
+                                  entryZone={setup.entryZone}
+                                  stopLoss={setup.stopLoss}
+                                  takeProfit={setup.takeProfit}
+                                  rings={rings}
+                                />
+                                <div className="mt-3">
+                                  <RiskRewardBlock riskReward={setup.riskReward ?? null} />
+                                </div>
+                              </>
                             ) : null}
                             <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400">
                               <span>

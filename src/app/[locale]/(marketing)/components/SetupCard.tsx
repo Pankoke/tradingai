@@ -8,6 +8,7 @@ import { Lock } from "lucide-react";
 import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import type { Setup } from "@/src/lib/engine/types";
+import { formatNumberText, formatRangeText } from "@/src/lib/formatters/levels";
 
 export type Direction = "Long" | "Short";
 
@@ -36,23 +37,6 @@ function localePrefix(pathname: string): string {
     return `/${maybeLocale}`;
   }
   return `/${i18nConfig.defaultLocale}`;
-}
-
-function formatNumberText(value: string): string {
-  const num = Number(value);
-  if (!Number.isFinite(num)) return value;
-  return num.toFixed(4);
-}
-
-function formatRangeText(value: string): string {
-  const matches = value.match(/-?\d+(\.\d+)?/g);
-  if (!matches || matches.length === 0) return value;
-  if (matches.length === 1) return Number(matches[0]).toFixed(4);
-  const [a, b] = matches.map((v) => Number(v));
-  if (Number.isFinite(a) && Number.isFinite(b)) {
-    return `${a.toFixed(4)} - ${b.toFixed(4)}`;
-  }
-  return value;
 }
 
 export function SetupCard({ setup, highlight = false }: SetupCardProps): JSX.Element {

@@ -3,6 +3,7 @@
 import type { JSX } from "react";
 import { getSetupById } from "@/src/lib/mockSetups";
 import { useT } from "@/src/lib/i18n/ClientProvider";
+import { formatNumberText, formatRangeText } from "@/src/lib/formatters/levels";
 
 type PageProps = {
   params: { locale: string; id: string };
@@ -57,9 +58,9 @@ export default function SetupDetailPage({ params }: PageProps): JSX.Element {
                 {t("detail.tradeSetupTitle")}
               </h2>
               <div className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
-                <Level label={t("setups.entry")} value={setup.entryZone} tone="neutral" />
-                <Level label={t("setups.stopLoss")} value={setup.stopLoss} tone="danger" />
-                <Level label={t("setups.takeProfit")} value={setup.takeProfit} tone="success" />
+                <Level label={t("setups.entry")} value={formatRangeText(setup.entryZone)} tone="neutral" />
+                <Level label={t("setups.stopLoss")} value={formatNumberText(setup.stopLoss)} tone="danger" />
+                <Level label={t("setups.takeProfit")} value={formatNumberText(setup.takeProfit)} tone="success" />
               </div>
             </div>
 
