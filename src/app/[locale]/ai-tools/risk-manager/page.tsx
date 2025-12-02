@@ -1,9 +1,6 @@
-"use client";
+import React from "react";
+import type { SearchParams } from "next/navigation";
 
-import React, { useMemo, useState } from "react";
-import type { JSX } from "react";
-import { useSearchParams } from "next/navigation";
-import { useT } from "../../../../lib/i18n/ClientProvider";
 import { computeRisk } from "@/src/features/risk-manager/calc";
 import type {
   Direction,
@@ -23,29 +20,80 @@ const DEFAULT_FORM: RiskFormState = {
   leverage: 1,
 };
 
-function parseNumberParam(value: string | null): number | null {
+type PageProps = {
+  params: {
+    locale: string;
+  };
+  searchParams: SearchParams;
+};
+
+function toURLSearchParams(searchParams: SearchParams): URLSearchParams {
+  const params = new URLSearchParams();
+  Object.entries(searchParams).forEach(([key, value]) => {
+    if (Array.isArray(value)) {
+      value.forEach((item) => {
+        if (item != null) {
+          params.append(key, item);
+        }
+      });
+      return;
+    }
+    if (value != null) {
+      params.set(key, value);
+    }
+  });
+  return params;
+}
+
+export default function RiskManagerPage({
+  params,
+  searchParams,
+}: PageProps) {
+  const initialSearchParams = toURLSearchParams(searchParams);
+  return (
+    <RiskManagerClient
+      locale={params.locale}
+      initialSearchParams={initialSearchParams}
+    />
+  );
+}
+
+"use client";
+
+import { useMemo, useState } from "react";
+import type { JSX } from "react";
+import { useT } from "../../../../lib/i18n/ClientProvider";
+
+const parseNumberParam = (value: string | null): number | null => {
   if (!value) return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
-}
+};
 
-function buildInitialFormState(searchParams: URLSearchParams): RiskFormState {
-  return {
-    ...DEFAULT_FORM,
-    asset: searchParams.get("asset") ?? DEFAULT_FORM.asset,
-    entry: parseNumberParam(searchParams.get("entry")) ?? DEFAULT_FORM.entry,
-    stopLoss: parseNumberParam(searchParams.get("stopLoss")) ?? DEFAULT_FORM.stopLoss,
-    takeProfit: parseNumberParam(searchParams.get("takeProfit")) ?? DEFAULT_FORM.takeProfit,
-  };
-}
+const buildInitialFormState = (searchParams: URLSearchParams): RiskFormState => ({
+  ...DEFAULT_FORM,
+  asset: searchParams.get("asset") ?? DEFAULT_FORM.asset,
+  entry: parseNumberParam(searchParams.get("entry")) ?? DEFAULT_FORM.entry,
+  stopLoss: parseNumberParam(searchParams.get("stopLoss")) ?? DEFAULT_FORM.stopLoss,
+  takeProfit: parseNumberParam(searchParams.get("takeProfit")) ?? DEFAULT_FORM.takeProfit,
+});
 
-export default function RiskManagerPage({ params }: { params: { locale: string } }): JSX.Element {
+type RiskManagerClientProps = {
+  locale: string;
+  initialSearchParams: URLSearchParams;
+};
+
+export function RiskManagerClient({
+  locale,
+  initialSearchParams,
+}: RiskManagerClientProps): JSX.Element {
   const t = useT();
-  const { locale } = params;
   void locale;
 
-  const searchParams = useSearchParams();
-  const initialForm = useMemo(() => buildInitialFormState(searchParams), [searchParams]);
+  const initialForm = useMemo(
+    () => buildInitialFormState(initialSearchParams),
+    [initialSearchParams],
+  );
   const [form, setForm] = useState<RiskFormState>(initialForm);
   const [result, setResult] = useState<RiskCalculationResult | null>(null);
 
@@ -66,7 +114,12 @@ export default function RiskManagerPage({ params }: { params: { locale: string }
     const parsed = Number(value);
     setForm((prev) => ({
       ...prev,
-      takeProfit: value.trim() === "" ? null : Number.isFinite(parsed) ? parsed : prev.takeProfit,
+      takeProfit:
+        value.trim() === ""
+          ? null
+          : Number.isFinite(parsed)
+            ? parsed
+            : prev.takeProfit,
     }));
   };
 
@@ -88,17 +141,19 @@ export default function RiskManagerPage({ params }: { params: { locale: string }
     <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
       <div className="mx-auto max-w-4xl px-4 py-10 space-y-8">
         <header className="space-y-3">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("riskManager.title")}</h1>
-          <p className="text-sm text-[var(--text-secondary)] sm:text-base">{t("riskManager.intro")}</p>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            {t("riskManager.title")}
+          </h1>
+          <p className="text-sm text-[var(--text-secondary)] sm:text-base">
+            {t("riskManager.intro")}
+          </p>
         </header>
 
         <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5 shadow-md">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2 space-y-2">
               <label className="flex flex-col gap-2 text-sm text-[var(--text-primary)]">
-                <span className="text-xs font-semibold text-[var(--text-secondary)]">
-                  Asset
-                </span>
+                <span className="text-xs font-semibold text-[var(--text-secondary)]">Asset</span>
                 <input
                   type="text"
                   value={form.asset}
@@ -181,13 +236,13 @@ export default function RiskManagerPage({ params }: { params: { locale: string }
               <StatCard label={t("riskManager.result.stopDistance")} value={result.stopDistance.toFixed(2)} />
             </div>
 
-          <div className="grid gap-3 sm:grid-cols-[1fr,1.2fr]">
-            <InfoBox
-              title={t("riskManager.result.leverageTitle")}
-              value={`x${result.leverage.toFixed(2)}`}
-              tone="neutral"
-            />
-            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-main)] p-4">
+            <div className="grid gap-3 sm:grid-cols-[1fr,1.2fr]">
+              <InfoBox
+                title={t("riskManager.result.leverageTitle")}
+                value={`x${result.leverage.toFixed(2)}`}
+                tone="neutral"
+              />
+              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-main)] p-4">
                 <div className="text-sm font-semibold text-[var(--text-primary)]">{t("riskManager.result.hintTitle")}</div>
                 <p className="mt-2 text-sm text-[var(--text-secondary)]">
                   {t("riskManager.result.hintTemplate").replace("{{riskPercent}}", result.riskPercent.toFixed(2))}
@@ -197,16 +252,13 @@ export default function RiskManagerPage({ params }: { params: { locale: string }
 
             <div className="rounded-xl border border-white/10 bg-black/40 p-4 text-[11px] text-white/70">
               <div className="flex items-center justify-between">
-                <p className="text-sm">
-                  Du riskierst ca. {formatCurrency(result.riskAmount)} auf Basis deines Kontos.
-                </p>
+                <p className="text-sm">Du riskierst ca. {formatCurrency(result.riskAmount)} auf Basis deines Kontos.</p>
                 <Badge tone={classifyRiskPercent(result.riskPercent)} label={`${result.riskPercent}%`} />
               </div>
               {result.rewardAmount != null && (
                 <p className="mt-1 flex items-center justify-between gap-3">
                   <span>
-                    Potenzial: {formatCurrency(result.rewardAmount)} (RRR:{" "}
-                    {(result.riskReward ?? 0).toFixed(2)} : 1)
+                    Potenzial: {formatCurrency(result.rewardAmount)} (RRR: {(result.riskReward ?? 0).toFixed(2)} : 1)
                   </span>
                   <Badge tone={classifyRrr(result.riskReward)} label={rrrLabel(result.riskReward)} />
                 </p>
@@ -220,13 +272,6 @@ export default function RiskManagerPage({ params }: { params: { locale: string }
     </div>
   );
 }
-
-type NumberFieldProps = {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  help?: string;
-};
 
 function formatNumberInput(value: number): string {
   return Number.isFinite(value) ? value.toString() : "";
@@ -243,6 +288,13 @@ function formatCurrency(value: number): string {
     maximumFractionDigits: 2,
   }).format(value);
 }
+
+type NumberFieldProps = {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  help?: string;
+};
 
 function NumberField({ label, value, onChange, help }: NumberFieldProps): JSX.Element {
   return (
@@ -296,7 +348,7 @@ function ResultHints({ hints }: ResultHintsProps): JSX.Element {
   if (hints.length === 0) {
     return (
       <div className="rounded-xl border border-white/10 bg-black/40 p-4 text-[11px] text-white/60">
-        Keine besonderen Auff√§lligkeiten erkannt.
+        Keine besonderen Auff‰lligkeiten erkannt.
       </div>
     );
   }
@@ -358,7 +410,9 @@ function Badge({ tone, label }: BadgeProps): JSX.Element | null {
         ? "bg-amber-500/10 text-amber-100 border border-amber-400/40"
         : "bg-emerald-500/10 text-emerald-200 border border-emerald-400/40";
   return (
-    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${toneClasses}`}>
+    <span
+      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${toneClasses}`}
+    >
       {label}
     </span>
   );
