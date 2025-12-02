@@ -55,8 +55,23 @@ export class DbBiasProvider implements BiasProvider {
       timeframe: params.timeframe,
     });
 
-    if (!row) return null;
-    return mapRow(row);
+    if (row) {
+      return mapRow(row);
+    }
+
+    const fallbackFrom = new Date(params.date);
+    fallbackFrom.setDate(fallbackFrom.getDate() - 30);
+    const rows = await getBiasSnapshotsForRange({
+      assetId: params.assetId,
+      from: fallbackFrom,
+      to: params.date,
+      timeframe: params.timeframe,
+    });
+    if (!rows || rows.length === 0) {
+      return null;
+    }
+    const latest = rows[rows.length - 1];
+    return mapRow(latest);
   }
 
   async getBiasForDateRange(params: {

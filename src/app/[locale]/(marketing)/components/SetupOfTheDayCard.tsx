@@ -136,6 +136,8 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
           stopLoss={setup.stopLoss}
           takeProfit={setup.takeProfit}
           rings={setup.rings}
+          snapshotId={setup.snapshotId ?? null}
+          snapshotCreatedAt={setup.snapshotCreatedAt ?? null}
         />
 
       <div className="mt-4 flex justify-end">

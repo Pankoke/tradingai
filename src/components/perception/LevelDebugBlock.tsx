@@ -13,6 +13,8 @@ type LevelDebugBlockProps = {
   takeProfit?: string | null;
   scoreVolatility?: number | null;
   rings?: Record<string, number>;
+  snapshotId?: string | null;
+  snapshotCreatedAt?: string | null;
 };
 
 function formatNumeric(value?: number | null, decimals = 4): string {
@@ -32,11 +34,19 @@ export function LevelDebugBlock({
   stopLoss,
   takeProfit,
   rings,
+  snapshotId,
+  snapshotCreatedAt,
 }: LevelDebugBlockProps): JSX.Element | null {
   const isDev = process.env.NODE_ENV !== "production";
   if (!isDev) {
     return null;
   }
+
+  const parsedSnapshotDate = snapshotCreatedAt ? new Date(snapshotCreatedAt) : null;
+  const formattedSnapshotDate =
+    parsedSnapshotDate && Number.isFinite(parsedSnapshotDate.getTime())
+      ? parsedSnapshotDate.toLocaleString()
+      : "n/a";
 
   const ringPayload = rings ? JSON.stringify(rings) : "-";
 
@@ -52,6 +62,8 @@ export function LevelDebugBlock({
         <div>Entry Zone: {entryZone ?? "n/a"}</div>
         <div>Stop Loss: {stopLoss ?? "n/a"}</div>
         <div>Take Profit: {takeProfit ?? "n/a"}</div>
+        <div>Snapshot: {snapshotId ?? "n/a"}</div>
+        <div>Snapshot created: {formattedSnapshotDate}</div>
         <div>Rings: {ringPayload}</div>
       </div>
     </div>

@@ -46,4 +46,11 @@ describe("Bias ring resolver Stage 1", () => {
     const { bias } = computeRingsFromSource({});
     expect(bias).toBe(50);
   });
+
+  it("uses raw biasScore when no biasScoreAtTime", () => {
+    const { bias } = computeRingsFromSource({
+      biasScore: 78,
+    });
+    expect(bias).toBeGreaterThan(70);
+  });
 });

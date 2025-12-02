@@ -115,6 +115,8 @@ function toHomepageSetup(setup: Setup): HomepageSetup {
     category: setup.category ?? null,
     levelDebug: setup.levelDebug,
     snapshotTimestamp: new Date().toISOString(),
+    snapshotId: setup.snapshotId ?? null,
+    snapshotCreatedAt: setup.snapshotCreatedAt ?? null,
     rings: setup.rings,
     riskReward: setup.riskReward,
   };

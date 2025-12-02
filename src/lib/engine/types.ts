@@ -51,6 +51,8 @@ export const setupSchema = z.object({
   timeframe: z.string(),
   direction: directionEnum,
   confidence: z.number().min(0).max(100),
+  snapshotId: z.string().nullable().optional(),
+  snapshotCreatedAt: z.string().nullable().optional(),
   eventScore: z.number().min(0).max(100),
   biasScore: z.number().min(0).max(100),
   sentimentScore: z.number().min(0).max(100),

@@ -37,20 +37,28 @@ export async function GET(): Promise<NextResponse<PerceptionSnapshotWithItems | 
   } catch (error) {
     console.error("Failed to persist perception snapshot, falling back to engine result", error);
     const snapshot = await buildPerceptionSnapshot();
+    const fallbackSnapshotTime = new Date();
+    const isoCreatedAt = fallbackSnapshotTime.toISOString();
+    const snapshotId = `fallback-${Date.now()}`;
+    const setupsWithMetadata = snapshot.setups.map((setup) => ({
+      ...setup,
+      snapshotId,
+      snapshotCreatedAt: isoCreatedAt,
+    }));
     const fallback: PerceptionSnapshotWithItems = {
       snapshot: {
-        id: `fallback-${Date.now()}`,
-        snapshotTime: new Date(),
+        id: snapshotId,
+        snapshotTime: fallbackSnapshotTime,
         label: null,
         version: snapshot.version,
         dataMode: "mock",
         generatedMs: null,
         notes: null,
-        setups: snapshot.setups,
-        createdAt: new Date(),
+        setups: setupsWithMetadata,
+        createdAt: fallbackSnapshotTime,
       },
       items: [],
-      setups: snapshot.setups,
+      setups: setupsWithMetadata,
     };
     return NextResponse.json(fallback);
   }

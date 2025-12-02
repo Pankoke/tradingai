@@ -113,6 +113,7 @@ export async function buildAndStorePerceptionSnapshot(
       scoreVolatility: breakdown.volatility ?? null,
       scorePattern: breakdown.pattern ?? null,
       confidence,
+      biasScore: setup.biasScore ?? null,
       biasScoreAtTime: setup.biasScore ?? null,
       eventContext: null,
       riskReward: setup.riskReward,
@@ -120,6 +121,13 @@ export async function buildAndStorePerceptionSnapshot(
       createdAt: snapshotTime,
     });
   }
+
+  const isoCreatedAt = snapshotTime.toISOString();
+  const setupsWithMetadata = engineResult.setups.map((setup) => ({
+    ...setup,
+    snapshotId,
+    snapshotCreatedAt: isoCreatedAt,
+  }));
 
   const snapshot: PerceptionSnapshotInput = {
     id: snapshotId,
@@ -129,7 +137,7 @@ export async function buildAndStorePerceptionSnapshot(
     dataMode: mode,
     generatedMs,
     notes: null,
-    setups: engineResult.setups,
+    setups: setupsWithMetadata,
   };
 
   await insertSnapshotWithItems({ snapshot, items });

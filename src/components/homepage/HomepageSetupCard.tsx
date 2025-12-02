@@ -171,6 +171,8 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
         stopLoss={formatOptionalDecimal(setup.stopLoss)}
         takeProfit={formatOptionalDecimal(setup.takeProfit)}
         rings={setup.rings}
+        snapshotId={setup.snapshotId ?? null}
+        snapshotCreatedAt={setup.snapshotCreatedAt ?? null}
       />
       <div className="mt-4">
         <RiskRewardBlock riskReward={setup.riskReward ?? null} />

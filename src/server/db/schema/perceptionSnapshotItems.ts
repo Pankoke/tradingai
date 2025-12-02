@@ -16,6 +16,7 @@ export const perceptionSnapshotItems = pgTable("perception_snapshot_items", {
   scoreVolatility: integer("score_volatility"),
   scorePattern: integer("score_pattern"),
   confidence: integer("confidence").notNull(),
+  biasScore: integer("bias_score").default(50),
   biasScoreAtTime: integer("bias_score_at_time"),
   eventContext: jsonb("event_context"),
   riskReward: jsonb("risk_reward"),

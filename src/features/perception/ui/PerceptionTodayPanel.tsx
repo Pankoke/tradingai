@@ -291,8 +291,10 @@ export function PerceptionTodayPanel(): JSX.Element {
                     stopLoss={heroSetup.stopLoss}
                     takeProfit={heroSetup.takeProfit}
                     rings={heroBaseRings}
+                    snapshotId={heroSetup.snapshotId ?? null}
+                    snapshotCreatedAt={heroSetup.snapshotCreatedAt ?? null}
                   />
-                <div className="mt-4">
+                  <div className="mt-4">
                     <RiskRewardBlock riskReward={heroSetup?.riskReward ?? heroItem?.riskReward ?? null} />
                   </div>
                 </>
@@ -354,17 +356,19 @@ export function PerceptionTodayPanel(): JSX.Element {
                             </div>
                             {setup ? (
                               <>
-                                <LevelDebugBlock
-                                  category={setup.category ?? setup.levelDebug?.category}
-                                  referencePrice={setup.levelDebug?.referencePrice ?? null}
-                                  bandPct={setup.levelDebug?.bandPct ?? null}
-                                  volatilityScore={setup.levelDebug?.volatilityScore ?? null}
-                                  scoreVolatility={item.scoreVolatility ?? setup.levelDebug?.scoreVolatility ?? null}
-                                  entryZone={setup.entryZone}
-                                  stopLoss={setup.stopLoss}
-                                  takeProfit={setup.takeProfit}
-                                  rings={rings}
-                                />
+                              <LevelDebugBlock
+                                category={setup.category ?? setup.levelDebug?.category}
+                                referencePrice={setup.levelDebug?.referencePrice ?? null}
+                                bandPct={setup.levelDebug?.bandPct ?? null}
+                                volatilityScore={setup.levelDebug?.volatilityScore ?? null}
+                                scoreVolatility={item.scoreVolatility ?? setup.levelDebug?.scoreVolatility ?? null}
+                                entryZone={setup.entryZone}
+                                stopLoss={setup.stopLoss}
+                                takeProfit={setup.takeProfit}
+                                rings={rings}
+                                snapshotId={setup.snapshotId ?? null}
+                                snapshotCreatedAt={setup.snapshotCreatedAt ?? null}
+                              />
                                 <div className="mt-3">
                                   <RiskRewardBlock riskReward={setup?.riskReward ?? item.riskReward ?? null} />
                                 </div>

@@ -103,6 +103,8 @@ function toHomepageSetup(setup: Setup): HomepageSetup {
     levelDebug: setup.levelDebug,
     riskReward: setup.riskReward,
     snapshotTimestamp: new Date().toISOString(),
+    snapshotId: setup.snapshotId ?? null,
+    snapshotCreatedAt: setup.snapshotCreatedAt ?? new Date().toISOString(),
     rings: setup.rings,
   };
 }

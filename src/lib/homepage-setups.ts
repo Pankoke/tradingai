@@ -24,6 +24,8 @@ export type HomepageSetup = {
   levelDebug?: Setup["levelDebug"];
   riskReward?: Setup["riskReward"];
   snapshotTimestamp: string;
+  snapshotId?: string | null;
+  snapshotCreatedAt?: string | null;
   rings: Setup["rings"];
 };
 
@@ -87,6 +89,8 @@ function mapSetup(setup: Setup, timestamp: string): HomepageSetup {
     category: setup.category ?? null,
     levelDebug: setup.levelDebug,
     snapshotTimestamp: timestamp,
+    snapshotId: setup.snapshotId ?? null,
+    snapshotCreatedAt: setup.snapshotCreatedAt ?? timestamp,
     rings: setup.rings,
     riskReward: setup.riskReward,
   };
