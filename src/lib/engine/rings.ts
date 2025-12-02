@@ -54,34 +54,86 @@ const clampPercent = (value?: number | null, fallback = 50): number => {
   return clamp(Math.round(value), 0, 100);
 };
 
-function computeEventScore(breakdown: Breakdown, patternType?: string | null): number {
-  const volShock = breakdown.volatility !== undefined && breakdown.volatility !== null
-    ? clampPercent(breakdown.volatility)
-    : 50;
-  const trend = clampPercent(breakdown.trend);
-  const momentum = clampPercent(breakdown.momentum);
-  const momentumEvent = clamp(Math.abs(trend - momentum) * 1.2, 0, 100);
-  const patternValue =
-    patternType && PATTERN_MAP[patternType.toLowerCase()]
-      ? PATTERN_MAP[patternType.toLowerCase()]
-      : breakdown.pattern ?? null;
-  const patternEvent =
-    patternType && PATTERN_MAP[patternType.toLowerCase()]
-      ? PATTERN_MAP[patternType.toLowerCase()]
-      : patternValue !== null
-        ? clamp(Math.max(patternValue, 40), 0, 100)
-        : 50;
+const PATTERN_MAP_STAGE1: Record<string, number> = {
+  breakout: 90,
+  "liquidity grab": 80,
+  "range rejection": 70,
+  pullback: 60,
+  "trend continuation": 55,
+};
 
-  const eventScore = 0.4 * volShock + 0.35 * momentumEvent + 0.25 * patternEvent;
-  return clamp(Math.round(eventScore), 0, 100);
+function computeVolComponent(volatility?: number | null): number {
+  const volNorm = clampPercent(volatility);
+  if (volNorm <= 40) {
+    return 0;
+  }
+  const rawVol = (volNorm - 40) * 2;
+  return clamp(Math.round(rawVol), 0, 100);
+}
+
+function computeRegimeComponent(trend?: number | null, momentum?: number | null): number {
+  const trendNorm = clampPercent(trend);
+  const momentumNorm = clampPercent(momentum);
+  const trendStrength = Math.abs(trendNorm - 50);
+  const divergence = Math.abs(trendNorm - momentumNorm);
+  const regime = 0.5 * trendStrength + 0.5 * divergence;
+  return clamp(Math.round(regime), 0, 100);
+}
+
+function computePatternComponent(breakdown?: Breakdown, patternType?: string | null): number {
+  if (patternType) {
+    const mapped = PATTERN_MAP_STAGE1[patternType.toLowerCase()];
+    if (typeof mapped === "number") {
+      return mapped;
+    }
+  }
+  if (breakdown && breakdown.pattern !== undefined && breakdown.pattern !== null) {
+    return clamp(Math.round(Math.max(30, Math.min(80, breakdown.pattern))), 0, 100);
+  }
+  return 50;
+}
+
+function computeMacroComponent(eventScore?: number | null): number {
+  return clampPercent(eventScore);
+}
+
+function computeEventWithBreakdown(
+  breakdown: Breakdown,
+  patternType?: string | null,
+  eventScore?: number | null,
+): number {
+  const volComponent = computeVolComponent(breakdown.volatility);
+  const regimeComponent = computeRegimeComponent(breakdown.trend, breakdown.momentum);
+  const patternComponent = computePatternComponent(breakdown, patternType);
+  const macroComponent = computeMacroComponent(eventScore);
+  const eventScoreValue =
+    0.3 * volComponent +
+    0.25 * regimeComponent +
+    0.25 * patternComponent +
+    0.2 * macroComponent;
+  return clamp(Math.round(eventScoreValue), 0, 100);
+}
+
+function computeEventWithoutBreakdown(
+  patternType?: string | null,
+  eventScore?: number | null,
+): number {
+  const macroComponent = computeMacroComponent(eventScore);
+  const patternComponent = computePatternComponent(undefined, patternType);
+  const eventScoreValue = 0.6 * macroComponent + 0.4 * patternComponent;
+  return clamp(Math.round(eventScoreValue), 0, 100);
 }
 
 function resolveEventScore(source: RingSource): number {
   if (source.breakdown) {
-    return computeEventScore(source.breakdown, source.patternType ?? null);
+    return computeEventWithBreakdown(
+      source.breakdown,
+      source.patternType,
+      source.eventScore,
+    );
   }
   if (typeof source.eventScore === "number" && !Number.isNaN(source.eventScore)) {
-    return clampPercent(source.eventScore);
+    return computeEventWithoutBreakdown(source.patternType, source.eventScore);
   }
   return 50;
 }
