@@ -14,6 +14,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     setup = await generateSetupFromEngine(parsed.data);
   } catch (err) {
+    console.error("Engine generation failed, falling back to mock", err);
     setup = await generateSetupFromMockEngine(parsed.data);
   }
   const payload = setupResponseSchema.parse({

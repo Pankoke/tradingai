@@ -17,14 +17,22 @@ export async function generateSetupFromEngine(form: FormState): Promise<Generate
     to,
   });
 
-  const marketData = {
-    asset: form.asset,
-    timeframe: form.timeframe,
-    candles,
-  };
+  if (!candles.length) {
+    throw new Error("No candle data available");
+  }
 
-  const referencePrice = candles[0]?.close ?? 0;
-  const direction = form.directionMode === "auto" ? (Math.random() > 0.5 ? "long" : "short") : form.directionMode;
+  const referencePrice = Number(candles[0].close ?? 0);
+  if (!referencePrice) {
+    throw new Error("Invalid reference price");
+  }
+
+  const direction =
+    form.directionMode === "auto"
+      ? Math.random() > 0.5
+        ? "long"
+        : "short"
+      : form.directionMode;
+
   const levels = computeLevelsForSetup({
     direction,
     referencePrice,
@@ -47,24 +55,82 @@ export async function generateSetupFromEngine(form: FormState): Promise<Generate
   const takeProfit2 = takeProfitParts[1] ?? takeProfit1;
   const validUntil = new Date(to.getTime() + timeframeMs * 4);
 
-  const preparedSetup = {
+  const entryMid = (entryMin + entryMax) / 2;
+  const riskDistance = Math.abs(entryMid - stopLoss) / entryMid;
+  const rewardDistance = Math.abs(takeProfit1 - entryMid) / entryMid;
+  const MIN_RISK_DISTANCE = 0.003;
+  const safeRiskDistance = riskDistance > 0 ? riskDistance : MIN_RISK_DISTANCE;
+  const riskRewardRaw = rewardDistance / safeRiskDistance;
+  const riskReward = Math.max(0.1, Number(riskRewardRaw.toFixed(2)));
+
+  let riskPct: number;
+  switch (form.riskProfile) {
+    case "conservative":
+      riskPct = 0.5;
+      break;
+    case "moderate":
+      riskPct = 1.0;
+      break;
+    case "aggressive":
+      riskPct = 1.5;
+      break;
+    default:
+      riskPct = 1.0;
+  }
+  const potentialPct = riskPct * riskReward;
+
+  let volatilityLabel: "low" | "medium" | "high";
+  if (safeRiskDistance < 0.005) volatilityLabel = "low";
+  else if (safeRiskDistance < 0.015) volatilityLabel = "medium";
+  else volatilityLabel = "high";
+
+  let biasScore = 50 + (riskReward - 2) * 10;
+  biasScore = Math.min(80, Math.max(30, biasScore));
+  let sentimentScore = 50 + (riskReward - 2) * 5;
+  sentimentScore = Math.min(75, Math.max(35, sentimentScore));
+  const eventScore = 50;
+  const balanceScore = 50;
+
+  let confidence = 0.5;
+  if (riskReward >= 2.5) confidence += 0.15;
+  else if (riskReward >= 2.0) confidence += 0.1;
+  if (volatilityLabel === "low") confidence += 0.1;
+  if (volatilityLabel === "high") confidence -= 0.1;
+  if (form.riskProfile === "aggressive" && volatilityLabel === "high") {
+    confidence += 0.05;
+  }
+  confidence = Math.min(0.9, Math.max(0.3, confidence));
+
+  const contextSummary = `Das Setup ist ${
+    direction === "long" ? "bullish" : "bearish"
+  } im ${form.timeframe.toUpperCase()}-Chart mit einem RRR von ${riskReward.toFixed(2)} : 1 und ${
+    volatilityLabel === "low" ? "geringer" : volatilityLabel === "medium" ? "mittlerer" : "erhöhter"
+  } Volatilität.`;
+
+  const setup: GeneratedSetup = {
+    id: `engine-${Date.now()}`,
+    asset: form.asset,
+    timeframe: form.timeframe,
+    direction,
     entryMin,
     entryMax,
     stopLoss,
     takeProfit1,
     takeProfit2,
+    riskReward,
+    riskPct,
+    potentialPct,
+    volatilityLabel,
+    confidence,
+    biasScore,
+    sentimentScore,
+    eventScore,
+    balanceScore,
     validUntil,
+    contextSummary,
   };
 
-  console.log("Prepared levels", preparedSetup, marketData);
-
-  // TODO: 1. Price + Market Context laden (candles, bias, sentiment, volatility)
-  // TODO: 2. Engine-Module ansprechen (trend-detection, volatility/score, bias/sentiment helpers)
-  // TODO: 3. Entry / SL / TP über computeLevelsForSetup oder ähnliche Helper ableiten
-  // TODO: 4. RiskReward + Scores (rrr, riskPct, potentialPct) berechnen
-  // TODO: 5. Gültigkeit („validUntil“) anhand Timeframe und Candle-Latenz bestimmen
-  // TODO: 6. Ergebnis in das GeneratedSetup-Shape mappen (inkl. Context Summary)
-  throw new Error("Engine-based setup generation not implemented yet.");
+  return setup;
 }
 
 function timeframeToMs(timeframe: Timeframe): number {

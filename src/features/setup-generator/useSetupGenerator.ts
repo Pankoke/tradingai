@@ -1,7 +1,7 @@
-import { setupGeneratorRequestSchema, setupGeneratorResponseSchema } from "@/src/features/setup-generator/types";
+import { formStateSchema, setupResponseSchema } from "@/src/features/setup-generator/types";
 
-export async function fetchSetupGenerator(form: Parameters<typeof setupGeneratorRequestSchema.parse>[0]) {
-  const body = setupGeneratorRequestSchema.parse(form);
+export async function fetchSetupGenerator(form: Parameters<typeof formStateSchema.parse>[0]) {
+  const body = formStateSchema.parse(form);
 
   const response = await fetch("/api/setup-generator", {
     method: "POST",
@@ -14,5 +14,9 @@ export async function fetchSetupGenerator(form: Parameters<typeof setupGenerator
   }
 
   const json = await response.json();
-  return setupGeneratorResponseSchema.parse(json);
+  const parsed = setupResponseSchema.parse(json);
+  return {
+    ...parsed.setup,
+    validUntil: new Date(parsed.setup.validUntil),
+  };
 }
