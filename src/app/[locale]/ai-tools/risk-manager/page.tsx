@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import type { SearchParams } from "next/navigation";
 
 import { computeRisk } from "@/src/features/risk-manager/calc";
@@ -348,7 +348,7 @@ function ResultHints({ hints }: ResultHintsProps): JSX.Element {
   if (hints.length === 0) {
     return (
       <div className="rounded-xl border border-white/10 bg-black/40 p-4 text-[11px] text-white/60">
-        Keine besonderen Auff�lligkeiten erkannt.
+        Keine besonderen Auffälligkeiten erkannt.
       </div>
     );
   }
@@ -417,3 +417,4 @@ function Badge({ tone, label }: BadgeProps): JSX.Element | null {
     </span>
   );
 }
+
