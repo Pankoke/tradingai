@@ -4,12 +4,12 @@ import React, { useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useSearchParams } from "next/navigation";
 import { useT } from "../../../../lib/i18n/ClientProvider";
-import { computeRisk } from "@/features/risk-manager/calc";
+import { computeRisk } from "@/src/features/risk-manager/calc";
 import type {
   Direction,
   RiskCalculationResult,
   RiskFormState,
-} from "@/features/risk-manager/types";
+} from "@/src/features/risk-manager/types";
 
 const DEFAULT_FORM: RiskFormState = {
   asset: "BTCUSDT",
