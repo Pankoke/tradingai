@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import type { SearchParams } from "next/navigation";
 import { SetupGeneratorClient } from "@/src/features/setup-generator/feature";
 
 type PageProps = {
