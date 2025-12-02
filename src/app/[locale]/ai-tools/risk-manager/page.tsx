@@ -1,53 +1,85 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import type { JSX } from "react";
+import { useSearchParams } from "next/navigation";
 import { useT } from "../../../../lib/i18n/ClientProvider";
+import { computeRisk } from "@/features/risk-manager/calc";
+import type {
+  Direction,
+  RiskCalculationResult,
+  RiskFormState,
+} from "@/features/risk-manager/types";
 
-type RiskFormState = {
-  accountSize: string;
-  riskPercent: string;
-  stopDistance: string;
-  leverage: string;
+const DEFAULT_FORM: RiskFormState = {
+  asset: "BTCUSDT",
+  accountSize: 10000,
+  riskPercent: 1,
+  entry: 0,
+  stopLoss: 0,
+  takeProfit: null,
+  direction: "long",
+  leverage: 1,
 };
 
-type RiskCalculationResult = {
-  positionSize: number;
-  maxLossAmount: number;
-  riskPercent: number;
-  stopDistance: number;
-  leverage: number;
-  rrHint: string;
-};
+function parseNumberParam(value: string | null): number | null {
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function buildInitialFormState(searchParams: URLSearchParams): RiskFormState {
+  return {
+    ...DEFAULT_FORM,
+    asset: searchParams.get("asset") ?? DEFAULT_FORM.asset,
+    entry: parseNumberParam(searchParams.get("entry")) ?? DEFAULT_FORM.entry,
+    stopLoss: parseNumberParam(searchParams.get("stopLoss")) ?? DEFAULT_FORM.stopLoss,
+    takeProfit: parseNumberParam(searchParams.get("takeProfit")) ?? DEFAULT_FORM.takeProfit,
+  };
+}
 
 export default function RiskManagerPage({ params }: { params: { locale: string } }): JSX.Element {
   const t = useT();
   const { locale } = params;
   void locale;
 
-  const [form, setForm] = useState<RiskFormState>({
-    accountSize: "",
-    riskPercent: "",
-    stopDistance: "",
-    leverage: "",
-  });
+  const searchParams = useSearchParams();
+  const initialForm = useMemo(() => buildInitialFormState(searchParams), [searchParams]);
+  const [form, setForm] = useState<RiskFormState>(initialForm);
   const [result, setResult] = useState<RiskCalculationResult | null>(null);
 
-  const handleChange = (key: keyof RiskFormState, value: string): void => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+  const handleTextChange = (value: string): void => {
+    setForm((prev) => ({ ...prev, asset: value }));
+  };
+
+  const handleNumericChange = (
+    key: "accountSize" | "riskPercent" | "entry" | "stopLoss" | "leverage",
+    value: string,
+  ): void => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return;
+    setForm((prev) => ({ ...prev, [key]: parsed }));
+  };
+
+  const handleTakeProfitChange = (value: string): void => {
+    const parsed = Number(value);
+    setForm((prev) => ({
+      ...prev,
+      takeProfit: value.trim() === "" ? null : Number.isFinite(parsed) ? parsed : prev.takeProfit,
+    }));
+  };
+
+  const handleDirectionChange = (direction: Direction): void => {
+    setForm((prev) => ({ ...prev, direction }));
   };
 
   const handleCalculate = (): void => {
-    const accountSize = parseFloat(form.accountSize);
-    const riskPercent = parseFloat(form.riskPercent);
-    const stopDistance = parseFloat(form.stopDistance);
-    const leverage = form.leverage.trim() === "" ? undefined : parseFloat(form.leverage);
-
-    if (!isFinite(accountSize) || accountSize <= 0) return;
-    if (!isFinite(riskPercent) || riskPercent <= 0) return;
+    const stopDistance = Math.abs(form.entry - form.stopLoss);
+    if (!isFinite(form.accountSize) || form.accountSize <= 0) return;
+    if (!isFinite(form.riskPercent) || form.riskPercent <= 0) return;
     if (!isFinite(stopDistance) || stopDistance <= 0) return;
 
-    const calculation = calculateRisk({ accountSize, riskPercent, stopDistance, leverage });
+    const calculation = computeRisk(form);
     setResult(calculation);
   };
 
@@ -61,26 +93,68 @@ export default function RiskManagerPage({ params }: { params: { locale: string }
 
         <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5 shadow-md">
           <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2 space-y-2">
+              <label className="flex flex-col gap-2 text-sm text-[var(--text-primary)]">
+                <span className="text-xs font-semibold text-[var(--text-secondary)]">
+                  Asset
+                </span>
+                <input
+                  type="text"
+                  value={form.asset}
+                  onChange={(event) => handleTextChange(event.target.value)}
+                  className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                />
+              </label>
+            </div>
             <NumberField
               label={t("riskManager.form.accountSize")}
-              value={form.accountSize}
-              onChange={(value) => handleChange("accountSize", value)}
+              value={formatNumberInput(form.accountSize)}
+              onChange={(value) => handleNumericChange("accountSize", value)}
             />
             <NumberField
               label={t("riskManager.form.riskPercent")}
-              value={form.riskPercent}
-              onChange={(value) => handleChange("riskPercent", value)}
+              value={formatNumberInput(form.riskPercent)}
+              onChange={(value) => handleNumericChange("riskPercent", value)}
             />
             <NumberField
-              label={t("riskManager.form.stopDistance")}
-              value={form.stopDistance}
-              onChange={(value) => handleChange("stopDistance", value)}
-              help="(Punkte / $ / € je nach Markt)"
+              label="Entry Preis"
+              value={formatNumberInput(form.entry)}
+              onChange={(value) => handleNumericChange("entry", value)}
             />
+            <NumberField
+              label="Stop-Loss Preis"
+              value={formatNumberInput(form.stopLoss)}
+              onChange={(value) => handleNumericChange("stopLoss", value)}
+            />
+            <NumberField
+              label="Take-Profit (optional)"
+              value={formatOptionalNumberInput(form.takeProfit)}
+              onChange={handleTakeProfitChange}
+            />
+            <div className="sm:col-span-2 space-y-2">
+              <span className="text-xs font-semibold text-[var(--text-secondary)]">Richtung</span>
+              <div className="grid grid-cols-2 gap-2">
+                {(["long", "short"] as Direction[]).map((dir) => (
+                  <button
+                    key={dir}
+                    type="button"
+                    onClick={() => handleDirectionChange(dir)}
+                    className={[
+                      "rounded-lg border px-2 py-1 text-sm transition",
+                      form.direction === dir
+                        ? "border-indigo-400 bg-indigo-500/20 text-indigo-100"
+                        : "border-white/10 bg-black/30 text-white/70 hover:border-white/30 hover:bg-black/50",
+                    ].join(" ")}
+                  >
+                    {dir === "long" ? "Long" : "Short"}
+                  </button>
+                ))}
+              </div>
+            </div>
             <NumberField
               label={t("riskManager.form.leverage")}
-              value={form.leverage}
-              onChange={(value) => handleChange("leverage", value)}
+              value={formatNumberInput(form.leverage)}
+              onChange={(value) => handleNumericChange("leverage", value)}
               help="optional"
             />
           </div>
@@ -120,6 +194,16 @@ export default function RiskManagerPage({ params }: { params: { locale: string }
               </div>
             </div>
 
+            <div className="rounded-xl border border-white/10 bg-black/40 p-4 text-[11px] text-white/70">
+              <p>Du riskierst ca. {formatCurrency(result.riskAmount)} auf Basis deines Kontos.</p>
+              {result.rewardAmount != null && (
+                <p className="mt-1">
+                  Potenzial: {formatCurrency(result.rewardAmount)} (RRR:{" "}
+                  {(result.riskReward ?? 0).toFixed(2)} : 1)
+                </p>
+              )}
+            </div>
+
             <div className="rounded-xl border border-red-500/40 bg-red-500/5 p-4 text-sm text-red-200">
               {t("riskManager.result.warning")}
             </div>
@@ -136,6 +220,22 @@ type NumberFieldProps = {
   onChange: (value: string) => void;
   help?: string;
 };
+
+function formatNumberInput(value: number): string {
+  return Number.isFinite(value) ? value.toString() : "";
+}
+
+function formatOptionalNumberInput(value: number | null): string {
+  return Number.isFinite(value ?? NaN) ? `${value}` : "";
+}
+
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("de-DE", {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 2,
+  }).format(value);
+}
 
 function NumberField({ label, value, onChange, help }: NumberFieldProps): JSX.Element {
   return (
@@ -181,32 +281,3 @@ function InfoBox({ title, value }: InfoBoxProps): JSX.Element {
   );
 }
 
-type CalcParams = {
-  accountSize: number;
-  riskPercent: number;
-  stopDistance: number;
-  leverage?: number;
-};
-
-function calculateRisk(params: CalcParams): RiskCalculationResult {
-  const leverage = params.leverage && isFinite(params.leverage) && params.leverage > 0 ? params.leverage : 1;
-  const maxLossAmount = params.accountSize * (params.riskPercent / 100);
-  const positionSize = (maxLossAmount / params.stopDistance) * leverage;
-  const rrHint = buildHint(params.riskPercent, params.stopDistance);
-
-  return {
-    positionSize,
-    maxLossAmount,
-    riskPercent: params.riskPercent,
-    stopDistance: params.stopDistance,
-    leverage,
-    rrHint,
-  };
-}
-
-function buildHint(riskPercent: number, stopDistance: number): string {
-  if (riskPercent <= 0 || stopDistance <= 0) return "";
-  if (riskPercent <= 1 && stopDistance <= 1) return "konservativ";
-  if (riskPercent <= 2 && stopDistance <= 2) return "moderat";
-  return "aggressiv";
-}

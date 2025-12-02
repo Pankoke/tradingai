@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useParams, useSearchParams } from "next/navigation";
 import {
   Direction,
   DirectionMode,
@@ -22,6 +24,27 @@ export default function SetupGeneratorPage() {
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [result, setResult] = useState<GeneratedSetup | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [prefillAsset, setPrefillAsset] = useState<string | null>(null);
+  const [prefillEntry, setPrefillEntry] = useState<number | null>(null);
+  const [prefillStop, setPrefillStop] = useState<number | null>(null);
+  const params = useParams();
+  const locale = params?.locale ?? "de";
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const assetParam = searchParams.get("asset");
+    const entryParam = parseNumber(searchParams.get("entry"));
+    const stopParam = parseNumber(searchParams.get("stopLoss"));
+
+    setPrefillAsset(assetParam ?? null);
+    setPrefillEntry(entryParam);
+    setPrefillStop(stopParam);
+
+    setForm((prev) => ({
+      ...prev,
+      asset: assetParam ?? prev.asset,
+    }));
+  }, [searchParams]);
 
   const handleChange = <K extends keyof FormState>(
     key: K,
@@ -371,6 +394,20 @@ export default function SetupGeneratorPage() {
                   <div className="rounded-xl bg-black/40 p-3 text-[11px] text-white/70">
                     {result.contextSummary}
                   </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Link
+                      href={`/${locale}/ai-tools/risk-manager?asset=${encodeURIComponent(
+                        result.asset,
+                      )}&entry=${encodeURIComponent(
+                        ((result.entryMin + result.entryMax) / 2).toFixed(2),
+                      )}&stopLoss=${encodeURIComponent(
+                        result.stopLoss.toFixed(2),
+                      )}`}
+                      className="rounded-xl border border-white/10 bg-indigo-500/10 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-indigo-200 hover:border-indigo-200 hover:bg-indigo-500/20"
+                    >
+                      Mit Risk Manager öffnen
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>
@@ -620,6 +657,12 @@ function mockValidForMs(timeframe: Timeframe): number {
     default:
       return 6 * 60 * 60 * 1000;
   }
+}
+
+function parseNumber(value?: string | null): number | null {
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function formatPrice(value: number): string {
