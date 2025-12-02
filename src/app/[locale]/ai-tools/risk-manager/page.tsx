@@ -1,17 +1,16 @@
-"use client";
+ "use client";
 
 import React from "react";
-import type { SearchParams } from "next/navigation";
 import { RiskManagerClient } from "@/src/features/risk-manager/feature";
 
 type PageProps = {
   params: {
     locale: string;
   };
-  searchParams: SearchParams;
+  searchParams: Record<string, string | string[] | undefined>;
 };
 
-function toURLSearchParams(searchParams: SearchParams): URLSearchParams {
+function toURLSearchParams(searchParams: Record<string, string | string[] | undefined>): URLSearchParams {
   const params = new URLSearchParams();
   Object.entries(searchParams).forEach(([key, value]) => {
     if (Array.isArray(value)) {
