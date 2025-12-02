@@ -29,9 +29,22 @@ export interface ComputedLevels {
     category: SetupLevelCategory;
     volatilityScore: number | null;
     scoreVolatility: number | null;
+    volatilityFactor: number | null;
+    stopFactor: number | null;
+    targetFactor: number | null;
+    confidenceScore: number | null;
   };
   riskReward: RiskRewardSummary;
 }
+
+const categoryBands: Record<SetupLevelCategory, number> = {
+  pullback: 0.005,
+  breakout: 0.006,
+  range: 0.0045,
+  trendContinuation: 0.0055,
+  liquidityGrab: 0.0075,
+  unknown: 0.005,
+};
 
 function clampPercent(value?: number): number {
   if (value === undefined || value === null || Number.isNaN(value)) {
@@ -126,11 +139,18 @@ export function computeLevelsForSetup(params: {
   direction: Direction;
   referencePrice: number;
   volatilityScore?: number;
+  confidence?: number;
   category?: SetupLevelCategory;
 }): ComputedLevels {
   const price = Number(params.referencePrice);
   const category = params.category ?? "unknown";
   const volatilityScore = clampPercent(params.volatilityScore);
+  const confidenceScore = clampPercent(params.confidence);
+  const volNorm = volatilityScore / 100;
+  const confNorm = confidenceScore / 100;
+  const volFactor = clamp(0.7 + volNorm * 0.7, 0.5, 1.4);
+  const stopFactor = clamp(1.1 - confNorm * 0.3, 0.8, 1.1);
+  const targetFactor = clamp(1.1 + confNorm * 0.7, 1.1, 1.8);
 
   if (!Number.isFinite(price) || price <= 0) {
     badgeLogging(`invalid reference price (${params.referencePrice}) for direction ${params.direction}`);
@@ -144,6 +164,10 @@ export function computeLevelsForSetup(params: {
         category,
         volatilityScore: null,
         scoreVolatility: null,
+        volatilityFactor: null,
+        stopFactor: null,
+        targetFactor: null,
+        confidenceScore: null,
       },
       riskReward: {
         riskPercent: null,
@@ -154,9 +178,10 @@ export function computeLevelsForSetup(params: {
     };
   }
 
-  const baseBand = 0.005;
-  const extraBand = (volatilityScore / 100) * 0.015;
-  const bandPct = baseBand + extraBand;
+  const baseBand = categoryBands[category] ?? categoryBands["unknown"];
+  const bandPct = clamp(baseBand * volFactor, 0.0015, 0.03);
+  const stopBand = clamp(bandPct * stopFactor, 0.001, 0.03);
+  const targetBand = clamp(bandPct * targetFactor, 0.0015, 0.04);
 
   let entryLow = price;
   let entryHigh = price;
@@ -165,23 +190,28 @@ export function computeLevelsForSetup(params: {
 
   const direction = params.direction;
 
+  const longStop = (mult: number) => price * (1 - stopBand * mult);
+  const shortStop = (mult: number) => price * (1 + stopBand * mult);
+  const longTarget = (mult: number) => price * (1 + targetBand * mult);
+  const shortTarget = (mult: number) => price * (1 - targetBand * mult);
+
   switch (category) {
     case "pullback": {
       if (direction === "long") {
         entryLow = price * (1 - bandPct * 1.3);
         entryHigh = price * (1 - bandPct * 0.3);
-        stopLossValue = price * (1 - bandPct * 2.0);
-        takeProfitValue = price * (1 + bandPct * 3.0);
+        stopLossValue = longStop(2.0);
+        takeProfitValue = longTarget(3.0);
       } else if (direction === "short") {
         entryLow = price * (1 + bandPct * 0.3);
         entryHigh = price * (1 + bandPct * 1.3);
-        stopLossValue = price * (1 + bandPct * 2.0);
-        takeProfitValue = price * (1 - bandPct * 3.0);
+        stopLossValue = shortStop(2.0);
+        takeProfitValue = shortTarget(3.0);
       } else {
         entryLow = price * (1 - bandPct * 1.0);
         entryHigh = price * (1 + bandPct * 1.0);
-        stopLossValue = price * (1 - bandPct * 2.0);
-        takeProfitValue = price * (1 + bandPct * 2.0);
+        stopLossValue = longStop(2.0);
+        takeProfitValue = longTarget(2.0);
       }
       break;
     }
@@ -190,18 +220,18 @@ export function computeLevelsForSetup(params: {
       if (direction === "long") {
         entryLow = price * (1 + bandPct * 0.2);
         entryHigh = price * (1 + bandPct * 1.2);
-        stopLossValue = price * (1 - bandPct * 1.5);
-        takeProfitValue = price * (1 + bandPct * 3.0);
+        stopLossValue = longStop(1.5);
+        takeProfitValue = longTarget(3.0);
       } else if (direction === "short") {
         entryLow = price * (1 - bandPct * 1.2);
         entryHigh = price * (1 - bandPct * 0.2);
-        stopLossValue = price * (1 + bandPct * 1.5);
-        takeProfitValue = price * (1 - bandPct * 3.0);
+        stopLossValue = shortStop(1.5);
+        takeProfitValue = shortTarget(3.0);
       } else {
         entryLow = price * (1 - bandPct * 0.5);
         entryHigh = price * (1 + bandPct * 0.5);
-        stopLossValue = price * (1 - bandPct * 1.5);
-        takeProfitValue = price * (1 + bandPct * 1.5);
+        stopLossValue = longStop(1.5);
+        takeProfitValue = longTarget(1.5);
       }
       break;
     }
@@ -210,14 +240,14 @@ export function computeLevelsForSetup(params: {
       entryLow = price * (1 - bandPct * 0.6);
       entryHigh = price * (1 + bandPct * 0.6);
       if (direction === "short") {
-        stopLossValue = price * (1 + bandPct * 1.5);
-        takeProfitValue = price * (1 - bandPct * 2.0);
+        stopLossValue = shortStop(1.5);
+        takeProfitValue = shortTarget(2.0);
       } else if (direction === "long") {
-        stopLossValue = price * (1 - bandPct * 1.5);
-        takeProfitValue = price * (1 + bandPct * 2.0);
+        stopLossValue = longStop(1.5);
+        takeProfitValue = longTarget(2.0);
       } else {
-        stopLossValue = price * (1 - bandPct * 1.2);
-        takeProfitValue = price * (1 + bandPct * 1.2);
+        stopLossValue = longStop(1.2);
+        takeProfitValue = longTarget(1.2);
       }
       break;
     }
@@ -226,14 +256,14 @@ export function computeLevelsForSetup(params: {
       entryLow = price * (1 - bandPct * 0.4);
       entryHigh = price * (1 + bandPct * 0.4);
       if (direction === "short") {
-        stopLossValue = price * (1 + bandPct * 1.8);
-        takeProfitValue = price * (1 - bandPct * 2.5);
+        stopLossValue = shortStop(1.8);
+        takeProfitValue = shortTarget(2.5);
       } else if (direction === "long") {
-        stopLossValue = price * (1 - bandPct * 1.8);
-        takeProfitValue = price * (1 + bandPct * 2.5);
+        stopLossValue = longStop(1.8);
+        takeProfitValue = longTarget(2.5);
       } else {
-        stopLossValue = price * (1 - bandPct * 1.4);
-        takeProfitValue = price * (1 + bandPct * 1.4);
+        stopLossValue = longStop(1.4);
+        takeProfitValue = longTarget(1.4);
       }
       break;
     }
@@ -242,18 +272,18 @@ export function computeLevelsForSetup(params: {
       if (direction === "long") {
         entryLow = price * (1 - bandPct * 1.8);
         entryHigh = price * (1 - bandPct * 0.8);
-        stopLossValue = price * (1 - bandPct * 3.5);
-        takeProfitValue = price * (1 + bandPct * 3.5);
+        stopLossValue = longStop(3.5);
+        takeProfitValue = longTarget(3.5);
       } else if (direction === "short") {
         entryLow = price * (1 + bandPct * 0.8);
         entryHigh = price * (1 + bandPct * 1.8);
-        stopLossValue = price * (1 + bandPct * 3.5);
-        takeProfitValue = price * (1 - bandPct * 3.5);
+        stopLossValue = shortStop(3.5);
+        takeProfitValue = shortTarget(3.5);
       } else {
         entryLow = price * (1 - bandPct * 1.2);
         entryHigh = price * (1 + bandPct * 1.2);
-        stopLossValue = price * (1 - bandPct * 2.5);
-        takeProfitValue = price * (1 + bandPct * 2.5);
+        stopLossValue = longStop(2.5);
+        takeProfitValue = longTarget(2.5);
       }
       break;
     }
@@ -263,14 +293,14 @@ export function computeLevelsForSetup(params: {
       entryLow = price * (1 - bandPct / 2);
       entryHigh = price * (1 + bandPct / 2);
       if (direction === "short") {
-        stopLossValue = price * (1 + bandPct * 2);
-        takeProfitValue = price * (1 - bandPct * 3);
+        stopLossValue = shortStop(2);
+        takeProfitValue = shortTarget(3);
       } else if (direction === "long") {
-        stopLossValue = price * (1 - bandPct * 2);
-        takeProfitValue = price * (1 + bandPct * 3);
+        stopLossValue = longStop(2);
+        takeProfitValue = longTarget(3);
       } else {
-        stopLossValue = price * (1 - bandPct);
-        takeProfitValue = price * (1 + bandPct);
+        stopLossValue = longStop(1);
+        takeProfitValue = longTarget(1);
       }
     }
   }
@@ -296,7 +326,11 @@ export function computeLevelsForSetup(params: {
       referencePrice: price,
       category,
       volatilityScore,
-      scoreVolatility: null,
+      scoreVolatility: params.volatilityScore ?? null,
+      volatilityFactor: volFactor,
+      stopFactor,
+      targetFactor,
+      confidenceScore,
     },
     riskReward,
   };
