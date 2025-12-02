@@ -33,17 +33,20 @@ export interface ComputedLevels {
     stopFactor: number | null;
     targetFactor: number | null;
     confidenceScore: number | null;
+    baseBand: number | null;
+    volatilityScoreUsed: number | null;
+    confidenceScoreUsed: number | null;
   };
   riskReward: RiskRewardSummary;
 }
 
 const categoryBands: Record<SetupLevelCategory, number> = {
-  pullback: 0.005,
-  breakout: 0.006,
-  range: 0.0045,
-  trendContinuation: 0.0055,
-  liquidityGrab: 0.0075,
-  unknown: 0.005,
+  pullback: 0.007,
+  breakout: 0.009,
+  range: 0.006,
+  trendContinuation: 0.008,
+  liquidityGrab: 0.011,
+  unknown: 0.006,
 };
 
 function clampPercent(value?: number): number {
@@ -135,6 +138,10 @@ function computeRiskReward(input: RiskRewardInput): RiskRewardSummary {
   };
 }
 
+function getBaseBandForCategory(category: SetupLevelCategory): number {
+  return categoryBands[category] ?? categoryBands["unknown"];
+}
+
 export function computeLevelsForSetup(params: {
   direction: Direction;
   referencePrice: number;
@@ -148,9 +155,9 @@ export function computeLevelsForSetup(params: {
   const confidenceScore = clampPercent(params.confidence);
   const volNorm = volatilityScore / 100;
   const confNorm = confidenceScore / 100;
-  const volFactor = clamp(0.7 + volNorm * 0.7, 0.5, 1.4);
-  const stopFactor = clamp(1.1 - confNorm * 0.3, 0.8, 1.1);
-  const targetFactor = clamp(1.1 + confNorm * 0.7, 1.1, 1.8);
+  const volFactor = clamp(0.5 + volNorm * 1.5, 0.5, 2.0);
+  const stopFactor = clamp(1.3 - confNorm * 0.6, 0.7, 1.3);
+  const targetFactor = clamp(1.0 + confNorm * 1.5, 1.0, 2.5);
 
   if (!Number.isFinite(price) || price <= 0) {
     badgeLogging(`invalid reference price (${params.referencePrice}) for direction ${params.direction}`);
@@ -158,17 +165,20 @@ export function computeLevelsForSetup(params: {
       entryZone: null,
       stopLoss: null,
       takeProfit: null,
-      debug: {
-        bandPct: null,
-        referencePrice: null,
-        category,
-        volatilityScore: null,
-        scoreVolatility: null,
-        volatilityFactor: null,
-        stopFactor: null,
-        targetFactor: null,
-        confidenceScore: null,
-      },
+    debug: {
+      bandPct: null,
+      referencePrice: null,
+      category,
+      volatilityScore: null,
+      scoreVolatility: null,
+      volatilityFactor: null,
+      stopFactor: null,
+      targetFactor: null,
+      confidenceScore: null,
+      baseBand: null,
+      volatilityScoreUsed: null,
+      confidenceScoreUsed: null,
+    },
       riskReward: {
         riskPercent: null,
         rewardPercent: null,
@@ -178,10 +188,11 @@ export function computeLevelsForSetup(params: {
     };
   }
 
-  const baseBand = categoryBands[category] ?? categoryBands["unknown"];
-  const bandPct = clamp(baseBand * volFactor, 0.0015, 0.03);
+  const baseBand = getBaseBandForCategory(category);
+  const bandPctRaw = baseBand * volFactor;
+  const bandPct = clamp(bandPctRaw, 0.001, 0.05);
   const stopBand = clamp(bandPct * stopFactor, 0.001, 0.03);
-  const targetBand = clamp(bandPct * targetFactor, 0.0015, 0.04);
+  const targetBand = clamp(bandPct * targetFactor, 0.001, 0.05);
 
   let entryLow = price;
   let entryHigh = price;
@@ -331,6 +342,9 @@ export function computeLevelsForSetup(params: {
       stopFactor,
       targetFactor,
       confidenceScore,
+      baseBand,
+      volatilityScoreUsed: volatilityScore,
+      confidenceScoreUsed: confidenceScore,
     },
     riskReward,
   };
