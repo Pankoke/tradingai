@@ -11,6 +11,13 @@ export type RiskFormState = {
   leverage: number;
 };
 
+export type RiskHintLevel = "info" | "warning" | "danger";
+
+export type RiskHint = {
+  level: RiskHintLevel;
+  message: string;
+};
+
 export type RiskCalculationResult = {
   positionSize: number;
   maxLossAmount: number;
@@ -21,4 +28,5 @@ export type RiskCalculationResult = {
   riskAmount: number;
   rewardAmount?: number;
   riskReward?: number;
+  hints: RiskHint[];
 };

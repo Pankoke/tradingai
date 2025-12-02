@@ -9,6 +9,7 @@ import type {
   Direction,
   RiskCalculationResult,
   RiskFormState,
+  RiskHint,
 } from "@/src/features/risk-manager/types";
 
 const DEFAULT_FORM: RiskFormState = {
@@ -180,13 +181,13 @@ export default function RiskManagerPage({ params }: { params: { locale: string }
               <StatCard label={t("riskManager.result.stopDistance")} value={result.stopDistance.toFixed(2)} />
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-[1fr,1.2fr]">
-              <InfoBox
-                title={t("riskManager.result.leverageTitle")}
-                value={`x${result.leverage.toFixed(2)}`}
-                tone="neutral"
-              />
-              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-main)] p-4">
+          <div className="grid gap-3 sm:grid-cols-[1fr,1.2fr]">
+            <InfoBox
+              title={t("riskManager.result.leverageTitle")}
+              value={`x${result.leverage.toFixed(2)}`}
+              tone="neutral"
+            />
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-main)] p-4">
                 <div className="text-sm font-semibold text-[var(--text-primary)]">{t("riskManager.result.hintTitle")}</div>
                 <p className="mt-2 text-sm text-[var(--text-secondary)]">
                   {t("riskManager.result.hintTemplate").replace("{{riskPercent}}", result.riskPercent.toFixed(2))}
@@ -195,18 +196,24 @@ export default function RiskManagerPage({ params }: { params: { locale: string }
             </div>
 
             <div className="rounded-xl border border-white/10 bg-black/40 p-4 text-[11px] text-white/70">
-              <p>Du riskierst ca. {formatCurrency(result.riskAmount)} auf Basis deines Kontos.</p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm">
+                  Du riskierst ca. {formatCurrency(result.riskAmount)} auf Basis deines Kontos.
+                </p>
+                <Badge tone={classifyRiskPercent(result.riskPercent)} label={`${result.riskPercent}%`} />
+              </div>
               {result.rewardAmount != null && (
-                <p className="mt-1">
-                  Potenzial: {formatCurrency(result.rewardAmount)} (RRR:{" "}
-                  {(result.riskReward ?? 0).toFixed(2)} : 1)
+                <p className="mt-1 flex items-center justify-between gap-3">
+                  <span>
+                    Potenzial: {formatCurrency(result.rewardAmount)} (RRR:{" "}
+                    {(result.riskReward ?? 0).toFixed(2)} : 1)
+                  </span>
+                  <Badge tone={classifyRrr(result.riskReward)} label={rrrLabel(result.riskReward)} />
                 </p>
               )}
             </div>
 
-            <div className="rounded-xl border border-red-500/40 bg-red-500/5 p-4 text-sm text-red-200">
-              {t("riskManager.result.warning")}
-            </div>
+            <ResultHints hints={result.hints} />
           </section>
         ) : null}
       </div>
@@ -281,3 +288,78 @@ function InfoBox({ title, value }: InfoBoxProps): JSX.Element {
   );
 }
 
+type ResultHintsProps = {
+  hints: RiskHint[];
+};
+
+function ResultHints({ hints }: ResultHintsProps): JSX.Element {
+  if (hints.length === 0) {
+    return (
+      <div className="rounded-xl border border-white/10 bg-black/40 p-4 text-[11px] text-white/60">
+        Keine besonderen Auffälligkeiten erkannt.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {hints.map((hint, idx) => (
+        <div
+          key={idx}
+          className={[
+            "rounded-xl border p-3 text-sm",
+            hint.level === "danger"
+              ? "border-red-400/40 bg-red-500/10 text-red-200"
+              : hint.level === "warning"
+                ? "border-amber-400/40 bg-amber-500/10 text-amber-100"
+                : "border-blue-300/40 bg-blue-500/5 text-blue-100",
+          ].join(" ")}
+        >
+          {hint.message}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+type BadgeTone = "low" | "medium" | "high" | "none";
+
+function classifyRrr(rrr: number | undefined): BadgeTone {
+  if (rrr == null) return "none";
+  if (rrr < 1.5) return "low";
+  if (rrr < 2.0) return "medium";
+  return "high";
+}
+
+function classifyRiskPercent(riskPercent: number): BadgeTone {
+  if (riskPercent < 1) return "low";
+  if (riskPercent < 2) return "medium";
+  return "high";
+}
+
+function rrrLabel(rrr: number | undefined): string {
+  if (rrr == null) return "n/a";
+  if (rrr < 1.5) return "schwach";
+  if (rrr < 2) return "okay";
+  return "stark";
+}
+
+type BadgeProps = {
+  tone: BadgeTone;
+  label: string;
+};
+
+function Badge({ tone, label }: BadgeProps): JSX.Element | null {
+  if (tone === "none") return null;
+  const toneClasses =
+    tone === "low"
+      ? "bg-red-500/10 text-red-200 border border-red-500/30"
+      : tone === "medium"
+        ? "bg-amber-500/10 text-amber-100 border border-amber-400/40"
+        : "bg-emerald-500/10 text-emerald-200 border border-emerald-400/40";
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${toneClasses}`}>
+      {label}
+    </span>
+  );
+}
