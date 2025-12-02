@@ -1,0 +1,23 @@
+name: Bias Snapshot Sync
+
+on:
+  schedule:
+    - cron: "0 7 * * *"
+    - cron: "0 12 * * *"
+    - cron: "0 20 * * *"
+  workflow_dispatch:
+
+jobs:
+  call-bias-sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Call bias sync endpoint
+        env:
+          BIAS_SYNC_URL: ${{ secrets.BIAS_SYNC_URL }}
+        run: |
+          echo "Calling $BIAS_SYNC_URL ..."
+          curl -X POST -sS -m 30 "$BIAS_SYNC_URL" || {
+            echo "Bias sync failed";
+            exit 1;
+          }
