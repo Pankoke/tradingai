@@ -5,7 +5,7 @@ import type { JSX } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Activity, BarChart3, Shield, Zap, ActivitySquare } from "lucide-react";
-import { fetchTodaySetups } from "@/src/lib/api/perceptionClient";
+import { fetchPerceptionToday } from "@/src/lib/api/perceptionClient";
 import type { Setup } from "@/src/lib/engine/types";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import { clamp } from "@/src/lib/math";
@@ -127,22 +127,22 @@ export default function MarketingPage(): JSX.Element {
   const labels: Labels = useMemo(() => buildLabels(t), [t]);
 
   useEffect(() => {
-    const load = async (): Promise<void> => {
-      try {
-        const { setups, setupOfTheDayId } = await fetchTodaySetups();
-        const mapped = setups.map(toHomepageSetup);
-        const hero =
-          mapped.find((s) => s.id === setupOfTheDayId) ?? mapped[0] ?? null;
-        setSetupOfTheDay(hero);
-        const heroRaw =
-          setups.find((s) => s.id === setupOfTheDayId) ?? setups[0] ?? null;
-        setSetupOfTheDayRaw(heroRaw);
-        setState("ready");
-      } catch (error) {
-        console.error(error);
-        setState("error");
-      }
-    };
+  const load = async (): Promise<void> => {
+    try {
+      const data = await fetchPerceptionToday();
+      const heroItem =
+        data.items.find((item) => item.isSetupOfTheDay) ?? data.items[0] ?? null;
+      const heroSetup =
+        heroItem ? data.setups.find((setup) => setup.id === heroItem.setupId) : null;
+      const winner = heroSetup ?? data.setups[0] ?? null;
+      setSetupOfTheDay(winner ? toHomepageSetup(winner) : null);
+      setSetupOfTheDayRaw(winner);
+      setState("ready");
+    } catch (error) {
+      console.error(error);
+      setState("error");
+    }
+  };
     void load();
   }, []);
 

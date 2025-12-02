@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { fetcher } from "@/src/lib/fetcher";
-import { setupSchema, type Setup, riskRewardSchema } from "@/src/lib/engine/types";
+import { setupSchema, type Setup, riskRewardSchema, type RiskRewardSummary } from "@/src/lib/engine/types";
 
 const perceptionTodayItemSchema = z.object({
   id: z.string(),
@@ -50,7 +50,35 @@ function resolveUrl(path: string): string {
 }
 
 export async function fetchPerceptionToday(): Promise<PerceptionTodayResponse> {
-  return fetcher(resolveUrl("/api/perception/today"), perceptionTodaySchema);
+  try {
+    return await fetcher(resolveUrl("/api/perception/today"), perceptionTodaySchema);
+  } catch (error) {
+    if (typeof window === "undefined") {
+      const { buildAndStorePerceptionSnapshot } = await import(
+        "@/src/features/perception/build/buildSetups"
+      );
+      const persisted = await buildAndStorePerceptionSnapshot();
+      return {
+        snapshot: {
+          ...persisted.snapshot,
+          snapshotTime: persisted.snapshot.snapshotTime.toISOString(),
+          createdAt: persisted.snapshot.createdAt
+            ? persisted.snapshot.createdAt.toISOString()
+            : new Date().toISOString(),
+        },
+        items: persisted.items.map((item) => ({
+          ...item,
+          direction: item.direction.toLowerCase() as "long" | "short" | "neutral",
+          createdAt: item.createdAt
+            ? item.createdAt.toISOString()
+            : new Date().toISOString(),
+          riskReward: (item.riskReward ?? null) as RiskRewardSummary | null,
+        })),
+        setups: persisted.setups,
+      };
+    }
+    throw error;
+  }
 }
 
 export async function fetchTodaySetups(): Promise<{ setups: Setup[]; setupOfTheDayId: string }> {

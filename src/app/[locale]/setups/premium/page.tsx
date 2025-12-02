@@ -3,13 +3,13 @@ import type { JSX } from "react";
 import HomepageSetupCard from "@/src/components/homepage/HomepageSetupCard";
 import { PremiumControls } from "@/src/components/setups/PremiumControls";
 import { ProNotice } from "@/src/components/common/ProNotice";
-import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
-import type { Setup } from "@/src/lib/engine/types";
-import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import { clamp } from "@/src/lib/math";
 import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
 import deMessages from "@/src/messages/de.json";
 import enMessages from "@/src/messages/en.json";
+import { fetchPerceptionToday } from "@/src/lib/api/perceptionClient";
+import type { Setup } from "@/src/lib/engine/types";
+import type { HomepageSetup } from "@/src/lib/homepage-setups";
 
 type PageProps = {
   params: Promise<{ locale?: string }>;
@@ -130,8 +130,7 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
   const t = (key: string): string => messages[key] ?? key;
   const labels = buildLabels(t);
 
-  const snapshot = await buildPerceptionSnapshot();
-  const { setups } = snapshot;
+  const { setups } = await fetchPerceptionToday();
 
   const sort = resolvedSearch?.sort ?? "confidence";
   const dir = resolvedSearch?.dir ?? "desc";

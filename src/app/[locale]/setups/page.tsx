@@ -4,7 +4,7 @@ import { SetupOfTheDayCard } from "@/src/app/[locale]/(marketing)/components/Set
 import HomepageSetupCard from "@/src/components/homepage/HomepageSetupCard";
 import { EngineMetaPanel } from "@/src/components/perception/EngineMetaPanel";
 import { FiveRingsExplainer } from "@/src/components/perception/FiveRingsExplainer";
-import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
+import { fetchPerceptionToday } from "@/src/lib/api/perceptionClient";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import { clamp } from "@/src/lib/math";
 import type { Setup } from "@/src/lib/engine/types";
@@ -136,13 +136,21 @@ export default async function SetupsPage({ params }: PageProps): Promise<JSX.Ele
   const t = (key: string): string => messages[key] ?? key;
   const labels: Labels = buildLabels(t);
 
-  const snapshot = await buildPerceptionSnapshot();
-  const { setups, setupOfTheDayId } = snapshot;
-  const setupOfTheDayRaw = setups.find((s) => s.id === setupOfTheDayId) ?? setups[0] ?? null;
+  const { setups, items, snapshot } = await fetchPerceptionToday();
+  const heroItem =
+    items.find((item) => item.isSetupOfTheDay) ??
+    items[0] ??
+    null;
+  const setupOfTheDayRaw =
+    heroItem ? setups.find((s) => s.id === heroItem.setupId) : null;
+  const primarySetup = setupOfTheDayRaw ?? setups[0] ?? null;
   const randomSetups = pickRandom(
-    setups.filter((s) => s.accessLevel === "free" && s.id !== setupOfTheDayRaw?.id),
+    setups.filter((s) => s.accessLevel === "free" && s.id !== primarySetup?.id),
     3,
-  ).map(toHomepageSetup);
+  ).map((setup) => ({
+    ...toHomepageSetup(setup),
+    snapshotTimestamp: snapshot.snapshotTime,
+  }));
 
   return (
     <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
@@ -154,7 +162,7 @@ export default async function SetupsPage({ params }: PageProps): Promise<JSX.Ele
           </p>
         </div>
 
-        <EngineMetaPanel generatedAt={snapshot.generatedAt} version={snapshot.version} />
+        <EngineMetaPanel generatedAt={snapshot.snapshotTime} version={snapshot.version} />
 
         <section className="space-y-4">
           <h2 className="text-lg font-semibold tracking-tight sm:text-xl">Setup des Tages</h2>
