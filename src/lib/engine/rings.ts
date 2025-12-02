@@ -139,33 +139,88 @@ function resolveEventScore(source: RingSource): number {
 }
 
 function resolveBiasScore(source: RingSource): number {
-  const bias = source.biasScoreAtTime ?? source.biasScore;
-  return clampPercent(bias);
+  const atTime =
+    typeof source.biasScoreAtTime === "number" && !Number.isNaN(source.biasScoreAtTime)
+      ? source.biasScoreAtTime
+      : undefined;
+  const baseline =
+    typeof source.biasScore === "number" && !Number.isNaN(source.biasScore)
+      ? source.biasScore
+      : undefined;
+  if (atTime !== undefined && baseline !== undefined) {
+    const combined = 0.7 * atTime + 0.3 * baseline;
+    return clampPercent(combined);
+  }
+  if (atTime !== undefined) {
+    return clampPercent(atTime);
+  }
+  if (baseline !== undefined) {
+    return clampPercent(baseline);
+  }
+  return 50;
 }
 
-function computeSentimentScore(source: RingSource): number {
-  const directionBase =
-    source.direction === "long" ? 60 : source.direction === "short" ? 40 : 50;
+const directionComponent = (dir?: RingSource["direction"]): number => {
+  if (dir === "long") return 55;
+  if (dir === "short") return 45;
+  return 50;
+};
+
+const biasComponentValue = (source: RingSource): number => {
   const biasNorm = clampPercent(source.biasScoreAtTime ?? source.biasScore);
-  const biasOffset = (biasNorm - 50) * 0.4;
-  const trendNorm = clampPercent(source.breakdown?.trend);
-  const momentumNorm = clampPercent(source.breakdown?.momentum);
-  const energy = (trendNorm + momentumNorm) / 2;
-  const energyOffset = (energy - 50) * 0.3;
-  const sentimentRaw = directionBase + biasOffset + energyOffset;
-  return clamp(Math.round(sentimentRaw), 0, 100);
+  const comp = 50 + 0.6 * (biasNorm - 50);
+  return clamp(Math.round(comp), 0, 100);
+};
+
+const energyComponentValue = (breakdown?: Breakdown): number => {
+  const trendNorm = clampPercent(breakdown?.trend);
+  const momentumNorm = clampPercent(breakdown?.momentum);
+  const energy = (2 * momentumNorm + trendNorm) / 3;
+  const value = 50 + 0.5 * (energy - 50);
+  return clamp(Math.round(value), 0, 100);
+};
+
+const macroComponentValue = (eventScore?: number | null): number => {
+  const macroNorm = clampPercent(eventScore);
+  const value = 50 + 0.2 * (macroNorm - 50);
+  return clamp(Math.round(value), 0, 100);
+};
+
+function resolveSentimentWithBreakdown(source: RingSource): number {
+  const dirComp = directionComponent(source.direction);
+  const biasComp = biasComponentValue(source);
+  const energyComp = energyComponentValue(source.breakdown);
+  const macroComp = macroComponentValue(source.eventScore);
+  const raw =
+    0.2 * dirComp + 0.4 * biasComp + 0.3 * energyComp + 0.1 * macroComp;
+  return clamp(Math.round(raw), 0, 100);
+}
+
+function resolveSentimentWithoutBreakdown(source: RingSource): number {
+  const dirComp = directionComponent(source.direction);
+  const biasComp = biasComponentValue(source);
+  const macroComp = macroComponentValue(source.eventScore);
+  if (typeof source.sentimentScore === "number" && !Number.isNaN(source.sentimentScore)) {
+    const precomputed = clampPercent(source.sentimentScore);
+    const raw =
+      0.6 * precomputed + 0.25 * biasComp + 0.1 * dirComp + 0.05 * macroComp;
+    return clamp(Math.round(raw), 0, 100);
+  }
+  const raw = 0.5 * biasComp + 0.3 * dirComp + 0.2 * macroComp;
+  return clamp(Math.round(raw), 0, 100);
 }
 
 function resolveSentimentScore(source: RingSource): number {
-  if (source.breakdown || source.sentimentScore !== undefined) {
-    return computeSentimentScore(source);
+  if (source.breakdown) {
+    return resolveSentimentWithBreakdown(source);
   }
-  return clampPercent(source.sentimentScore);
-}
-
-function computeOrderflowScore(source: RingSource): number {
-  const flowEnergy = computeOrderflowEnergy(source.breakdown);
-  return clamp(Math.round(flowEnergy), 0, 100);
+  if (typeof source.sentimentScore === "number" && !Number.isNaN(source.sentimentScore)) {
+    return resolveSentimentWithoutBreakdown(source);
+  }
+  if (typeof source.biasScoreAtTime === "number" || typeof source.biasScore === "number") {
+    return resolveSentimentWithoutBreakdown(source);
+  }
+  return 50;
 }
 
 function computeOrderflowEnergy(breakdown?: Breakdown): number {
@@ -174,15 +229,117 @@ function computeOrderflowEnergy(breakdown?: Breakdown): number {
   return (2 * momentumNorm + volNorm) / 3;
 }
 
+function energyComponent(breakdown?: Breakdown): number {
+  const rawEnergy = computeOrderflowEnergy(breakdown);
+  const value = 50 + 0.6 * (rawEnergy - 50);
+  return clamp(Math.round(value), 0, 100);
+}
+
+function resolveDirectionTilt(direction?: RingSource["direction"]): number {
+  if (direction === "long") return 5;
+  if (direction === "short") return -5;
+  return 0;
+}
+
+const MODE_DELTA_MAP: Record<string, number> = {
+  trending: 5,
+  choppy: -5,
+  "mean-reversion": 0,
+};
+
+function resolveModeDelta(source: RingSource): number {
+  if (!source.orderflowMode) return 0;
+  const key = source.orderflowMode.toLowerCase();
+  return MODE_DELTA_MAP[key] ?? 0;
+}
+
 function resolveOrderflowScore(source: RingSource): number {
   if (source.breakdown) {
-    return computeOrderflowScore(source);
+    const base = energyComponent(source.breakdown);
+    const tilt = resolveDirectionTilt(source.direction);
+    const modeDelta = resolveModeDelta(source);
+    return clamp(Math.round(base + tilt + modeDelta), 0, 100);
   }
-  return clampPercent(source.balanceScore);
+  if (typeof source.balanceScore === "number" && !Number.isNaN(source.balanceScore)) {
+    const flowFromBalance = clampPercent(source.balanceScore);
+    const fallback = 50 + 0.4 * (flowFromBalance - 50);
+    return clamp(Math.round(fallback), 0, 100);
+  }
+  return 50;
+}
+
+function normalizeConfidenceInputs(source: RingSource) {
+  const eventNorm = clampPercent(resolveEventScore(source));
+  const biasNorm = clampPercent(resolveBiasScore(source));
+  const sentimentNorm = clampPercent(resolveSentimentScore(source));
+  const orderflowNorm = clampPercent(resolveOrderflowScore(source));
+  const trendNorm = clampPercent(resolveTrendScore(source));
+  return { eventNorm, biasNorm, sentimentNorm, orderflowNorm, trendNorm };
+}
+
+function strengthComponent(eventNorm: number, biasNorm: number, sentimentNorm: number): number {
+  const strength = (eventNorm + biasNorm + sentimentNorm) / 3;
+  const value = 50 + 0.6 * (strength - 50);
+  return clamp(Math.round(value), 0, 100);
+}
+
+function consistencyComponent(values: number[]): number {
+  const avg = values.reduce((sum, val) => sum + val, 0) / values.length;
+  const variance =
+    values.reduce((sum, val) => sum + (val - avg) ** 2, 0) / values.length;
+  const stdDev = Math.sqrt(variance);
+  return clamp(Math.round(100 - stdDev), 0, 100);
+}
+
+function coherenceComponent(biasNorm: number, sentimentNorm: number): number {
+  const directionImpact = 0.5 * biasNorm + 0.5 * sentimentNorm;
+  const value = 50 + 0.4 * (directionImpact - 50);
+  return clamp(Math.round(value), 0, 100);
+}
+
+function stabilityComponent(volatility?: number | null): number {
+  const volNorm = clampPercent(volatility);
+  const value = 100 - Math.abs(volNorm - 50) * 1.2;
+  return clamp(Math.round(value), 0, 100);
 }
 
 function resolveConfidence(source: RingSource): number {
-  return clampPercent(source.confidence);
+  const { eventNorm, biasNorm, sentimentNorm, orderflowNorm, trendNorm } =
+    normalizeConfidenceInputs(source);
+  const strengthComp = strengthComponent(eventNorm, biasNorm, sentimentNorm);
+  const consistencyComp = consistencyComponent([
+    eventNorm,
+    biasNorm,
+    sentimentNorm,
+    orderflowNorm,
+    trendNorm,
+  ]);
+  const coherenceComp = coherenceComponent(biasNorm, sentimentNorm);
+  const stabilityComp = source.breakdown
+    ? stabilityComponent(source.breakdown.volatility)
+    : 50;
+  const stageScore =
+    0.4 * strengthComp + 0.3 * consistencyComp + 0.2 * coherenceComp + 0.1 * stabilityComp;
+  if (source.breakdown) {
+    return clamp(Math.round(stageScore), 0, 100);
+  }
+  if (typeof source.confidence === "number" && !Number.isNaN(source.confidence)) {
+    const precomputed = clampPercent(source.confidence);
+    const combined =
+      0.6 * precomputed + 0.2 * strengthComp + 0.2 * consistencyComp;
+    return clamp(Math.round(combined), 0, 100);
+  }
+  const hasSignal =
+    typeof source.eventScore === "number" ||
+    typeof source.biasScore === "number" ||
+    typeof source.biasScoreAtTime === "number" ||
+    typeof source.sentimentScore === "number" ||
+    typeof source.orderflowMode === "string" ||
+    typeof source.trendScore === "number";
+  if (hasSignal) {
+    return clamp(Math.round(stageScore), 0, 100);
+  }
+  return 50;
 }
 
 function resolveTrendScore(source: RingSource): number {
