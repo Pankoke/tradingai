@@ -70,8 +70,7 @@ export class DbBiasProvider implements BiasProvider {
     if (!rows || rows.length === 0) {
       return null;
     }
-    const latest = rows[rows.length - 1];
-    return mapRow(latest);
+    return mapRow(rows[0]);
   }
 
   async getBiasForDateRange(params: {

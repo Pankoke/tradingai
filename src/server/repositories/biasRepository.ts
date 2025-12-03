@@ -19,7 +19,10 @@ export async function getBiasSnapshot(params: {
       and(
         eq(biasSnapshots.assetId, params.assetId),
         eq(biasSnapshots.date, targetDate),
-        eq(biasSnapshots.timeframe, params.timeframe),
+        eq(
+          sql`lower(${biasSnapshots.timeframe})`,
+          params.timeframe.toLowerCase(),
+        ),
       ),
     )
     .limit(1);
@@ -40,12 +43,15 @@ export async function getBiasSnapshotsForRange(params: {
     .where(
       and(
         eq(biasSnapshots.assetId, params.assetId),
-        eq(biasSnapshots.timeframe, params.timeframe),
+        eq(
+          sql`lower(${biasSnapshots.timeframe})`,
+          params.timeframe.toLowerCase(),
+        ),
         gte(biasSnapshots.date, fromDate),
         lte(biasSnapshots.date, toDate),
       ),
     )
-    .orderBy(sql`${biasSnapshots.date} asc`);
+    .orderBy(sql`${biasSnapshots.date} desc`);
 }
 
 export async function upsertBiasSnapshot(input: BiasSnapshotInput): Promise<void> {
