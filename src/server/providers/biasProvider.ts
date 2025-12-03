@@ -55,6 +55,21 @@ export class DbBiasProvider implements BiasProvider {
       timeframe: params.timeframe,
     });
 
+    if (process.env.DEBUG_BIAS === "1") {
+      console.log("[BiasProvider:getBiasSnapshot]", {
+        assetId: params.assetId,
+        timeframe: params.timeframe,
+        date: params.date.toISOString().slice(0, 10),
+        row: row
+          ? {
+              biasScore: row.biasScore,
+              confidence: row.confidence,
+              trendScore: row.trendScore,
+            }
+          : null,
+      });
+    }
+
     if (row) {
       return mapRow(row);
     }
@@ -70,6 +85,21 @@ export class DbBiasProvider implements BiasProvider {
     if (!rows || rows.length === 0) {
       return null;
     }
+
+    if (process.env.DEBUG_BIAS === "1") {
+      console.log("[BiasProvider:getBiasSnapshot:fallback]", {
+        assetId: params.assetId,
+        timeframe: params.timeframe,
+        fallbackFrom: fallbackFrom.toISOString().slice(0, 10),
+        date: params.date.toISOString().slice(0, 10),
+        rows: rows.map((r) => ({
+          biasScore: r.biasScore,
+          confidence: r.confidence,
+          date: r.date,
+        })),
+      });
+    }
+
     return mapRow(rows[0]);
   }
 

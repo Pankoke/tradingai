@@ -53,7 +53,21 @@ export function scoreFromBias(
     delta = 0.2 * (strength - 50);
   }
   const raw = strength + delta;
-  return clamp(Math.round(raw), 0, 100);
+  const score = clamp(Math.round(raw), 0, 100);
+
+  if (process.env.DEBUG_BIAS === "1") {
+    console.log("[BiasScoring:computed]", {
+      direction,
+      entryDirection,
+      entryConfidence,
+      structuralStrength: strength,
+      alignment,
+      delta,
+      score,
+    });
+  }
+
+  return score;
 }
 
 export function applyBiasScoring(setup: Setup, biasSnapshot: BiasSnapshot): BiasScoreResult {

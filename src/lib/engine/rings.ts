@@ -356,6 +356,14 @@ function computeRingsFromSource(source: RingSource): SetupRings {
   const sentimentScore = resolveSentimentScore(source);
   const orderflowScore = resolveOrderflowScore(source);
   const confidenceScore = resolveConfidence(source);
+
+  if (process.env.DEBUG_BIAS === "1") {
+    console.log("[Rings:bias]", {
+      biasScore: source.biasScore,
+      biasScoreAtTime: source.biasScoreAtTime,
+      ringBias: biasScore,
+    });
+  }
   return {
     trendScore,
     eventScore,

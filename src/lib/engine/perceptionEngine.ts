@@ -76,6 +76,15 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
 
     const eventResult = applyEventScoring(base, events);
     const biasResult = applyBiasScoring(base, biasSnapshot);
+    if (process.env.DEBUG_BIAS === "1") {
+      console.log("[PerceptionEngine:bias]", {
+        assetId: base.assetId,
+        symbol: base.symbol,
+        timeframe: base.timeframe,
+        direction: base.direction,
+        biasScoreFromProvider: biasResult.biasScore,
+      });
+    }
     const sentimentResult = applySentimentScoring(base);
     const scoreBreakdown = computeSetupScore({
       trendStrength: eventResult.eventScore,

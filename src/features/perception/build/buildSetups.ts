@@ -120,6 +120,15 @@ export async function buildAndStorePerceptionSnapshot(
       isSetupOfTheDay: items.length === 0,
       createdAt: snapshotTime,
     });
+
+    if (process.env.DEBUG_BIAS === "1") {
+      console.log("[BuildSetups:bias]", {
+        assetId,
+        setupId: setup.id,
+        biasScore: setup.biasScore,
+        biasScoreAtTime: setup.biasScore,
+      });
+    }
   }
 
   const isoCreatedAt = snapshotTime.toISOString();
