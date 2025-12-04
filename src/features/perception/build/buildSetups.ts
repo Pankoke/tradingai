@@ -12,8 +12,11 @@ import {
   insertSnapshotWithItems,
 } from "@/src/server/repositories/perceptionSnapshotRepository";
 import { getActiveAssets } from "@/src/server/repositories/assetRepository";
-import { PerceptionDataMode } from "@/src/lib/engine/perceptionDataSource";
 import { computeRingsForSetup } from "@/src/lib/engine/rings";
+import {
+  getPerceptionDataMode,
+  type PerceptionDataMode,
+} from "@/src/lib/config/perceptionDataMode";
 
 export type PerceptionSnapshotEngineResult = PerceptionSnapshot;
 
@@ -50,8 +53,7 @@ export async function buildAndStorePerceptionSnapshot(
   params: BuildParams = {},
 ): Promise<PerceptionSnapshotWithItems> {
   const snapshotTime = params.snapshotTime ?? new Date();
-  const envMode = (process.env.NEXT_PUBLIC_PERCEPTION_DATA_MODE as PerceptionDataMode) ?? "mock";
-  const mode: PerceptionDataMode = params.mode ?? envMode ?? "mock";
+  const mode: PerceptionDataMode = params.mode ?? getPerceptionDataMode();
 
   const start = Date.now();
   const engineResult: PerceptionSnapshotEngineResult = await buildPerceptionSnapshot({ asOf: snapshotTime });

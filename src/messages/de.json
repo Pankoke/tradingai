@@ -124,9 +124,12 @@
   "perception.today.confidenceRing": "Confidence",
   "perception.today.dataMode.live": "Live-Modus",
   "perception.today.dataMode.mock": "Mock-Modus",
+  "perception.today.mode.live": "Live-Modus",
+  "perception.today.mode.mock": "Mock-Modus (Demo-Daten)",
   "perception.today.direction.long": "Long",
   "perception.today.direction.short": "Short",
   "perception.today.direction.neutral": "Neutral",
+  "perception.today.snapshotAge": "Snapshot von {relative}",
   "perception.riskReward.title": "Risiko & Chance",
   "perception.riskReward.rrrLabel": "RRR (Chance-Risiko-Verhältnis)",
   "perception.riskReward.rewardLabel": "Chance",
@@ -518,6 +521,5 @@
   "legal.terms.liabilityTitle": "Haftung",
   "legal.terms.liabilityText": "Trading ist mit erheblichen Risiken verbunden. Wir übernehmen keine Haftung für finanzielle Schäden, Verluste oder Entscheidungen, die aus der Nutzung unserer Inhalte entstehen. KI-basierte oder automatisierte Inhalte können Fehler enthalten.",
   "legal.terms.finalTitle": "Schlussbestimmungen",
-  "legal.terms.finalText": "Es gilt das Recht der Bundesrepublik Deutschland. Sollten einzelne Bestimmungen unwirksam sein, bleibt der Rest der AGB wirksam.",
-  "perception.today.snapshotAge": "Snapshot von {relative}"
+  "legal.terms.finalText": "Es gilt das Recht der Bundesrepublik Deutschland. Sollten einzelne Bestimmungen unwirksam sein, bleibt der Rest der AGB wirksam."
 }

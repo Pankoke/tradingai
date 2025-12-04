@@ -11,8 +11,7 @@ import { getEventsInRange } from "@/src/server/repositories/eventRepository";
 import { DbBiasProvider, type BiasDomainModel } from "@/src/server/providers/biasProvider";
 import { getLatestCandleForAsset } from "@/src/server/repositories/candleRepository";
 import type { Timeframe } from "@/src/server/providers/marketDataProvider";
-
-export type PerceptionDataMode = "mock" | "live";
+import { getPerceptionDataMode } from "@/src/lib/config/perceptionDataMode";
 
 export interface PerceptionDataSource {
   getSetupsForToday(params: { asOf: Date }): Promise<Setup[]>;
@@ -65,10 +64,11 @@ class MockPerceptionDataSource implements PerceptionDataSource {
     });
   }
 
-  async getBiasSnapshotForAssets(_: {
+  async getBiasSnapshotForAssets(params: {
     assets: { assetId?: string | null; symbol: string; timeframe?: string }[];
     date: Date;
   }): Promise<BiasSnapshot> {
+    void params;
     return mockBiasSnapshot;
   }
 }
@@ -272,8 +272,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
 }
 
 export function createPerceptionDataSource(): PerceptionDataSource {
-  const envMode = (process.env.NEXT_PUBLIC_PERCEPTION_DATA_MODE ?? "").toLowerCase();
-  const mode: PerceptionDataMode = envMode === "live" ? "live" : "mock";
+  const mode = getPerceptionDataMode();
 
   if (mode === "live") {
     return new LivePerceptionDataSource();

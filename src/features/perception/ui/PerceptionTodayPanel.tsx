@@ -14,6 +14,8 @@ import { computeRingsForSnapshotItem } from "@/src/lib/engine/rings";
 import { fetchPerceptionToday, type PerceptionTodayResponse } from "@/src/lib/api/perceptionClient";
 import { BigGauge, SmallGauge } from "@/src/components/perception/RingGauges";
 import { formatRelativeTime } from "@/src/lib/formatters/datetime";
+import { isPerceptionMockMode } from "@/src/lib/config/perceptionDataMode";
+import { mockSetups } from "@/src/lib/mockSetups";
 
 type LucideIcon = ComponentType<SVGProps<SVGSVGElement>>;
 
@@ -75,8 +77,71 @@ function StatusMessage({ message }: StatusMessageProps): JSX.Element {
   );
 }
 
+function createMockPerceptionTodayResponse(): PerceptionTodayResponse {
+  const snapshotTime = new Date();
+  const snapshotId = "mock-snapshot";
+  const createdAt = snapshotTime.toISOString();
+  const rankWithinAsset = new Map<string, number>();
+
+  const items = mockSetups.map((setup, index) => {
+    const assetRank = (rankWithinAsset.get(setup.assetId) ?? 0) + 1;
+    rankWithinAsset.set(setup.assetId, assetRank);
+    const direction = setup.direction.toLowerCase() as Direction;
+    const scoreTrend = setup.eventScore;
+    const scoreMomentum = setup.sentimentScore;
+    const scoreVolatility = Math.max(0, Math.round(Math.abs(setup.biasScore - setup.eventScore)));
+    const scorePattern = setup.balanceScore;
+    const scoreTotal = Math.round(
+      (scoreTrend + scoreMomentum + scoreVolatility + scorePattern + setup.biasScore) / 5,
+    );
+
+    return {
+      id: `mock-item-${index + 1}`,
+      snapshotId,
+      assetId: setup.assetId,
+      setupId: setup.id,
+      direction,
+      rankOverall: index + 1,
+      rankWithinAsset: assetRank,
+      scoreTotal,
+      scoreTrend,
+      scoreMomentum,
+      scoreVolatility,
+      scorePattern,
+      confidence: setup.confidence,
+      biasScoreAtTime: setup.biasScore,
+      eventContext: null,
+      isSetupOfTheDay: index === 0,
+      createdAt,
+      riskReward: setup.riskReward,
+    };
+  });
+
+  const setups: Setup[] = mockSetups.map((setup) => ({
+    ...setup,
+    snapshotId,
+    snapshotCreatedAt: createdAt,
+  }));
+
+  return {
+    snapshot: {
+      id: snapshotId,
+      snapshotTime: snapshotTime.toISOString(),
+      label: "mock",
+      version: "mock",
+      dataMode: "mock",
+      generatedMs: null,
+      notes: null,
+      createdAt,
+    },
+    items,
+    setups,
+  };
+}
+
 export function PerceptionTodayPanel(): JSX.Element {
   const t = useT();
+  const isMockMode = isPerceptionMockMode();
   const [data, setData] = useState<PerceptionTodayResponse | null>(null);
   const [setups, setSetups] = useState<Setup[] | null>(null);
   const [status, setStatus] = useState<"loading" | "error" | "empty" | "ready">("loading");
@@ -85,6 +150,16 @@ export function PerceptionTodayPanel(): JSX.Element {
   useEffect(() => {
     let isMounted = true;
     const load = async (): Promise<void> => {
+      if (isMockMode) {
+        const mockPayload = createMockPerceptionTodayResponse();
+        if (!isMounted) {
+          return;
+        }
+        setData(mockPayload);
+        setSetups(mockPayload.setups);
+        setStatus(mockPayload.items.length > 0 ? "ready" : "empty");
+        return;
+      }
       setStatus("loading");
       setErrorMessage(null);
       try {
@@ -109,7 +184,7 @@ export function PerceptionTodayPanel(): JSX.Element {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isMockMode]);
 
   const heroItem = useMemo<PerceptionTodayItem | null>(() => {
     if (!data) {
@@ -177,8 +252,9 @@ export function PerceptionTodayPanel(): JSX.Element {
   const heroDirectionMeta = heroItem ? DIRECTION_META[heroItem.direction] : DIRECTION_META.neutral;
   const HeroDirectionIcon = heroDirectionMeta.Icon;
 
-  const modeKey = data?.snapshot.dataMode?.toLowerCase() === "live" ? "live" : "mock";
-  const modeLabel = t(`perception.today.dataMode.${modeKey}`);
+  const modeKey =
+    isMockMode || data?.snapshot.dataMode?.toLowerCase() === "mock" ? "mock" : "live";
+  const modeLabel = t(`perception.today.mode.${modeKey}`);
   const modeAccent =
     modeKey === "live"
       ? "text-emerald-300 border-emerald-500/60 bg-emerald-500/10"

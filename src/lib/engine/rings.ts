@@ -69,6 +69,7 @@ function computeRegimeComponent(trend?: number | null, momentum?: number | null)
 }
 
 function computePatternComponent(breakdown?: Breakdown, patternType?: string | null): number {
+  void patternType;
   if (breakdown && breakdown.pattern !== undefined && breakdown.pattern !== null) {
     return clamp(Math.round(Math.max(30, Math.min(80, breakdown.pattern))), 0, 100);
   }
