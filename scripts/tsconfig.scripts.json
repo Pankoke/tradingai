@@ -3,8 +3,8 @@
   "compilerOptions": {
     "module": "commonjs",
     "moduleResolution": "node",
-    "allowImportingTsExtensions": true,
     "noEmit": true
   },
-  "include": ["./dev/**/*.ts", "../src/**/*.ts"]
+  "include": ["./dev/**/*.ts", "../src/**/*.ts"],
+  "exclude": ["../node_modules"]
 }
