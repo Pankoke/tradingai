@@ -62,6 +62,7 @@ export function RingInsights({
   direction,
   aiSummary,
   ringAiSummary,
+  eventContext,
 }: RingInsightsProps): JSX.Element {
   const t = useT();
   const [expanded, setExpanded] = useState(false);
