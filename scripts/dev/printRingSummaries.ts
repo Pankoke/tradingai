@@ -1,6 +1,6 @@
-import { buildRingAiSummaryForSetup } from "../src/lib/engine/modules/ringAiSummary";
-import { maybeEnhanceRingAiSummaryWithLLM } from "../src/server/ai/ringSummaryOpenAi";
-import type { RiskRewardSummary, Setup } from "../src/lib/engine/types";
+import { buildRingAiSummaryForSetup } from "../src/lib/engine/modules/ringAiSummary.js";
+import { maybeEnhanceRingAiSummaryWithLLM } from "../src/server/ai/ringSummaryOpenAi.js";
+import type { RiskRewardSummary, Setup } from "../src/lib/engine/types.js";
 
 type CaseInput = {
   name: string;
