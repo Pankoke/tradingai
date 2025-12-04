@@ -109,6 +109,7 @@ Keep it concise, mention numbers, separate drivers/risks/conflicts where relevan
       shortSummary: newShort,
       longSummary: newLong.length ? newLong : heuristic.longSummary,
       keyFacts: heuristic.keyFacts,
+      source: "llm",
     };
   } catch (error) {
     console.warn("[RingAiSummary:llm] Falling back to heuristic", error);

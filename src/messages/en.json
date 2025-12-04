@@ -208,6 +208,8 @@
   "perception.rings.insights.aiSummaryTitle": "AI summary",
   "perception.rings.insights.showMore": "Show more",
   "perception.rings.insights.showLess": "Show less",
+  "perception.rings.insights.source.heuristic": "Heuristic",
+  "perception.rings.insights.source.llm": "AI refined",
   "features.title": "What is the Perception Lab?",
   "features.block1.title": "AI-powered analysis",
   "features.block1.text": "Rule-based system plus AI for precise market assessments.",

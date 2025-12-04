@@ -109,11 +109,20 @@ export function RingInsights({
 
   return (
     <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-inner shadow-black/10">
-      <div className="mb-2">
-        <p className="text-[0.6rem] uppercase tracking-[0.25em] text-slate-400">
-          {t("perception.rings.insights.title")}
-        </p>
-        <p className="text-sm text-slate-300">{t("perception.rings.insights.subtitle")}</p>
+      <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-[0.6rem] uppercase tracking-[0.25em] text-slate-400">
+            {t("perception.rings.insights.title")}
+          </p>
+          <p className="text-sm text-slate-300">{t("perception.rings.insights.subtitle")}</p>
+        </div>
+        <div>
+          <span className="inline-flex items-center rounded-full border border-slate-700 bg-slate-800 px-2.5 py-1 text-[11px] font-semibold text-slate-200">
+            {summaryData?.source === "llm"
+              ? t("perception.rings.insights.source.llm")
+              : t("perception.rings.insights.source.heuristic")}
+          </span>
+        </div>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         {items.map((item) => (

@@ -125,5 +125,6 @@ export function buildRingAiSummaryForSetup(params: SummaryInput): RingAiSummary 
     shortSummary,
     longSummary: longParts.join(" "),
     keyFacts,
+    source: "heuristic",
   };
 }

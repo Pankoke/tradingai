@@ -53,6 +53,7 @@ export const ringAiSummarySchema = z.object({
       value: z.string(),
     }),
   ),
+  source: z.enum(["heuristic", "llm"]).optional(),
 });
 export type RingAiSummary = z.infer<typeof ringAiSummarySchema>;
 

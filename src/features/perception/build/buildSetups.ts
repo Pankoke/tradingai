@@ -28,6 +28,7 @@ type BuildParams = {
 };
 
 const SNAPSHOT_VERSION = "v1.0.0";
+const MAX_LLM_SUMMARIES_PER_SNAPSHOT = 5;
 
 function deriveSnapshotLabel(date: Date): "morning" | "us_open" | "eod" | null {
   const hour = date.getUTCHours();
@@ -62,6 +63,16 @@ export async function buildAndStorePerceptionSnapshot(
   const generatedMs = Date.now() - start;
 
   const snapshotId = createId("snapshot");
+
+  // Limit LLM usage to top-N setups per snapshot; always include setup of the day.
+  const llmTargetIds = new Set<string>(
+    engineResult.setups
+      .slice(0, MAX_LLM_SUMMARIES_PER_SNAPSHOT)
+      .map((s) => s.id),
+  );
+  if (engineResult.setups[0]) {
+    llmTargetIds.add(engineResult.setups[0].id);
+  }
 
   const activeAssets = await getActiveAssets();
   const symbolToAssetId = new Map(activeAssets.map((asset) => [asset.symbol, asset.id]));
@@ -106,18 +117,20 @@ export async function buildAndStorePerceptionSnapshot(
       rings,
     });
 
-    const ringAiSummary = buildRingAiSummaryForSetup({
-      setup: {
-        ...setup,
-        rings,
-        confidence,
-        riskReward: setup.riskReward,
-      },
-    });
-    const enhancedRingAiSummary = await maybeEnhanceRingAiSummaryWithLLM({
-      setup: { ...setup, rings, riskReward: setup.riskReward },
-      heuristic: ringAiSummary,
-    });
+      const ringAiSummary = buildRingAiSummaryForSetup({
+        setup: {
+          ...setup,
+          rings,
+          confidence,
+          riskReward: setup.riskReward,
+        },
+      });
+      const enhancedRingAiSummary = llmTargetIds.has(setup.id)
+        ? await maybeEnhanceRingAiSummaryWithLLM({
+            setup: { ...setup, rings, riskReward: setup.riskReward },
+            heuristic: ringAiSummary,
+          })
+        : ringAiSummary;
 
     const assetRank = (itemRankCounters.get(setup.symbol) ?? 0) + 1;
     itemRankCounters.set(setup.symbol, assetRank);
