@@ -49,6 +49,12 @@ type RingDefinition = {
 };
 
 type PerceptionTodayItem = PerceptionTodayResponse["items"][number];
+type EventContextLite =
+  | {
+      topEvents?: Array<{ title?: string; scheduledAt?: string }> | null;
+    }
+  | null
+  | undefined;
 
 function formatScore(value: number | null): string {
   if (value === null || Number.isNaN(value)) {
@@ -80,10 +86,9 @@ function buildEventTooltip(
   const top = eventContext?.topEvents?.[0];
   const contextLine =
     top && translate
-      ? translate("perception.rings.tooltip.eventContext", {
-          title: top.title ?? "",
-          time: formatEventTime(top.scheduledAt),
-        })
+      ? translate("perception.rings.tooltip.eventContext")
+          .replace("{title}", top.title ?? "")
+          .replace("{time}", formatEventTime(top.scheduledAt))
       : null;
 
   return (
@@ -294,6 +299,10 @@ export function PerceptionTodayPanel(): JSX.Element {
   const snapshotAgeLabel = snapshotRelative
     ? t("perception.today.snapshotAge").replace("{relative}", snapshotRelative)
     : null;
+  const heroEventContext: EventContextLite =
+    (heroItem?.eventContext as EventContextLite) ??
+    (heroSetup as { eventContext?: EventContextLite })?.eventContext ??
+    null;
 
   useEffect(() => {
     if (typeof window === "undefined" || process.env.NODE_ENV === "production") return;
@@ -310,9 +319,9 @@ export function PerceptionTodayPanel(): JSX.Element {
       eventScore?: number | null,
     ) => {
       const eventContext =
-        (item?.eventContext as { topEvents?: Array<{ title?: string; severity?: string; scheduledAt?: string }> }) ??
-        (setup as { eventContext?: { topEvents?: Array<{ title?: string; severity?: string; scheduledAt?: string }> } })
-          ?.eventContext;
+        (item?.eventContext as EventContextLite) ??
+        (setup as { eventContext?: EventContextLite })?.eventContext ??
+        null;
       if (!eventContext?.topEvents?.length) return;
       entries.push({
         setupId: item?.setupId ?? setup?.id,
@@ -325,9 +334,9 @@ export function PerceptionTodayPanel(): JSX.Element {
     collect(heroItem, heroSetup ?? null, heroBaseRings.eventScore);
     additionalEntries.forEach(({ item, setup, rings }) => {
       const eventContext =
-        (item.eventContext as { topEvents?: Array<{ title?: string; severity?: string; scheduledAt?: string }> }) ??
-        (setup as { eventContext?: { topEvents?: Array<{ title?: string; severity?: string; scheduledAt?: string }> } })
-          ?.eventContext;
+        (item.eventContext as EventContextLite) ??
+        (setup as { eventContext?: EventContextLite })?.eventContext ??
+        null;
       if (!eventContext?.topEvents?.length) return;
       entries.push({
         setupId: item.setupId,
@@ -445,8 +454,7 @@ export function PerceptionTodayPanel(): JSX.Element {
                       ring.key === "eventScore"
                         ? buildEventTooltip(
                             ring.tooltip,
-                            (heroItem?.eventContext as unknown as { topEvents?: unknown[] }) ??
-                              (heroSetup as { eventContext?: unknown })?.eventContext,
+                            heroEventContext,
                             t,
                           )
                         : ring.tooltip
@@ -525,18 +533,18 @@ export function PerceptionTodayPanel(): JSX.Element {
                                   key={ring.label}
                                   label={ring.label}
                                   value={rings[ring.key]}
-                                  tone={ring.tone}
-                                  tooltip={
-                                    ring.key === "eventScore"
-                                      ? buildEventTooltip(
-                                          ring.tooltip,
-                                          (item.eventContext as unknown as { topEvents?: unknown[] }) ??
-                                            (setup as { eventContext?: unknown })?.eventContext,
-                                          t,
-                                        )
-                                      : ring.tooltip
-                                  }
-                                />
+                              tone={ring.tone}
+                              tooltip={
+                                ring.key === "eventScore"
+                                  ? buildEventTooltip(
+                                      ring.tooltip,
+                                      (item.eventContext as EventContextLite) ??
+                                        (setup as { eventContext?: EventContextLite })?.eventContext,
+                                      t,
+                                    )
+                                  : ring.tooltip
+                              }
+                            />
                               ))}
                             </div>
                             {setup ? (

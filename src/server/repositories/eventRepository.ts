@@ -3,8 +3,8 @@ import { db } from "../db/db";
 import { events } from "../db/schema/events";
 import { excluded } from "../db/sqlHelpers";
 
-type Event = typeof events["$inferSelect"];
-type EventInput = typeof events["$inferInsert"];
+export type Event = typeof events["$inferSelect"];
+export type EventInput = typeof events["$inferInsert"];
 
 export async function getEventsInRange(params: {
   from: Date;
