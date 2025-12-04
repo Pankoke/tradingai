@@ -1,5 +1,5 @@
 import { db } from "../db/db";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { perceptionSnapshotItems } from "../db/schema/perceptionSnapshotItems";
 import { perceptionSnapshots } from "../db/schema/perceptionSnapshots";
 import { excluded } from "../db/sqlHelpers";
@@ -62,6 +62,9 @@ export async function insertSnapshotWithItems(params: {
   snapshot: PerceptionSnapshotInput;
   items: PerceptionSnapshotItemInput[];
 }): Promise<void> {
+  // Ensure new JSONB columns exist in legacy DBs before inserting
+  await db.execute(sql`ALTER TABLE perception_snapshot_items ADD COLUMN IF NOT EXISTS ring_ai_summary JSONB;`);
+
   await db.transaction(async (tx) => {
     await tx
       .insert(perceptionSnapshots)
