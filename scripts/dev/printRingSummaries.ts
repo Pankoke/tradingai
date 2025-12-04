@@ -1,6 +1,6 @@
-import { buildRingAiSummaryForSetup } from "../src/lib/engine/modules/ringAiSummary";
-import { maybeEnhanceRingAiSummaryWithLLM } from "../src/server/ai/ringSummaryOpenAi";
-import type { RiskRewardSummary, Setup } from "../src/lib/engine/types";
+import { buildRingAiSummaryForSetup } from "../../src/lib/engine/modules/ringAiSummary";
+import { maybeEnhanceRingAiSummaryWithLLM } from "../../src/server/ai/ringSummaryOpenAi";
+import type { RiskRewardSummary, Setup } from "../../src/lib/engine/types";
 
 type CaseInput = {
   name: string;
@@ -62,7 +62,7 @@ function makeSetup(input: CaseInput): Setup {
     },
     snapshotId: null,
     snapshotCreatedAt: null,
-    eventContext: null,
+    eventContext: undefined,
     ringAiSummary: null,
   };
 }

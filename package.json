@@ -10,7 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "dev:ring-summaries": "ts-node --project scripts/tsconfig.scripts.json scripts/dev/printRingSummaries.ts"
-  },
+    },
   "dependencies": {
     "@clerk/nextjs": "^6.35.5",
     "@neondatabase/serverless": "^1.0.2",
@@ -40,6 +40,7 @@
     "tailwindcss-animate": "^1.0.7",
     "tw-animate-css": "^1.4.0",
     "typescript": "^5",
-    "vitest": "^1.6.0"
+    "vitest": "^1.6.0",
+    "ts-node": "^10.9.2"
   }
 }
