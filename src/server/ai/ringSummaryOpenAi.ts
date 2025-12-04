@@ -71,8 +71,7 @@ Heuristic shortSummary: ${heuristic.shortSummary}
 Heuristic longSummary: ${heuristic.longSummary}
 Heuristic keyFacts: ${heuristic.keyFacts.map((k) => `${k.label}: ${k.value}`).join("; ")}
 
-Task: Provide a refined short headline (1 sentence) and an enriched long summary (2-3 sentences) for traders. 
-Keep it concise, mention numbers, separate drivers/risks/conflicts where relevant. Output only plain text (no JSON).
+Task: Provide a refined short headline (1 sentence) and an enriched long summary (2-3 sentences) for traders. Use heuristic signals; do not contradict buckets. Headline + long summary must mention: drivers, risks, conflicts with numbers. If trend>=70 and bias>=65, explicitly state Drivers: high trend + high bias. If event is medium/high, call out event risk. If orderflow<=40, call it weak flow/positioning. If high trend/bias but weak flow, add a Conflict sentence. If RRR>=2 or Risk%>2, note that as positive (RRR) or risk (risk%). Output only plain text (no JSON).
           `,
         },
       ],

@@ -61,6 +61,7 @@ export function buildRingAiSummaryForSetup(params: SummaryInput): RingAiSummary 
 
   const risks: string[] = [];
   if (buckets.event === "high") risks.push(`Event risk elevated (${Math.round(setup.rings.eventScore)})`);
+  else if (buckets.event === "medium") risks.push(`Event risk moderate (${Math.round(setup.rings.eventScore)})`);
   const rrr = params.setup.riskReward?.rrr;
   const riskPct = params.setup.riskReward?.riskPercent;
   const volLabel = params.setup.riskReward?.volatilityLabel;
@@ -72,6 +73,9 @@ export function buildRingAiSummaryForSetup(params: SummaryInput): RingAiSummary 
   if (buckets.trend === "high" && buckets.sentiment === "low") conflicts.push("Strong trend but weak sentiment");
   if (dir.toLowerCase() === "long" && buckets.event === "high") conflicts.push("Bullish bias vs. high event risk");
   if (drivers.length >= 2 && buckets.confidence !== "high") conflicts.push("Strong drivers but only medium/low confidence");
+  if (buckets.orderflow === "low" && (buckets.trend === "high" || buckets.bias === "high")) {
+    conflicts.push("Weak orderflow against strong directional drivers");
+  }
 
   const keyFacts: { label: string; value: string }[] = [];
   if (drivers.length) {
