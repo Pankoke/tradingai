@@ -191,10 +191,10 @@ class LivePerceptionDataSource implements PerceptionDataSource {
       (row): row is BiasDomainModel & { symbol: string; timeframe: string } => row !== null,
     );
 
-    const entries = filtered.map((bias) => ({
+    const entries: BiasSnapshot["entries"] = filtered.map((bias) => ({
       symbol: bias.symbol,
       timeframe: bias.timeframe,
-      direction: bias.biasScore > 0 ? "Bullish" : bias.biasScore < 0 ? "Bearish" : "Neutral",
+      direction: bias.biasScore > 0 ? "Bullish" as const : bias.biasScore < 0 ? "Bearish" as const : "Neutral",
       confidence: bias.confidence,
       biasScore: bias.biasScore,
       comment: "",
