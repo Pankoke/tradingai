@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
 import { setPerceptionSnapshot } from "@/src/lib/cache/perceptionCache";
 import { addPerceptionHistoryEntry } from "@/src/lib/cache/perceptionHistory";
-import { fetchTodayEvents, fetchTodayBiasSnapshot } from "@/src/lib/api/eventsBiasClient";
 import type { PerceptionSnapshot } from "@/src/lib/engine/types";
 import { buildAndStorePerceptionSnapshot } from "@/src/features/perception/build/buildSetups";
 
@@ -20,11 +19,7 @@ type CronErrorBody = {
 export async function GET(): Promise<NextResponse<CronSuccessBody | CronErrorBody>> {
   try {
     const snapshot: PerceptionSnapshot = await buildPerceptionSnapshot();
-    const [events, biasSnapshot] = await Promise.all([
-      fetchTodayEvents().catch(() => []),
-      fetchTodayBiasSnapshot().catch(() => null),
-    ]);
-    addPerceptionHistoryEntry({ snapshot, events, biasSnapshot });
+    addPerceptionHistoryEntry({ snapshot, events: [], biasSnapshot: null });
     setPerceptionSnapshot(snapshot);
     await buildAndStorePerceptionSnapshot({ snapshotTime: new Date(snapshot.generatedAt) });
 

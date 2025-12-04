@@ -66,6 +66,20 @@ export const setupSchema = z.object({
   accessLevel: accessLevelSchema,
   rings: setupRingsSchema,
   riskReward: riskRewardSchema,
+  eventContext: z
+    .object({
+      topEvents: z.array(
+        z.object({
+          id: z.string(),
+          title: z.string(),
+          category: z.string(),
+          severity: z.string(),
+          scheduledAt: z.string(),
+          source: z.string().optional(),
+        }),
+      ),
+    })
+    .optional(),
 });
 
 export type Setup = z.infer<typeof setupSchema>;

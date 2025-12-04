@@ -124,6 +124,7 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
       balanceScore,
       rings,
       levelDebug,
+      eventContext: eventResult.context,
     };
   });
 

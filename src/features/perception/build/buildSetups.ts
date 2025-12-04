@@ -122,7 +122,7 @@ export async function buildAndStorePerceptionSnapshot(
       confidence,
       biasScore: setup.biasScore ?? null,
       biasScoreAtTime: setup.biasScore ?? null,
-      eventContext: null,
+      eventContext: setup.eventContext ?? null,
       riskReward: setup.riskReward,
       isSetupOfTheDay: items.length === 0,
       createdAt: snapshotTime,
