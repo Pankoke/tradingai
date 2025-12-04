@@ -27,7 +27,7 @@ export type HomepageSetup = {
   snapshotId?: string | null;
   snapshotCreatedAt?: string | null;
   rings: Setup["rings"];
-  eventContext?: Setup["eventContext"];
+  eventContext?: Setup["eventContext"] | null;
 };
 
 export type HomepageSetups = {
