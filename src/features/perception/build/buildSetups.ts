@@ -18,6 +18,7 @@ import {
   type PerceptionDataMode,
 } from "@/src/lib/config/perceptionDataMode";
 import { buildRingAiSummaryForSetup } from "@/src/lib/engine/modules/ringAiSummary";
+import { maybeEnhanceRingAiSummaryWithLLM } from "@/src/server/ai/ringSummaryOpenAi";
 
 export type PerceptionSnapshotEngineResult = PerceptionSnapshot;
 
@@ -66,6 +67,7 @@ export async function buildAndStorePerceptionSnapshot(
   const symbolToAssetId = new Map(activeAssets.map((asset) => [asset.symbol, asset.id]));
   const itemRankCounters = new Map<string, number>();
   const items: PerceptionSnapshotItemInput[] = [];
+  const updatedSetups: Setup[] = [];
   let overallRank = 0;
   for (const setup of engineResult.setups) {
     // Resolve assetId before any usage (rings / logs) to avoid TDZ issues.
@@ -112,6 +114,10 @@ export async function buildAndStorePerceptionSnapshot(
         riskReward: setup.riskReward,
       },
     });
+    const enhancedRingAiSummary = await maybeEnhanceRingAiSummaryWithLLM({
+      setup: { ...setup, rings, riskReward: setup.riskReward },
+      heuristic: ringAiSummary,
+    });
 
     const assetRank = (itemRankCounters.get(setup.symbol) ?? 0) + 1;
     itemRankCounters.set(setup.symbol, assetRank);
@@ -134,14 +140,21 @@ export async function buildAndStorePerceptionSnapshot(
       biasScoreAtTime: setup.biasScore ?? null,
       eventContext: setup.eventContext ?? null,
       riskReward: setup.riskReward,
-      ringAiSummary,
+      ringAiSummary: enhancedRingAiSummary,
       isSetupOfTheDay: items.length === 0,
       createdAt: snapshotTime,
+    });
+
+    updatedSetups.push({
+      ...setup,
+      rings,
+      confidence,
+      ringAiSummary: enhancedRingAiSummary,
     });
   }
 
   const isoCreatedAt = snapshotTime.toISOString();
-  const setupsWithMetadata = engineResult.setups.map((setup) => ({
+  const setupsWithMetadata = updatedSetups.map((setup) => ({
     ...setup,
     snapshotId,
     snapshotCreatedAt: isoCreatedAt,
