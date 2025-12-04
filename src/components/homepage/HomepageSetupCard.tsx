@@ -149,6 +149,7 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
         timeframe={setup.timeframe}
         direction={setup.direction}
         ringAiSummary={setup.ringAiSummary ?? null}
+        eventContext={setup.eventContext ?? null}
       />
 
   <div className="mt-4 grid gap-4 text-sm md:grid-cols-3">

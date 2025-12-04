@@ -2,7 +2,7 @@
 
 import { useState, type JSX } from "react";
 import { useT } from "@/src/lib/i18n/ClientProvider";
-import type { RingAiSummary } from "@/src/lib/engine/types";
+import type { RingAiSummary, Setup } from "@/src/lib/engine/types";
 
 type RingInsightsProps = {
   rings: {
@@ -18,6 +18,7 @@ type RingInsightsProps = {
   direction?: "Long" | "Short" | "Neutral" | null;
   aiSummary?: string | null;
   ringAiSummary?: RingAiSummary | null;
+  eventContext?: Setup["eventContext"];
 };
 
 type Bucket = "low" | "medium" | "high";
@@ -37,6 +38,23 @@ function formatInsightText(
   return Object.entries(vars).reduce((acc, [k, v]) => acc.replace(`{${k}}`, v), template);
 }
 
+function formatEventTiming(isoDate: string, translate: (key: string) => string): string {
+  const target = new Date(isoDate);
+  const now = new Date();
+  const diffMs = target.getTime() - now.getTime();
+  const diffMinutes = Math.round(diffMs / 60000);
+
+  if (Number.isFinite(diffMinutes) && Math.abs(diffMinutes) <= 24 * 60) {
+    const hours = Math.max(0, Math.round(diffMinutes / 60));
+    if (diffMinutes >= 0) {
+      return translate("perception.rings.insights.event.inHours").replace("{hours}", hours.toString());
+    }
+    return translate("perception.rings.insights.event.hoursAgo").replace("{hours}", Math.abs(hours).toString());
+  }
+
+  return target.toLocaleString();
+}
+
 export function RingInsights({
   rings,
   assetLabel,
@@ -53,6 +71,8 @@ export function RingInsights({
     timeframe: timeframe ?? t("perception.rings.insights.timeframeFallback"),
     direction: direction ?? t("perception.rings.insights.directionFallback"),
   };
+
+  const topEvent = eventContext?.topEvents?.[0];
 
   const items = [
     {
@@ -105,10 +125,20 @@ export function RingInsights({
               <span className="font-semibold text-slate-200">{Math.round(item.score)}%</span>
             </div>
             <p className="mt-1 text-xs text-slate-200">
-              {formatInsightText(t, `perception.rings.insights.${item.key}.${item.bucket}`, {
-                ...commonVars,
-                score: Math.round(item.score).toString(),
-              })}
+              {item.key === "event" && topEvent
+                ? formatInsightText(t, "perception.rings.insights.event.context", {
+                    ...commonVars,
+                    score: Math.round(item.score).toString(),
+                    title: topEvent.title ?? t("perception.rings.insights.event.noTitle"),
+                    time: topEvent.scheduledAt
+                      ? formatEventTiming(topEvent.scheduledAt, t)
+                      : t("perception.rings.insights.event.noTime"),
+                    severity: topEvent.severity ?? "n/a",
+                  })
+                : formatInsightText(t, `perception.rings.insights.${item.key}.${item.bucket}`, {
+                    ...commonVars,
+                    score: Math.round(item.score).toString(),
+                  })}
             </p>
           </div>
         ))}

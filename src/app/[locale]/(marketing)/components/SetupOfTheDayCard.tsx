@@ -135,6 +135,7 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
             timeframe={setup.timeframe}
             direction={setup.direction}
             ringAiSummary={setup.ringAiSummary ?? null}
+            eventContext={setup.eventContext ?? null}
           />
 
         <LevelDebugBlock
