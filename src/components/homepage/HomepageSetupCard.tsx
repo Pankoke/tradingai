@@ -10,6 +10,7 @@ import { formatAssetLabel } from "@/src/lib/formatters/asset";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import { BigGauge, SmallGauge } from "@/src/components/perception/RingGauges";
 import { buildEventTooltip } from "@/src/features/perception/ui/eventTooltip";
+import { RingInsights } from "@/src/components/perception/RingInsights";
 
 type Props = {
   setup: HomepageSetup;
@@ -59,6 +60,7 @@ function formatEntryZoneRange(value: { from: number | null; to: number | null })
 export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): JSX.Element {
   const t = useT();
   const assetHeadline = formatAssetLabel(setup.assetId, setup.symbol);
+  const assetLabel = assetHeadline;
   const rings = setup.rings;
   const smallRingDefinitions = [
     {
@@ -140,6 +142,8 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
           />
         ))}
       </div>
+
+      <RingInsights rings={rings} assetLabel={assetLabel} timeframe={setup.timeframe} direction={setup.direction} />
 
   <div className="mt-4 grid gap-4 text-sm md:grid-cols-3">
         <div className={detailBoxClass}>

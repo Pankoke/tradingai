@@ -14,6 +14,7 @@ import { BigGauge, SmallGauge } from "@/src/components/perception/RingGauges";
 import { formatNumberText, formatRangeText } from "@/src/lib/formatters/levels";
 import { RiskRewardBlock } from "@/src/components/perception/RiskRewardBlock";
 import { buildEventTooltip } from "@/src/features/perception/ui/eventTooltip";
+import { RingInsights } from "@/src/components/perception/RingInsights";
 
 type SetupOfTheDayCardProps = {
   setup: SetupCardSetup;
@@ -48,6 +49,7 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
   const meta = getAssetMeta(setup.assetId, setup.symbol);
   const headline = formatAssetLabel(setup.assetId, setup.symbol);
   const rings = setup.rings;
+  const assetLabel = formatAssetLabel(setup.assetId, setup.symbol);
   const compactRings = [
     {
       label: t("perception.today.scoreTrend"),
@@ -126,6 +128,13 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
       <div className="mt-4">
         <RiskRewardBlock riskReward={setup.riskReward ?? null} />
       </div>
+
+          <RingInsights
+            rings={rings}
+            assetLabel={assetLabel}
+            timeframe={setup.timeframe}
+            direction={setup.direction}
+          />
 
         <LevelDebugBlock
           category={setup.category ?? setup.levelDebug?.category}
