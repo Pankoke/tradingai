@@ -1,12 +1,12 @@
-import { buildRingAiSummaryForSetup } from "../src/lib/engine/modules/ringAiSummary";
-import { maybeEnhanceRingAiSummaryWithLLM } from "../src/server/ai/ringSummaryOpenAi";
-import type { RiskRewardSummary, Setup } from "../src/lib/engine/types";
+import { buildRingAiSummaryForSetup } from "../src/lib/engine/modules/ringAiSummary.ts";
+import { maybeEnhanceRingAiSummaryWithLLM } from "../src/server/ai/ringSummaryOpenAi.ts";
+import type { RiskRewardSummary, Setup } from "../src/lib/engine/types.ts";
 
 type CaseInput = {
   name: string;
   assetId: string;
   symbol: string;
-  direction: "Long" | "Short" | "Neutral";
+  direction: Setup["direction"];
   timeframe: string;
   trendScore: number;
   eventScore: number;
