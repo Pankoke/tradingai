@@ -65,23 +65,33 @@ function formatTimestamp(value: string): string {
   return date.toLocaleString();
 }
 
+function formatEventTime(value?: string | null): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+}
+
 function buildEventTooltip(
   baseTooltip: string,
   eventContext?: { topEvents?: Array<{ title?: string; scheduledAt?: string }> | null } | null,
-  formatFn?: (value: string) => string,
   translate?: (key: string) => string,
-): string {
+): JSX.Element {
   const top = eventContext?.topEvents?.[0];
-  if (!top) {
-    return baseTooltip;
-  }
-  const time =
-    top.scheduledAt && !Number.isNaN(new Date(top.scheduledAt).getTime())
-      ? formatFn?.(top.scheduledAt) ?? top.scheduledAt
-      : top.scheduledAt ?? "";
-  const template = translate ? translate("perception.rings.tooltip.eventContext") : "Next: {title} ({time})";
-  const extra = template.replace("{title}", top.title ?? "").replace("{time}", time);
-  return `${baseTooltip}\n${extra}`;
+  const contextLine =
+    top && translate
+      ? translate("perception.rings.tooltip.eventContext", {
+          title: top.title ?? "",
+          time: formatEventTime(top.scheduledAt),
+        })
+      : null;
+
+  return (
+    <div className="flex flex-col gap-1 text-left">
+      <p>{baseTooltip}</p>
+      {contextLine ? <p className="text-xs text-slate-300">{contextLine}</p> : null}
+    </div>
+  );
 }
 
 type StatusMessageProps = {
@@ -285,6 +295,57 @@ export function PerceptionTodayPanel(): JSX.Element {
     ? t("perception.today.snapshotAge").replace("{relative}", snapshotRelative)
     : null;
 
+  useEffect(() => {
+    if (typeof window === "undefined" || process.env.NODE_ENV === "production") return;
+    const entries: Array<{
+      setupId?: string;
+      assetId?: string;
+      eventScore?: number | null;
+      topEvent?: { title?: string; severity?: string; scheduledAt?: string };
+    }> = [];
+
+    const collect = (
+      item?: PerceptionTodayItem | null,
+      setup?: Setup | null,
+      eventScore?: number | null,
+    ) => {
+      const eventContext =
+        (item?.eventContext as { topEvents?: Array<{ title?: string; severity?: string; scheduledAt?: string }> }) ??
+        (setup as { eventContext?: { topEvents?: Array<{ title?: string; severity?: string; scheduledAt?: string }> } })
+          ?.eventContext;
+      if (!eventContext?.topEvents?.length) return;
+      entries.push({
+        setupId: item?.setupId ?? setup?.id,
+        assetId: item?.assetId ?? setup?.assetId,
+        eventScore: eventScore ?? setup?.rings?.eventScore ?? null,
+        topEvent: eventContext.topEvents[0],
+      });
+    };
+
+    collect(heroItem, heroSetup ?? null, heroBaseRings.eventScore);
+    additionalEntries.forEach(({ item, setup, rings }) => {
+      const eventContext =
+        (item.eventContext as { topEvents?: Array<{ title?: string; severity?: string; scheduledAt?: string }> }) ??
+        (setup as { eventContext?: { topEvents?: Array<{ title?: string; severity?: string; scheduledAt?: string }> } })
+          ?.eventContext;
+      if (!eventContext?.topEvents?.length) return;
+      entries.push({
+        setupId: item.setupId,
+        assetId: item.assetId,
+        eventScore: rings.eventScore,
+        topEvent: eventContext.topEvents[0],
+      });
+    });
+
+    if (entries.length) {
+      // Debug-Hinweis:
+      // Im Dev-Mode kannst du in der Browser-Konsole nach "[EventRing]" filtern,
+      // um zu sehen, welche Events im Event-Ring-Kontext hängen.
+      // eslint-disable-next-line no-console
+      console.debug("[EventRing]", entries);
+    }
+  }, [additionalEntries, heroBaseRings.eventScore, heroItem, heroSetup]);
+
   return (
     <section>
       <div className="mt-6 rounded-2xl border border-slate-200 bg-gradient-to-br from-sky-50 via-white to-emerald-50 p-[1.5px] shadow-sm dark:border-transparent dark:from-sky-500/15 dark:via-transparent dark:to-emerald-500/10 dark:shadow-[0_0_25px_rgba(56,189,248,0.15)]">
@@ -386,7 +447,6 @@ export function PerceptionTodayPanel(): JSX.Element {
                             ring.tooltip,
                             (heroItem?.eventContext as unknown as { topEvents?: unknown[] }) ??
                               (heroSetup as { eventContext?: unknown })?.eventContext,
-                            formatTimestamp,
                             t,
                           )
                         : ring.tooltip
@@ -472,7 +532,6 @@ export function PerceptionTodayPanel(): JSX.Element {
                                           ring.tooltip,
                                           (item.eventContext as unknown as { topEvents?: unknown[] }) ??
                                             (setup as { eventContext?: unknown })?.eventContext,
-                                          formatTimestamp,
                                           t,
                                         )
                                       : ring.tooltip

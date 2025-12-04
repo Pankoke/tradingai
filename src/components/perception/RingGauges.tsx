@@ -1,7 +1,7 @@
 "use client";
 
 import { Tooltip } from "@/src/components/ui/tooltip";
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 
 type GaugeTone = "accent" | "green" | "teal" | "neutral";
 
@@ -9,7 +9,7 @@ export type SmallGaugeProps = {
   label?: string;
   value: number;
   tone?: GaugeTone;
-  tooltip?: string;
+  tooltip?: ReactNode;
 };
 
 export function SmallGauge({ label, value, tone = "accent", tooltip }: SmallGaugeProps): JSX.Element {
