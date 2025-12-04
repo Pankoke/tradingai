@@ -18,7 +18,7 @@ type RingInsightsProps = {
   direction?: "Long" | "Short" | "Neutral" | null;
   aiSummary?: string | null;
   ringAiSummary?: RingAiSummary | null;
-  eventContext?: Setup["eventContext"];
+  eventContext?: Setup["eventContext"] | null;
 };
 
 type Bucket = "low" | "medium" | "high";
