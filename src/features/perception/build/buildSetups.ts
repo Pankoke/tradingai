@@ -23,13 +23,6 @@ type BuildParams = {
 };
 
 const SNAPSHOT_VERSION = "v1.0.0";
-const isBiasDebug = process.env.DEBUG_BIAS === "1";
-const isServer = typeof window === "undefined";
-const logBiasDebug = (...args: unknown[]) => {
-  if (isBiasDebug && isServer) {
-    console.log(...args);
-  }
-};
 
 function deriveSnapshotLabel(date: Date): "morning" | "us_open" | "eod" | null {
   const hour = date.getUTCHours();
@@ -59,12 +52,6 @@ export async function buildAndStorePerceptionSnapshot(
   const snapshotTime = params.snapshotTime ?? new Date();
   const envMode = (process.env.NEXT_PUBLIC_PERCEPTION_DATA_MODE as PerceptionDataMode) ?? "mock";
   const mode: PerceptionDataMode = params.mode ?? envMode ?? "mock";
-
-  logBiasDebug("[BuildSetups:start]", {
-    snapshotTime: snapshotTime.toISOString(),
-    mode,
-    nodeEnv: process.env.NODE_ENV,
-  });
 
   const start = Date.now();
   const engineResult: PerceptionSnapshotEngineResult = await buildPerceptionSnapshot({ asOf: snapshotTime });
@@ -137,16 +124,6 @@ export async function buildAndStorePerceptionSnapshot(
       riskReward: setup.riskReward,
       isSetupOfTheDay: items.length === 0,
       createdAt: snapshotTime,
-    });
-
-    logBiasDebug("[BuildSetups:bias]", {
-      assetId,
-      setupId: setup.id,
-      symbol: setup.symbol,
-      timeframe: setup.timeframe,
-      direction: setup.direction,
-      biasScore: setup.biasScore,
-      biasScoreAtTime: setup.biasScore,
     });
   }
 

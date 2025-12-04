@@ -4,19 +4,6 @@ import type {
 } from "@/src/server/repositories/perceptionSnapshotRepository";
 import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
 
-const isBiasDebug = process.env.DEBUG_BIAS === "1";
-const isServer = typeof window === "undefined";
-
-function redactDbUrl(raw?: string | null) {
-  if (!raw) return null;
-  try {
-    const url = new URL(raw);
-    return { host: url.host, database: url.pathname.replace(/\//g, "") };
-  } catch {
-    return "invalid_url";
-  }
-}
-
 type ErrorBody = {
   error: string;
 };
@@ -32,14 +19,6 @@ function isSnapshotFromToday(snapshotTime: Date): boolean {
 }
 
 export async function GET(): Promise<NextResponse<PerceptionSnapshotWithItems | ErrorBody>> {
-  if (isBiasDebug && isServer) {
-    console.log("[PerceptionToday:handler]", {
-      mode: process.env.NEXT_PUBLIC_PERCEPTION_DATA_MODE,
-      nodeEnv: process.env.NODE_ENV,
-      db: redactDbUrl(process.env.DATABASE_URL),
-    });
-  }
-
   try {
     const { getLatestSnapshot } = await import(
       "@/src/server/repositories/perceptionSnapshotRepository"

@@ -5,14 +5,6 @@ export type BiasScoreResult = {
   biasScore: number;
 };
 
-const isBiasDebug = process.env.DEBUG_BIAS === "1";
-const isServer = typeof window === "undefined";
-const logBiasDebug = (...args: unknown[]) => {
-  if (isBiasDebug && isServer) {
-    console.log(...args);
-  }
-};
-
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
@@ -58,7 +50,6 @@ export function scoreFromBias(
   entryDirection: BiasDirection,
   entryConfidence: number,
   entryBiasScore?: number,
-  context?: { symbol?: string; timeframe?: string },
 ): number {
   const alignment = determineAlignment(direction, entryDirection);
   const strength = structuralStrength(entryConfidence);
@@ -76,33 +67,12 @@ export function scoreFromBias(
   const raw = baseDirectional + alignmentDelta + confidenceDelta;
   const score = clamp(Math.round(raw), 0, 100);
 
-  logBiasDebug("[BiasScoring:computed]", {
-    symbol: context?.symbol,
-    timeframe: context?.timeframe,
-    setupDirection: direction,
-    biasDirection: entryDirection,
-    entryConfidence,
-    entryBiasScore,
-    tilt,
-    structuralStrength: strength,
-    baseDirectional,
-    alignment,
-    alignmentDelta,
-    confidenceDelta,
-    score,
-  });
-
   return score;
 }
 
 export function applyBiasScoring(setup: Setup, biasSnapshot: BiasSnapshot): BiasScoreResult {
   const entry = findBiasEntry(setup, biasSnapshot);
   if (!entry) {
-    logBiasDebug("[BiasScoring:noEntry]", {
-      symbol: setup.symbol,
-      timeframe: setup.timeframe,
-      snapshotEntries: biasSnapshot.entries.length,
-    });
     return { biasScore: 50 };
   }
   const biasScore = scoreFromBias(
@@ -110,7 +80,6 @@ export function applyBiasScoring(setup: Setup, biasSnapshot: BiasSnapshot): Bias
     entry.direction,
     entry.confidence,
     entry.biasScore,
-    { symbol: setup.symbol, timeframe: setup.timeframe },
   );
   return { biasScore };
 }

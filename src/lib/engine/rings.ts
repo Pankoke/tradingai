@@ -43,14 +43,6 @@ type RingSource = {
   setupId?: string;
 };
 
-const isBiasDebug = process.env.DEBUG_BIAS === "1";
-const isServer = typeof window === "undefined";
-const logBiasDebug = (...args: unknown[]) => {
-  if (isBiasDebug && isServer) {
-    console.log(...args);
-  }
-};
-
 const PATTERN_MAP: Record<string, number> = {
   breakout: 85,
   "liquidity grab": 80,
@@ -369,15 +361,6 @@ function computeRingsFromSource(source: RingSource): SetupRings {
   const orderflowScore = resolveOrderflowScore(source);
   const confidenceScore = resolveConfidence(source);
 
-  logBiasDebug("[Rings:bias]", {
-    assetId: source.assetId,
-    symbol: source.symbol,
-    timeframe: source.timeframe,
-    setupId: source.setupId,
-    biasScore: source.biasScore,
-    biasScoreAtTime: source.biasScoreAtTime,
-    ringBias: biasScore,
-  });
   return {
     trendScore,
     eventScore,

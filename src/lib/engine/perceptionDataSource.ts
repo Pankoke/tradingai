@@ -23,14 +23,6 @@ export interface PerceptionDataSource {
   }): Promise<BiasSnapshot>;
 }
 
-const isBiasDebug = process.env.DEBUG_BIAS === "1";
-const isServer = typeof window === "undefined";
-const logBiasDebug = (...args: unknown[]) => {
-  if (isBiasDebug && isServer) {
-    console.log(...args);
-  }
-};
-
 const EVENT_CATEGORIES = ["macro", "crypto", "onchain", "technical", "other"] as const;
 type EventCategory = (typeof EVENT_CATEGORIES)[number];
 
@@ -83,15 +75,6 @@ class MockPerceptionDataSource implements PerceptionDataSource {
 
 class LivePerceptionDataSource implements PerceptionDataSource {
   private biasProvider = new DbBiasProvider();
-
-  constructor() {
-    logBiasDebug("[Bias:initProvider]", {
-      provider: "DbBiasProvider",
-      dataMode: "live",
-      nodeEnv: process.env.NODE_ENV,
-      debugBias: process.env.DEBUG_BIAS,
-    });
-  }
 
   private createDefaultRings(): Setup["rings"] {
     return {
@@ -199,15 +182,6 @@ class LivePerceptionDataSource implements PerceptionDataSource {
           timeframe: asset.timeframe as Timeframe,
         });
 
-        logBiasDebug("[BiasProvider:dataSource]", {
-          assetId: asset.assetId,
-          symbol: asset.symbol,
-          timeframe: asset.timeframe,
-          found: Boolean(result),
-          biasScore: result?.biasScore,
-          confidence: result?.confidence,
-        });
-
         if (!result) return null;
         return { ...result, symbol: asset.symbol, timeframe: asset.timeframe };
       }),
@@ -234,12 +208,6 @@ class LivePerceptionDataSource implements PerceptionDataSource {
             ),
           ).toISOString()
         : params.date.toISOString();
-
-    logBiasDebug("[BiasProvider:dataSource:aggregated]", {
-      assetsRequested: params.assets.map((a) => ({ assetId: a.assetId, symbol: a.symbol })),
-      entryCount: entries.length,
-      generatedAt,
-    });
 
     return {
       generatedAt,
@@ -310,13 +278,6 @@ export function createPerceptionDataSource(): PerceptionDataSource {
   if (mode === "live") {
     return new LivePerceptionDataSource();
   }
-
-  logBiasDebug("[Bias:initProvider]", {
-    provider: "MockPerceptionDataSource",
-    dataMode: mode,
-    nodeEnv: process.env.NODE_ENV,
-    debugBias: process.env.DEBUG_BIAS,
-  });
 
   return new MockPerceptionDataSource();
 }
