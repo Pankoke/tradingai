@@ -116,6 +116,7 @@ function toHomepageSetup(setup: Setup): HomepageSetup {
     snapshotCreatedAt: setup.snapshotCreatedAt ?? null,
     rings: setup.rings,
     riskReward: setup.riskReward,
+    eventContext: setup.eventContext ?? null,
   };
 }
 

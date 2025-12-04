@@ -151,7 +151,7 @@
   "perception.rings.tooltip.sentiment": "AI-rated market and news sentiment.",
   "perception.rings.tooltip.orderflow": "Capital flow derived from momentum and volatility.",
   "perception.rings.tooltip.confidence": "Overall confidence: how well all five rings align.",
-  "perception.rings.tooltip.eventContext": "Next: {title} ({time})",
+  "perception.rings.tooltip.eventContext": "Next: {{title}} ({{time}})",
   "perception.rings.explainerTitle": "The 5 Rings of the Perception Lab",
   "perception.rings.explainerHeadline": "Why the rings matter",
   "perception.rings.explainerIntro": "Each setup is evaluated through five rings that explain why a signal feels strong or weak.",

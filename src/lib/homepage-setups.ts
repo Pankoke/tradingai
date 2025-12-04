@@ -27,6 +27,7 @@ export type HomepageSetup = {
   snapshotId?: string | null;
   snapshotCreatedAt?: string | null;
   rings: Setup["rings"];
+  eventContext?: Setup["eventContext"];
 };
 
 export type HomepageSetups = {
@@ -93,6 +94,7 @@ function mapSetup(setup: Setup, timestamp: string): HomepageSetup {
     snapshotCreatedAt: setup.snapshotCreatedAt ?? timestamp,
     rings: setup.rings,
     riskReward: setup.riskReward,
+    eventContext: setup.eventContext ?? null,
   };
 }
 

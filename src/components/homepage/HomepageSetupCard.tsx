@@ -9,6 +9,7 @@ import { RiskRewardBlock } from "@/src/components/perception/RiskRewardBlock";
 import { formatAssetLabel } from "@/src/lib/formatters/asset";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import { BigGauge, SmallGauge } from "@/src/components/perception/RingGauges";
+import { buildEventTooltip } from "@/src/features/perception/ui/eventTooltip";
 
 type Props = {
   setup: HomepageSetup;
@@ -70,7 +71,7 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
       key: "eventScore" as const,
       label: t("perception.today.eventRing"),
       tone: "accent" as const,
-      tooltip: t("perception.rings.tooltip.event"),
+      tooltip: buildEventTooltip(t("perception.rings.tooltip.event"), setup.eventContext, t),
     },
     {
       key: "biasScore" as const,
@@ -173,10 +174,7 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
         rings={setup.rings}
         snapshotId={setup.snapshotId ?? null}
         snapshotCreatedAt={setup.snapshotCreatedAt ?? null}
-        eventContext={
-          (setup as { eventContext?: { topEvents?: Array<{ id?: string; title?: string; severity?: string; scheduledAt?: string; source?: string }> | null } })
-            .eventContext ?? null
-        }
+        eventContext={setup.eventContext ?? null}
       />
       <div className="mt-4">
         <RiskRewardBlock riskReward={setup.riskReward ?? null} />

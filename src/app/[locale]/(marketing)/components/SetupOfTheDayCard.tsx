@@ -13,6 +13,7 @@ import { formatAssetLabel, getAssetMeta } from "@/src/lib/formatters/asset";
 import { BigGauge, SmallGauge } from "@/src/components/perception/RingGauges";
 import { formatNumberText, formatRangeText } from "@/src/lib/formatters/levels";
 import { RiskRewardBlock } from "@/src/components/perception/RiskRewardBlock";
+import { buildEventTooltip } from "@/src/features/perception/ui/eventTooltip";
 
 type SetupOfTheDayCardProps = {
   setup: SetupCardSetup;
@@ -58,7 +59,7 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
       label: t("perception.today.eventRing"),
       value: rings.eventScore,
       tone: "accent" as const,
-      tooltip: t("perception.rings.tooltip.event"),
+      tooltip: buildEventTooltip(t("perception.rings.tooltip.event"), setup.eventContext, t),
     },
     {
       label: t("perception.today.biasRing"),
@@ -138,6 +139,7 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
           rings={setup.rings}
           snapshotId={setup.snapshotId ?? null}
           snapshotCreatedAt={setup.snapshotCreatedAt ?? null}
+          eventContext={setup.eventContext ?? null}
         />
 
       <div className="mt-4 flex justify-end">

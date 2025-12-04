@@ -151,7 +151,7 @@
   "perception.rings.tooltip.sentiment": "KI-bewertetes Markt- und News-Sentiment.",
   "perception.rings.tooltip.orderflow": "Kapitalfluss abgeleitet aus Momentum und Volatilität.",
   "perception.rings.tooltip.confidence": "Meta-Confidence: wie gut alle fünf Ringe zusammenpassen.",
-  "perception.rings.tooltip.eventContext": "Nächstes Event: {title} ({time})",
+  "perception.rings.tooltip.eventContext": "Nächstes Event: {{title}} ({{time}})",
   "perception.rings.explainerTitle": "Die 5 Wahrnehmungs-Ringe",
   "perception.rings.explainerHeadline": "Warum die Ringe wichtig sind",
   "perception.rings.explainerIntro": "Jeder Ring liefert eine weitere Perspektive auf das Setup, damit du ein mehrdimensionales Gefühl für Stärke bekommst.",
