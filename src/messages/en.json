@@ -201,6 +201,8 @@
   "perception.rings.insights.confidence.medium": "Confidence mid-level ({score}%). Signals align moderately.",
   "perception.rings.insights.confidence.high": "High confidence ({score}%). Rings agree — setup conviction is strong.",
   "perception.rings.insights.aiSummaryTitle": "AI summary",
+  "perception.rings.insights.showMore": "Show more",
+  "perception.rings.insights.showLess": "Show less",
   "features.title": "What is the Perception Lab?",
   "features.block1.title": "AI-powered analysis",
   "features.block1.text": "Rule-based system plus AI for precise market assessments.",

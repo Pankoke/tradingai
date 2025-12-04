@@ -191,6 +191,8 @@
   "perception.rings.insights.confidence.medium": "Confidence mittel ({score}%). Signale halbwegs ausgerichtet.",
   "perception.rings.insights.confidence.high": "Hohe Confidence ({score}%). Ringe stimmen überein — starke Setup-Überzeugung.",
   "perception.rings.insights.aiSummaryTitle": "KI-Zusammenfassung",
+  "perception.rings.insights.showMore": "Mehr anzeigen",
+  "perception.rings.insights.showLess": "Weniger anzeigen",
   "features.title": "Was ist das Perception Lab?",
   "features.block1.title": "KI-gestützte Analyse",
   "features.block1.text": "Regelbasiertes System plus KI für präzise Marktbeurteilungen.",

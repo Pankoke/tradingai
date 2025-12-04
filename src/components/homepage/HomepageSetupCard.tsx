@@ -143,7 +143,13 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
         ))}
       </div>
 
-      <RingInsights rings={rings} assetLabel={assetLabel} timeframe={setup.timeframe} direction={setup.direction} />
+      <RingInsights
+        rings={rings}
+        assetLabel={assetLabel}
+        timeframe={setup.timeframe}
+        direction={setup.direction}
+        ringAiSummary={setup.ringAiSummary ?? null}
+      />
 
   <div className="mt-4 grid gap-4 text-sm md:grid-cols-3">
         <div className={detailBoxClass}>

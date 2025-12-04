@@ -17,6 +17,7 @@ import {
   getPerceptionDataMode,
   type PerceptionDataMode,
 } from "@/src/lib/config/perceptionDataMode";
+import { buildRingAiSummaryForSetup } from "@/src/lib/engine/modules/ringAiSummary";
 
 export type PerceptionSnapshotEngineResult = PerceptionSnapshot;
 
@@ -103,6 +104,15 @@ export async function buildAndStorePerceptionSnapshot(
       rings,
     });
 
+    const ringAiSummary = buildRingAiSummaryForSetup({
+      setup: {
+        ...setup,
+        rings,
+        confidence,
+        riskReward: setup.riskReward,
+      },
+    });
+
     const assetRank = (itemRankCounters.get(setup.symbol) ?? 0) + 1;
     itemRankCounters.set(setup.symbol, assetRank);
     overallRank += 1;
@@ -124,6 +134,7 @@ export async function buildAndStorePerceptionSnapshot(
       biasScoreAtTime: setup.biasScore ?? null,
       eventContext: setup.eventContext ?? null,
       riskReward: setup.riskReward,
+      ringAiSummary,
       isSetupOfTheDay: items.length === 0,
       createdAt: snapshotTime,
     });
@@ -134,6 +145,7 @@ export async function buildAndStorePerceptionSnapshot(
     ...setup,
     snapshotId,
     snapshotCreatedAt: isoCreatedAt,
+    ringAiSummary: setup.ringAiSummary ?? null,
   }));
 
   const snapshot: PerceptionSnapshotInput = {

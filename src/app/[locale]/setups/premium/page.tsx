@@ -120,6 +120,7 @@ function toHomepageSetup(setup: Setup): HomepageSetup {
     rings: setup.rings,
     riskReward: setup.riskReward,
     eventContext: setup.eventContext ?? null,
+    ringAiSummary: setup.ringAiSummary ?? null,
   };
 }
 

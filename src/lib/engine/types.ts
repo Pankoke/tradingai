@@ -44,6 +44,18 @@ export const riskRewardSchema = z.object({
 });
 export type RiskRewardSummary = z.infer<typeof riskRewardSchema>;
 
+export const ringAiSummarySchema = z.object({
+  shortSummary: z.string(),
+  longSummary: z.string(),
+  keyFacts: z.array(
+    z.object({
+      label: z.string(),
+      value: z.string(),
+    }),
+  ),
+});
+export type RingAiSummary = z.infer<typeof ringAiSummarySchema>;
+
 export const setupSchema = z.object({
   id: z.string(),
   assetId: z.string(),
@@ -66,6 +78,7 @@ export const setupSchema = z.object({
   accessLevel: accessLevelSchema,
   rings: setupRingsSchema,
   riskReward: riskRewardSchema,
+  ringAiSummary: ringAiSummarySchema.nullable().optional(),
   eventContext: z
     .object({
       topEvents: z.array(

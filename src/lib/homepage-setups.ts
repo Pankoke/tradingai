@@ -28,6 +28,7 @@ export type HomepageSetup = {
   snapshotCreatedAt?: string | null;
   rings: Setup["rings"];
   eventContext?: Setup["eventContext"] | null;
+  ringAiSummary?: Setup["ringAiSummary"] | null;
 };
 
 export type HomepageSetups = {
@@ -95,6 +96,7 @@ function mapSetup(setup: Setup, timestamp: string): HomepageSetup {
     rings: setup.rings,
     riskReward: setup.riskReward,
     eventContext: setup.eventContext ?? null,
+    ringAiSummary: setup.ringAiSummary ?? null,
   };
 }
 

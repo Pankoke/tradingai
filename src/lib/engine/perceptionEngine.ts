@@ -7,6 +7,7 @@ import { computeSetupBalanceScore, computeSetupConfidence, computeSetupScore } f
 import { perceptionSnapshotSchema, type AccessLevel, type PerceptionSnapshot, type Setup } from "@/src/lib/engine/types";
 import type { BiasSnapshot } from "@/src/lib/engine/eventsBiasTypes";
 import { computeRingsForSetup } from "@/src/lib/engine/rings";
+import { buildRingAiSummaryForSetup } from "@/src/lib/engine/modules/ringAiSummary";
 
 const ENGINE_VERSION = "0.1.0";
 const dataSource = createPerceptionDataSource();
@@ -103,30 +104,40 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
       sentimentResult.sentimentScore,
     ]);
 
-    const fallbackLevelDebug = base.levelDebug ?? {
-      bandPct: null,
-      referencePrice: null,
-      category: base.category ?? "unknown",
-      volatilityScore: null,
-    };
+      const fallbackLevelDebug = base.levelDebug ?? {
+        bandPct: null,
+        referencePrice: null,
+        category: base.category ?? "unknown",
+        volatilityScore: null,
+      };
     const levelDebug = {
       ...fallbackLevelDebug,
       category: fallbackLevelDebug.category ?? base.category ?? "unknown",
       scoreVolatility: scoreBreakdown.volatility ?? null,
     };
 
+    const ringAiSummary = buildRingAiSummaryForSetup({
+      setup: {
+        ...base,
+        rings,
+        confidence,
+        riskReward: base.riskReward,
+      },
+    });
+
     return {
-      ...base,
-      eventScore: eventResult.eventScore,
-      biasScore: biasResult.biasScore,
-      sentimentScore: sentimentResult.sentimentScore,
-      confidence,
-      balanceScore,
-      rings,
-      levelDebug,
-      eventContext: eventResult.context,
-    };
-  });
+        ...base,
+        eventScore: eventResult.eventScore,
+        biasScore: biasResult.biasScore,
+        sentimentScore: sentimentResult.sentimentScore,
+        confidence,
+        balanceScore,
+        rings,
+        levelDebug,
+        eventContext: eventResult.context,
+        ringAiSummary,
+      };
+    });
 
   const ranked = sortSetupsForToday(enriched);
 

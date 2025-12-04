@@ -107,6 +107,7 @@ function toHomepageSetup(setup: Setup): HomepageSetup {
     snapshotCreatedAt: setup.snapshotCreatedAt ?? new Date().toISOString(),
     rings: setup.rings,
     eventContext: setup.eventContext ?? null,
+    ringAiSummary: setup.ringAiSummary ?? null,
   };
 }
 

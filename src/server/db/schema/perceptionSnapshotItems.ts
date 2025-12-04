@@ -20,6 +20,7 @@ export const perceptionSnapshotItems = pgTable("perception_snapshot_items", {
   biasScoreAtTime: integer("bias_score_at_time"),
   eventContext: jsonb("event_context"),
   riskReward: jsonb("risk_reward"),
+  ringAiSummary: jsonb("ring_ai_summary"),
   isSetupOfTheDay: boolean("is_setup_of_the_day").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow()
 });

@@ -1,7 +1,8 @@
 "use client";
 
-import type { JSX } from "react";
+import { useState, type JSX } from "react";
 import { useT } from "@/src/lib/i18n/ClientProvider";
+import type { RingAiSummary } from "@/src/lib/engine/types";
 
 type RingInsightsProps = {
   rings: {
@@ -16,6 +17,7 @@ type RingInsightsProps = {
   timeframe?: string | null;
   direction?: "Long" | "Short" | "Neutral" | null;
   aiSummary?: string | null;
+  ringAiSummary?: RingAiSummary | null;
 };
 
 type Bucket = "low" | "medium" | "high";
@@ -35,8 +37,16 @@ function formatInsightText(
   return Object.entries(vars).reduce((acc, [k, v]) => acc.replace(`{${k}}`, v), template);
 }
 
-export function RingInsights({ rings, assetLabel, timeframe, direction, aiSummary }: RingInsightsProps): JSX.Element {
+export function RingInsights({
+  rings,
+  assetLabel,
+  timeframe,
+  direction,
+  aiSummary,
+  ringAiSummary,
+}: RingInsightsProps): JSX.Element {
   const t = useT();
+  const [expanded, setExpanded] = useState(false);
 
   const commonVars = {
     asset: assetLabel ?? t("perception.rings.insights.assetFallback"),
@@ -73,6 +83,8 @@ export function RingInsights({ rings, assetLabel, timeframe, direction, aiSummar
   ] as const;
 
   const confidence = rings.confidenceScore;
+  const summaryData: RingAiSummary | null =
+    ringAiSummary ?? (aiSummary ? { shortSummary: aiSummary, longSummary: aiSummary, keyFacts: [] } : null);
 
   return (
     <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-inner shadow-black/10">
@@ -115,12 +127,33 @@ export function RingInsights({ rings, assetLabel, timeframe, direction, aiSummar
           </div>
         ) : null}
       </div>
-      {aiSummary ? (
+      {summaryData ? (
         <div className="mt-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-200">
           <p className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-400">
             {t("perception.rings.insights.aiSummaryTitle")}
           </p>
-          <p className="mt-1 text-xs text-slate-100">{aiSummary}</p>
+          <p className="mt-1 text-xs text-slate-100">{summaryData.shortSummary}</p>
+          {summaryData.keyFacts.length ? (
+            <ul className="mt-2 list-disc list-inside space-y-0.5 text-xs text-slate-200">
+              {summaryData.keyFacts.map((fact, idx) => (
+                <li key={`${fact.label}-${idx}`}>
+                  <span className="font-semibold">{fact.label}:</span> {fact.value}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {summaryData.longSummary && summaryData.longSummary !== summaryData.shortSummary ? (
+            <div className="mt-2 text-xs text-slate-200">
+              {expanded ? <p>{summaryData.longSummary}</p> : null}
+              <button
+                type="button"
+                className="mt-1 text-[11px] font-semibold text-sky-300 hover:text-sky-200"
+                onClick={() => setExpanded((prev) => !prev)}
+              >
+                {expanded ? t("perception.rings.insights.showLess") : t("perception.rings.insights.showMore")}
+              </button>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
