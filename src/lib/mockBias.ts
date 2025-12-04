@@ -11,6 +11,7 @@ const rawBiasSnapshot: BiasSnapshot = {
       timeframe: "D1",
       direction: biasDirectionEnum.enum.Bullish,
       confidence: 78,
+      biasScore: 80,
       comment: "Higher lows intact, spot demand steady, funding neutral to positive.",
     },
     {
@@ -18,6 +19,7 @@ const rawBiasSnapshot: BiasSnapshot = {
       timeframe: "H4",
       direction: biasDirectionEnum.enum.Neutral,
       confidence: 62,
+      biasScore: 0,
       comment: "Range-bound; watch for break above local resistance on volume.",
     },
     {
@@ -25,6 +27,7 @@ const rawBiasSnapshot: BiasSnapshot = {
       timeframe: "H1",
       direction: biasDirectionEnum.enum.Bearish,
       confidence: 48,
+      biasScore: -35,
       comment: "Pullback after strong rally; liquidity pockets below remain untested.",
     },
   ],

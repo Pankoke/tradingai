@@ -23,6 +23,13 @@ type BuildParams = {
 };
 
 const SNAPSHOT_VERSION = "v1.0.0";
+const isBiasDebug = process.env.DEBUG_BIAS === "1";
+const isServer = typeof window === "undefined";
+const logBiasDebug = (...args: unknown[]) => {
+  if (isBiasDebug && isServer) {
+    console.log(...args);
+  }
+};
 
 function deriveSnapshotLabel(date: Date): "morning" | "us_open" | "eod" | null {
   const hour = date.getUTCHours();
@@ -53,6 +60,12 @@ export async function buildAndStorePerceptionSnapshot(
   const envMode = (process.env.NEXT_PUBLIC_PERCEPTION_DATA_MODE as PerceptionDataMode) ?? "mock";
   const mode: PerceptionDataMode = params.mode ?? envMode ?? "mock";
 
+  logBiasDebug("[BuildSetups:start]", {
+    snapshotTime: snapshotTime.toISOString(),
+    mode,
+    nodeEnv: process.env.NODE_ENV,
+  });
+
   const start = Date.now();
   const engineResult: PerceptionSnapshotEngineResult = await buildPerceptionSnapshot({ asOf: snapshotTime });
   const generatedMs = Date.now() - start;
@@ -65,6 +78,16 @@ export async function buildAndStorePerceptionSnapshot(
   const items: PerceptionSnapshotItemInput[] = [];
   let overallRank = 0;
   for (const setup of engineResult.setups) {
+    // Resolve assetId before any usage (rings / logs) to avoid TDZ issues.
+    const assetId = setup.assetId ?? symbolToAssetId.get(setup.symbol);
+    if (!assetId) {
+      console.warn("[snapshotBuilder] skipping setup without assetId", {
+        setupId: setup.id,
+        symbol: setup.symbol,
+      });
+      continue;
+    }
+
     const breakdown = computeSetupScore({
       trendStrength: setup.eventScore,
       biasScore: setup.biasScore,
@@ -80,21 +103,16 @@ export async function buildAndStorePerceptionSnapshot(
       balanceScore: setup.balanceScore,
       confidence: setup.confidence,
       direction: setup.direction?.toLowerCase() as "long" | "short" | "neutral" | null,
+      assetId,
+      symbol: setup.symbol,
+      timeframe: setup.timeframe,
+      setupId: setup.id,
     });
     const confidence = computeSetupConfidence({
       setupId: setup.id,
       score: breakdown,
       rings,
     });
-
-    const assetId = setup.assetId ?? symbolToAssetId.get(setup.symbol);
-    if (!assetId) {
-      console.warn("[snapshotBuilder] skipping setup without assetId", {
-        setupId: setup.id,
-        symbol: setup.symbol,
-      });
-      continue;
-    }
 
     const assetRank = (itemRankCounters.get(setup.symbol) ?? 0) + 1;
     itemRankCounters.set(setup.symbol, assetRank);
@@ -121,14 +139,15 @@ export async function buildAndStorePerceptionSnapshot(
       createdAt: snapshotTime,
     });
 
-    if (process.env.DEBUG_BIAS === "1") {
-      console.log("[BuildSetups:bias]", {
-        assetId,
-        setupId: setup.id,
-        biasScore: setup.biasScore,
-        biasScoreAtTime: setup.biasScore,
-      });
-    }
+    logBiasDebug("[BuildSetups:bias]", {
+      assetId,
+      setupId: setup.id,
+      symbol: setup.symbol,
+      timeframe: setup.timeframe,
+      direction: setup.direction,
+      biasScore: setup.biasScore,
+      biasScoreAtTime: setup.biasScore,
+    });
   }
 
   const isoCreatedAt = snapshotTime.toISOString();

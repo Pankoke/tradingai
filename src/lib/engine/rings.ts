@@ -37,6 +37,18 @@ type RingSource = {
   confidence?: number | null;
   direction?: "long" | "short" | "neutral" | null;
   trendScore?: number | null;
+  assetId?: string;
+  symbol?: string;
+  timeframe?: string | null;
+  setupId?: string;
+};
+
+const isBiasDebug = process.env.DEBUG_BIAS === "1";
+const isServer = typeof window === "undefined";
+const logBiasDebug = (...args: unknown[]) => {
+  if (isBiasDebug && isServer) {
+    console.log(...args);
+  }
 };
 
 const PATTERN_MAP: Record<string, number> = {
@@ -357,13 +369,15 @@ function computeRingsFromSource(source: RingSource): SetupRings {
   const orderflowScore = resolveOrderflowScore(source);
   const confidenceScore = resolveConfidence(source);
 
-  if (process.env.DEBUG_BIAS === "1") {
-    console.log("[Rings:bias]", {
-      biasScore: source.biasScore,
-      biasScoreAtTime: source.biasScoreAtTime,
-      ringBias: biasScore,
-    });
-  }
+  logBiasDebug("[Rings:bias]", {
+    assetId: source.assetId,
+    symbol: source.symbol,
+    timeframe: source.timeframe,
+    setupId: source.setupId,
+    biasScore: source.biasScore,
+    biasScoreAtTime: source.biasScoreAtTime,
+    ringBias: biasScore,
+  });
   return {
     trendScore,
     eventScore,

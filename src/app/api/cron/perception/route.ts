@@ -6,6 +6,14 @@ import { fetchTodayEvents, fetchTodayBiasSnapshot } from "@/src/lib/api/eventsBi
 import type { PerceptionSnapshot } from "@/src/lib/engine/types";
 import { buildAndStorePerceptionSnapshot } from "@/src/features/perception/build/buildSetups";
 
+const isBiasDebug = process.env.DEBUG_BIAS === "1";
+const isServer = typeof window === "undefined";
+const logBiasDebug = (...args: unknown[]) => {
+  if (isBiasDebug && isServer) {
+    console.log(...args);
+  }
+};
+
 type CronSuccessBody = {
   ok: true;
   generatedAt: string;
@@ -18,6 +26,10 @@ type CronErrorBody = {
 };
 
 export async function GET(): Promise<NextResponse<CronSuccessBody | CronErrorBody>> {
+  logBiasDebug("[PerceptionCron:start]", {
+    mode: process.env.NEXT_PUBLIC_PERCEPTION_DATA_MODE,
+    nodeEnv: process.env.NODE_ENV,
+  });
   try {
     const snapshot: PerceptionSnapshot = await buildPerceptionSnapshot();
     const [events, biasSnapshot] = await Promise.all([
@@ -28,6 +40,11 @@ export async function GET(): Promise<NextResponse<CronSuccessBody | CronErrorBod
     setPerceptionSnapshot(snapshot);
     await buildAndStorePerceptionSnapshot({ snapshotTime: new Date(snapshot.generatedAt) });
 
+    logBiasDebug("[PerceptionCron:finished]", {
+      generatedAt: snapshot.generatedAt,
+      totalSetups: snapshot.setups.length,
+    });
+
     const body: CronSuccessBody = {
       ok: true,
       generatedAt: snapshot.generatedAt,
@@ -36,7 +53,7 @@ export async function GET(): Promise<NextResponse<CronSuccessBody | CronErrorBod
 
     return NextResponse.json(body);
   } catch (error) {
-    console.error("Failed to build perception snapshot", error);
+    console.error("[PerceptionCron:error]", error);
     const body: CronErrorBody = {
       ok: false,
       error: "Failed to build perception snapshot",

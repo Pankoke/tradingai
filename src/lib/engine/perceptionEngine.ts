@@ -24,9 +24,20 @@ const defaultRings = {
   orderflow: 50,
   confidence: 50,
 };
+const isBiasDebug = process.env.DEBUG_BIAS === "1";
+const isServer = typeof window === "undefined";
+const logBiasDebug = (...args: unknown[]) => {
+  if (isBiasDebug && isServer) {
+    console.log(...args);
+  }
+};
 
 export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promise<PerceptionSnapshot> {
   const asOf = options?.asOf ?? new Date();
+  logBiasDebug("[PerceptionEngine:start]", {
+    asOf: asOf.toISOString(),
+    dataMode: process.env.NEXT_PUBLIC_PERCEPTION_DATA_MODE,
+  });
   const setups = await dataSource.getSetupsForToday({ asOf });
 
   const windowFrom = new Date(asOf);
@@ -39,18 +50,25 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
     to: windowTo,
   });
 
-  const biasSnapshots = await dataSource.getBiasSnapshotForAssets({
-    assetIds: setups.map((setup) => setup.symbol),
+  const biasSnapshot: BiasSnapshot = await dataSource.getBiasSnapshotForAssets({
+    assets: setups.map((setup) => ({
+      assetId: setup.assetId ?? setup.symbol,
+      symbol: setup.symbol,
+      timeframe: setup.timeframe,
+    })),
     date: asOf,
   });
 
-  const biasSnapshot: BiasSnapshot =
-    biasSnapshots[0] ?? {
-      generatedAt: asOf.toISOString(),
-      universe: [],
-      entries: [],
-      version: ENGINE_VERSION,
-    };
+  logBiasDebug("[PerceptionEngine:biasSnapshot]", {
+    asOf: asOf.toISOString().slice(0, 10),
+    entries: biasSnapshot.entries.map((entry) => ({
+      symbol: entry.symbol,
+      timeframe: entry.timeframe,
+      direction: entry.direction,
+      confidence: entry.confidence,
+      biasScore: entry.biasScore,
+    })),
+  });
 
   const enriched: Setup[] = setups.map((item) => {
     const base: Setup = {
@@ -76,15 +94,13 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
 
     const eventResult = applyEventScoring(base, events);
     const biasResult = applyBiasScoring(base, biasSnapshot);
-    if (process.env.DEBUG_BIAS === "1") {
-      console.log("[PerceptionEngine:bias]", {
-        assetId: base.assetId,
-        symbol: base.symbol,
-        timeframe: base.timeframe,
-        direction: base.direction,
-        biasScoreFromProvider: biasResult.biasScore,
-      });
-    }
+    logBiasDebug("[PerceptionEngine:bias]", {
+      assetId: base.assetId,
+      symbol: base.symbol,
+      timeframe: base.timeframe,
+      direction: base.direction,
+      biasScoreFromProvider: biasResult.biasScore,
+    });
     const sentimentResult = applySentimentScoring(base);
     const scoreBreakdown = computeSetupScore({
       trendStrength: eventResult.eventScore,
@@ -100,6 +116,10 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
       balanceScore: base.balanceScore,
       confidence: base.confidence,
       direction: (base.direction?.toLowerCase() as "long" | "short" | "neutral") ?? null,
+      assetId: base.assetId,
+      symbol: base.symbol,
+      timeframe: base.timeframe,
+      setupId: base.id,
     });
     const confidence = computeSetupConfidence({
       setupId: base.id,

@@ -10,14 +10,26 @@ import { getActiveAssets } from "@/src/server/repositories/assetRepository";
 import { getEventsInRange } from "@/src/server/repositories/eventRepository";
 import { DbBiasProvider, type BiasDomainModel } from "@/src/server/providers/biasProvider";
 import { getLatestCandleForAsset } from "@/src/server/repositories/candleRepository";
+import type { Timeframe } from "@/src/server/providers/marketDataProvider";
 
 export type PerceptionDataMode = "mock" | "live";
 
 export interface PerceptionDataSource {
   getSetupsForToday(params: { asOf: Date }): Promise<Setup[]>;
   getEventsForWindow(params: { from: Date; to: Date }): Promise<Event[]>;
-  getBiasSnapshotForAssets(params: { assetIds: string[]; date: Date }): Promise<BiasSnapshot[]>;
+  getBiasSnapshotForAssets(params: {
+    assets: { assetId?: string | null; symbol: string; timeframe?: string }[];
+    date: Date;
+  }): Promise<BiasSnapshot>;
 }
+
+const isBiasDebug = process.env.DEBUG_BIAS === "1";
+const isServer = typeof window === "undefined";
+const logBiasDebug = (...args: unknown[]) => {
+  if (isBiasDebug && isServer) {
+    console.log(...args);
+  }
+};
 
 const EVENT_CATEGORIES = ["macro", "crypto", "onchain", "technical", "other"] as const;
 type EventCategory = (typeof EVENT_CATEGORIES)[number];
@@ -61,13 +73,25 @@ class MockPerceptionDataSource implements PerceptionDataSource {
     });
   }
 
-  async getBiasSnapshotForAssets(): Promise<BiasSnapshot[]> {
-    return [mockBiasSnapshot];
+  async getBiasSnapshotForAssets(_: {
+    assets: { assetId?: string | null; symbol: string; timeframe?: string }[];
+    date: Date;
+  }): Promise<BiasSnapshot> {
+    return mockBiasSnapshot;
   }
 }
 
 class LivePerceptionDataSource implements PerceptionDataSource {
   private biasProvider = new DbBiasProvider();
+
+  constructor() {
+    logBiasDebug("[Bias:initProvider]", {
+      provider: "DbBiasProvider",
+      dataMode: "live",
+      nodeEnv: process.env.NODE_ENV,
+      debugBias: process.env.DEBUG_BIAS,
+    });
+  }
 
   private createDefaultRings(): Setup["rings"] {
     return {
@@ -150,35 +174,79 @@ class LivePerceptionDataSource implements PerceptionDataSource {
   }
 
   async getBiasSnapshotForAssets(params: {
-    assetIds: string[];
+    assets: { assetId?: string | null; symbol: string; timeframe?: string }[];
     date: Date;
-  }): Promise<BiasSnapshot[]> {
-    const promises = params.assetIds.map(async (assetId) => {
-      const result = await this.biasProvider.getBiasSnapshot({
-        assetId,
-        date: params.date,
-        timeframe: "1D",
-      });
-      return result;
+  }): Promise<BiasSnapshot> {
+    const uniqueAssets = new Map<
+      string,
+      { key: string; assetId: string; symbol: string; timeframe: string }
+    >();
+
+    for (const asset of params.assets) {
+      const assetId = asset.assetId ?? asset.symbol;
+      const timeframe = asset.timeframe ?? "1D";
+      const key = `${assetId}-${timeframe}`;
+      if (!uniqueAssets.has(key)) {
+        uniqueAssets.set(key, { key, assetId, symbol: asset.symbol, timeframe });
+      }
+    }
+
+    const biasRows = await Promise.all(
+      Array.from(uniqueAssets.values()).map(async (asset) => {
+        const result = await this.biasProvider.getBiasSnapshot({
+          assetId: asset.assetId,
+          date: params.date,
+          timeframe: asset.timeframe as Timeframe,
+        });
+
+        logBiasDebug("[BiasProvider:dataSource]", {
+          assetId: asset.assetId,
+          symbol: asset.symbol,
+          timeframe: asset.timeframe,
+          found: Boolean(result),
+          biasScore: result?.biasScore,
+          confidence: result?.confidence,
+        });
+
+        if (!result) return null;
+        return { ...result, symbol: asset.symbol, timeframe: asset.timeframe };
+      }),
+    );
+
+    const filtered = biasRows.filter(
+      (row): row is BiasDomainModel & { symbol: string; timeframe: string } => row !== null,
+    );
+
+    const entries = filtered.map((bias) => ({
+      symbol: bias.symbol,
+      timeframe: bias.timeframe,
+      direction: bias.biasScore > 0 ? "Bullish" : bias.biasScore < 0 ? "Bearish" : "Neutral",
+      confidence: bias.confidence,
+      biasScore: bias.biasScore,
+      comment: "",
+    }));
+
+    const generatedAt =
+      filtered.length > 0
+        ? new Date(
+            Math.max(
+              ...filtered.map((row) => row.date.getTime()),
+            ),
+          ).toISOString()
+        : params.date.toISOString();
+
+    logBiasDebug("[BiasProvider:dataSource:aggregated]", {
+      assetsRequested: params.assets.map((a) => ({ assetId: a.assetId, symbol: a.symbol })),
+      entryCount: entries.length,
+      generatedAt,
     });
 
-    const biasList = await Promise.all(promises);
-    return biasList
-      .filter((item): item is BiasDomainModel => item !== null)
-      .map((bias) => ({
-        generatedAt: bias.date.toISOString(),
-        universe: [bias.assetId],
-        entries: [
-          {
-            symbol: bias.assetId,
-            timeframe: bias.timeframe,
-            direction: bias.biasScore >= 0 ? "Bullish" : "Bearish",
-            confidence: bias.confidence,
-            comment: "",
-          },
-        ],
-        version: "live",
-      }));
+    return {
+      generatedAt,
+      universe: Array.from(uniqueAssets.values()).map((asset) => asset.assetId),
+      entries,
+      version: "live",
+    };
   }
 
   private async ensureLatestCandle(
@@ -236,11 +304,19 @@ class LivePerceptionDataSource implements PerceptionDataSource {
 }
 
 export function createPerceptionDataSource(): PerceptionDataSource {
-  const mode = (process.env.NEXT_PUBLIC_PERCEPTION_DATA_MODE as PerceptionDataMode) ?? "mock";
+  const envMode = (process.env.NEXT_PUBLIC_PERCEPTION_DATA_MODE ?? "").toLowerCase();
+  const mode: PerceptionDataMode = envMode === "live" ? "live" : "mock";
 
   if (mode === "live") {
     return new LivePerceptionDataSource();
   }
+
+  logBiasDebug("[Bias:initProvider]", {
+    provider: "MockPerceptionDataSource",
+    dataMode: mode,
+    nodeEnv: process.env.NODE_ENV,
+    debugBias: process.env.DEBUG_BIAS,
+  });
 
   return new MockPerceptionDataSource();
 }

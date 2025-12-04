@@ -28,6 +28,7 @@ export const biasEntrySchema = z.object({
   timeframe: z.string(),
   direction: biasDirectionEnum,
   confidence: z.number().min(0).max(100),
+  biasScore: z.number().min(-100).max(100).optional(),
   comment: z.string(),
 });
 

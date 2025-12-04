@@ -29,6 +29,15 @@ function mapRow(row: BiasSnapshotRow): BiasDomainModel {
   };
 }
 
+const isBiasDebug = process.env.DEBUG_BIAS === "1";
+const isServer = typeof window === "undefined";
+const logBiasDebug = (...args: unknown[]) => {
+  if (isBiasDebug && isServer) {
+    console.log(...args);
+  }
+};
+
+
 export interface BiasProvider {
   getBiasSnapshot(params: {
     assetId: string;
@@ -49,26 +58,32 @@ export class DbBiasProvider implements BiasProvider {
     date: Date;
     timeframe: Timeframe;
   }): Promise<BiasDomainModel | null> {
+    if (isServer) {
+      console.log("[BiasProvider:getBiasSnapshot:called]", {
+        assetId: params.assetId,
+        timeframe: params.timeframe,
+        date: params.date.toISOString().slice(0, 10),
+      });
+    }
+
     const row = await getBiasSnapshot({
       assetId: params.assetId,
       date: params.date,
       timeframe: params.timeframe,
     });
 
-    if (process.env.DEBUG_BIAS === "1") {
-      console.log("[BiasProvider:getBiasSnapshot]", {
-        assetId: params.assetId,
-        timeframe: params.timeframe,
-        date: params.date.toISOString().slice(0, 10),
-        row: row
-          ? {
-              biasScore: row.biasScore,
-              confidence: row.confidence,
-              trendScore: row.trendScore,
-            }
-          : null,
-      });
-    }
+    logBiasDebug("[BiasProvider:getBiasSnapshot]", {
+      assetId: params.assetId,
+      timeframe: params.timeframe,
+      date: params.date.toISOString().slice(0, 10),
+      row: row
+        ? {
+            biasScore: row.biasScore,
+            confidence: row.confidence,
+            trendScore: row.trendScore,
+          }
+        : null,
+    });
 
     if (row) {
       return mapRow(row);
@@ -86,19 +101,17 @@ export class DbBiasProvider implements BiasProvider {
       return null;
     }
 
-    if (process.env.DEBUG_BIAS === "1") {
-      console.log("[BiasProvider:getBiasSnapshot:fallback]", {
-        assetId: params.assetId,
-        timeframe: params.timeframe,
-        fallbackFrom: fallbackFrom.toISOString().slice(0, 10),
-        date: params.date.toISOString().slice(0, 10),
-        rows: rows.map((r) => ({
-          biasScore: r.biasScore,
-          confidence: r.confidence,
-          date: r.date,
-        })),
-      });
-    }
+    logBiasDebug("[BiasProvider:getBiasSnapshot:fallback]", {
+      assetId: params.assetId,
+      timeframe: params.timeframe,
+      fallbackFrom: fallbackFrom.toISOString().slice(0, 10),
+      date: params.date.toISOString().slice(0, 10),
+      rows: rows.map((r) => ({
+        biasScore: r.biasScore,
+        confidence: r.confidence,
+        date: r.date,
+      })),
+    });
 
     return mapRow(rows[0]);
   }

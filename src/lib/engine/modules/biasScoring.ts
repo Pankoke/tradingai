@@ -5,6 +5,14 @@ export type BiasScoreResult = {
   biasScore: number;
 };
 
+const isBiasDebug = process.env.DEBUG_BIAS === "1";
+const isServer = typeof window === "undefined";
+const logBiasDebug = (...args: unknown[]) => {
+  if (isBiasDebug && isServer) {
+    console.log(...args);
+  }
+};
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
@@ -37,35 +45,52 @@ function structuralStrength(entryConfidence: number): number {
   return clamp(Math.round(strength), 0, 100);
 }
 
+function normalizeBiasTilt(entryBiasScore?: number): number {
+  if (typeof entryBiasScore !== "number" || Number.isNaN(entryBiasScore)) {
+    return 50;
+  }
+  // Map -100..100 to 0..100 where 0 = max bearish, 100 = max bullish.
+  return clamp(Math.round(50 + entryBiasScore / 2), 0, 100);
+}
+
 export function scoreFromBias(
   direction: Direction,
   entryDirection: BiasDirection,
   entryConfidence: number,
+  entryBiasScore?: number,
+  context?: { symbol?: string; timeframe?: string },
 ): number {
   const alignment = determineAlignment(direction, entryDirection);
   const strength = structuralStrength(entryConfidence);
-  let delta = 0;
-  if (alignment === "aligned") {
-    delta = 5 + 0.3 * (strength - 50);
-  } else if (alignment === "opposite") {
-    delta = -(10 + 0.4 * (strength - 50));
-  } else {
-    delta = 0.2 * (strength - 50);
-  }
-  const raw = strength + delta;
+  const tilt = normalizeBiasTilt(entryBiasScore);
+
+  const baseDirectional =
+    direction === "Short"
+      ? 100 - tilt
+      : direction === "Long"
+        ? tilt
+        : 50;
+
+  const alignmentDelta = alignment === "aligned" ? 5 : alignment === "opposite" ? -10 : 0;
+  const confidenceDelta = 0.3 * (strength - 50);
+  const raw = baseDirectional + alignmentDelta + confidenceDelta;
   const score = clamp(Math.round(raw), 0, 100);
 
-  if (process.env.DEBUG_BIAS === "1") {
-    console.log("[BiasScoring:computed]", {
-      direction,
-      entryDirection,
-      entryConfidence,
-      structuralStrength: strength,
-      alignment,
-      delta,
-      score,
-    });
-  }
+  logBiasDebug("[BiasScoring:computed]", {
+    symbol: context?.symbol,
+    timeframe: context?.timeframe,
+    setupDirection: direction,
+    biasDirection: entryDirection,
+    entryConfidence,
+    entryBiasScore,
+    tilt,
+    structuralStrength: strength,
+    baseDirectional,
+    alignment,
+    alignmentDelta,
+    confidenceDelta,
+    score,
+  });
 
   return score;
 }
@@ -73,8 +98,19 @@ export function scoreFromBias(
 export function applyBiasScoring(setup: Setup, biasSnapshot: BiasSnapshot): BiasScoreResult {
   const entry = findBiasEntry(setup, biasSnapshot);
   if (!entry) {
+    logBiasDebug("[BiasScoring:noEntry]", {
+      symbol: setup.symbol,
+      timeframe: setup.timeframe,
+      snapshotEntries: biasSnapshot.entries.length,
+    });
     return { biasScore: 50 };
   }
-  const biasScore = scoreFromBias(setup.direction, entry.direction, entry.confidence);
+  const biasScore = scoreFromBias(
+    setup.direction,
+    entry.direction,
+    entry.confidence,
+    entry.biasScore,
+    { symbol: setup.symbol, timeframe: setup.timeframe },
+  );
   return { biasScore };
 }
