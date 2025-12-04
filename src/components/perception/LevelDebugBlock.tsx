@@ -15,6 +15,15 @@ type LevelDebugBlockProps = {
   rings?: Record<string, number>;
   snapshotId?: string | null;
   snapshotCreatedAt?: string | null;
+  eventContext?: {
+    topEvents?: Array<{
+      id?: string;
+      title?: string;
+      severity?: string;
+      scheduledAt?: string;
+      source?: string;
+    }> | null;
+  } | null;
 };
 
 function formatNumeric(value?: number | null, decimals = 4): string {
@@ -36,6 +45,7 @@ export function LevelDebugBlock({
   rings,
   snapshotId,
   snapshotCreatedAt,
+  eventContext,
 }: LevelDebugBlockProps): JSX.Element | null {
   const isDev = process.env.NODE_ENV !== "production";
   if (!isDev) {
@@ -49,6 +59,7 @@ export function LevelDebugBlock({
       : "n/a";
 
   const ringPayload = rings ? JSON.stringify(rings) : "-";
+  const topEvents = eventContext?.topEvents ?? null;
 
   return (
     <div className="mt-3 rounded-md border border-yellow-700 bg-yellow-950/40 p-3 text-xs text-yellow-200">
@@ -65,6 +76,23 @@ export function LevelDebugBlock({
         <div>Snapshot: {snapshotId ?? "n/a"}</div>
         <div>Snapshot created: {formattedSnapshotDate}</div>
         <div>Rings: {ringPayload}</div>
+        <div className="pt-1">
+          <div className="font-semibold text-yellow-100">Events (debug):</div>
+          {topEvents && topEvents.length ? (
+            <ul className="list-disc list-inside space-y-0.5">
+              {topEvents.map((ev) => (
+                <li key={`${ev.id ?? ev.title ?? "ev"}`}>
+                  {ev.title ?? "n/a"} [{ev.severity ?? "n/a"}] –{" "}
+                  {ev.scheduledAt
+                    ? new Date(ev.scheduledAt).toLocaleString()
+                    : "n/a"}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div>none</div>
+          )}
+        </div>
       </div>
     </div>
   );

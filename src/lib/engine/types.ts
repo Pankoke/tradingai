@@ -70,14 +70,14 @@ export const setupSchema = z.object({
     .object({
       topEvents: z.array(
         z.object({
-          id: z.string(),
-          title: z.string(),
-          category: z.string(),
-          severity: z.string(),
-          scheduledAt: z.string(),
+          id: z.string().optional(),
+          title: z.string().optional(),
+          category: z.string().optional(),
+          severity: z.string().optional(),
+          scheduledAt: z.string().optional(),
           source: z.string().optional(),
         }),
-      ),
+      ).optional().nullable(),
     })
     .optional(),
 });

@@ -173,6 +173,10 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
         rings={setup.rings}
         snapshotId={setup.snapshotId ?? null}
         snapshotCreatedAt={setup.snapshotCreatedAt ?? null}
+        eventContext={
+          (setup as { eventContext?: { topEvents?: Array<{ id?: string; title?: string; severity?: string; scheduledAt?: string; source?: string }> | null } })
+            .eventContext ?? null
+        }
       />
       <div className="mt-4">
         <RiskRewardBlock riskReward={setup.riskReward ?? null} />

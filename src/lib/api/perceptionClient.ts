@@ -1,6 +1,25 @@
-import { z } from "zod";
 import { fetcher } from "@/src/lib/fetcher";
 import { setupSchema, type Setup, riskRewardSchema, type RiskRewardSummary } from "@/src/lib/engine/types";
+import { z } from "zod";
+
+const eventContextSchema = z
+  .object({
+    topEvents: z
+      .array(
+        z.object({
+          id: z.string().optional(),
+          title: z.string().optional(),
+          category: z.string().optional(),
+          severity: z.string().optional(),
+          scheduledAt: z.string().optional(),
+          source: z.string().optional(),
+        }),
+      )
+      .optional()
+      .nullable(),
+  })
+  .optional()
+  .nullable();
 
 const perceptionTodayItemSchema = z.object({
   id: z.string(),
@@ -17,7 +36,7 @@ const perceptionTodayItemSchema = z.object({
   scorePattern: z.number().nullable(),
   confidence: z.number(),
   biasScoreAtTime: z.number().nullable(),
-  eventContext: z.unknown().nullable(),
+  eventContext: eventContextSchema,
   isSetupOfTheDay: z.boolean(),
   createdAt: z.string(),
   riskReward: riskRewardSchema.nullable(),
@@ -73,6 +92,7 @@ export async function fetchPerceptionToday(): Promise<PerceptionTodayResponse> {
             ? item.createdAt.toISOString()
             : new Date().toISOString(),
           riskReward: (item.riskReward ?? null) as RiskRewardSummary | null,
+          eventContext: (item as { eventContext?: unknown }).eventContext ?? null,
         })),
         setups: persisted.setups,
       };

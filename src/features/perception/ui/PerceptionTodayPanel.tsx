@@ -49,12 +49,7 @@ type RingDefinition = {
 };
 
 type PerceptionTodayItem = PerceptionTodayResponse["items"][number];
-type EventContextLite =
-  | {
-      topEvents?: Array<{ title?: string; scheduledAt?: string }> | null;
-    }
-  | null
-  | undefined;
+type EventContextLite = PerceptionTodayItem["eventContext"] | Setup["eventContext"];
 
 function formatScore(value: number | null): string {
   if (value === null || Number.isNaN(value)) {
@@ -299,61 +294,35 @@ export function PerceptionTodayPanel(): JSX.Element {
   const snapshotAgeLabel = snapshotRelative
     ? t("perception.today.snapshotAge").replace("{relative}", snapshotRelative)
     : null;
-  const heroEventContext: EventContextLite =
-    (heroItem?.eventContext as EventContextLite) ??
-    (heroSetup as { eventContext?: EventContextLite })?.eventContext ??
-    null;
+  const heroEventContext = heroItem?.eventContext ?? heroSetup?.eventContext ?? null;
 
   useEffect(() => {
-    if (typeof window === "undefined" || process.env.NODE_ENV === "production") return;
-    const entries: Array<{
-      setupId?: string;
-      assetId?: string;
-      eventScore?: number | null;
-      topEvent?: { title?: string; severity?: string; scheduledAt?: string };
-    }> = [];
+    // Nur im Browser & nur in DEV loggen
+    if (typeof window === "undefined") return;
+    if (process.env.NODE_ENV === "production") return;
+    if (!data || status !== "ready") return;
 
-    const collect = (
-      item?: PerceptionTodayItem | null,
-      setup?: Setup | null,
-      eventScore?: number | null,
-    ) => {
-      const eventContext =
-        (item?.eventContext as EventContextLite) ??
-        (setup as { eventContext?: EventContextLite })?.eventContext ??
-        null;
-      if (!eventContext?.topEvents?.length) return;
-      entries.push({
-        setupId: item?.setupId ?? setup?.id,
-        assetId: item?.assetId ?? setup?.assetId,
-        eventScore: eventScore ?? setup?.rings?.eventScore ?? null,
-        topEvent: eventContext.topEvents[0],
-      });
-    };
+    data.setups.forEach((setup) => {
+      const ctx = setup.eventContext;
+      if (!ctx?.topEvents?.length) return;
 
-    collect(heroItem, heroSetup ?? null, heroBaseRings.eventScore);
-    additionalEntries.forEach(({ item, setup, rings }) => {
-      const eventContext =
-        (item.eventContext as EventContextLite) ??
-        (setup as { eventContext?: EventContextLite })?.eventContext ??
-        null;
-      if (!eventContext?.topEvents?.length) return;
-      entries.push({
-        setupId: item.setupId,
-        assetId: item.assetId,
-        eventScore: rings.eventScore,
-        topEvent: eventContext.topEvents[0],
+      const top = ctx.topEvents[0];
+
+      // eslint-disable-next-line no-console
+      console.debug("[EventRing]", {
+        assetId: setup.assetId,
+        setupId: setup.id,
+        eventScore: setup.eventScore,
+        event: {
+          id: top.id,
+          title: top.title,
+          severity: top.severity,
+          scheduledAt: top.scheduledAt,
+          source: top.source,
+        },
       });
     });
-
-    if (entries.length) {
-      // Debug-Hinweis:
-      // Im Dev-Mode kannst du in der Browser-Konsole nach "[EventRing]" filtern,
-      // um zu sehen, welche Events im Event-Ring-Kontext hängen.
-      // eslint-disable-next-line no-console
-      console.debug("[EventRing]", entries);
-    }
-  }, [additionalEntries, heroBaseRings.eventScore, heroItem, heroSetup]);
+  }, [data, status]);
 
   return (
     <section>
@@ -477,6 +446,7 @@ export function PerceptionTodayPanel(): JSX.Element {
                     rings={heroBaseRings}
                     snapshotId={heroSetup.snapshotId ?? null}
                     snapshotCreatedAt={heroSetup.snapshotCreatedAt ?? null}
+                    eventContext={heroEventContext ?? undefined}
                   />
                   <div className="mt-4">
                     <RiskRewardBlock riskReward={heroSetup?.riskReward ?? heroItem?.riskReward ?? null} />
@@ -538,8 +508,7 @@ export function PerceptionTodayPanel(): JSX.Element {
                                 ring.key === "eventScore"
                                   ? buildEventTooltip(
                                       ring.tooltip,
-                                      (item.eventContext as EventContextLite) ??
-                                        (setup as { eventContext?: EventContextLite })?.eventContext,
+                                      item.eventContext ?? setup?.eventContext ?? null,
                                       t,
                                     )
                                   : ring.tooltip
@@ -561,6 +530,11 @@ export function PerceptionTodayPanel(): JSX.Element {
                                 rings={rings}
                                 snapshotId={setup.snapshotId ?? null}
                                 snapshotCreatedAt={setup.snapshotCreatedAt ?? null}
+                                eventContext={
+                                  (item.eventContext as EventContextLite) ??
+                                  (setup as { eventContext?: EventContextLite })?.eventContext ??
+                                  undefined
+                                }
                               />
                                 <div className="mt-3">
                                   <RiskRewardBlock riskReward={setup?.riskReward ?? item.riskReward ?? null} />
