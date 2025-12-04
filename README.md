@@ -76,6 +76,9 @@ Redis (geplant)
 
 Vitest (Tests geplant)
 
+## Perception Pipeline
+Eine kompakte Beschreibung der Perception-Snapshots (Cron-Build, `/api/perception/today`, Health-Check, Live/Mock-Modus) findest du in `docs/perception-pipeline.md`.
+
 Projektstruktur (Kurzüberblick)
 
 src/app: UI, Routing, API-Routen

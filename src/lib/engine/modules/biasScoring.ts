@@ -62,8 +62,8 @@ export function scoreFromBias(
         ? tilt
         : 50;
 
-  const alignmentDelta = alignment === "aligned" ? 5 : alignment === "opposite" ? -10 : 0;
-  const confidenceDelta = 0.3 * (strength - 50);
+  const alignmentDelta = alignment === "aligned" ? 10 : alignment === "opposite" ? -25 : 0;
+  const confidenceDelta = 0.5 * (strength - 50);
   const raw = baseDirectional + alignmentDelta + confidenceDelta;
   const score = clamp(Math.round(raw), 0, 100);
 

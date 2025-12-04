@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+console.log("[vitest] loading eventRing.stage1.test.ts", typeof describe);
 import { computeRingsFromSource } from "@/src/lib/engine/rings";
 
 describe("Event ring Stage 1 (new components)", () => {

@@ -24,7 +24,7 @@ type Breakdown = {
   pattern?: number | null;
 };
 
-type RingSource = {
+export type RingSource = {
   breakdown?: Breakdown;
   patternType?: string | null;
   eventScore?: number | null;
@@ -332,7 +332,7 @@ function resolveTrendScore(source: RingSource): number {
   return clampPercent(source.breakdown?.trend);
 }
 
-function computeRingsFromSource(source: RingSource): SetupRings {
+export function computeRingsFromSource(source: RingSource): SetupRings {
   const trendScore = resolveTrendScore(source);
   const eventScore = resolveEventScore(source);
   const biasScore = resolveBiasScore(source);
