@@ -26,6 +26,15 @@ function bucketFromScore(score: number): Bucket {
   return "low";
 }
 
+function formatInsightText(
+  translate: (key: string) => string,
+  key: string,
+  vars: Record<string, string>,
+): string {
+  const template = translate(key);
+  return Object.entries(vars).reduce((acc, [k, v]) => acc.replace(`{${k}}`, v), template);
+}
+
 export function RingInsights({ rings, assetLabel, timeframe, direction, aiSummary }: RingInsightsProps): JSX.Element {
   const t = useT();
 
@@ -84,7 +93,7 @@ export function RingInsights({ rings, assetLabel, timeframe, direction, aiSummar
               <span className="font-semibold text-slate-200">{Math.round(item.score)}%</span>
             </div>
             <p className="mt-1 text-xs text-slate-200">
-              {t(`perception.rings.insights.${item.key}.${item.bucket}`, {
+              {formatInsightText(t, `perception.rings.insights.${item.key}.${item.bucket}`, {
                 ...commonVars,
                 score: Math.round(item.score).toString(),
               })}
@@ -98,7 +107,7 @@ export function RingInsights({ rings, assetLabel, timeframe, direction, aiSummar
               <span className="font-semibold text-slate-200">{Math.round(confidence)}%</span>
             </div>
             <p className="mt-1 text-xs text-slate-200">
-              {t(`perception.rings.insights.confidence.${bucketFromScore(confidence)}`, {
+              {formatInsightText(t, `perception.rings.insights.confidence.${bucketFromScore(confidence)}`, {
                 ...commonVars,
                 score: Math.round(confidence).toString(),
               })}
