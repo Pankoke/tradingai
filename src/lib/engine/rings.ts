@@ -43,27 +43,11 @@ type RingSource = {
   setupId?: string;
 };
 
-const PATTERN_MAP: Record<string, number> = {
-  breakout: 85,
-  "liquidity grab": 80,
-  pullback: 65,
-  "range rejection": 60,
-  "trend continuation": 55,
-};
-
 const clampPercent = (value?: number | null, fallback = 50): number => {
   if (value === undefined || value === null || Number.isNaN(value)) {
     return fallback;
   }
   return clamp(Math.round(value), 0, 100);
-};
-
-const PATTERN_MAP_STAGE1: Record<string, number> = {
-  breakout: 90,
-  "liquidity grab": 80,
-  "range rejection": 70,
-  pullback: 60,
-  "trend continuation": 55,
 };
 
 function computeVolComponent(volatility?: number | null): number {
@@ -85,12 +69,6 @@ function computeRegimeComponent(trend?: number | null, momentum?: number | null)
 }
 
 function computePatternComponent(breakdown?: Breakdown, patternType?: string | null): number {
-  if (patternType) {
-    const mapped = PATTERN_MAP_STAGE1[patternType.toLowerCase()];
-    if (typeof mapped === "number") {
-      return mapped;
-    }
-  }
   if (breakdown && breakdown.pattern !== undefined && breakdown.pattern !== null) {
     return clamp(Math.round(Math.max(30, Math.min(80, breakdown.pattern))), 0, 100);
   }

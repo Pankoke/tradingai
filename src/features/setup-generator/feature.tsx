@@ -5,12 +5,8 @@ import Link from "next/link";
 import type { JSX } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import {
-  Direction,
-  DirectionMode,
   FormState,
   GeneratedSetup,
-  RiskProfile,
-  Timeframe,
 } from "@/src/features/setup-generator/types";
 import { fetchSetupGenerator } from "@/src/features/setup-generator/useSetupGenerator";
 
@@ -33,11 +29,6 @@ export function SetupGeneratorClient({
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [result, setResult] = useState<GeneratedSetup | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [prefillAsset, setPrefillAsset] = useState<string | null>(null);
-  const [prefillEntry, setPrefillEntry] = useState<number | null>(null);
-  const [prefillStop, setPrefillStop] = useState<number | null>(null);
-  const params = useParams();
-  const activeLocale = params?.locale ?? "de";
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -48,10 +39,6 @@ export function SetupGeneratorClient({
     const stopParam =
       parseNumber(initialSearchParams.get("stopLoss")) ??
       parseNumber(searchParams.get("stopLoss"));
-
-    setPrefillAsset(assetParam ?? null);
-    setPrefillEntry(entryParam);
-    setPrefillStop(stopParam);
 
     setForm((prev) => ({
       ...prev,

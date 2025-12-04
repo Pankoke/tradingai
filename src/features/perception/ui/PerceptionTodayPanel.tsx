@@ -13,6 +13,7 @@ import type { SetupRingScores, SetupRings } from "@/src/lib/engine/rings";
 import { computeRingsForSnapshotItem } from "@/src/lib/engine/rings";
 import { fetchPerceptionToday, type PerceptionTodayResponse } from "@/src/lib/api/perceptionClient";
 import { BigGauge, SmallGauge } from "@/src/components/perception/RingGauges";
+import { formatRelativeTime } from "@/src/lib/formatters/datetime";
 
 type LucideIcon = ComponentType<SVGProps<SVGSVGElement>>;
 
@@ -78,7 +79,7 @@ export function PerceptionTodayPanel(): JSX.Element {
   const t = useT();
   const [data, setData] = useState<PerceptionTodayResponse | null>(null);
   const [setups, setSetups] = useState<Setup[] | null>(null);
-  const [status, setStatus] = useState<"loading" | "error" | "ready">("loading");
+  const [status, setStatus] = useState<"loading" | "error" | "empty" | "ready">("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -91,9 +92,10 @@ export function PerceptionTodayPanel(): JSX.Element {
         if (!isMounted) {
           return;
         }
+        const hasItems = perceptionPayload.items && perceptionPayload.items.length > 0;
         setData(perceptionPayload);
         setSetups(perceptionPayload.setups);
-        setStatus("ready");
+        setStatus(hasItems ? "ready" : "empty");
       } catch (error) {
         if (!isMounted) {
           return;
@@ -182,6 +184,9 @@ export function PerceptionTodayPanel(): JSX.Element {
       ? "text-emerald-300 border-emerald-500/60 bg-emerald-500/10"
       : "text-amber-300 border-amber-500/60 bg-amber-500/10";
 
+  const snapshotRelative =
+    data?.snapshot.snapshotTime ? formatRelativeTime(data.snapshot.snapshotTime) : null;
+
   return (
     <section>
       <div className="mt-6 rounded-2xl border border-slate-200 bg-gradient-to-br from-sky-50 via-white to-emerald-50 p-[1.5px] shadow-sm dark:border-transparent dark:from-sky-500/15 dark:via-transparent dark:to-emerald-500/10 dark:shadow-[0_0_25px_rgba(56,189,248,0.15)]">
@@ -199,11 +204,18 @@ export function PerceptionTodayPanel(): JSX.Element {
               {modeLabel}
             </div>
           </div>
-          <p className="text-xs text-slate-500">
-            {data
-              ? `${t("perception.today.lastUpdated")}: ${formatTimestamp(data.snapshot.snapshotTime)}`
-              : t("perception.today.loading")}
-          </p>
+          <div className="text-xs text-slate-500 space-y-1">
+            <p>
+              {data
+                ? `${t("perception.today.lastUpdated")}: ${formatTimestamp(data.snapshot.snapshotTime)}`
+                : t("perception.today.loading")}
+            </p>
+            {snapshotRelative ? (
+              <p className="text-slate-400">
+                {t("perception.today.snapshotAge", { relative: snapshotRelative })}
+              </p>
+            ) : null}
+          </div>
 
           {status === "loading" && (
             <StatusMessage message={t("perception.today.loading")} />
@@ -217,7 +229,7 @@ export function PerceptionTodayPanel(): JSX.Element {
               }
             />
           )}
-          {status === "ready" && (!data || data.items.length === 0) && (
+          {status === "empty" && (
             <StatusMessage message={t("perception.today.empty")} />
           )}
 
