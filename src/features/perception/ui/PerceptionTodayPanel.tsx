@@ -262,6 +262,9 @@ export function PerceptionTodayPanel(): JSX.Element {
 
   const snapshotRelative =
     data?.snapshot.snapshotTime ? formatRelativeTime(data.snapshot.snapshotTime) : null;
+  const snapshotAgeLabel = snapshotRelative
+    ? t("perception.today.snapshotAge").replace("{relative}", snapshotRelative)
+    : null;
 
   return (
     <section>
@@ -286,11 +289,7 @@ export function PerceptionTodayPanel(): JSX.Element {
                 ? `${t("perception.today.lastUpdated")}: ${formatTimestamp(data.snapshot.snapshotTime)}`
                 : t("perception.today.loading")}
             </p>
-            {snapshotRelative ? (
-              <p className="text-slate-400">
-                {t("perception.today.snapshotAge", { relative: snapshotRelative })}
-              </p>
-            ) : null}
+            {snapshotAgeLabel ? <p className="text-slate-400">{snapshotAgeLabel}</p> : null}
           </div>
 
           {status === "loading" && (
