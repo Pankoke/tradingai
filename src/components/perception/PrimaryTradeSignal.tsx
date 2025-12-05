@@ -21,17 +21,22 @@ type PrimaryTradeSignalProps = {
 };
 
 type SignalKey = "strongLong" | "strongShort" | "cautious" | "noEdge";
+type ExtendedSignal = SignalKey | "coreLong" | "coreShort";
 
-const ICONS: Record<SignalKey, LucideIcon> = {
+const ICONS: Record<ExtendedSignal, LucideIcon> = {
   strongLong: ArrowUpRight,
   strongShort: ArrowDownRight,
+  coreLong: ArrowUpRight,
+  coreShort: ArrowDownRight,
   cautious: ArrowRightCircle,
   noEdge: ArrowRightCircle,
 };
 
-const COLOR_CLASSES: Record<SignalKey, string> = {
+const COLOR_CLASSES: Record<ExtendedSignal, string> = {
   strongLong: "text-emerald-300 bg-emerald-500/10 border-emerald-500/50",
   strongShort: "text-rose-300 bg-rose-500/10 border-rose-500/50",
+  coreLong: "text-emerald-200 bg-emerald-500/10 border-emerald-500/30",
+  coreShort: "text-rose-200 bg-rose-500/10 border-rose-500/30",
   cautious: "text-amber-300 bg-amber-500/10 border-amber-500/40",
   noEdge: "text-slate-300 bg-slate-700/20 border-slate-600/60",
 };
@@ -46,6 +51,20 @@ function bucket(score: number): "low" | "medium" | "high" {
   if (score >= 67) return "high";
   if (score >= 34) return "medium";
   return "low";
+}
+
+function bucketRrr(rrr?: number | null): "weak" | "ok" | "strong" | null {
+  if (rrr === undefined || rrr === null || Number.isNaN(rrr)) return null;
+  if (rrr < 1.5) return "weak";
+  if (rrr < 3) return "ok";
+  return "strong";
+}
+
+function bucketRisk(risk?: number | null): "low" | "medium" | "high" | null {
+  if (risk === undefined || risk === null || Number.isNaN(risk)) return null;
+  if (risk <= 1.5) return "low";
+  if (risk <= 2.5) return "medium";
+  return "high";
 }
 
 export function PrimaryTradeSignal({ setup }: PrimaryTradeSignalProps): JSX.Element {
@@ -64,6 +83,7 @@ export function PrimaryTradeSignal({ setup }: PrimaryTradeSignalProps): JSX.Elem
   const event = rings.eventScore ?? setup.eventScore ?? 0;
   const confidence = confidenceBucket(rings.confidenceScore ?? setup.confidence ?? 0);
   const rrr = setup.riskReward?.rrr ?? null;
+  const riskPct = setup.riskReward?.riskPercent ?? null;
   const sentiment = rings.sentimentScore ?? 0;
 
   const trendBucket = bucket(trend);
@@ -71,6 +91,8 @@ export function PrimaryTradeSignal({ setup }: PrimaryTradeSignalProps): JSX.Elem
   const flowBucket = bucket(flow);
   const eventBucket = bucket(event);
   const sentimentBucket = bucket(sentiment);
+  const rrrBucket = bucketRrr(rrr);
+  const riskBucket = bucketRisk(riskPct);
 
   const strongDriver =
     (trendBucket === "high" && biasBucket === "high") || (trendBucket === "high" && flowBucket !== "low");
@@ -93,17 +115,28 @@ export function PrimaryTradeSignal({ setup }: PrimaryTradeSignalProps): JSX.Elem
   const hasAnyDriver = trendBucket === "high" || biasBucket === "high" || flowBucket === "high" || sentimentBucket === "high";
   const watchRisk = confidence === "low" || lowRRR || eventBucket === "high";
 
-  let signal: SignalKey = "noEdge";
-  if (
-    strongDriver &&
-    confidence !== "low" &&
+  let signal: ExtendedSignal = "noEdge";
+  const canCore =
+    hasAnyDriver &&
+    !noEdge &&
     (rrr === null || rrr >= 2) &&
-    eventBucket !== "high"
-  ) {
-    if (setup.direction === "Long") signal = "strongLong";
-    else if (setup.direction === "Short") signal = "strongShort";
-  } else if (noEdge) {
+    (riskPct === null || riskBucket !== "high") &&
+    eventBucket !== "high" &&
+    confidence !== "low";
+  const canHighConviction =
+    strongDriver &&
+    (rrr === null || rrrBucket === "strong") &&
+    (riskBucket === null || riskBucket === "low") &&
+    (eventBucket === "low" || eventBucket === "medium") &&
+    confidence === "high" &&
+    !noEdge;
+
+  if (noEdge || rrrBucket === "weak") {
     signal = "noEdge";
+  } else if (canHighConviction) {
+    signal = setup.direction === "Long" ? "strongLong" : "strongShort";
+  } else if (canCore) {
+    signal = setup.direction === "Long" ? "coreLong" : "coreShort";
   } else if (hasAnyDriver && (watchRisk || weakFlow)) {
     signal = "cautious";
   } else if (weakFlow || eventRisk || lowRRR || confidence === "low") {

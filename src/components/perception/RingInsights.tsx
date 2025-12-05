@@ -55,6 +55,45 @@ function formatEventTiming(isoDate: string, translate: (key: string) => string):
   return target.toLocaleString();
 }
 
+function buildConfluenceLine(
+  t: (k: string) => string,
+  rings: RingInsightsProps["rings"],
+  riskRewardRrr?: number | null,
+) {
+  const entries = [
+    { key: "trend", score: rings.trendScore },
+    { key: "bias", score: rings.biasScore },
+    { key: "orderflow", score: rings.orderflowScore },
+    { key: "sentiment", score: rings.sentimentScore },
+    { key: "event", score: rings.eventScore },
+  ];
+
+  const drivers = entries.filter((e) => bucketFromScore(e.score) === "high").sort((a, b) => b.score - a.score);
+  const weakness = entries.reduce((min, cur) => (cur.score < min.score ? cur : min), entries[0]);
+
+  const confidenceVal = rings.confidenceScore ?? 0;
+  const confidenceBucket = bucketFromScore(confidenceVal);
+
+  let level: "strong" | "mixed" | "noEdge" = "mixed";
+  if (drivers.length >= 2 && weakness.score >= 34) level = "strong";
+  else if (drivers.length === 0 && weakness.score >= 34 && (riskRewardRrr ?? 0) < 2) level = "noEdge";
+  else if (drivers.length === 0 && weakness.score < 34) level = "noEdge";
+
+  const driverText =
+    drivers.slice(0, 2).map((d) => `${t(`perception.rings.title.${d.key}`)} ${Math.round(d.score)}`).join(", ") ||
+    t("perception.rings.confluence.none");
+  const weaknessText = `${t(`perception.rings.title.${weakness.key}`)} ${Math.round(weakness.score)}`;
+  const rrrText = riskRewardRrr != null ? riskRewardRrr.toFixed(2) : t("perception.rings.confluence.rrrNA");
+
+  const template = t(`perception.rings.confluence.${level}`);
+  return template
+    .replace("{drivers}", driverText)
+    .replace("{weakness}", weaknessText)
+    .replace("{confidence}", Math.round(confidenceVal).toString())
+    .replace("{confBucket}", confidenceBucket)
+    .replace("{rrr}", rrrText);
+}
+
 export function RingInsights({
   rings,
   assetLabel,
@@ -107,6 +146,8 @@ export function RingInsights({
   const summaryData: RingAiSummary | null =
     ringAiSummary ?? (aiSummary ? { shortSummary: aiSummary, longSummary: aiSummary, keyFacts: [] } : null);
 
+  const confluenceLine = buildConfluenceLine(t, rings, undefined);
+
   return (
     <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-inner shadow-black/10">
       <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
@@ -115,6 +156,7 @@ export function RingInsights({
             {t("perception.rings.insights.title")}
           </p>
           <p className="text-sm text-slate-300">{t("perception.rings.insights.subtitle")}</p>
+          <p className="mt-1 text-xs text-slate-200">{t("perception.rings.confluence.title")}: {confluenceLine}</p>
         </div>
         <div>
           <span className="inline-flex items-center rounded-full border border-slate-700 bg-slate-800 px-2.5 py-1 text-[11px] font-semibold text-slate-200">

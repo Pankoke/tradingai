@@ -49,6 +49,30 @@ const classStyles: Record<RrrClass, string> = {
   aggressive: "bg-emerald-500/10 text-emerald-300 border border-emerald-500/30",
 };
 
+type RrrBucket = "weak" | "ok" | "strong";
+type RiskBucket = "low" | "medium" | "high";
+
+const bucketRrr = (rrr?: number | null): RrrBucket | null => {
+  if (rrr === undefined || rrr === null || Number.isNaN(rrr)) return null;
+  if (rrr < 1.5) return "weak";
+  if (rrr < 3) return "ok";
+  return "strong";
+};
+
+const bucketRisk = (riskPercent?: number | null): RiskBucket | null => {
+  if (riskPercent === undefined || riskPercent === null || Number.isNaN(riskPercent)) return null;
+  if (riskPercent <= 1.5) return "low";
+  if (riskPercent <= 2.5) return "medium";
+  return "high";
+};
+
+const bucketConfidence = (confidence?: number | null): "low" | "medium" | "high" | null => {
+  if (confidence === undefined || confidence === null || Number.isNaN(confidence)) return null;
+  if (confidence > 70) return "high";
+  if (confidence >= 46) return "medium";
+  return "low";
+};
+
 export function RiskRewardBlock({ riskReward, className }: Props): JSX.Element {
   const t = useT();
   const data = riskReward ?? {
@@ -60,6 +84,13 @@ export function RiskRewardBlock({ riskReward, className }: Props): JSX.Element {
   const volatilityDisplay =
     data.volatilityLabel != null ? formatVolatilityLabel(data.volatilityLabel) : t("perception.riskReward.valueNA");
   const rrrClass = classifyRrr(data.rrr);
+  const rrrBucket = bucketRrr(data.rrr);
+  const riskBucket = bucketRisk(data.riskPercent);
+  const confidenceBucket = bucketConfidence(
+    // optional passthrough when available on riskReward
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (data as any)?.confidenceScore ?? null,
+  );
 
   return (
     <div
@@ -72,7 +103,19 @@ export function RiskRewardBlock({ riskReward, className }: Props): JSX.Element {
       <div className="mt-3 flex flex-col gap-3">
         <div className="flex items-end justify-between">
           <div>
-            <Tooltip content={t("perception.riskReward.tooltip.rrr")} side="top">
+            <Tooltip
+              content={
+                rrrBucket
+                  ? t(`perception.riskReward.tooltip.rrr.${rrrBucket}`)
+                      .replace("{rrr}", formatRRR(data.rrr))
+                      .replace(
+                        "{confidence}",
+                        confidenceBucket ? t(`perception.rings.insights.confidence.${confidenceBucket}`) : "",
+                      )
+                  : t("perception.riskReward.tooltip.rrrDefault")
+              }
+              side="top"
+            >
               <p className="flex cursor-help items-center gap-2 text-[0.55rem] uppercase tracking-[0.35em] text-slate-500">
                 {t("perception.riskReward.rrrLabel")}
                 <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-slate-700 text-[0.55rem] text-slate-400">i</span>
@@ -88,6 +131,11 @@ export function RiskRewardBlock({ riskReward, className }: Props): JSX.Element {
                 {t(`perception.riskReward.rrrClass.${rrrClass}`)}
               </span>
             )}
+            {rrrBucket ? (
+              <p className="mt-1 text-[11px] text-slate-300">
+                {t(`perception.riskReward.rrrNote.${rrrBucket}`).replace("{rrr}", formatRRR(data.rrr))}
+              </p>
+            ) : null}
           </div>
           <div className="h-2 w-[110px] rounded-full border border-slate-800 bg-slate-900">
             <div className={`h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 ${barWidth(data.rrr)}`} />
@@ -113,6 +161,13 @@ export function RiskRewardBlock({ riskReward, className }: Props): JSX.Element {
             <div className="mt-1 text-sm font-semibold text-rose-400">
               {formatRiskPercent(data.riskPercent)}
             </div>
+            {riskBucket ? (
+              <p className="mt-1 text-[11px] text-slate-300">
+                {t(`perception.riskReward.riskNote.${riskBucket}`)
+                  .replace("{risk}", formatRiskPercent(data.riskPercent))
+                  .replace("{rrr}", formatRRR(data.rrr))}
+              </p>
+            ) : null}
             <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-slate-800">
               <div className={`h-full rounded-full bg-rose-500 ${barWidth(data.riskPercent)}`} />
             </div>

@@ -5,13 +5,25 @@ import { useT } from "@/src/lib/i18n/ClientProvider";
 import type { Setup } from "@/src/lib/engine/types";
 
 type TraderPlaybookProps = {
-  setup: Pick<
-    Setup,
-    | "rings"
-    | "confidence"
-  > &
-    Partial<Pick<Setup, "sentimentScore" | "eventScore" | "biasScore" | "riskReward">>;
+  setup: Pick<Setup, "rings" | "confidence"> &
+    Partial<Pick<Setup, "riskReward" | "sentimentScore" | "eventScore" | "biasScore" | "ringAiSummary">>;
 };
+
+type Bucket = "low" | "medium" | "high";
+
+function bucket(score: number): Bucket {
+  if (score >= 67) return "high";
+  if (score >= 34) return "medium";
+  return "low";
+}
+
+function pickFactByLabel(
+  keyFacts: Array<{ label: string; value: string }>,
+  target: string,
+): string | null {
+  const found = keyFacts.find((f) => f.label.toLowerCase().includes(target.toLowerCase()));
+  return found ? found.value : null;
+}
 
 export function TraderPlaybook({ setup }: TraderPlaybookProps): JSX.Element {
   const t = useT();
@@ -30,18 +42,59 @@ export function TraderPlaybook({ setup }: TraderPlaybookProps): JSX.Element {
   const rrr = setup.riskReward?.rrr ?? null;
   const confidence = rings.confidenceScore ?? setup.confidence ?? 0;
   const sentiment = rings.sentimentScore ?? 0;
+  const riskPct = setup.riskReward?.riskPercent ?? null;
+  const keyFacts = setup.ringAiSummary?.keyFacts ?? [];
 
   const bullets: string[] = [];
 
-  if (event >= 65) bullets.push(t("perception.tradeDecision.playbook.highEvent"));
-  if (confidence < 50) bullets.push(t("perception.tradeDecision.playbook.lowConfidence"));
-  if (rrr !== null && rrr < 2) bullets.push(t("perception.tradeDecision.playbook.lowRRR"));
-  if (flow <= 40) bullets.push(t("perception.tradeDecision.playbook.weakFlow"));
-  if (trend >= 70 && bias >= 70) bullets.push(t("perception.tradeDecision.playbook.trendBiasHigh"));
-  else if (flow >= 70 || sentiment >= 70) bullets.push(t("perception.tradeDecision.playbook.momentumPlay"));
+  if (keyFacts.length >= 1) {
+    const driver = pickFactByLabel(keyFacts, "driver");
+    const risk = pickFactByLabel(keyFacts, "risk");
+    const conflict = pickFactByLabel(keyFacts, "conflict");
+    const confidenceFact = pickFactByLabel(keyFacts, "confidence");
+    const edge = pickFactByLabel(keyFacts, "edge");
 
-  if (bullets.length === 0) {
-    bullets.push(t("perception.tradeDecision.playbook.default"));
+    if (driver) bullets.push(t("perception.tradeDecision.playbook.driver").replace("{driver}", driver));
+    if (risk) bullets.push(t("perception.tradeDecision.playbook.risk").replace("{risk}", risk));
+    if (conflict) bullets.push(t("perception.tradeDecision.playbook.conflict").replace("{conflict}", conflict));
+    if (edge) {
+      bullets.push(t("perception.tradeDecision.playbook.edge").replace("{edge}", edge));
+    } else if (confidenceFact) {
+      bullets.push(
+        t("perception.tradeDecision.playbook.confidenceMgmt").replace("{confidence}", confidenceFact),
+      );
+    }
+  }
+
+  if (bullets.length < 2) {
+    if (event >= 65) bullets.push(t("perception.tradeDecision.playbook.highEvent"));
+    if (rrr !== null && rrr < 2) bullets.push(t("perception.tradeDecision.playbook.lowRRR"));
+    if (confidence < 50) bullets.push(t("perception.tradeDecision.playbook.lowConfidence"));
+    if (flow <= 40) bullets.push(t("perception.tradeDecision.playbook.weakFlow"));
+    if (trend >= 70 && bias >= 70) bullets.push(t("perception.tradeDecision.playbook.trendBiasHigh"));
+    else if (flow >= 70 || sentiment >= 70) bullets.push(t("perception.tradeDecision.playbook.momentumPlay"));
+    if (riskPct !== null && riskPct > 2.5) {
+      bullets.push(
+        t("perception.tradeDecision.playbook.riskPctHigh")
+          .replace("{risk}", (riskPct ?? 0).toFixed(2))
+          .replace("{rrr}", rrr !== null ? rrr.toFixed(2) : "n/a"),
+      );
+    }
+    if (bullets.length === 0) {
+      bullets.push(t("perception.tradeDecision.playbook.default"));
+    }
+  }
+
+  // If no edge (all buckets medium and weak RRR), keep it lean
+  const trendB = bucket(trend);
+  const biasB = bucket(bias);
+  const flowB = bucket(flow);
+  const eventB = bucket(event);
+  const sentimentB = bucket(sentiment);
+  const allMedium =
+    trendB === "medium" && biasB === "medium" && flowB === "medium" && eventB === "medium" && sentimentB === "medium";
+  if (allMedium && (rrr === null || rrr < 2)) {
+    bullets.splice(2);
   }
 
   return (
@@ -50,7 +103,7 @@ export function TraderPlaybook({ setup }: TraderPlaybookProps): JSX.Element {
         {t("perception.tradeDecision.playbook.title")}
       </p>
       <ul className="mt-3 space-y-2 text-sm text-slate-100">
-        {bullets.slice(0, 5).map((b, idx) => (
+        {bullets.slice(0, 4).map((b, idx) => (
           <li key={idx} className="flex items-start gap-2">
             <span className="mt-1 h-1.5 w-1.5 rounded-full bg-sky-400" />
             <span>{b}</span>
@@ -60,3 +113,5 @@ export function TraderPlaybook({ setup }: TraderPlaybookProps): JSX.Element {
     </div>
   );
 }
+
+// Bullet priority: Driver > Risk > Conflict > Confidence/Management; fallbacks use ring scores if keyFacts are missing.

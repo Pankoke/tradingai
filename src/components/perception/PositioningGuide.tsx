@@ -5,15 +5,13 @@ import { useT } from "@/src/lib/i18n/ClientProvider";
 import type { Setup } from "@/src/lib/engine/types";
 
 type PositioningGuideProps = {
-  setup: Pick<
-    Setup,
-    | "rings"
-    | "confidence"
-  > &
-    Partial<Pick<Setup, "riskReward" | "eventScore">>;
+  setup: Pick<Setup, "rings" | "confidence"> &
+    Partial<Pick<Setup, "riskReward" | "eventScore" | "ringAiSummary">>;
 };
 
-function badgeTone(tone: "good" | "ok" | "weak" | "risk"): string {
+type Tone = "good" | "ok" | "weak" | "risk";
+
+function badgeTone(tone: Tone): string {
   switch (tone) {
     case "good":
       return "bg-emerald-500/15 text-emerald-300 border-emerald-500/40";
@@ -27,53 +25,129 @@ function badgeTone(tone: "good" | "ok" | "weak" | "risk"): string {
   }
 }
 
+function bucket(score: number): "low" | "medium" | "high" {
+  if (score >= 67) return "high";
+  if (score >= 34) return "medium";
+  return "low";
+}
+
+function confidenceBucket(score: number): "low" | "medium" | "high" {
+  if (score > 70) return "high";
+  if (score >= 46) return "medium";
+  return "low";
+}
+
+function hasFact(keyFacts: Array<{ label: string; value: string }>, label: string): boolean {
+  return keyFacts.some((f) => f.label.toLowerCase().includes(label.toLowerCase()));
+}
+
 export function PositioningGuide({ setup }: PositioningGuideProps): JSX.Element {
   const t = useT();
   const rings = setup.rings ?? {
     eventScore: setup.eventScore ?? 0,
     orderflowScore: 0,
     confidenceScore: setup.confidence ?? 0,
+    biasScore: 0,
+    trendScore: 0,
   };
 
   const event = rings.eventScore ?? 0;
   const flow = rings.orderflowScore ?? 0;
   const confidence = rings.confidenceScore ?? setup.confidence ?? 0;
   const rrr = setup.riskReward?.rrr ?? null;
+  const riskPct = setup.riskReward?.riskPercent ?? null;
+  const keyFacts = setup.ringAiSummary?.keyFacts ?? [];
 
-  const timingTone: "good" | "ok" | "risk" =
-    event >= 65 || confidence < 46 || (rrr !== null && rrr < 2)
-      ? "risk"
-      : flow >= 70 && event <= 50
-        ? "good"
-        : "ok";
+  const eventBucket = bucket(event);
+  const flowBucket = bucket(flow);
+  const confBucket = confidenceBucket(confidence);
 
-  const rrrTone: "good" | "ok" | "weak" =
-    rrr !== null
-      ? rrr >= 3
-        ? "good"
-        : rrr >= 2
-          ? "ok"
-          : "weak"
-      : "weak";
+  const hasConflict = hasFact(keyFacts, "conflict");
+  const hasRiskFact = hasFact(keyFacts, "risk");
+  const hasEdgeFact = hasFact(keyFacts, "edge");
 
-  const confidenceTone: "good" | "ok" | "weak" =
-    confidence > 70 ? "good" : confidence >= 46 ? "ok" : "weak";
+  // Sizing heuristic
+  let sizing: "small" | "medium" | "aggressive" = "medium";
+  if (
+    (rrr !== null && rrr < 2) ||
+    (riskPct !== null && riskPct > 2.5) ||
+    eventBucket === "high" ||
+    confBucket === "low" ||
+    hasConflict ||
+    hasRiskFact ||
+    hasEdgeFact
+  ) {
+    sizing = "small";
+  } else if (
+    rrr !== null &&
+    rrr >= 3 &&
+    (riskPct === null || riskPct <= 2) &&
+    (eventBucket === "low" || eventBucket === "medium") &&
+    confBucket === "high" &&
+    !hasConflict
+  ) {
+    sizing = "aggressive";
+  } else {
+    sizing = "medium";
+  }
+
+  // Timing heuristic
+  let timingTone: Tone = "ok";
+  let timingText = t("perception.tradeDecision.positioning.timing.ok");
+  if (eventBucket === "high") {
+    timingTone = "risk";
+    timingText = t("perception.tradeDecision.positioning.timing.eventRisk");
+  } else if (flowBucket === "high" && (eventBucket === "low" || eventBucket === "medium")) {
+    timingTone = "good";
+    timingText = t("perception.tradeDecision.positioning.timing.flowDriven");
+  } else if (
+    (bucket(rings.trendScore) === "high" || bucket(rings.biasScore) === "high") &&
+    (eventBucket === "low" || eventBucket === "medium") &&
+    !hasConflict
+  ) {
+    timingTone = "good";
+    timingText = t("perception.tradeDecision.positioning.timing.trendFollow");
+  }
+
+  // RRR fitness
+  let rrrTone: Tone = "weak";
+  let rrrText = t("perception.tradeDecision.positioning.rrr.weak");
+  if (rrr !== null) {
+    if (rrr >= 3) {
+      rrrTone = "good";
+      rrrText = t("perception.tradeDecision.positioning.rrr.good");
+    } else if (rrr >= 2) {
+      rrrTone = "ok";
+      rrrText = t("perception.tradeDecision.positioning.rrr.ok");
+    }
+  }
+
+  // Confidence badge text
+  let confidenceTone: Tone = confBucket === "high" ? "good" : confBucket === "medium" ? "ok" : "weak";
+  let confidenceText = t(`perception.tradeDecision.positioning.confidence.${confBucket}`);
+  if (sizing === "aggressive") {
+    confidenceTone = confidenceTone === "good" ? "good" : "ok";
+    confidenceText = t("perception.tradeDecision.positioning.confidence.aggressive");
+  } else if (sizing === "small") {
+    confidenceTone = "weak";
+    confidenceText = t("perception.tradeDecision.positioning.confidence.small");
+  }
 
   const rows = [
     {
       label: t("perception.tradeDecision.positioning.timing"),
       tone: timingTone,
-      value: t(`perception.tradeDecision.positioning.timing.${timingTone}`),
+      value: timingText,
     },
     {
       label: t("perception.tradeDecision.positioning.rrr"),
       tone: rrrTone,
-      value: t(`perception.tradeDecision.positioning.rrr.${rrrTone}`),
+      value: rrrText,
     },
     {
       label: t("perception.tradeDecision.positioning.confidence"),
       tone: confidenceTone,
-      value: `${t(`perception.tradeDecision.positioning.confidence.${confidenceTone}`)} (${Math.round(confidence)}%)`,
+      value: confidenceText,
     },
   ];
 
@@ -84,7 +158,10 @@ export function PositioningGuide({ setup }: PositioningGuideProps): JSX.Element 
       </p>
       <div className="mt-3 space-y-2">
         {rows.map((row) => (
-          <div key={row.label} className="flex items-center justify-between gap-3 rounded-xl border border-slate-700/70 bg-slate-800/60 px-3 py-2">
+          <div
+            key={row.label}
+            className="flex items-center justify-between gap-3 rounded-xl border border-slate-700/70 bg-slate-800/60 px-3 py-2"
+          >
             <span className="text-xs text-slate-200">{row.label}</span>
             <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${badgeTone(row.tone)}`}>
               {row.value}
@@ -95,3 +172,5 @@ export function PositioningGuide({ setup }: PositioningGuideProps): JSX.Element 
     </div>
   );
 }
+
+// Sizing priority: Event/RRR/Risk% and conflicts gate aggressiveness; confidence adjusts tone; flow/trend set timing bias.
