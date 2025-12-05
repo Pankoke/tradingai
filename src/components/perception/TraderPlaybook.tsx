@@ -53,7 +53,7 @@ export function TraderPlaybook({ setup }: TraderPlaybookProps): JSX.Element {
   const sentiment = rings.sentimentScore ?? 0;
   const riskPct = setup.riskReward?.riskPercent ?? null;
   const keyFacts = setup.ringAiSummary?.keyFacts ?? [];
-  const eventBucket = bucket(event);
+  const eventBucket = event >= 75 ? "high" : event >= 40 ? "medium" : "low";
   const flowBucket = bucket(flow);
   const trendBucket = bucket(trend);
   const biasBucket = bucket(bias);
@@ -82,7 +82,9 @@ export function TraderPlaybook({ setup }: TraderPlaybookProps): JSX.Element {
   }
 
   if (bullets.length < 2) {
-    if (eventBucket === "high") bullets.push(t("perception.tradeDecision.playbook.highEvent"));
+    if (eventBucket === "high") bullets.unshift(t("perception.tradeDecision.playbook.highEvent"));
+    else if (eventBucket === "medium") bullets.push(t("perception.tradeDecision.playbook.mediumEvent"));
+    else if (eventBucket === "low") bullets.push(t("perception.tradeDecision.playbook.lowEvent"));
     if (rrr !== null && rrr < 2) bullets.push(t("perception.tradeDecision.playbook.lowRRR"));
     if (confidence < 46) bullets.push(t("perception.tradeDecision.playbook.lowConfidence"));
     if (flowBucket === "low") bullets.push(t("perception.tradeDecision.playbook.weakFlow"));
@@ -101,11 +103,6 @@ export function TraderPlaybook({ setup }: TraderPlaybookProps): JSX.Element {
   }
 
   // If no edge (all buckets medium and weak RRR), keep it lean
-  const trendB = bucket(trend);
-  const biasB = bucket(bias);
-  const flowB = bucket(flow);
-  const eventB = bucket(event);
-  const sentimentB = bucket(sentiment);
   const allMedium =
     trendBucket === "medium" &&
     biasBucket === "medium" &&

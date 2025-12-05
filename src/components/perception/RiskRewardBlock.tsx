@@ -114,7 +114,9 @@ export function RiskRewardBlock({ riskReward, className }: Props): JSX.Element {
                       )}${
                       (data as any)?.eventScore && (data as any)?.eventScore >= 75
                         ? ` ${t("perception.tradeDecision.playbook.highEvent")}`
-                        : ""
+                        : (data as any)?.eventScore && (data as any)?.eventScore >= 40
+                          ? ` ${t("perception.tradeDecision.playbook.mediumEvent")}`
+                          : ""
                     }`
                   : t("perception.riskReward.tooltip.rrrDefault")
               }

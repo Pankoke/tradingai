@@ -35,6 +35,12 @@ function confidenceBucketScore(score: number): Bucket {
   return "low";
 }
 
+function eventBucketFromScore(score: number): Bucket {
+  if (score >= 75) return "high";
+  if (score >= 40) return "medium";
+  return "low";
+}
+
 function formatInsightText(
   translate: (key: string) => string,
   key: string,
@@ -82,8 +88,10 @@ function buildConfluenceLine(
   const conflict =
     (bucketFromScore(rings.orderflowScore) === "low" &&
       (bucketFromScore(rings.trendScore) === "high" || bucketFromScore(rings.biasScore) === "high")) ||
-    (bucketFromScore(rings.eventScore) === "high" &&
-      (bucketFromScore(rings.trendScore) === "high" || bucketFromScore(rings.biasScore) === "high"));
+    (eventBucketFromScore(rings.eventScore) === "high" &&
+      (bucketFromScore(rings.trendScore) === "high" || bucketFromScore(rings.biasScore) === "high")) ||
+    (bucketFromScore(rings.trendScore) === "high" && confidenceBucket === "low") ||
+    (bucketFromScore(rings.biasScore) === "high" && confidenceBucket === "low");
 
   let level: "strong" | "mixed" | "noEdge" = "mixed";
   if (drivers.length >= 2 && weakness.score >= 34 && !conflict) level = "strong";
@@ -137,7 +145,7 @@ export function RingInsights({
     {
       key: "event",
       score: rings.eventScore,
-      bucket: bucketFromScore(rings.eventScore),
+      bucket: eventBucketFromScore(rings.eventScore),
     },
     {
       key: "bias",

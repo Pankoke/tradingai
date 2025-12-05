@@ -60,7 +60,7 @@ export function PositioningGuide({ setup }: PositioningGuideProps): JSX.Element 
   const riskPct = setup.riskReward?.riskPercent ?? null;
   const keyFacts = setup.ringAiSummary?.keyFacts ?? [];
 
-  const eventBucket = bucket(event);
+  const eventBucket = event >= 75 ? "high" : event >= 40 ? "medium" : "low";
   const flowBucket = bucket(flow);
   const confBucket = confidenceBucket(confidence);
   const rrrBucket = (() => {
@@ -83,9 +83,9 @@ export function PositioningGuide({ setup }: PositioningGuideProps): JSX.Element 
   // Sizing heuristic
   let sizing: "small" | "medium" | "aggressive" = "medium";
   if (
+    eventBucket === "high" ||
     rrrBucket === "weak" ||
     riskPctBucket === "high" ||
-    eventBucket === "high" ||
     confBucket === "low" ||
     hasConflict ||
     hasRiskFact ||
@@ -127,7 +127,7 @@ export function PositioningGuide({ setup }: PositioningGuideProps): JSX.Element 
     (rrrBucket === null || rrrBucket === "weak")
   ) {
     timingTone = "weak";
-    timingText = t("perception.tradeDecision.positioning.timing.eventRisk");
+    timingText = t("perception.tradeDecision.positioning.timing.ok");
   }
 
   // RRR fitness

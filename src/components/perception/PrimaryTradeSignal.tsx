@@ -123,10 +123,9 @@ export function PrimaryTradeSignal({ setup }: PrimaryTradeSignalProps): JSX.Elem
     confidence === "high" &&
     rrrBucket === "strong" &&
     (riskBucket === null || riskBucket === "low") &&
-    (eventBucket === "low" || eventBucket === "medium") &&
+    eventBucket !== "high" &&
     !noEdge &&
-    !conflictDerived &&
-    !eventRiskHigh;
+    !conflictDerived;
   const canCore =
     !noEdge &&
     [trendBucket, biasBucket, flowBucket, sentimentBucket].filter((b) => b === "high").length >= 2 &&
@@ -136,7 +135,7 @@ export function PrimaryTradeSignal({ setup }: PrimaryTradeSignalProps): JSX.Elem
     eventBucket !== "high" &&
     !conflictDerived;
 
-  if (noEdge || rrrBucket === "weak" || conflictDerived) {
+  if (noEdge || rrrBucket === "weak") {
     signal = "noEdge";
   } else if (canHighConviction) {
     signal = setup.direction === "Long" ? "strongLong" : "strongShort";
@@ -146,8 +145,6 @@ export function PrimaryTradeSignal({ setup }: PrimaryTradeSignalProps): JSX.Elem
     hasAnyDriver &&
     (eventRiskHigh || weakFlow || confidence === "low" || riskBucket === "high" || conflictDerived)
   ) {
-    signal = "cautious";
-  } else if (conflictDerived) {
     signal = "cautious";
   }
 
