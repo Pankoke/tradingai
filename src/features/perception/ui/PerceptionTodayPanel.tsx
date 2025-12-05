@@ -308,7 +308,6 @@ export function PerceptionTodayPanel(): JSX.Element {
 
       const top = ctx.topEvents[0];
 
-      // eslint-disable-next-line no-console
       console.debug("[EventRing]", {
         assetId: setup.assetId,
         setupId: setup.id,

@@ -1,5 +1,18 @@
 import type { RingAiSummary, RiskRewardSummary, Setup } from "@/src/lib/engine/types";
 
+const fallbackMessages = {
+  noEdgeLong:
+    "No clear edge: all rings are in the middle; treat this more as a watchlist candidate than a high-conviction trade.",
+  noEdgeFact: "No clear edge (all rings medium, RRR < 2)",
+  eventDriverFact: (score: number) => `Macro event dominates (${score})`,
+  eventDriverLong:
+    "The setup is heavily driven by the upcoming macro event – expect volatility around the release window.",
+};
+
+function fmtEventDriverFact(score: number): string {
+  return fallbackMessages.eventDriverFact(score);
+}
+
 type SummaryInput = {
   setup: Pick<
     Setup,
@@ -23,6 +36,12 @@ function bucketLabel(score: number): "low" | "medium" | "high" {
   return "low";
 }
 
+function confidenceBucket(score: number): "low" | "medium" | "high" {
+  if (score > 70) return "high";
+  if (score >= 46) return "medium";
+  return "low";
+}
+
 export function buildRingAiSummaryForSetup(params: SummaryInput): RingAiSummary {
   const { setup } = params;
   const dir = setup.direction ?? "Neutral";
@@ -35,7 +54,7 @@ export function buildRingAiSummaryForSetup(params: SummaryInput): RingAiSummary 
     bias: bucketLabel(setup.rings.biasScore),
     sentiment: bucketLabel(setup.rings.sentimentScore),
     orderflow: bucketLabel(setup.rings.orderflowScore),
-    confidence: bucketLabel(setup.rings.confidenceScore ?? setup.confidence ?? 0),
+    confidence: confidenceBucket(setup.rings.confidenceScore ?? setup.confidence ?? 0),
   };
   const confidenceVal = Math.round(setup.rings.confidenceScore ?? setup.confidence ?? 0);
 
@@ -54,6 +73,9 @@ export function buildRingAiSummaryForSetup(params: SummaryInput): RingAiSummary 
     { name: "Orderflow", score: Math.round(setup.rings.orderflowScore), bucket: buckets.orderflow },
     { name: "Sentiment", score: Math.round(setup.rings.sentimentScore), bucket: buckets.sentiment },
   ];
+  if (setup.rings.eventScore >= 75) {
+    driverCandidates.push({ name: "Event", score: Math.round(setup.rings.eventScore), bucket: "high" });
+  }
   const drivers = driverCandidates
     .filter((d) => d.bucket === "high")
     .sort((a, b) => b.score - a.score)
@@ -76,6 +98,19 @@ export function buildRingAiSummaryForSetup(params: SummaryInput): RingAiSummary 
   if (buckets.orderflow === "low" && (buckets.trend === "high" || buckets.bias === "high")) {
     conflicts.push("Weak orderflow against strong directional drivers");
   }
+
+  const noEdge =
+    setup.rings.trendScore >= 40 &&
+    setup.rings.trendScore <= 60 &&
+    setup.rings.biasScore >= 40 &&
+    setup.rings.biasScore <= 60 &&
+    setup.rings.sentimentScore >= 40 &&
+    setup.rings.sentimentScore <= 60 &&
+    setup.rings.orderflowScore >= 40 &&
+    setup.rings.orderflowScore <= 60 &&
+    setup.rings.eventScore >= 40 &&
+    setup.rings.eventScore <= 60 &&
+    (params.setup.riskReward?.rrr ?? Infinity) < 2;
 
   const keyFacts: { label: string; value: string }[] = [];
   if (drivers.length) {
@@ -107,6 +142,15 @@ export function buildRingAiSummaryForSetup(params: SummaryInput): RingAiSummary 
     }
     if (volatilityLabel) keyFacts.push({ label: "Volatility", value: volatilityLabel });
   }
+  if (setup.rings.eventScore >= 75) {
+    keyFacts.push({
+      label: "Driver",
+      value: fmtEventDriverFact(Math.round(setup.rings.eventScore)),
+    });
+  }
+  if (noEdge) {
+    keyFacts.push({ label: "Edge", value: fallbackMessages.noEdgeFact });
+  }
 
   const longParts: string[] = [];
   if (drivers.length) {
@@ -123,6 +167,12 @@ export function buildRingAiSummaryForSetup(params: SummaryInput): RingAiSummary 
     longParts.push(`Conflicts: ${conflicts.join("; ")}.`);
   } else {
     longParts.push(`Confidence ${confidenceVal} (${buckets.confidence}); overall confluence is ${buckets.confidence}.`);
+  }
+  if (setup.rings.eventScore >= 75) {
+    longParts.push(fallbackMessages.eventDriverLong);
+  }
+  if (noEdge) {
+    longParts.push(fallbackMessages.noEdgeLong);
   }
 
   return {

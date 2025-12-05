@@ -8,9 +8,9 @@ describeMaybe("DbBiasProvider integration", () => {
   let biasSnapshots: Awaited<
     ReturnType<typeof import("@/src/server/db/schema/biasSnapshots")>
   >["biasSnapshots"];
-  let eq: typeof (await import("drizzle-orm")).eq;
-  let DbBiasProvider: typeof (await import("@/src/server/providers/biasProvider")).DbBiasProvider;
-  let scoreFromBias: typeof (await import("@/src/lib/engine/modules/biasScoring")).scoreFromBias;
+  let eq: typeof import("drizzle-orm")["eq"];
+  let DbBiasProvider: typeof import("@/src/server/providers/biasProvider")["DbBiasProvider"];
+  let scoreFromBias: typeof import("@/src/lib/engine/modules/biasScoring")["scoreFromBias"];
 
   const TEST_ID = "vitest-bias-eth-2025";
   const ASSET_ID = "eth";

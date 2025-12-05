@@ -9,11 +9,6 @@ type TooltipProps = {
   className?: string;
 };
 
-const SIDE_CLASSES: Record<NonNullable<TooltipProps["side"]>, string> = {
-  top: "bottom-full left-1/2 -translate-x-1/2 mb-2",
-  bottom: "top-full left-1/2 -translate-x-1/2 mt-2",
-};
-
 export function Tooltip({ children, content, side = "top", className = "" }: TooltipProps): JSX.Element {
   return (
     <div className="group relative inline-flex">
