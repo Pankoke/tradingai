@@ -675,5 +675,14 @@
     "perception.scoreBreakdown.labels.bias": "Bias",
     "perception.scoreBreakdown.labels.sentiment": "Sentiment",
     "perception.scoreBreakdown.labels.orderflow": "Orderflow",
-    "perception.scoreBreakdown.labels.confidence": "Confidence"
+    "perception.scoreBreakdown.labels.confidence": "Confidence",
+    "perception.scoreBreakdown.bucket.low": "low",
+    "perception.scoreBreakdown.bucket.medium": "medium",
+    "perception.scoreBreakdown.bucket.high": "high",
+    "perception.scoreBreakdown.tooltip.trend": "Strong or weak structural trend backing the setup.",
+    "perception.scoreBreakdown.tooltip.event": "Macro/news impact on the setup.",
+    "perception.scoreBreakdown.tooltip.bias": "Model bias and technical tilt.",
+    "perception.scoreBreakdown.tooltip.sentiment": "Crowd mood and positioning tone.",
+    "perception.scoreBreakdown.tooltip.orderflow": "Market participation and flow strength.",
+    "perception.scoreBreakdown.tooltip.confidence": "Overall alignment of the rings."
 }

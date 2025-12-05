@@ -675,6 +675,15 @@
     "perception.scoreBreakdown.labels.bias": "Bias",
     "perception.scoreBreakdown.labels.sentiment": "Sentiment",
     "perception.scoreBreakdown.labels.orderflow": "Orderflow",
-    "perception.scoreBreakdown.labels.confidence": "Confidence"
+    "perception.scoreBreakdown.labels.confidence": "Confidence",
+    "perception.scoreBreakdown.bucket.low": "niedrig",
+    "perception.scoreBreakdown.bucket.medium": "mittel",
+    "perception.scoreBreakdown.bucket.high": "hoch",
+    "perception.scoreBreakdown.tooltip.trend": "Trendstärke, die das Setup stützt oder schwächt.",
+    "perception.scoreBreakdown.tooltip.event": "Makro/News-Einfluss auf das Setup.",
+    "perception.scoreBreakdown.tooltip.bias": "Modell-Bias und technischer Drift.",
+    "perception.scoreBreakdown.tooltip.sentiment": "Stimmungslage und Positionierung.",
+    "perception.scoreBreakdown.tooltip.orderflow": "Marktbeteiligung und Flow-Stärke.",
+    "perception.scoreBreakdown.tooltip.confidence": "Gesamtausrichtung der Ringe."
 }
 

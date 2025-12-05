@@ -3,6 +3,7 @@
 import type { JSX } from "react";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import type { Setup } from "@/src/lib/engine/types";
+import { Tooltip } from "@/src/components/ui/tooltip";
 
 type Props = {
   setup: Setup;
@@ -21,6 +22,15 @@ function toBucket(score?: number | null): Bucket {
   if (score >= 70) return "high";
   if (score >= 40) return "medium";
   return "low";
+}
+
+function bucketLabel(bucket: Bucket, t: (k: string) => string): string {
+  return t(`perception.scoreBreakdown.bucket.${bucket}`);
+}
+
+function clampPercent(v: number): number {
+  if (Number.isNaN(v)) return 0;
+  return Math.max(0, Math.min(100, v));
 }
 
 export function ScoreBreakdownChart({ setup }: Props): JSX.Element {
@@ -59,24 +69,31 @@ export function ScoreBreakdownChart({ setup }: Props): JSX.Element {
         </p>
         <p className="text-[0.75rem] text-slate-500">{t("perception.scoreBreakdown.subtitle")}</p>
       </div>
-      <div className="mt-3 space-y-2">
+      <div className="mt-3 space-y-3">
         {items.map((item) => {
           const bucket = toBucket(item.value);
+          const pct = clampPercent(item.value);
+          const tooltipContent = `${item.label}: ${pct}% · ${bucketLabel(bucket, t)} — ${t(
+            `perception.scoreBreakdown.tooltip.${item.key}`
+          )}`;
           return (
-            <div key={item.key} className="space-y-1">
-              <div className="flex justify-between text-xs text-slate-200">
-                <span>{item.label}</span>
-                <span className="text-slate-400">
-                  {Math.round(item.value)} / {bucket}
-                </span>
+            <Tooltip key={item.key} content={tooltipContent}>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-xs text-slate-200">
+                  <span>{item.label}</span>
+                  <span className="w-14 text-right text-slate-300">{pct.toFixed(0)}%</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="relative h-2.5 flex-1 overflow-hidden rounded-full bg-slate-800">
+                    <div
+                      className={`h-2.5 rounded-full ${bucketClass[bucket]}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <span className="text-[0.7rem] uppercase text-slate-400">{bucketLabel(bucket, t)}</span>
+                </div>
               </div>
-              <div className="h-2.5 rounded-full bg-slate-800">
-                <div
-                  className={`h-2.5 rounded-full ${bucketClass[bucket]}`}
-                  style={{ width: `${Math.max(0, Math.min(100, item.value))}%` }}
-                />
-              </div>
-            </div>
+            </Tooltip>
           );
         })}
       </div>
