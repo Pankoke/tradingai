@@ -6,15 +6,24 @@ import type { Setup } from "@/src/lib/engine/types";
 
 type TraderPlaybookProps = {
   setup: Pick<Setup, "rings" | "confidence"> &
-    Partial<Pick<Setup, "riskReward" | "sentimentScore" | "eventScore" | "biasScore" | "ringAiSummary">>;
+    Partial<
+      Pick<Setup, "riskReward" | "sentimentScore" | "eventScore" | "biasScore" | "ringAiSummary">
+    > & { riskReward?: Setup["riskReward"] | null };
 };
 
 type Bucket = "low" | "medium" | "high";
 
 function bucket(score: number): Bucket {
-  if (score >= 67) return "high";
-  if (score >= 34) return "medium";
+  if (score >= 70) return "high";
+  if (score >= 40) return "medium";
   return "low";
+}
+
+function riskBucket(risk?: number | null): "low" | "medium" | "high" | null {
+  if (risk === undefined || risk === null || Number.isNaN(risk)) return null;
+  if (risk <= 1.2) return "low";
+  if (risk <= 2.5) return "medium";
+  return "high";
 }
 
 function pickFactByLabel(
@@ -44,6 +53,12 @@ export function TraderPlaybook({ setup }: TraderPlaybookProps): JSX.Element {
   const sentiment = rings.sentimentScore ?? 0;
   const riskPct = setup.riskReward?.riskPercent ?? null;
   const keyFacts = setup.ringAiSummary?.keyFacts ?? [];
+  const eventBucket = bucket(event);
+  const flowBucket = bucket(flow);
+  const trendBucket = bucket(trend);
+  const biasBucket = bucket(bias);
+  const sentimentBucket = bucket(sentiment);
+  const riskPctBucket = riskBucket(riskPct);
 
   const bullets: string[] = [];
 
@@ -56,7 +71,7 @@ export function TraderPlaybook({ setup }: TraderPlaybookProps): JSX.Element {
 
     if (driver) bullets.push(t("perception.tradeDecision.playbook.driver").replace("{driver}", driver));
     if (risk) bullets.push(t("perception.tradeDecision.playbook.risk").replace("{risk}", risk));
-    if (conflict) bullets.push(t("perception.tradeDecision.playbook.conflict").replace("{conflict}", conflict));
+    if (conflict) bullets.unshift(t("perception.tradeDecision.playbook.conflict").replace("{conflict}", conflict));
     if (edge) {
       bullets.push(t("perception.tradeDecision.playbook.edge").replace("{edge}", edge));
     } else if (confidenceFact) {
@@ -67,13 +82,13 @@ export function TraderPlaybook({ setup }: TraderPlaybookProps): JSX.Element {
   }
 
   if (bullets.length < 2) {
-    if (event >= 65) bullets.push(t("perception.tradeDecision.playbook.highEvent"));
+    if (eventBucket === "high") bullets.push(t("perception.tradeDecision.playbook.highEvent"));
     if (rrr !== null && rrr < 2) bullets.push(t("perception.tradeDecision.playbook.lowRRR"));
-    if (confidence < 50) bullets.push(t("perception.tradeDecision.playbook.lowConfidence"));
-    if (flow <= 40) bullets.push(t("perception.tradeDecision.playbook.weakFlow"));
-    if (trend >= 70 && bias >= 70) bullets.push(t("perception.tradeDecision.playbook.trendBiasHigh"));
-    else if (flow >= 70 || sentiment >= 70) bullets.push(t("perception.tradeDecision.playbook.momentumPlay"));
-    if (riskPct !== null && riskPct > 2.5) {
+    if (confidence < 46) bullets.push(t("perception.tradeDecision.playbook.lowConfidence"));
+    if (flowBucket === "low") bullets.push(t("perception.tradeDecision.playbook.weakFlow"));
+    if (trendBucket === "high" && biasBucket === "high") bullets.push(t("perception.tradeDecision.playbook.trendBiasHigh"));
+    else if (flowBucket === "high" || sentimentBucket === "high") bullets.push(t("perception.tradeDecision.playbook.momentumPlay"));
+    if (riskPctBucket === "high") {
       bullets.push(
         t("perception.tradeDecision.playbook.riskPctHigh")
           .replace("{risk}", (riskPct ?? 0).toFixed(2))
@@ -92,7 +107,11 @@ export function TraderPlaybook({ setup }: TraderPlaybookProps): JSX.Element {
   const eventB = bucket(event);
   const sentimentB = bucket(sentiment);
   const allMedium =
-    trendB === "medium" && biasB === "medium" && flowB === "medium" && eventB === "medium" && sentimentB === "medium";
+    trendBucket === "medium" &&
+    biasBucket === "medium" &&
+    flowBucket === "medium" &&
+    eventBucket === "medium" &&
+    sentimentBucket === "medium";
   if (allMedium && (rrr === null || rrr < 2)) {
     bullets.splice(2);
   }

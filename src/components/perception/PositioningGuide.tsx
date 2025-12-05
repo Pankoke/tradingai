@@ -6,7 +6,9 @@ import type { Setup } from "@/src/lib/engine/types";
 
 type PositioningGuideProps = {
   setup: Pick<Setup, "rings" | "confidence"> &
-    Partial<Pick<Setup, "riskReward" | "eventScore" | "ringAiSummary">>;
+    Partial<Pick<Setup, "riskReward" | "eventScore" | "ringAiSummary">> & {
+      riskReward?: Setup["riskReward"] | null;
+    };
 };
 
 type Tone = "good" | "ok" | "weak" | "risk";
@@ -26,8 +28,8 @@ function badgeTone(tone: Tone): string {
 }
 
 function bucket(score: number): "low" | "medium" | "high" {
-  if (score >= 67) return "high";
-  if (score >= 34) return "medium";
+  if (score >= 70) return "high";
+  if (score >= 40) return "medium";
   return "low";
 }
 
@@ -61,6 +63,18 @@ export function PositioningGuide({ setup }: PositioningGuideProps): JSX.Element 
   const eventBucket = bucket(event);
   const flowBucket = bucket(flow);
   const confBucket = confidenceBucket(confidence);
+  const rrrBucket = (() => {
+    if (rrr === null || Number.isNaN(rrr)) return null;
+    if (rrr < 2) return "weak";
+    if (rrr < 3) return "ok";
+    return "strong";
+  })();
+  const riskPctBucket = (() => {
+    if (riskPct === null || Number.isNaN(riskPct)) return null;
+    if (riskPct <= 1.2) return "low";
+    if (riskPct <= 2.5) return "medium";
+    return "high";
+  })();
 
   const hasConflict = hasFact(keyFacts, "conflict");
   const hasRiskFact = hasFact(keyFacts, "risk");
@@ -69,8 +83,8 @@ export function PositioningGuide({ setup }: PositioningGuideProps): JSX.Element 
   // Sizing heuristic
   let sizing: "small" | "medium" | "aggressive" = "medium";
   if (
-    (rrr !== null && rrr < 2) ||
-    (riskPct !== null && riskPct > 2.5) ||
+    rrrBucket === "weak" ||
+    riskPctBucket === "high" ||
     eventBucket === "high" ||
     confBucket === "low" ||
     hasConflict ||
@@ -79,9 +93,8 @@ export function PositioningGuide({ setup }: PositioningGuideProps): JSX.Element 
   ) {
     sizing = "small";
   } else if (
-    rrr !== null &&
-    rrr >= 3 &&
-    (riskPct === null || riskPct <= 2) &&
+    rrrBucket === "strong" &&
+    (riskPctBucket === null || riskPctBucket === "low") &&
     (eventBucket === "low" || eventBucket === "medium") &&
     confBucket === "high" &&
     !hasConflict
@@ -107,6 +120,14 @@ export function PositioningGuide({ setup }: PositioningGuideProps): JSX.Element 
   ) {
     timingTone = "good";
     timingText = t("perception.tradeDecision.positioning.timing.trendFollow");
+  } else if (
+    bucket(rings.trendScore) === "medium" &&
+    bucket(rings.biasScore) === "medium" &&
+    flowBucket === "medium" &&
+    (rrrBucket === null || rrrBucket === "weak")
+  ) {
+    timingTone = "weak";
+    timingText = t("perception.tradeDecision.positioning.timing.eventRisk");
   }
 
   // RRR fitness

@@ -54,14 +54,14 @@ type RiskBucket = "low" | "medium" | "high";
 
 const bucketRrr = (rrr?: number | null): RrrBucket | null => {
   if (rrr === undefined || rrr === null || Number.isNaN(rrr)) return null;
-  if (rrr < 1.5) return "weak";
+  if (rrr < 2) return "weak";
   if (rrr < 3) return "ok";
   return "strong";
 };
 
 const bucketRisk = (riskPercent?: number | null): RiskBucket | null => {
   if (riskPercent === undefined || riskPercent === null || Number.isNaN(riskPercent)) return null;
-  if (riskPercent <= 1.5) return "low";
+  if (riskPercent <= 1.2) return "low";
   if (riskPercent <= 2.5) return "medium";
   return "high";
 };
@@ -106,12 +106,16 @@ export function RiskRewardBlock({ riskReward, className }: Props): JSX.Element {
             <Tooltip
               content={
                 rrrBucket
-                  ? t(`perception.riskReward.tooltip.rrr.${rrrBucket}`)
+                  ? `${t(`perception.riskReward.tooltip.rrr.${rrrBucket}`)
                       .replace("{rrr}", formatRRR(data.rrr))
                       .replace(
                         "{confidence}",
                         confidenceBucket ? t(`perception.rings.insights.confidence.${confidenceBucket}`) : "",
-                      )
+                      )}${
+                      (data as any)?.eventScore && (data as any)?.eventScore >= 75
+                        ? ` ${t("perception.tradeDecision.playbook.highEvent")}`
+                        : ""
+                    }`
                   : t("perception.riskReward.tooltip.rrrDefault")
               }
               side="top"

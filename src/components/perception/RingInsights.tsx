@@ -24,8 +24,14 @@ type RingInsightsProps = {
 type Bucket = "low" | "medium" | "high";
 
 function bucketFromScore(score: number): Bucket {
-  if (score >= 67) return "high";
-  if (score >= 34) return "medium";
+  if (score >= 70) return "high";
+  if (score >= 40) return "medium";
+  return "low";
+}
+
+function confidenceBucketScore(score: number): Bucket {
+  if (score > 70) return "high";
+  if (score >= 46) return "medium";
   return "low";
 }
 
@@ -72,10 +78,15 @@ function buildConfluenceLine(
   const weakness = entries.reduce((min, cur) => (cur.score < min.score ? cur : min), entries[0]);
 
   const confidenceVal = rings.confidenceScore ?? 0;
-  const confidenceBucket = bucketFromScore(confidenceVal);
+  const confidenceBucket = confidenceBucketScore(confidenceVal);
+  const conflict =
+    (bucketFromScore(rings.orderflowScore) === "low" &&
+      (bucketFromScore(rings.trendScore) === "high" || bucketFromScore(rings.biasScore) === "high")) ||
+    (bucketFromScore(rings.eventScore) === "high" &&
+      (bucketFromScore(rings.trendScore) === "high" || bucketFromScore(rings.biasScore) === "high"));
 
   let level: "strong" | "mixed" | "noEdge" = "mixed";
-  if (drivers.length >= 2 && weakness.score >= 34) level = "strong";
+  if (drivers.length >= 2 && weakness.score >= 34 && !conflict) level = "strong";
   else if (drivers.length === 0 && weakness.score >= 34 && (riskRewardRrr ?? 0) < 2) level = "noEdge";
   else if (drivers.length === 0 && weakness.score < 34) level = "noEdge";
 
@@ -86,12 +97,15 @@ function buildConfluenceLine(
   const rrrText = riskRewardRrr != null ? riskRewardRrr.toFixed(2) : t("perception.rings.confluence.rrrNA");
 
   const template = t(`perception.rings.confluence.${level}`);
-  return template
+  const line = template
     .replace("{drivers}", driverText)
     .replace("{weakness}", weaknessText)
     .replace("{confidence}", Math.round(confidenceVal).toString())
     .replace("{confBucket}", confidenceBucket)
     .replace("{rrr}", rrrText);
+  return conflict
+    ? `${line} (${t("perception.tradeDecision.playbook.conflict").replace("{conflict}", t("perception.tradeDecision.playbook.weakFlow"))})`
+    : line;
 }
 
 export function RingInsights({
