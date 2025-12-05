@@ -14,6 +14,11 @@ import { RingInsights } from "@/src/components/perception/RingInsights";
 import { PrimaryTradeSignal } from "@/src/components/perception/PrimaryTradeSignal";
 import { TraderPlaybook } from "@/src/components/perception/TraderPlaybook";
 import { PositioningGuide } from "@/src/components/perception/PositioningGuide";
+import { EventMicroTimingStrip } from "@/src/components/perception/EventMicroTimingStrip";
+import { TraderImpactSummary } from "@/src/components/perception/TraderImpactSummary";
+import { TraderContextOverlay } from "@/src/components/perception/TraderContextOverlay";
+import type { Setup } from "@/src/lib/engine/types";
+import { TraderNarrativeBlock } from "@/src/components/perception/TraderNarrativeBlock";
 
 type Props = {
   setup: HomepageSetup;
@@ -154,6 +159,58 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
         ringAiSummary={setup.ringAiSummary ?? null}
         eventContext={setup.eventContext ?? undefined}
       />
+      <TraderImpactSummary
+        setup={
+          {
+            ...setup,
+            riskReward:
+              setup.riskReward ?? {
+                riskPercent: null,
+                rewardPercent: null,
+                rrr: null,
+                volatilityLabel: null,
+              },
+          } as unknown as Setup
+        }
+        ringAiSummary={setup.ringAiSummary ?? null}
+        riskReward={setup.riskReward ?? null}
+        eventContext={setup.eventContext ?? null}
+      />
+      <TraderNarrativeBlock
+        setup={
+          {
+            ...setup,
+            riskReward:
+              setup.riskReward ?? {
+                riskPercent: null,
+                rewardPercent: null,
+                rrr: null,
+                volatilityLabel: null,
+              },
+          } as unknown as Setup
+        }
+        ringAiSummary={setup.ringAiSummary ?? null}
+        riskReward={setup.riskReward ?? null}
+        eventContext={setup.eventContext ?? null}
+      />
+      <EventMicroTimingStrip eventContext={setup.eventContext ?? null} />
+
+      <div className="mt-4">
+        <TraderContextOverlay
+          setup={
+            {
+              ...setup,
+              riskReward:
+                setup.riskReward ?? {
+                  riskPercent: null,
+                  rewardPercent: null,
+                  rrr: null,
+                  volatilityLabel: null,
+                },
+            } as unknown as Setup
+          }
+        />
+      </div>
 
       <div className="mt-4 grid gap-4 text-sm md:grid-cols-3">
         <PrimaryTradeSignal setup={setup} />

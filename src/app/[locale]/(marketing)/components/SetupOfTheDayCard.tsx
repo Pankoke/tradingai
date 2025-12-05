@@ -18,6 +18,11 @@ import { RingInsights } from "@/src/components/perception/RingInsights";
 import { PrimaryTradeSignal } from "@/src/components/perception/PrimaryTradeSignal";
 import { TraderPlaybook } from "@/src/components/perception/TraderPlaybook";
 import { PositioningGuide } from "@/src/components/perception/PositioningGuide";
+import { TraderContextOverlay } from "@/src/components/perception/TraderContextOverlay";
+import { EventMicroTimingStrip } from "@/src/components/perception/EventMicroTimingStrip";
+import { TraderImpactSummary } from "@/src/components/perception/TraderImpactSummary";
+import type { Setup } from "@/src/lib/engine/types";
+import { TraderNarrativeBlock } from "@/src/components/perception/TraderNarrativeBlock";
 
 type SetupOfTheDayCardProps = {
   setup: SetupCardSetup;
@@ -140,6 +145,24 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
             ringAiSummary={setup.ringAiSummary ?? null}
             eventContext={setup.eventContext ?? undefined}
           />
+
+          <TraderImpactSummary
+            setup={setup as unknown as Setup}
+            ringAiSummary={setup.ringAiSummary ?? null}
+            riskReward={setup.riskReward ?? null}
+            eventContext={setup.eventContext ?? null}
+          />
+
+          <TraderNarrativeBlock
+            setup={setup as unknown as Setup}
+            ringAiSummary={setup.ringAiSummary ?? null}
+            riskReward={setup.riskReward ?? null}
+            eventContext={setup.eventContext ?? null}
+          />
+
+          <EventMicroTimingStrip eventContext={setup.eventContext ?? null} />
+
+          <TraderContextOverlay setup={setup} />
 
           <div className="mt-4 grid gap-4 lg:grid-cols-3">
             <PrimaryTradeSignal setup={setup} />
