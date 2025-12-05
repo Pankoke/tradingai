@@ -656,6 +656,25 @@
     "perception.impactSummary.confluence": "Konfluenz",
     "perception.impactSummary.rrr": "RRR",
     "perception.impactSummary.riskPct": "Risiko %",
-    "perception.impactSummary.timing": "Timing"
+    "perception.impactSummary.timing": "Timing",
+    "perception.setupRating.title": "Setup-Rating",
+    "perception.setupRating.rating.A": "Starke Treiber und solide Struktur.",
+    "perception.setupRating.rating.B": "Gute Treiber mit balanciertem Risiko.",
+    "perception.setupRating.rating.C": "Gemischte Treiber, neutrale Struktur.",
+    "perception.setupRating.rating.D": "Konflikte oder erhöhte Risiken vorhanden.",
+    "perception.setupRating.rating.E": "Kaum Edge; Qualität begrenzt.",
+    "perception.setupRating.rating.F": "Starke Konflikte und hohes Risiko.",
+    "perception.setupRating.reason.drivers": "Treiber: {items}.",
+    "perception.setupRating.reason.risks": "Risiken: {items}.",
+    "perception.setupRating.reason.conflicts": "Konflikte: {items}.",
+    "perception.setupRating.reason.structure": "Struktur: {items}.",
+    "perception.scoreBreakdown.title": "Score Breakdown",
+    "perception.scoreBreakdown.subtitle": "Ring-Scores im Überblick",
+    "perception.scoreBreakdown.labels.trend": "Trend",
+    "perception.scoreBreakdown.labels.event": "Event",
+    "perception.scoreBreakdown.labels.bias": "Bias",
+    "perception.scoreBreakdown.labels.sentiment": "Sentiment",
+    "perception.scoreBreakdown.labels.orderflow": "Orderflow",
+    "perception.scoreBreakdown.labels.confidence": "Confidence"
 }
 

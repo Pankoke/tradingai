@@ -23,6 +23,8 @@ import { EventMicroTimingStrip } from "@/src/components/perception/EventMicroTim
 import { TraderImpactSummary } from "@/src/components/perception/TraderImpactSummary";
 import type { Setup } from "@/src/lib/engine/types";
 import { TraderNarrativeBlock } from "@/src/components/perception/TraderNarrativeBlock";
+import { SetupRatingBlock } from "@/src/components/perception/SetupRatingBlock";
+import { ScoreBreakdownChart } from "@/src/components/perception/ScoreBreakdownChart";
 
 type SetupOfTheDayCardProps = {
   setup: SetupCardSetup;
@@ -152,6 +154,14 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
             riskReward={setup.riskReward ?? null}
             eventContext={setup.eventContext ?? null}
           />
+
+          <SetupRatingBlock
+            setup={setup as unknown as Setup}
+            ringAiSummary={setup.ringAiSummary ?? null}
+            riskReward={setup.riskReward ?? null}
+            eventContext={setup.eventContext ?? null}
+          />
+          <ScoreBreakdownChart setup={setup as unknown as Setup} />
 
           <TraderNarrativeBlock
             setup={setup as unknown as Setup}

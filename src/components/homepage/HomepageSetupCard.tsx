@@ -19,6 +19,8 @@ import { TraderImpactSummary } from "@/src/components/perception/TraderImpactSum
 import { TraderContextOverlay } from "@/src/components/perception/TraderContextOverlay";
 import type { Setup } from "@/src/lib/engine/types";
 import { TraderNarrativeBlock } from "@/src/components/perception/TraderNarrativeBlock";
+import { SetupRatingBlock } from "@/src/components/perception/SetupRatingBlock";
+import { ScoreBreakdownChart } from "@/src/components/perception/ScoreBreakdownChart";
 
 type Props = {
   setup: HomepageSetup;
@@ -158,6 +160,37 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
         direction={setup.direction}
         ringAiSummary={setup.ringAiSummary ?? null}
         eventContext={setup.eventContext ?? undefined}
+      />
+      <SetupRatingBlock
+        setup={
+          {
+            ...setup,
+            riskReward:
+              setup.riskReward ?? {
+                riskPercent: null,
+                rewardPercent: null,
+                rrr: null,
+                volatilityLabel: null,
+              },
+          } as unknown as Setup
+        }
+        ringAiSummary={setup.ringAiSummary ?? null}
+        riskReward={setup.riskReward ?? null}
+        eventContext={setup.eventContext ?? null}
+      />
+      <ScoreBreakdownChart
+        setup={
+          {
+            ...setup,
+            riskReward:
+              setup.riskReward ?? {
+                riskPercent: null,
+                rewardPercent: null,
+                rrr: null,
+                volatilityLabel: null,
+              },
+          } as unknown as Setup
+        }
       />
       <TraderImpactSummary
         setup={
