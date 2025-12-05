@@ -11,6 +11,9 @@ import { useT } from "@/src/lib/i18n/ClientProvider";
 import { BigGauge, SmallGauge } from "@/src/components/perception/RingGauges";
 import { buildEventTooltip } from "@/src/features/perception/ui/eventTooltip";
 import { RingInsights } from "@/src/components/perception/RingInsights";
+import { PrimaryTradeSignal } from "@/src/components/perception/PrimaryTradeSignal";
+import { TraderPlaybook } from "@/src/components/perception/TraderPlaybook";
+import { PositioningGuide } from "@/src/components/perception/PositioningGuide";
 
 type Props = {
   setup: HomepageSetup;
@@ -151,6 +154,12 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
         ringAiSummary={setup.ringAiSummary ?? null}
         eventContext={setup.eventContext ?? undefined}
       />
+
+      <div className="mt-4 grid gap-4 text-sm md:grid-cols-3">
+        <PrimaryTradeSignal setup={setup} />
+        <TraderPlaybook setup={setup} />
+        <PositioningGuide setup={setup} />
+      </div>
 
   <div className="mt-4 grid gap-4 text-sm md:grid-cols-3">
         <div className={detailBoxClass}>

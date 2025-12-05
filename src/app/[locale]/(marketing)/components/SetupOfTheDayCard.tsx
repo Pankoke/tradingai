@@ -15,6 +15,9 @@ import { formatNumberText, formatRangeText } from "@/src/lib/formatters/levels";
 import { RiskRewardBlock } from "@/src/components/perception/RiskRewardBlock";
 import { buildEventTooltip } from "@/src/features/perception/ui/eventTooltip";
 import { RingInsights } from "@/src/components/perception/RingInsights";
+import { PrimaryTradeSignal } from "@/src/components/perception/PrimaryTradeSignal";
+import { TraderPlaybook } from "@/src/components/perception/TraderPlaybook";
+import { PositioningGuide } from "@/src/components/perception/PositioningGuide";
 
 type SetupOfTheDayCardProps = {
   setup: SetupCardSetup;
@@ -137,6 +140,12 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
             ringAiSummary={setup.ringAiSummary ?? null}
             eventContext={setup.eventContext ?? undefined}
           />
+
+          <div className="mt-4 grid gap-4 lg:grid-cols-3">
+            <PrimaryTradeSignal setup={setup} />
+            <TraderPlaybook setup={setup} />
+            <PositioningGuide setup={setup} />
+          </div>
 
         <LevelDebugBlock
           category={setup.category ?? setup.levelDebug?.category}
