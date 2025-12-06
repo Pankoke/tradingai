@@ -22,6 +22,8 @@ type PrimaryTradeSignalProps = {
 
 type SignalKey = "strongLong" | "strongShort" | "cautious" | "noEdge";
 type ExtendedSignal = SignalKey | "coreLong" | "coreShort";
+export type TradeSignalResult = ExtendedSignal;
+export type TradeSignalInput = PrimaryTradeSignalProps["setup"];
 
 const ICONS: Record<ExtendedSignal, LucideIcon> = {
   strongLong: ArrowUpRight,
@@ -67,8 +69,7 @@ function bucketRisk(risk?: number | null): "low" | "medium" | "high" | null {
   return "high";
 }
 
-export function PrimaryTradeSignal({ setup }: PrimaryTradeSignalProps): JSX.Element {
-  const t = useT();
+export function classifyTradeSignal(setup: TradeSignalInput): ExtendedSignal {
   const rings = setup.rings ?? {
     trendScore: 0,
     biasScore: setup.biasScore ?? 0,
@@ -94,59 +95,93 @@ export function PrimaryTradeSignal({ setup }: PrimaryTradeSignalProps): JSX.Elem
   const rrrBucket = bucketRrr(rrr);
   const riskBucket = bucketRisk(riskPct);
 
-  const highDriver =
-    (trendBucket === "high" || biasBucket === "high") && (flowBucket === "high" || sentimentBucket === "high");
-  const hasAnyDriver =
+  const driversHighCount = [trend, bias, flow, sentiment].filter((value) => value >= 70).length;
+  const anyDriverHigh = driversHighCount > 0;
+  const hasDriverSupport =
     trendBucket === "high" || biasBucket === "high" || flowBucket === "high" || sentimentBucket === "high";
   const weakFlow = flowBucket === "low";
   const eventRiskHigh = event >= 75;
-  const conflictDerived =
-    (weakFlow && (trendBucket === "high" || biasBucket === "high" || sentimentBucket === "high")) ||
-    (eventRiskHigh && (trendBucket === "high" || biasBucket === "high")) ||
-    (hasAnyDriver && confidence === "low");
+  const volatilityHigh = setup.riskReward?.volatilityLabel === "high";
 
-  const allMedium =
-    trendBucket === "medium" &&
-    biasBucket === "medium" &&
-    flowBucket === "medium" &&
-    sentimentBucket === "medium" &&
-    eventBucket === "medium";
+  const conflictHigh =
+    (weakFlow && (trend >= 70 || bias >= 70)) ||
+    (eventRiskHigh && (trend >= 70 || bias >= 70)) ||
+    (confidence === "low" && (trend >= 70 || bias >= 70));
+  const conflictModerate =
+    !conflictHigh &&
+    ((weakFlow && hasDriverSupport) ||
+      (eventRiskHigh && (trend >= 40 || bias >= 40)) ||
+      (confidence === "medium" && (trend >= 70 || bias >= 70)));
 
-  const noEdge =
-    (allMedium && (rrr === null || rrr < 2)) ||
-    (!hasAnyDriver && eventBucket === "high") ||
-    (confidence === "low" && (rrrBucket === "weak" || rrr === null));
+  const strengthCriteria = [
+    rrrBucket === "strong",
+    riskBucket === null || riskBucket === "low",
+    confidence !== "low",
+    bias >= 40,
+    trend >= 40,
+    event < 75,
+  ].filter(Boolean).length;
 
-  let signal: ExtendedSignal = "noEdge";
+  const weaknessFlags = [
+    rrrBucket === "weak" || rrr === null,
+    riskBucket === "high",
+    confidence === "low",
+    bias < 40,
+    trend < 40,
+    sentiment < 40,
+    flowBucket === "low",
+    conflictHigh,
+    eventRiskHigh && (rrrBucket === "weak" || confidence === "low"),
+  ];
+  const weaknessCount = weaknessFlags.filter(Boolean).length;
+
+  const warningFlags = [
+    eventRiskHigh,
+    riskBucket === "high",
+    volatilityHigh,
+    conflictHigh || conflictModerate,
+    trend < 40 && bias > 60,
+    confidence === "low" && (bias >= 60 || trend >= 60),
+  ];
+  const warningCount = warningFlags.filter(Boolean).length;
+
   const canHighConviction =
-    highDriver &&
-    confidence === "high" &&
     rrrBucket === "strong" &&
     (riskBucket === null || riskBucket === "low") &&
-    eventBucket !== "high" &&
-    !noEdge &&
-    !conflictDerived;
-  const canCore =
-    !noEdge &&
-    [trendBucket, biasBucket, flowBucket, sentimentBucket].filter((b) => b === "high").length >= 2 &&
-    (rrrBucket === "ok" || rrrBucket === "strong") &&
-    (riskBucket === null || riskBucket !== "high") &&
-    confidence !== "low" &&
-    eventBucket !== "high" &&
-    !conflictDerived;
+    confidence === "high" &&
+    bias >= 70 &&
+    event < 75 &&
+    !conflictHigh &&
+    driversHighCount >= 1;
 
-  if (noEdge || rrrBucket === "weak") {
-    signal = "noEdge";
-  } else if (canHighConviction) {
+  const canCore =
+    !conflictHigh &&
+    !conflictModerate &&
+    strengthCriteria >= 3 &&
+    hasDriverSupport &&
+    (rrrBucket === "ok" || rrrBucket === "strong");
+
+  let signal: ExtendedSignal = "noEdge";
+  if (canHighConviction) {
     signal = setup.direction === "Long" ? "strongLong" : "strongShort";
+  } else if (weaknessCount >= 2) {
+    signal = "noEdge";
   } else if (canCore) {
     signal = setup.direction === "Long" ? "coreLong" : "coreShort";
-  } else if (
-    hasAnyDriver &&
-    (eventRiskHigh || weakFlow || confidence === "low" || riskBucket === "high" || conflictDerived)
-  ) {
+  } else if (warningCount >= 2 || eventRiskHigh || conflictModerate || conflictHigh) {
     signal = "cautious";
+  } else if (anyDriverHigh || rrrBucket === "ok" || rrrBucket === "strong") {
+    signal = setup.direction === "Long" ? "coreLong" : "coreShort";
+  } else {
+    signal = "noEdge";
   }
+
+  return signal;
+}
+
+export function PrimaryTradeSignal({ setup }: PrimaryTradeSignalProps): JSX.Element {
+  const t = useT();
+  const signal = classifyTradeSignal(setup);
 
   const Icon = ICONS[signal];
   const color = COLOR_CLASSES[signal];
