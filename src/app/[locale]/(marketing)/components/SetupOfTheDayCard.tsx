@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import type { JSX } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -93,10 +93,15 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
     },
   ];
 
+  const [showNarrative, setShowNarrative] = useState(false);
+  const [showAi, setShowAi] = useState(false);
+
   return (
-    <PerceptionCard className="p-0" innerClassName="p-6">
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex flex-1 flex-col gap-4">
+    <PerceptionCard className="p-0" innerClassName="p-6 space-y-6">
+      {/* Decision Layer */}
+      <section className="space-y-6">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex flex-1 flex-col gap-4">
           <div className="space-y-2">
             <p className="text-[0.58rem] font-semibold uppercase tracking-[0.35em] text-slate-300">
               {t("setups.setupOfTheDay")}
@@ -123,37 +128,25 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
         </div>
       </div>
 
-      <div className="mt-6 grid gap-3 text-[0.65rem] sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-3 text-[0.65rem] sm:grid-cols-2 lg:grid-cols-5">
         {compactRings.map((ring) => (
           <SmallGauge key={ring.label} label={ring.label} value={ring.value} tone={ring.tone} tooltip={ring.tooltip} />
         ))}
       </div>
 
-      <div className="mt-6 grid gap-4 text-xs sm:grid-cols-3">
-        <LevelBox label={t("setups.entry")} value={formatRangeText(setup.entryZone)} tone="neutral" />
-        <LevelBox label={t("setups.stopLoss")} value={formatNumberText(setup.stopLoss)} tone="danger" />
-        <LevelBox label={t("setups.takeProfit")} value={formatNumberText(setup.takeProfit)} tone="success" />
-      </div>
+        <div className="space-y-4">
+          <div className="grid gap-4 text-xs sm:grid-cols-3">
+            <LevelBox label={t("setups.entry")} value={formatRangeText(setup.entryZone)} tone="neutral" />
+            <LevelBox label={t("setups.stopLoss")} value={formatNumberText(setup.stopLoss)} tone="danger" />
+            <LevelBox label={t("setups.takeProfit")} value={formatNumberText(setup.takeProfit)} tone="success" />
+          </div>
 
-      <div className="mt-4">
-        <RiskRewardBlock riskReward={setup.riskReward ?? null} />
-      </div>
+          <RiskRewardBlock riskReward={setup.riskReward ?? null} />
 
-          <RingInsights
-            rings={rings}
-            assetLabel={assetLabel}
-            timeframe={setup.timeframe}
-            direction={setup.direction}
-            ringAiSummary={setup.ringAiSummary ?? null}
-            eventContext={setup.eventContext ?? undefined}
-          />
-
-          <TraderImpactSummary
-            setup={setup as unknown as Setup}
-            ringAiSummary={setup.ringAiSummary ?? null}
-            riskReward={setup.riskReward ?? null}
-            eventContext={setup.eventContext ?? null}
-          />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <PrimaryTradeSignal setup={setup} />
+            <PositioningGuide setup={setup} />
+          </div>
 
           <SetupRatingBlock
             setup={setup as unknown as Setup}
@@ -161,48 +154,123 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
             riskReward={setup.riskReward ?? null}
             eventContext={setup.eventContext ?? null}
           />
-          <ScoreBreakdownChart setup={setup as unknown as Setup} />
+        </div>
+      </section>
 
-          <TraderNarrativeBlock
-            setup={setup as unknown as Setup}
-            ringAiSummary={setup.ringAiSummary ?? null}
-            riskReward={setup.riskReward ?? null}
+      {/* Drivers Layer */}
+      <section className="space-y-6">
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold opacity-80">
+            {t("perception.setup.sections.driversOverview")}
+          </h3>
+          <ScoreBreakdownChart setup={setup as unknown as Setup} />
+          <div className="space-y-4">
+            <RingInsights
+              rings={rings}
+              assetLabel={assetLabel}
+              timeframe={setup.timeframe}
+              direction={setup.direction}
+              ringAiSummary={setup.ringAiSummary ?? null}
+              eventContext={setup.eventContext ?? undefined}
+            />
+            <TraderImpactSummary
+              setup={setup as unknown as Setup}
+              ringAiSummary={setup.ringAiSummary ?? null}
+              riskReward={setup.riskReward ?? null}
+              eventContext={setup.eventContext ?? null}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold opacity-80">
+            {t("perception.setup.sections.playbook")}
+          </h3>
+          <TraderPlaybook setup={setup} />
+        </div>
+      </section>
+
+      {/* Details Layer */}
+      <section className="space-y-4">
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold opacity-80">
+            {t("perception.setup.sections.context")}
+          </h3>
+          <TraderContextOverlay setup={setup} />
+          <EventMicroTimingStrip eventContext={setup.eventContext ?? null} />
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold opacity-80">
+              {t("perception.setup.sections.narrative")}
+            </h3>
+            <button
+              type="button"
+              className="text-sm font-medium text-slate-200 transition hover:text-white"
+              onClick={() => setShowNarrative((prev) => !prev)}
+            >
+              {showNarrative ? t("perception.setup.details.hideNarrative") : t("perception.setup.details.showNarrative")}
+            </button>
+          </div>
+          {showNarrative && (
+            <TraderNarrativeBlock
+              setup={setup as unknown as Setup}
+              ringAiSummary={setup.ringAiSummary ?? null}
+              riskReward={setup.riskReward ?? null}
+              eventContext={setup.eventContext ?? null}
+            />
+          )}
+        </div>
+
+        {setup.ringAiSummary && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold opacity-80">
+                {t("perception.setup.sections.aiSummary")}
+              </h3>
+              <button
+                type="button"
+                className="text-sm font-medium text-slate-200 transition hover:text-white"
+                onClick={() => setShowAi((prev) => !prev)}
+              >
+                {showAi ? t("perception.setup.details.hideAi") : t("perception.setup.details.showAi")}
+              </button>
+            </div>
+            {showAi && (
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm text-slate-200">
+                {setup.ringAiSummary.longSummary ?? setup.ringAiSummary.shortSummary ?? ""}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="pt-4">
+          <LevelDebugBlock
+            category={setup.category ?? setup.levelDebug?.category}
+            referencePrice={setup.levelDebug?.referencePrice ?? null}
+            bandPct={setup.levelDebug?.bandPct ?? null}
+            volatilityScore={setup.levelDebug?.volatilityScore ?? null}
+            scoreVolatility={setup.levelDebug?.scoreVolatility ?? null}
+            entryZone={setup.entryZone}
+            stopLoss={setup.stopLoss}
+            takeProfit={setup.takeProfit}
+            rings={setup.rings}
+            snapshotId={setup.snapshotId ?? null}
+            snapshotCreatedAt={setup.snapshotCreatedAt ?? null}
             eventContext={setup.eventContext ?? null}
           />
+        </div>
 
-          <EventMicroTimingStrip eventContext={setup.eventContext ?? null} />
-
-          <TraderContextOverlay setup={setup} />
-
-          <div className="mt-4 grid gap-4 lg:grid-cols-3">
-            <PrimaryTradeSignal setup={setup} />
-            <TraderPlaybook setup={setup} />
-            <PositioningGuide setup={setup} />
-          </div>
-
-        <LevelDebugBlock
-          category={setup.category ?? setup.levelDebug?.category}
-          referencePrice={setup.levelDebug?.referencePrice ?? null}
-          bandPct={setup.levelDebug?.bandPct ?? null}
-          volatilityScore={setup.levelDebug?.volatilityScore ?? null}
-          scoreVolatility={setup.levelDebug?.scoreVolatility ?? null}
-          entryZone={setup.entryZone}
-          stopLoss={setup.stopLoss}
-          takeProfit={setup.takeProfit}
-          rings={setup.rings}
-          snapshotId={setup.snapshotId ?? null}
-          snapshotCreatedAt={setup.snapshotCreatedAt ?? null}
-          eventContext={setup.eventContext ?? null}
-        />
-
-      <div className="mt-4 flex justify-end">
-        <Link
-          href={`${prefix}/setups/${setup.id}`}
-          className="rounded-full bg-[#0ea5e9] px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(14,165,233,0.35)] transition hover:brightness-110"
-        >
-          {t("setups.openAnalysis")}
-        </Link>
-      </div>
+        <div className="flex justify-end">
+          <Link
+            href={`${prefix}/setups/${setup.id}`}
+            className="rounded-full bg-[#0ea5e9] px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(14,165,233,0.35)] transition hover:brightness-110"
+          >
+            {t("setups.openAnalysis")}
+          </Link>
+        </div>
+      </section>
     </PerceptionCard>
   );
 }

@@ -684,5 +684,14 @@
   "perception.scoreBreakdown.tooltip.bias": "Modell-Bias und technischer Drift.",
   "perception.scoreBreakdown.tooltip.sentiment": "Stimmungslage und Positionierung.",
   "perception.scoreBreakdown.tooltip.orderflow": "Marktbeteiligung und Flow-Strke.",
-  "perception.scoreBreakdown.tooltip.confidence": "Gesamtausrichtung der Ringe."
+  "perception.scoreBreakdown.tooltip.confidence": "Gesamtausrichtung der Ringe.",
+  "perception.setup.sections.driversOverview": "Drivers & Risks Overview",
+  "perception.setup.sections.playbook": "Trader Playbook",
+  "perception.setup.sections.context": "Context & Events",
+  "perception.setup.sections.narrative": "Narrative",
+  "perception.setup.sections.aiSummary": "AI Summary",
+  "perception.setup.details.showNarrative": "Show narrative",
+  "perception.setup.details.hideNarrative": "Hide narrative",
+  "perception.setup.details.showAi": "Show AI details",
+  "perception.setup.details.hideAi": "Hide AI details"
 }
