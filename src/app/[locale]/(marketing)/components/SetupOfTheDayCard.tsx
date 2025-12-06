@@ -23,8 +23,8 @@ import { TraderImpactSummary } from "@/src/components/perception/TraderImpactSum
 import type { Setup } from "@/src/lib/engine/types";
 import { TraderNarrativeBlock } from "@/src/components/perception/TraderNarrativeBlock";
 import { SetupRatingBlock } from "@/src/components/perception/SetupRatingBlock";
-import { ScoreBreakdownChart } from "@/src/components/perception/ScoreBreakdownChart";
 import { SetupLayoutFrame } from "@/src/components/perception/SetupLayoutFrame";
+import { OnboardingHint, OnboardingTourProvider, useOnboardingTour } from "@/src/components/perception/OnboardingTour";
 
 type SetupOfTheDayCardProps = {
   setup: SetupCardSetup;
@@ -52,7 +52,16 @@ function toneClass(tone: LevelBoxPropsDay["tone"]): string {
 }
 
 export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Element {
+  return (
+    <OnboardingTourProvider>
+      <SetupOfTheDayCardInner setup={setup} />
+    </OnboardingTourProvider>
+  );
+}
+
+function SetupOfTheDayCardInner({ setup }: SetupOfTheDayCardProps): JSX.Element {
   const t = useT();
+  const { startTour, isCompleted } = useOnboardingTour();
   const isLong = setup.direction === "Long";
   const pathname = usePathname();
   const prefix = useMemo(() => localePrefix(pathname), [pathname]);
@@ -97,239 +106,258 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
   const [showAi, setShowAi] = useState(false);
   const [showImpact, setShowImpact] = useState(false);
 
+  const headerContent = !isCompleted ? (
+    <div className="flex items-center justify-between rounded-lg border border-sky-700/60 bg-sky-900/30 px-4 py-2 text-xs text-slate-100">
+      <span className="font-medium">{t("perception.onboarding.setupIntroTitle")}</span>
+      <button
+        type="button"
+        className="text-[0.7rem] font-semibold uppercase tracking-wide text-sky-300 transition hover:text-sky-200"
+        onClick={startTour}
+      >
+        {t("perception.onboarding.startTour")}
+      </button>
+    </div>
+  ) : null;
+
   const decisionContent = (
     <>
+      <OnboardingHint
+        stepId="decision"
+        title={t("perception.onboarding.decision.title")}
+        description={t("perception.onboarding.decision.description")}
+      >
         <div className="flex flex-col gap-4 sm:gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex flex-1 flex-col gap-4">
             <div className="space-y-2">
-            <p className="text-[0.58rem] font-semibold uppercase tracking-[0.35em] text-slate-300">
-              {t("setups.setupOfTheDay")}
-            </p>
-            <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-              {headline} · {setup.timeframe}
-            </h2>
-            <p className={`text-4xl font-bold ${isLong ? "text-emerald-400" : "text-rose-400"}`}>
-              {setup.direction}
-            </p>
-            <p className="text-sm text-slate-400">{meta.name}</p>
-            <span className="inline-flex w-fit rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-200">
-              {setup.type === "Regelbasiert" ? t("setups.type.ruleBased") : t("setups.type.ai")}
-            </span>
+              <p className="text-[0.58rem] font-semibold uppercase tracking-[0.35em] text-slate-300">
+                {t("setups.setupOfTheDay")}
+              </p>
+              <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+                {headline} · {setup.timeframe}
+              </h2>
+              <p className={`text-4xl font-bold ${isLong ? "text-emerald-400" : "text-rose-400"}`}>{setup.direction}</p>
+              <p className="text-sm text-slate-400">{meta.name}</p>
+              <span className="inline-flex w-fit rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-200">
+                {setup.type === "Regelbasiert" ? t("setups.type.ruleBased") : t("setups.type.ai")}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-col items-center gap-3 sm:items-center lg:mt-0 lg:w-64 lg:items-end">
+            <BigGauge value={rings.confidenceScore} label={t("perception.today.confidenceRing")} tooltip={t("perception.rings.tooltip.confidence")} />
           </div>
         </div>
+      </OnboardingHint>
 
-        <div className="mt-4 flex flex-col items-center gap-3 sm:items-center lg:mt-0 lg:w-64 lg:items-end">
-          <BigGauge
-            value={rings.confidenceScore}
-            label={t("perception.today.confidenceRing")}
-            tooltip={t("perception.rings.tooltip.confidence")}
-          />
-        </div>
+      <div className="grid grid-cols-2 gap-3 text-[0.65rem] sm:grid-cols-3 lg:grid-cols-5">
+        {compactRings.map((ring) => (
+          <SmallGauge key={ring.label} label={ring.label} value={ring.value} tone={ring.tone} tooltip={ring.tooltip} />
+        ))}
       </div>
 
-        <div className="grid grid-cols-2 gap-3 text-[0.65rem] sm:grid-cols-3 lg:grid-cols-5">
-          {compactRings.map((ring) => (
-            <SmallGauge key={ring.label} label={ring.label} value={ring.value} tone={ring.tone} tooltip={ring.tooltip} />
-          ))}
+      <div className="space-y-4">
+        <div className="grid gap-3 text-xs sm:grid-cols-3">
+          <LevelBox label={t("setups.entry")} value={formatRangeText(setup.entryZone)} tone="neutral" />
+          <LevelBox label={t("setups.stopLoss")} value={formatNumberText(setup.stopLoss)} tone="danger" />
+          <LevelBox label={t("setups.takeProfit")} value={formatNumberText(setup.takeProfit)} tone="success" />
         </div>
 
-        <div className="space-y-4">
-          <div className="grid gap-3 text-xs sm:grid-cols-3">
-            <LevelBox label={t("setups.entry")} value={formatRangeText(setup.entryZone)} tone="neutral" />
-            <LevelBox label={t("setups.stopLoss")} value={formatNumberText(setup.stopLoss)} tone="danger" />
-            <LevelBox label={t("setups.takeProfit")} value={formatNumberText(setup.takeProfit)} tone="success" />
-          </div>
+        <RiskRewardBlock riskReward={setup.riskReward ?? null} />
 
-          <RiskRewardBlock riskReward={setup.riskReward ?? null} />
-
-          <div className="space-y-4 rounded-xl border border-slate-800 bg-slate-900/50 p-4 shadow-[inset_0_0_10px_rgba(0,0,0,0.25)]">
-            <div className="grid gap-4 lg:grid-cols-3">
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
-                  {t("perception.setup.sections.rating")}
-                </h3>
-                <SetupRatingBlock
-                  setup={setup as unknown as Setup}
-                  ringAiSummary={setup.ringAiSummary ?? null}
-                  riskReward={setup.riskReward ?? null}
-                  eventContext={setup.eventContext ?? null}
-                />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
-                  {t("perception.setup.sections.tradeSignal")}
-                </h3>
-                <PrimaryTradeSignal setup={setup} />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
-                  {t("perception.setup.sections.positioning")}
-                </h3>
-                <PositioningGuide setup={setup} />
-              </div>
+        <div className="space-y-4 rounded-xl border border-slate-800 bg-slate-900/50 p-4 shadow-[inset_0_0_10px_rgba(0,0,0,0.25)]">
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
+                {t("perception.setup.sections.rating")}
+              </h3>
+              <SetupRatingBlock
+                setup={setup as unknown as Setup}
+                ringAiSummary={setup.ringAiSummary ?? null}
+                riskReward={setup.riskReward ?? null}
+                eventContext={setup.eventContext ?? null}
+              />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
+                {t("perception.setup.sections.tradeSignal")}
+              </h3>
+              <PrimaryTradeSignal setup={setup} />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
+                {t("perception.setup.sections.positioning")}
+              </h3>
+              <PositioningGuide setup={setup} />
             </div>
           </div>
         </div>
+      </div>
     </>
   );
 
   const driversContent = (
     <>
-        <div className="space-y-4">
+      <div className="space-y-4">
+        <OnboardingHint
+          stepId="drivers"
+          title={t("perception.onboarding.drivers.title")}
+          description={t("perception.onboarding.drivers.description")}
+        >
           <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
             {t("perception.setup.sections.driversOverview")}
           </h3>
-          <ScoreBreakdownChart setup={setup as unknown as Setup} />
-          <div className="h-px bg-slate-800/40" />
-          <div className="space-y-4">
-            <RingInsights
-              rings={rings}
-              assetLabel={assetLabel}
-              timeframe={setup.timeframe}
-              direction={setup.direction}
-              ringAiSummary={setup.ringAiSummary ?? null}
-              eventContext={setup.eventContext ?? undefined}
-            />
-          </div>
-        </div>
+        </OnboardingHint>
+        <RingInsights
+          rings={rings}
+          assetLabel={assetLabel}
+          timeframe={setup.timeframe}
+          direction={setup.direction}
+          ringAiSummary={setup.ringAiSummary ?? null}
+          eventContext={setup.eventContext ?? undefined}
+        />
+      </div>
 
-        <div className="space-y-4 pt-3">
-          <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
-            {t("perception.setup.sections.playbook")}
-          </h3>
-          <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 shadow-[inset_0_0_10px_rgba(0,0,0,0.25)]">
-            <TraderPlaybook setup={setup} />
-          </div>
+      <div className="space-y-4 pt-3">
+        <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
+          {t("perception.setup.sections.playbook")}
+        </h3>
+        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 shadow-[inset_0_0_10px_rgba(0,0,0,0.25)]">
+          <TraderPlaybook setup={setup} />
         </div>
+      </div>
     </>
   );
 
   const detailsContent = (
     <>
-        <div className="space-y-3">
+      <div className="space-y-3">
+        <OnboardingHint
+          stepId="details"
+          title={t("perception.onboarding.details.title")}
+          description={t("perception.onboarding.details.description")}
+        >
           <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
             {t("perception.setup.sections.context")}
           </h3>
-          <div className="grid gap-4 lg:grid-cols-2">
-            <TraderContextOverlay setup={setup} />
-            <EventMicroTimingStrip eventContext={setup.eventContext ?? null} />
-          </div>
+        </OnboardingHint>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <TraderContextOverlay setup={setup} />
+          <EventMicroTimingStrip eventContext={setup.eventContext ?? null} />
         </div>
+      </div>
 
-        <div className="space-y-2">
-          <div className="space-y-1">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
-                {t("perception.setup.sections.impactOverview")}
-              </h3>
-              <button
-                type="button"
-                className="w-full text-left text-sm font-medium text-slate-200 transition hover:text-white sm:w-auto"
-                onClick={() => setShowImpact((prev) => !prev)}
-              >
-                {showImpact ? t("perception.setup.details.hideImpact") : t("perception.setup.details.showImpact")}
-              </button>
-            </div>
-            <p className="text-xs text-slate-400">{t("perception.setup.sections.impactHint")}</p>
+      <div className="space-y-2">
+        <div className="space-y-1">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
+              {t("perception.setup.sections.impactOverview")}
+            </h3>
+            <button
+              type="button"
+              className="w-full text-left text-sm font-medium text-slate-200 transition hover:text-white sm:w-auto"
+              onClick={() => setShowImpact((prev) => !prev)}
+            >
+              {showImpact ? t("perception.setup.details.hideImpact") : t("perception.setup.details.showImpact")}
+            </button>
           </div>
-          {showImpact && (
-            <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 text-sm text-slate-200 shadow-[inset_0_0_10px_rgba(0,0,0,0.25)] transition-all duration-300 ease-in-out">
-              <TraderImpactSummary
-                setup={setup as unknown as Setup}
-                ringAiSummary={setup.ringAiSummary ?? null}
-                riskReward={setup.riskReward ?? null}
-                eventContext={setup.eventContext ?? null}
-              />
-            </div>
-          )}
+          <p className="text-xs text-slate-400">{t("perception.setup.sections.impactHint")}</p>
         </div>
-
-        <div className="space-y-2">
-          <div className="space-y-1">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
-                {t("perception.setup.sections.narrative")}
-              </h3>
-              <button
-                type="button"
-                className="w-full text-left text-sm font-medium text-slate-200 transition hover:text-white sm:w-auto"
-                onClick={() => setShowNarrative((prev) => !prev)}
-              >
-                {showNarrative ? t("perception.setup.details.hideNarrative") : t("perception.setup.details.showNarrative")}
-              </button>
-            </div>
-            <p className="text-xs text-slate-400">{t("perception.setup.sections.narrativeHint")}</p>
-          </div>
-          {showNarrative && (
-            <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 shadow-[inset_0_0_10px_rgba(0,0,0,0.25)] transition-all duration-300 ease-in-out">
-              <TraderNarrativeBlock
-                setup={setup as unknown as Setup}
-                ringAiSummary={setup.ringAiSummary ?? null}
-                riskReward={setup.riskReward ?? null}
-                eventContext={setup.eventContext ?? null}
-              />
-            </div>
-          )}
-        </div>
-
-        {setup.ringAiSummary && (
-          <div className="space-y-2">
-            <div className="space-y-1">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
-                  {t("perception.setup.sections.aiSummary")}
-                </h3>
-                <button
-                  type="button"
-                  className="w-full text-left text-sm font-medium text-slate-200 transition hover:text-white sm:w-auto"
-                  onClick={() => setShowAi((prev) => !prev)}
-                >
-                  {showAi ? t("perception.setup.details.hideAi") : t("perception.setup.details.showAi")}
-                </button>
-              </div>
-              <p className="text-xs text-slate-400">{t("perception.setup.sections.aiHint")}</p>
-            </div>
-            {showAi && (
-              <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 text-sm text-slate-200 shadow-[inset_0_0_10px_rgba(0,0,0,0.25)] transition-all duration-300 ease-in-out">
-                {setup.ringAiSummary.longSummary ?? setup.ringAiSummary.shortSummary ?? ""}
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="pt-4">
-          <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 shadow-[inset_0_0_10px_rgba(0,0,0,0.25)]">
-            <LevelDebugBlock
-              category={setup.category ?? setup.levelDebug?.category}
-              referencePrice={setup.levelDebug?.referencePrice ?? null}
-              bandPct={setup.levelDebug?.bandPct ?? null}
-              volatilityScore={setup.levelDebug?.volatilityScore ?? null}
-              scoreVolatility={setup.levelDebug?.scoreVolatility ?? null}
-              entryZone={setup.entryZone}
-              stopLoss={setup.stopLoss}
-              takeProfit={setup.takeProfit}
-              rings={setup.rings}
-              snapshotId={setup.snapshotId ?? null}
-              snapshotCreatedAt={setup.snapshotCreatedAt ?? null}
+        {showImpact && (
+          <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 text-sm text-slate-200 shadow-[inset_0_0_10px_rgba(0,0,0,0.25)] transition-all duration-300 ease-in-out">
+            <TraderImpactSummary
+              setup={setup as unknown as Setup}
+              ringAiSummary={setup.ringAiSummary ?? null}
+              riskReward={setup.riskReward ?? null}
               eventContext={setup.eventContext ?? null}
             />
           </div>
-        </div>
+        )}
+      </div>
 
-        <div className="flex justify-end">
-          <Link
-            href={`${prefix}/setups/${setup.id}`}
-            className="rounded-full bg-[#0ea5e9] px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(14,165,233,0.35)] transition hover:brightness-110"
-          >
-            {t("setups.openAnalysis")}
-          </Link>
+      <div className="space-y-2">
+        <div className="space-y-1">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
+              {t("perception.setup.sections.narrative")}
+            </h3>
+            <button
+              type="button"
+              className="w-full text-left text-sm font-medium text-slate-200 transition hover:text-white sm:w-auto"
+              onClick={() => setShowNarrative((prev) => !prev)}
+            >
+              {showNarrative ? t("perception.setup.details.hideNarrative") : t("perception.setup.details.showNarrative")}
+            </button>
+          </div>
+          <p className="text-xs text-slate-400">{t("perception.setup.sections.narrativeHint")}</p>
         </div>
+        {showNarrative && (
+          <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 shadow-[inset_0_0_10px_rgba(0,0,0,0.25)] transition-all duration-300 ease-in-out">
+            <TraderNarrativeBlock
+              setup={setup as unknown as Setup}
+              ringAiSummary={setup.ringAiSummary ?? null}
+              riskReward={setup.riskReward ?? null}
+              eventContext={setup.eventContext ?? null}
+            />
+          </div>
+        )}
+      </div>
+
+      {setup.ringAiSummary && (
+        <div className="space-y-2">
+          <div className="space-y-1">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
+                {t("perception.setup.sections.aiSummary")}
+              </h3>
+              <button
+                type="button"
+                className="w-full text-left text-sm font-medium text-slate-200 transition hover:text-white sm:w-auto"
+                onClick={() => setShowAi((prev) => !prev)}
+              >
+                {showAi ? t("perception.setup.details.hideAi") : t("perception.setup.details.showAi")}
+              </button>
+            </div>
+            <p className="text-xs text-slate-400">{t("perception.setup.sections.aiHint")}</p>
+          </div>
+          {showAi && (
+            <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 text-sm text-slate-200 shadow-[inset_0_0_10px_rgba(0,0,0,0.25)] transition-all duration-300 ease-in-out">
+              {setup.ringAiSummary.longSummary ?? setup.ringAiSummary.shortSummary ?? ""}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="pt-4">
+        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 shadow-[inset_0_0_10px_rgba(0,0,0,0.25)]">
+          <LevelDebugBlock
+            category={setup.category ?? setup.levelDebug?.category}
+            referencePrice={setup.levelDebug?.referencePrice ?? null}
+            bandPct={setup.levelDebug?.bandPct ?? null}
+            volatilityScore={setup.levelDebug?.volatilityScore ?? null}
+            scoreVolatility={setup.levelDebug?.scoreVolatility ?? null}
+            entryZone={setup.entryZone}
+            stopLoss={setup.stopLoss}
+            takeProfit={setup.takeProfit}
+            rings={setup.rings}
+            snapshotId={setup.snapshotId ?? null}
+            snapshotCreatedAt={setup.snapshotCreatedAt ?? null}
+            eventContext={setup.eventContext ?? null}
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end">
+        <Link
+          href={`${prefix}/setups/${setup.id}`}
+          className="rounded-full bg-[#0ea5e9] px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(14,165,233,0.35)] transition hover:brightness-110"
+        >
+          {t("setups.openAnalysis")}
+        </Link>
+      </div>
     </>
   );
 
-  return (
-    <SetupLayoutFrame decision={decisionContent} drivers={driversContent} details={detailsContent} header={null} />
-  );
+  return <SetupLayoutFrame header={headerContent} decision={decisionContent} drivers={driversContent} details={detailsContent} />;
 }
 
 const detailBoxClass = "rounded-2xl border border-slate-800 bg-[#0f172a]/80 px-4 py-3 shadow-[inset_0_0_25px_rgba(15,23,42,0.9)]";

@@ -2,6 +2,7 @@
 
 import { useState, type JSX } from "react";
 import { useT } from "@/src/lib/i18n/ClientProvider";
+import { cn } from "@/lib/utils";
 import type { RingAiSummary, Setup } from "@/src/lib/engine/types";
 
 type RingInsightsProps = {
@@ -170,59 +171,86 @@ export function RingInsights({
 
   const confluenceLine = buildConfluenceLine(t, rings, undefined);
 
+  const cardBadge = (bucket: Bucket): string =>
+    cn(
+      "inline-flex rounded-full px-2 py-0.5 text-[0.65rem] font-semibold border",
+      bucket === "high" && "border-emerald-500/60 bg-emerald-500/10 text-emerald-300",
+      bucket === "medium" && "border-amber-500/60 bg-amber-500/10 text-amber-300",
+      bucket === "low" && "border-rose-500/60 bg-rose-500/10 text-rose-300",
+    );
+
+  const heatBar = (bucket: Bucket): string =>
+    cn(
+      "h-full rounded-full transition-all",
+      bucket === "high" && "bg-emerald-400",
+      bucket === "medium" && "bg-amber-400",
+      bucket === "low" && "bg-rose-400",
+    );
+
   return (
-    <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-inner shadow-black/10">
-      <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-[0.6rem] uppercase tracking-[0.25em] text-slate-400">
-            {t("perception.rings.insights.title")}
-          </p>
-          <p className="text-sm text-slate-300">{t("perception.rings.insights.subtitle")}</p>
-          <p className="mt-1 text-xs text-slate-200">{t("perception.rings.confluence.title")}: {confluenceLine}</p>
-        </div>
-        <div>
-          <span className="inline-flex items-center rounded-full border border-slate-700 bg-slate-800 px-2.5 py-1 text-[11px] font-semibold text-slate-200">
-            {summaryData?.source === "llm"
-              ? t("perception.rings.insights.source.llm")
-              : t("perception.rings.insights.source.heuristic")}
-          </span>
-        </div>
+    <section className="space-y-4 rounded-xl border border-slate-800 bg-slate-900/40 p-4 lg:p-5">
+      <div className="space-y-1">
+        <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
+          {t("perception.rings.insights.title")}
+        </h3>
+        <p className="text-xs text-slate-400">
+          {t("perception.rings.confluence.title")}: {confluenceLine}
+        </p>
       </div>
-      <div className="grid gap-3 md:grid-cols-2">
-        {items.map((item) => (
-          <div
-            key={item.key}
-            className="rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-200"
-          >
-            <div className="flex items-center justify-between text-xs text-slate-400">
-              <span>{t(`perception.rings.title.${item.key}`)}</span>
-              <span className="font-semibold text-slate-200">{Math.round(item.score)}%</span>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {items.map((item) => {
+          const label = t(`perception.rings.title.${item.key}`);
+          const score = Math.round(item.score);
+          const description =
+            item.key === "event" && topEvent
+              ? formatInsightText(t, "perception.rings.insights.event.context", {
+                  ...commonVars,
+                  score: score.toString(),
+                  title: topEvent.title ?? t("perception.rings.insights.event.noTitle"),
+                  time: topEvent.scheduledAt
+                    ? formatEventTiming(topEvent.scheduledAt, t)
+                    : t("perception.rings.insights.event.noTime"),
+                  severity: topEvent.severity ?? "n/a",
+                })
+              : formatInsightText(t, `perception.rings.insights.${item.key}.${item.bucket}`, {
+                  ...commonVars,
+                  score: score.toString(),
+                });
+
+          return (
+            <div key={item.key} className="space-y-2 rounded-lg border border-slate-800 bg-slate-900/60 p-3 shadow-inner">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-200">{score}%</span>
+                  <span className={cardBadge(item.bucket)}>{t(`perception.rings.bucket.${item.bucket}`)}</span>
+                </div>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+                <div className={heatBar(item.bucket)} style={{ width: `${score}%` }} />
+              </div>
+              <p className="text-xs text-slate-300/90">{description}</p>
             </div>
-            <p className="mt-1 text-xs text-slate-200">
-              {item.key === "event" && topEvent
-                ? formatInsightText(t, "perception.rings.insights.event.context", {
-                    ...commonVars,
-                    score: Math.round(item.score).toString(),
-                    title: topEvent.title ?? t("perception.rings.insights.event.noTitle"),
-                    time: topEvent.scheduledAt
-                      ? formatEventTiming(topEvent.scheduledAt, t)
-                      : t("perception.rings.insights.event.noTime"),
-                    severity: topEvent.severity ?? "n/a",
-                  })
-                : formatInsightText(t, `perception.rings.insights.${item.key}.${item.bucket}`, {
-                    ...commonVars,
-                    score: Math.round(item.score).toString(),
-                  })}
-            </p>
-          </div>
-        ))}
+          );
+        })}
         {confidence !== undefined ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-200">
-            <div className="flex items-center justify-between text-xs text-slate-400">
-              <span>{t("perception.today.confidenceRing")}</span>
-              <span className="font-semibold text-slate-200">{Math.round(confidence)}%</span>
+          <div className="space-y-2 rounded-lg border border-slate-800 bg-slate-900/60 p-3 shadow-inner">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                {t("perception.today.confidenceRing")}
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-slate-200">{Math.round(confidence)}%</span>
+                <span className={cardBadge(bucketFromScore(confidence))}>
+                  {t(`perception.rings.bucket.${bucketFromScore(confidence)}`)}
+                </span>
+              </div>
             </div>
-            <p className="mt-1 text-xs text-slate-200">
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+              <div className={heatBar(bucketFromScore(confidence))} style={{ width: `${Math.round(confidence)}%` }} />
+            </div>
+            <p className="text-xs text-slate-300/90">
               {formatInsightText(t, `perception.rings.insights.confidence.${bucketFromScore(confidence)}`, {
                 ...commonVars,
                 score: Math.round(confidence).toString(),
@@ -231,14 +259,22 @@ export function RingInsights({
           </div>
         ) : null}
       </div>
+
       {summaryData ? (
-        <div className="mt-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-200">
-          <p className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-400">
-            {t("perception.rings.insights.aiSummaryTitle")}
-          </p>
-          <p className="mt-1 text-xs text-slate-100">{summaryData.shortSummary}</p>
+        <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3 text-xs text-slate-200 shadow-inner">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold tracking-wide text-slate-300/90">
+              {t("perception.rings.insights.aiSummaryTitle")}
+            </span>
+            <span className="inline-flex rounded-full border border-slate-700 bg-slate-800 px-2 py-0.5 text-[11px] font-semibold text-slate-200">
+              {summaryData?.source === "llm"
+                ? t("perception.rings.insights.source.llm")
+                : t("perception.rings.insights.source.heuristic")}
+            </span>
+          </div>
+          <p className="mt-2 text-slate-100">{summaryData.shortSummary}</p>
           {summaryData.keyFacts.length ? (
-            <ul className="mt-2 list-disc list-inside space-y-0.5 text-xs text-slate-200">
+            <ul className="mt-2 list-disc list-inside space-y-0.5 text-slate-200">
               {summaryData.keyFacts.map((fact, idx) => (
                 <li key={`${fact.label}-${idx}`}>
                   <span className="font-semibold">{fact.label}:</span> {fact.value}
@@ -247,7 +283,7 @@ export function RingInsights({
             </ul>
           ) : null}
           {summaryData.longSummary && summaryData.longSummary !== summaryData.shortSummary ? (
-            <div className="mt-2 text-xs text-slate-200">
+            <div className="mt-2 text-slate-200">
               {expanded ? <p>{summaryData.longSummary}</p> : null}
               <button
                 type="button"
@@ -260,6 +296,6 @@ export function RingInsights({
           ) : null}
         </div>
       ) : null}
-    </div>
+    </section>
   );
 }

@@ -8,8 +8,8 @@
   "nav.account": "Account",
   "meta.title": "TradingAI | Perception Lab",
   "meta.description": "TradingAI is an AI-powered trading platform delivering daily rule-based and AI-based setups.",
-  "hero.badge": "AI-powered · Snapshot-based",
-  "hero.title": "Perception Lab – AI-powered Market Setups",
+  "hero.badge": "AI-powered Â· Snapshot-based",
+  "hero.title": "Perception Lab â€“ AI-powered Market Setups",
   "hero.subtitle": "The Perception Engine blends rule-based market analysis with AI to deliver clear, objective, and tradable setups every day.",
   "hero.linkPerception": "What is the Perception Lab?",
   "hero.datePrefix": "Snapshot for",
@@ -702,5 +702,14 @@
 "perception.setup.details.showAi": "Show AI details",
 "perception.setup.details.hideAi": "Hide AI details",
 "perception.setup.details.showImpact": "Show impact overview",
-"perception.setup.details.hideImpact": "Hide impact overview"
-}
+"perception.setup.details.hideImpact": "Hide impact overview",
+"perception.onboarding.setupIntroTitle": "New here? Learn how to read this setup.",
+"perception.onboarding.startTour": "Start tour",
+"perception.onboarding.skip": "Skip",
+"perception.onboarding.next": "Next",
+"perception.onboarding.decision.title": "Decision layer",
+"perception.onboarding.decision.description": "Here you see direction, levels, risk/reward and the final trade signal. This is where your trade decision happens.",
+"perception.onboarding.drivers.title": "Drivers & risks",
+"perception.onboarding.drivers.description": "This section explains why the setup is rated the way it is: ring insights, confluence and your trader playbook.",
+"perception.onboarding.details.title": "Context & events",
+"perception.onboarding.details.description": "Here you can dive deeper: market context, event risk, narrative and AI summary, plus debug info if needed."\n}
