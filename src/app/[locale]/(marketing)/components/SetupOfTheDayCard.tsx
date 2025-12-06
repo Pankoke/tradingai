@@ -7,7 +7,6 @@ import { usePathname } from "next/navigation";
 import { useT } from "../../../../lib/i18n/ClientProvider";
 import type { SetupCardSetup } from "./SetupCard";
 import { i18nConfig, type Locale } from "../../../../lib/i18n/config";
-import { PerceptionCard } from "@/src/components/perception/PerceptionCard";
 import { LevelDebugBlock } from "@/src/components/perception/LevelDebugBlock";
 import { formatAssetLabel, getAssetMeta } from "@/src/lib/formatters/asset";
 import { BigGauge, SmallGauge } from "@/src/components/perception/RingGauges";
@@ -25,6 +24,7 @@ import type { Setup } from "@/src/lib/engine/types";
 import { TraderNarrativeBlock } from "@/src/components/perception/TraderNarrativeBlock";
 import { SetupRatingBlock } from "@/src/components/perception/SetupRatingBlock";
 import { ScoreBreakdownChart } from "@/src/components/perception/ScoreBreakdownChart";
+import { SetupLayoutFrame } from "@/src/components/perception/SetupLayoutFrame";
 
 type SetupOfTheDayCardProps = {
   setup: SetupCardSetup;
@@ -96,20 +96,18 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
   const [showNarrative, setShowNarrative] = useState(false);
   const [showAi, setShowAi] = useState(false);
 
-  return (
-    <PerceptionCard className="p-0" innerClassName="p-6 space-y-6">
-      {/* Decision Layer */}
-      <section className="space-y-6">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+  const decisionContent = (
+    <>
+        <div className="flex flex-col gap-4 sm:gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex flex-1 flex-col gap-4">
-          <div className="space-y-2">
+            <div className="space-y-2">
             <p className="text-[0.58rem] font-semibold uppercase tracking-[0.35em] text-slate-300">
               {t("setups.setupOfTheDay")}
             </p>
             <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
               {headline} · {setup.timeframe}
             </h2>
-            <p className={`text-3xl font-bold ${isLong ? "text-emerald-400" : "text-rose-400"}`}>
+            <p className={`text-4xl font-bold ${isLong ? "text-emerald-400" : "text-rose-400"}`}>
               {setup.direction}
             </p>
             <p className="text-sm text-slate-400">{meta.name}</p>
@@ -119,7 +117,7 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
           </div>
         </div>
 
-        <div className="mt-4 flex flex-col items-center gap-3 lg:mt-0 lg:w-64 lg:items-end">
+        <div className="mt-4 flex flex-col items-center gap-3 sm:items-center lg:mt-0 lg:w-64 lg:items-end">
           <BigGauge
             value={rings.confidenceScore}
             label={t("perception.today.confidenceRing")}
@@ -128,14 +126,14 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
         </div>
       </div>
 
-        <div className="grid gap-3 text-[0.65rem] sm:grid-cols-2 lg:grid-cols-5">
-        {compactRings.map((ring) => (
-          <SmallGauge key={ring.label} label={ring.label} value={ring.value} tone={ring.tone} tooltip={ring.tooltip} />
-        ))}
-      </div>
+        <div className="grid grid-cols-2 gap-3 text-[0.65rem] sm:grid-cols-3 lg:grid-cols-5">
+          {compactRings.map((ring) => (
+            <SmallGauge key={ring.label} label={ring.label} value={ring.value} tone={ring.tone} tooltip={ring.tooltip} />
+          ))}
+        </div>
 
         <div className="space-y-4">
-          <div className="grid gap-4 text-xs sm:grid-cols-3">
+          <div className="grid gap-3 text-xs sm:grid-cols-3">
             <LevelBox label={t("setups.entry")} value={formatRangeText(setup.entryZone)} tone="neutral" />
             <LevelBox label={t("setups.stopLoss")} value={formatNumberText(setup.stopLoss)} tone="danger" />
             <LevelBox label={t("setups.takeProfit")} value={formatNumberText(setup.takeProfit)} tone="success" />
@@ -143,7 +141,7 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
 
           <RiskRewardBlock riskReward={setup.riskReward ?? null} />
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
             <PrimaryTradeSignal setup={setup} />
             <PositioningGuide setup={setup} />
           </div>
@@ -155,15 +153,17 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
             eventContext={setup.eventContext ?? null}
           />
         </div>
-      </section>
+    </>
+  );
 
-      {/* Drivers Layer */}
-      <section className="space-y-6">
+  const driversContent = (
+    <>
         <div className="space-y-4">
-          <h3 className="text-sm font-semibold opacity-80">
+          <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
             {t("perception.setup.sections.driversOverview")}
           </h3>
           <ScoreBreakdownChart setup={setup as unknown as Setup} />
+          <div className="h-px bg-slate-800/40" />
           <div className="space-y-4">
             <RingInsights
               rings={rings}
@@ -182,63 +182,70 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
           </div>
         </div>
 
-        <div className="space-y-4">
-          <h3 className="text-sm font-semibold opacity-80">
+        <div className="space-y-4 pt-3">
+          <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
             {t("perception.setup.sections.playbook")}
           </h3>
-          <TraderPlaybook setup={setup} />
+          <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 shadow-[inset_0_0_10px_rgba(0,0,0,0.25)]">
+            <TraderPlaybook setup={setup} />
+          </div>
         </div>
-      </section>
+    </>
+  );
 
-      {/* Details Layer */}
-      <section className="space-y-4">
+  const detailsContent = (
+    <>
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold opacity-80">
+          <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
             {t("perception.setup.sections.context")}
           </h3>
-          <TraderContextOverlay setup={setup} />
-          <EventMicroTimingStrip eventContext={setup.eventContext ?? null} />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <TraderContextOverlay setup={setup} />
+            <EventMicroTimingStrip eventContext={setup.eventContext ?? null} />
+          </div>
         </div>
 
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold opacity-80">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
               {t("perception.setup.sections.narrative")}
             </h3>
             <button
               type="button"
-              className="text-sm font-medium text-slate-200 transition hover:text-white"
+              className="w-full text-left text-sm font-medium text-slate-200 transition hover:text-white sm:w-auto"
               onClick={() => setShowNarrative((prev) => !prev)}
             >
               {showNarrative ? t("perception.setup.details.hideNarrative") : t("perception.setup.details.showNarrative")}
             </button>
           </div>
           {showNarrative && (
-            <TraderNarrativeBlock
-              setup={setup as unknown as Setup}
-              ringAiSummary={setup.ringAiSummary ?? null}
-              riskReward={setup.riskReward ?? null}
-              eventContext={setup.eventContext ?? null}
-            />
+            <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 shadow-[inset_0_0_10px_rgba(0,0,0,0.25)] transition-all duration-300 ease-in-out">
+              <TraderNarrativeBlock
+                setup={setup as unknown as Setup}
+                ringAiSummary={setup.ringAiSummary ?? null}
+                riskReward={setup.riskReward ?? null}
+                eventContext={setup.eventContext ?? null}
+              />
+            </div>
           )}
         </div>
 
         {setup.ringAiSummary && (
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold opacity-80">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
                 {t("perception.setup.sections.aiSummary")}
               </h3>
               <button
                 type="button"
-                className="text-sm font-medium text-slate-200 transition hover:text-white"
+                className="w-full text-left text-sm font-medium text-slate-200 transition hover:text-white sm:w-auto"
                 onClick={() => setShowAi((prev) => !prev)}
               >
                 {showAi ? t("perception.setup.details.hideAi") : t("perception.setup.details.showAi")}
               </button>
             </div>
             {showAi && (
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm text-slate-200">
+              <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 text-sm text-slate-200 shadow-[inset_0_0_10px_rgba(0,0,0,0.25)] transition-all duration-300 ease-in-out">
                 {setup.ringAiSummary.longSummary ?? setup.ringAiSummary.shortSummary ?? ""}
               </div>
             )}
@@ -246,20 +253,22 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
         )}
 
         <div className="pt-4">
-          <LevelDebugBlock
-            category={setup.category ?? setup.levelDebug?.category}
-            referencePrice={setup.levelDebug?.referencePrice ?? null}
-            bandPct={setup.levelDebug?.bandPct ?? null}
-            volatilityScore={setup.levelDebug?.volatilityScore ?? null}
-            scoreVolatility={setup.levelDebug?.scoreVolatility ?? null}
-            entryZone={setup.entryZone}
-            stopLoss={setup.stopLoss}
-            takeProfit={setup.takeProfit}
-            rings={setup.rings}
-            snapshotId={setup.snapshotId ?? null}
-            snapshotCreatedAt={setup.snapshotCreatedAt ?? null}
-            eventContext={setup.eventContext ?? null}
-          />
+          <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 shadow-[inset_0_0_10px_rgba(0,0,0,0.25)]">
+            <LevelDebugBlock
+              category={setup.category ?? setup.levelDebug?.category}
+              referencePrice={setup.levelDebug?.referencePrice ?? null}
+              bandPct={setup.levelDebug?.bandPct ?? null}
+              volatilityScore={setup.levelDebug?.volatilityScore ?? null}
+              scoreVolatility={setup.levelDebug?.scoreVolatility ?? null}
+              entryZone={setup.entryZone}
+              stopLoss={setup.stopLoss}
+              takeProfit={setup.takeProfit}
+              rings={setup.rings}
+              snapshotId={setup.snapshotId ?? null}
+              snapshotCreatedAt={setup.snapshotCreatedAt ?? null}
+              eventContext={setup.eventContext ?? null}
+            />
+          </div>
         </div>
 
         <div className="flex justify-end">
@@ -270,8 +279,11 @@ export function SetupOfTheDayCard({ setup }: SetupOfTheDayCardProps): JSX.Elemen
             {t("setups.openAnalysis")}
           </Link>
         </div>
-      </section>
-    </PerceptionCard>
+    </>
+  );
+
+  return (
+    <SetupLayoutFrame decision={decisionContent} drivers={driversContent} details={detailsContent} header={null} />
   );
 }
 
