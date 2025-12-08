@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import type { JSX } from "react";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 
 const STORAGE_KEY = "perception_onboarding_v1";

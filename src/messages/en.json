@@ -684,7 +684,7 @@
   "perception.scoreBreakdown.tooltip.bias": "Model bias and technical tilt.",
   "perception.scoreBreakdown.tooltip.sentiment": "Crowd mood and positioning tone.",
   "perception.scoreBreakdown.tooltip.orderflow": "Market participation and flow strength.",
-  "perception.scoreBreakdown.tooltip.confidence": "Overall alignment of the rings.",,
+  "perception.scoreBreakdown.tooltip.confidence": "Overall alignment of the rings.",
 "perception.setup.sections.driversOverview": "Drivers & Risks Overview",
 "perception.setup.sections.playbook": "Trader Playbook",
 "perception.setup.sections.context": "Context & Events",
