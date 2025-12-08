@@ -8,8 +8,8 @@
   "nav.account": "Account",
   "meta.title": "TradingAI | Perception Lab",
   "meta.description": "TradingAI is an AI-powered trading platform delivering daily rule-based and AI-based setups.",
-  "hero.badge": "AI-powered Â· Snapshot-based",
-  "hero.title": "Perception Lab â€“ AI-powered Market Setups",
+  "hero.badge": "AI-powered ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Snapshot-based",
+  "hero.title": "Perception Lab ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ AI-powered Market Setups",
   "hero.subtitle": "The Perception Engine blends rule-based market analysis with AI to deliver clear, objective, and tradable setups every day.",
   "hero.linkPerception": "What is the Perception Lab?",
   "hero.datePrefix": "Snapshot for",
@@ -684,7 +684,7 @@
   "perception.scoreBreakdown.tooltip.bias": "Model bias and technical tilt.",
   "perception.scoreBreakdown.tooltip.sentiment": "Crowd mood and positioning tone.",
   "perception.scoreBreakdown.tooltip.orderflow": "Market participation and flow strength.",
-  "perception.scoreBreakdown.tooltip.confidence": "Overall alignment of the rings.",
+  "perception.scoreBreakdown.tooltip.confidence": "Overall alignment of the rings.",,
 "perception.setup.sections.driversOverview": "Drivers & Risks Overview",
 "perception.setup.sections.playbook": "Trader Playbook",
 "perception.setup.sections.context": "Context & Events",
@@ -712,4 +712,5 @@
 "perception.onboarding.drivers.title": "Drivers & risks",
 "perception.onboarding.drivers.description": "This section explains why the setup is rated the way it is: ring insights, confluence and your trader playbook.",
 "perception.onboarding.details.title": "Context & events",
-"perception.onboarding.details.description": "Here you can dive deeper: market context, event risk, narrative and AI summary, plus debug info if needed."\n}
+"perception.onboarding.details.description": "Here you can dive deeper: market context, event risk, narrative and AI summary, plus debug info if needed."
+}
