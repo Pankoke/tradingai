@@ -11,10 +11,17 @@ export type SentimentRawSnapshot = {
   shortLiquidationsUsd?: number | null;
   source: string;
   timestamp: Date;
+  longShortRatio?: number | null;
 };
 
 export interface SentimentProvider {
   readonly source: string;
-  fetchFundingAndOi(params: { asset: Asset }): Promise<SentimentRawSnapshot | null>;
-  isEnabled(): boolean;
+  fetchSentiment(params: { asset: Asset }): Promise<SentimentRawSnapshot | null>;
+  getLastDebug(): SentimentProviderDebug | null;
 }
+
+export type SentimentProviderDebug = {
+  requestedSymbol?: string;
+  timestamp: string;
+  message?: string;
+};

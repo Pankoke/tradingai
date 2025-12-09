@@ -23,15 +23,28 @@ export async function GET(request: Request) {
   const provider = resolveSentimentProvider(asset);
   if (!provider) {
     return NextResponse.json(
-      { ok: false, error: "No sentiment provider configured for this asset" },
+      {
+        ok: false,
+        error: "No sentiment provider configured for this asset",
+        asset: asset.symbol,
+      },
       { status: 400 },
     );
   }
 
-  const raw = await provider.fetchFundingAndOi({ asset });
+  const raw = await provider.fetchSentiment({ asset });
+  const debug = provider.getLastDebug ? provider.getLastDebug() : null;
+
   if (!raw) {
     return NextResponse.json(
-      { ok: false, error: "Provider did not return data" },
+      {
+        ok: false,
+        provider: provider.source,
+        error: debug?.message ?? "Provider did not return data",
+        details: {
+          ...debug,
+        },
+      },
       { status: 502 },
     );
   }
@@ -39,8 +52,12 @@ export async function GET(request: Request) {
   const metrics = buildSentimentMetrics({ asset, sentiment: raw });
   return NextResponse.json({
     ok: true,
+    symbol: asset.symbol,
     provider: provider.source,
-    asset: asset.symbol,
-    metrics,
+    sentiment: metrics,
+    raw,
+    debug: {
+      ...debug,
+    },
   });
 }

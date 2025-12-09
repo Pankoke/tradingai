@@ -59,5 +59,5 @@ export async function syncDailyCandlesForAsset(params: {
   }));
 
   await upsertCandles(inserts);
-  console.log(`synced ${inserts.length} candles for ${asset.symbol}`);
+  console.log(`synced ${inserts.length} candles for ${params.asset.symbol}`);
 }

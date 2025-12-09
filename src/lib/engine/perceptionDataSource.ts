@@ -301,7 +301,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     }
 
     try {
-      const snapshot = await provider.fetchFundingAndOi({ asset });
+      const snapshot = await provider.fetchSentiment({ asset });
       return buildSentimentMetrics({ asset, sentiment: snapshot });
     } catch (error) {
       console.warn(

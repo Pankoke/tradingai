@@ -25,6 +25,11 @@ function resolveLabel(score: number): SentimentLabel {
   return "neutral";
 }
 
+function describeFunding(rate: number): string {
+  const annualized = rate * 3 * 365 * 100;
+  return `${annualized.toFixed(1)}% annualized`;
+}
+
 export function buildSentimentMetrics(params: BuildParams): SentimentMetrics {
   const reasons: string[] = [];
   let score = 50;
@@ -40,28 +45,63 @@ export function buildSentimentMetrics(params: BuildParams): SentimentMetrics {
     };
   }
 
+  // Funding bias: strong positive → bearish (crowded longs), strong negative → bullish.
   if (typeof sentiment.fundingRate === "number") {
-    if (sentiment.fundingRate > 0.02) {
-      const impact = Math.min(20, sentiment.fundingRate * 400);
+    const rate = sentiment.fundingRate;
+    if (rate > 0.01) {
+      const impact = Math.min(18, Math.abs(rate) * 1800);
       score -= impact;
-      reasons.push("Positive funding – crowded longs");
-    } else if (sentiment.fundingRate < -0.02) {
-      const impact = Math.min(20, Math.abs(sentiment.fundingRate) * 400);
+      reasons.push(`High positive funding (${describeFunding(rate)}) → crowded longs`);
+    } else if (rate > 0.004) {
+      score -= 6;
+      reasons.push(`Moderate positive funding (${describeFunding(rate)})`);
+    } else if (rate < -0.01) {
+      const impact = Math.min(18, Math.abs(rate) * 1800);
       score += impact;
-      reasons.push("Negative funding – crowded shorts");
+      reasons.push(`High negative funding (${describeFunding(rate)}) → shorts paying`);
+    } else if (rate < -0.004) {
+      score += 6;
+      reasons.push(`Moderate negative funding (${describeFunding(rate)})`);
     }
   }
 
+  // Open interest change (percentage) → conviction build-up / unwind.
   if (typeof sentiment.openInterestChangePct === "number") {
-    if (sentiment.openInterestChangePct > 5) {
-      score += 5;
-      reasons.push("Open interest rising");
-    } else if (sentiment.openInterestChangePct < -5) {
-      score -= 5;
-      reasons.push("Open interest falling");
+    const change = sentiment.openInterestChangePct;
+    if (change > 7) {
+      score += 8;
+      reasons.push(`Open interest rising ${change.toFixed(1)}%`);
+    } else if (change > 3) {
+      score += 4;
+      reasons.push(`Open interest up ${change.toFixed(1)}%`);
+    } else if (change < -7) {
+      score -= 8;
+      reasons.push(`Open interest falling ${change.toFixed(1)}%`);
+    } else if (change < -3) {
+      score -= 4;
+      reasons.push(`Open interest down ${change.toFixed(1)}%`);
     }
   }
 
+  // Long/short ratio from Binance global account data.
+  if (typeof sentiment.longShortRatio === "number") {
+    const ratio = sentiment.longShortRatio;
+    if (ratio >= 1.25) {
+      score -= 12;
+      reasons.push(`Long/short ratio ${ratio.toFixed(2)} – aggressive long crowding`);
+    } else if (ratio >= 1.1) {
+      score -= 6;
+      reasons.push(`Long/short ratio ${ratio.toFixed(2)} – longs dominant`);
+    } else if (ratio <= 0.8) {
+      score += 12;
+      reasons.push(`Long/short ratio ${ratio.toFixed(2)} – shorts dominant`);
+    } else if (ratio <= 0.9) {
+      score += 6;
+      reasons.push(`Long/short ratio ${ratio.toFixed(2)} – short-leaning`);
+    }
+  }
+
+  // Liquidations data (if provided later) – currently neutral but keep hook.
   const longLiq = sentiment.longLiquidationsUsd ?? 0;
   const shortLiq = sentiment.shortLiquidationsUsd ?? 0;
   if (longLiq > shortLiq * 1.5 && longLiq > 1_000_000) {
