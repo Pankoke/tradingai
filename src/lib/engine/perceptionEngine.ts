@@ -69,22 +69,30 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
       rings: defaultRings,
       riskReward: item.riskReward,
       levelDebug: item.levelDebug,
+      sentiment: item.sentiment,
     };
 
     const eventResult = applyEventScoring(base, events);
     const biasResult = applyBiasScoring(base, biasSnapshot);
     const sentimentResult = applySentimentScoring(base);
+    const sentimentScore = base.sentiment?.score ?? sentimentResult.sentimentScore;
+    const sentimentDetail =
+      base.sentiment ?? {
+        score: sentimentScore,
+        label: sentimentScore >= 65 ? "bullish" : sentimentScore <= 35 ? "bearish" : "neutral",
+        reasons: ["Heuristic sentiment scoring"],
+      };
     const scoreBreakdown = computeSetupScore({
       trendStrength: eventResult.eventScore,
       biasScore: biasResult.biasScore,
-      momentum: sentimentResult.sentimentScore,
+      momentum: sentimentScore,
       volatility: Math.abs(eventResult.eventScore - biasResult.biasScore),
       pattern: base.balanceScore,
     });
     const rings = computeRingsForSetup({
       breakdown: scoreBreakdown,
       biasScore: biasResult.biasScore,
-      sentimentScore: sentimentResult.sentimentScore,
+      sentimentScore,
       balanceScore: base.balanceScore,
       confidence: base.confidence,
       direction: (base.direction?.toLowerCase() as "long" | "short" | "neutral") ?? null,
@@ -101,7 +109,7 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
     const balanceScore = computeSetupBalanceScore([
       eventResult.eventScore,
       biasResult.biasScore,
-      sentimentResult.sentimentScore,
+      sentimentScore,
     ]);
 
       const fallbackLevelDebug = base.levelDebug ?? {
@@ -129,11 +137,12 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
         ...base,
         eventScore: eventResult.eventScore,
         biasScore: biasResult.biasScore,
-        sentimentScore: sentimentResult.sentimentScore,
+        sentimentScore,
         confidence,
         balanceScore,
         rings,
         levelDebug,
+        sentiment: sentimentDetail,
         eventContext: eventResult.context,
         ringAiSummary,
       };

@@ -1,4 +1,4 @@
-export type Timeframe = "1D" | "4H" | "1H";
+export type Timeframe = "1D" | "4H" | "1H" | "15m";
 
 export type CandleDomainModel = {
   assetId: string;

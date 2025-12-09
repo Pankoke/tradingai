@@ -25,6 +25,25 @@ const setupRingsSchema = z.object({
   confidence: ringPercentSchema,
 });
 
+const sentimentDetailSchema = z.object({
+  score: ringPercentSchema,
+  label: z.enum(["bullish", "neutral", "bearish"]),
+  reasons: z.array(z.string()).optional(),
+  raw: z
+    .object({
+      fundingRate: z.number().nullable().optional(),
+      fundingRateAnnualized: z.number().nullable().optional(),
+      openInterestUsd: z.number().nullable().optional(),
+      openInterestChangePct: z.number().nullable().optional(),
+      longLiquidationsUsd: z.number().nullable().optional(),
+      shortLiquidationsUsd: z.number().nullable().optional(),
+      source: z.string().optional(),
+      timestamp: z.string().optional(),
+    })
+    .nullable()
+    .optional(),
+});
+
 const levelDebugSchema = z.object({
   bandPct: z.number().nullable(),
   referencePrice: z.number().nullable(),
@@ -43,6 +62,14 @@ export const riskRewardSchema = z.object({
   volatilityLabel: volatilityLabelEnum.nullable(),
 });
 export type RiskRewardSummary = z.infer<typeof riskRewardSchema>;
+
+const setupValiditySchema = z.object({
+  isStale: z.boolean(),
+  reasons: z.array(z.string()).optional(),
+  lastPrice: z.number().nullable().optional(),
+  priceDriftPct: z.number().nullable().optional(),
+  evaluatedAt: z.string().optional(),
+});
 
 export const ringAiSummarySchema = z.object({
   shortSummary: z.string(),
@@ -80,6 +107,8 @@ export const setupSchema = z.object({
   rings: setupRingsSchema,
   riskReward: riskRewardSchema,
   ringAiSummary: ringAiSummarySchema.nullable().optional(),
+  validity: setupValiditySchema.optional(),
+  sentiment: sentimentDetailSchema.optional(),
   eventContext: z
     .object({
       topEvents: z.array(
@@ -107,3 +136,5 @@ export const perceptionSnapshotSchema = z.object({
 });
 
 export type PerceptionSnapshot = z.infer<typeof perceptionSnapshotSchema>;
+
+export type SetupSentiment = z.infer<typeof sentimentDetailSchema>;

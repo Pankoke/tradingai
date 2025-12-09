@@ -1,15 +1,16 @@
-import { YahooMarketDataProvider } from "@/src/server/providers/yahooMarketDataProvider";
-import { getAssetById } from "@/src/server/repositories/assetRepository";
+import type { Asset } from "@/src/server/repositories/assetRepository";
 import { upsertCandles } from "@/src/server/repositories/candleRepository";
-import type { Timeframe } from "@/src/server/providers/marketDataProvider";
+import type { MarketTimeframe } from "@/src/server/marketData/MarketDataProvider";
+import { resolveMarketDataProvider } from "@/src/server/marketData/providerResolver";
+import { YahooMarketDataProvider } from "@/src/server/providers/yahooMarketDataProvider";
 
 const MAX_YEARS = 5;
 
 export async function syncDailyCandlesForAsset(params: {
-  assetId: string;
-  symbol: string;
+  asset: Asset;
   from: Date;
   to: Date;
+  timeframe?: MarketTimeframe;
 }): Promise<void> {
   if (params.from > params.to) {
     throw new Error("`from` must be before `to`");
@@ -20,19 +21,30 @@ export async function syncDailyCandlesForAsset(params: {
     throw new Error("Requested range exceeds maximum window");
   }
 
-  const asset = await getAssetById(params.assetId);
-  if (!asset) {
-    throw new Error(`Asset ${params.assetId} not found`);
-  }
-
-  const provider = new YahooMarketDataProvider();
-  const candles = await provider.getCandles({
-    assetId: params.assetId,
-    symbol: params.symbol,
-    timeframe: "1D" as Timeframe,
+  const timeframe: MarketTimeframe = params.timeframe ?? "1D";
+  const provider = resolveMarketDataProvider(params.asset);
+  let candles = await provider.fetchCandles({
+    asset: params.asset,
+    timeframe,
     from: params.from,
     to: params.to,
   });
+
+  if (!candles.length && provider.provider !== "yahoo") {
+    const fallback = new YahooMarketDataProvider();
+    const yahooCandles = await fallback.fetchCandles({
+      asset: params.asset,
+      timeframe,
+      from: params.from,
+      to: params.to,
+    });
+    if (yahooCandles.length) {
+      console.warn(
+        `[syncDailyCandlesForAsset] provider ${provider.provider} returned no data for ${params.asset.symbol}, falling back to Yahoo`,
+      );
+      candles = yahooCandles;
+    }
+  }
 
   const inserts = candles.map((item) => ({
     assetId: item.assetId,

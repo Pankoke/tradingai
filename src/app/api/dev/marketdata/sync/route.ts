@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { syncDailyCandlesForAsset } from "@/src/features/marketData/syncDailyCandles";
+import { getAssetById } from "@/src/server/repositories/assetRepository";
 
 type ErrorBody = { ok: false; error: string };
 type SuccessBody = { ok: true };
@@ -20,9 +21,13 @@ export async function POST(req: NextRequest): Promise<NextResponse<SuccessBody |
       return NextResponse.json({ ok: false, error: "Invalid date range" }, { status: 400 });
     }
 
+    const asset = await getAssetById(body.assetId);
+    if (!asset) {
+      return NextResponse.json({ ok: false, error: "Asset not found" }, { status: 404 });
+    }
+
     await syncDailyCandlesForAsset({
-      assetId: body.assetId,
-      symbol: body.symbol,
+      asset,
       from: fromDate,
       to: toDate,
     });

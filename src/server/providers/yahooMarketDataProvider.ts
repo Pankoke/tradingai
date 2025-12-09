@@ -1,4 +1,6 @@
-import type { CandleDomainModel, MarketDataProvider, Timeframe } from "./marketDataProvider";
+import type { CandleDomainModel } from "./marketDataProvider";
+import type { MarketDataProvider, MarketTimeframe } from "@/src/server/marketData/MarketDataProvider";
+import type { Asset } from "@/src/server/repositories/assetRepository";
 
 const YAHOO_ENDPOINT = "https://query1.finance.yahoo.com/v8/finance/chart";
 
@@ -28,20 +30,22 @@ type YahooChartResponse = {
 };
 
 export class YahooMarketDataProvider implements MarketDataProvider {
-  async getCandles(params: {
-    assetId: string;
-    symbol: string;
-    timeframe: Timeframe;
+  public readonly provider = "yahoo" as const;
+
+  async fetchCandles(params: {
+    asset: Asset;
+    timeframe: MarketTimeframe;
     from: Date;
     to: Date;
+    limit?: number;
   }): Promise<CandleDomainModel[]> {
     if (params.timeframe !== "1D") {
-      throw new Error("YahooMarketDataProvider currently supports only 1D candles");
+      return [];
     }
 
     const fromEpoch = Math.floor(params.from.getTime() / 1000);
     const toEpoch = Math.floor(params.to.getTime() / 1000);
-    const url = new URL(`${YAHOO_ENDPOINT}/${encodeURIComponent(params.symbol)}`);
+    const url = new URL(`${YAHOO_ENDPOINT}/${encodeURIComponent(params.asset.symbol)}`);
     url.searchParams.set("interval", "1d");
     url.searchParams.set("period1", String(fromEpoch));
     url.searchParams.set("period2", String(toEpoch));
@@ -84,7 +88,7 @@ export class YahooMarketDataProvider implements MarketDataProvider {
       }
 
       candles.push({
-        assetId: params.assetId,
+        assetId: params.asset.id,
         timeframe: params.timeframe,
         timestamp: new Date((timestamps[i] ?? 0) * 1000),
         open,
@@ -97,5 +101,22 @@ export class YahooMarketDataProvider implements MarketDataProvider {
     }
 
     return candles;
+  }
+
+  async fetchLatestPrice(params: { asset: Asset; timeframe?: MarketTimeframe }): Promise<number | null> {
+    const to = new Date();
+    const from = new Date(to);
+    from.setDate(from.getDate() - 2);
+
+    const candles = await this.fetchCandles({
+      asset: params.asset,
+      timeframe: params.timeframe ?? "1D",
+      from,
+      to,
+      limit: 1,
+    });
+
+    const latest = candles.at(-1);
+    return latest ? latest.close : null;
   }
 }

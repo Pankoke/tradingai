@@ -1,4 +1,4 @@
-import type { Setup } from "./types";
+import type { Setup, VolatilityLabel } from "./types";
 import type { BiasSnapshot, Event } from "./eventsBiasTypes";
 import { mockSetups } from "@/src/lib/mockSetups";
 import { mockEvents } from "@/src/lib/mockEvents";
@@ -6,12 +6,19 @@ import { mockBiasSnapshot } from "@/src/lib/mockBias";
 import { setupDefinitions, type SetupDefinition } from "@/src/lib/engine/setupDefinitions";
 import { computeLevelsForSetup, type SetupLevelCategory } from "@/src/lib/engine/levels";
 import { syncDailyCandlesForAsset } from "@/src/features/marketData/syncDailyCandles";
-import { getActiveAssets } from "@/src/server/repositories/assetRepository";
+import { getActiveAssets, type Asset } from "@/src/server/repositories/assetRepository";
 import { getEventsInRange } from "@/src/server/repositories/eventRepository";
 import { DbBiasProvider, type BiasDomainModel } from "@/src/server/providers/biasProvider";
 import { getLatestCandleForAsset } from "@/src/server/repositories/candleRepository";
 import type { Timeframe } from "@/src/server/providers/marketDataProvider";
+import type { MarketTimeframe } from "@/src/server/marketData/MarketDataProvider";
+import { getTimeframesForAsset, TIMEFRAME_SYNC_WINDOWS } from "@/src/server/marketData/timeframeConfig";
+import { buildMarketMetrics } from "@/src/lib/engine/marketMetrics";
+import type { MarketMetrics } from "@/src/lib/engine/marketMetrics";
 import { getPerceptionDataMode } from "@/src/lib/config/perceptionDataMode";
+import { resolveSentimentProvider } from "@/src/server/sentiment/providerResolver";
+import type { SentimentRawSnapshot } from "@/src/server/sentiment/SentimentProvider";
+import { buildSentimentMetrics, type SentimentMetrics } from "@/src/lib/engine/sentimentMetrics";
 
 export interface PerceptionDataSource {
   getSetupsForToday(params: { asOf: Date }): Promise<Setup[]>;
@@ -100,17 +107,43 @@ class LivePerceptionDataSource implements PerceptionDataSource {
         const direction = index % 2 === 0 ? "Long" : "Short";
         const normalizedDirection = direction.toLowerCase() as "long" | "short";
         const timeframe = template.defaultTimeframe ?? "1D";
-        const candle = await this.ensureLatestCandle(
-          { id: asset.id, symbol: asset.symbol },
-          timeframe
-        );
+        const baseTimeframe = timeframe as MarketTimeframe;
+        const candle = await this.ensureLatestCandle(asset, baseTimeframe);
+        await this.ensureSupplementalTimeframes(asset, baseTimeframe);
         const levelCategory = resolveLevelCategory(template);
+        const referencePrice = candle ? Number(candle.close) : 0;
         const computedLevels = computeLevelsForSetup({
           direction: normalizedDirection,
-          referencePrice: candle ? Number(candle.close) : 0,
+          referencePrice,
           volatilityScore: 50,
           category: levelCategory,
         });
+
+        const timeframes = getTimeframesForAsset(asset);
+        const metrics = await buildMarketMetrics({
+          asset,
+          referencePrice,
+          timeframes,
+        });
+        const sentiment = await this.buildSentimentMetricsForAsset(asset);
+
+        const volatilityLabel = this.mapVolatilityLabel(metrics.volatilityScore);
+        const enhancedRiskReward = {
+          ...computedLevels.riskReward,
+          volatilityLabel,
+        };
+
+        let confidence = this.deriveConfidenceScore(metrics);
+        confidence = this.adjustConfidenceForSentiment(confidence, normalizedDirection, sentiment);
+
+        const rings = {
+          ...this.createDefaultRings(),
+          trendScore: metrics.trendScore,
+          orderflowScore: metrics.momentumScore,
+          sentimentScore: sentiment.score,
+          sentiment: sentiment.score,
+          confidenceScore: confidence,
+        };
 
         return {
           id: `${asset.id}-${template.id}`,
@@ -118,20 +151,33 @@ class LivePerceptionDataSource implements PerceptionDataSource {
           symbol: asset.symbol,
           timeframe,
           direction,
-          confidence: 50,
-          eventScore: 50,
-          biasScore: 50,
-          sentimentScore: 50,
-          balanceScore: 50,
+          confidence,
+          eventScore: rings.eventScore,
+          biasScore: rings.biasScore,
+          sentimentScore: sentiment.score,
+          balanceScore: rings.orderflowScore,
           entryZone: computedLevels.entryZone,
           stopLoss: computedLevels.stopLoss,
           takeProfit: computedLevels.takeProfit,
           category: levelCategory,
           levelDebug: computedLevels.debug,
-          riskReward: computedLevels.riskReward,
+          riskReward: enhancedRiskReward,
           type: "Regelbasiert",
           accessLevel: "free",
-          rings: this.createDefaultRings(),
+          rings,
+          sentiment: {
+            score: sentiment.score,
+            label: sentiment.label,
+            reasons: sentiment.reasons,
+            raw: this.normalizeSentimentRaw(sentiment.raw),
+          },
+          validity: {
+            isStale: metrics.isStale,
+            reasons: metrics.reasons,
+            priceDriftPct: metrics.priceDriftPct,
+            lastPrice: metrics.lastPrice,
+            evaluatedAt: metrics.evaluatedAt,
+          },
         } satisfies Setup;
       }),
     );
@@ -218,8 +264,8 @@ class LivePerceptionDataSource implements PerceptionDataSource {
   }
 
   private async ensureLatestCandle(
-    asset: { id: string; symbol: string },
-    timeframe: string
+    asset: Asset,
+    timeframe: MarketTimeframe
   ) {
     let candle = await getLatestCandleForAsset({
       assetId: asset.id,
@@ -229,7 +275,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
       return candle;
     }
 
-    await this.syncCandlesForAsset(asset);
+    await this.syncCandlesForAsset(asset, timeframe);
     candle = await getLatestCandleForAsset({
       assetId: asset.id,
       timeframe,
@@ -242,15 +288,40 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     return candle;
   }
 
-  private async syncCandlesForAsset(asset: { id: string; symbol: string }) {
+  private async ensureSupplementalTimeframes(asset: Asset, base: MarketTimeframe) {
+    const configured = getTimeframesForAsset(asset);
+    const extras = configured.filter((tf) => tf !== base);
+    await Promise.all(extras.map((tf) => this.syncCandlesForAsset(asset, tf)));
+  }
+
+  private async buildSentimentMetricsForAsset(asset: Asset): Promise<SentimentMetrics> {
+    const provider = resolveSentimentProvider(asset);
+    if (!provider) {
+      return buildSentimentMetrics({ asset, sentiment: null });
+    }
+
+    try {
+      const snapshot = await provider.fetchFundingAndOi({ asset });
+      return buildSentimentMetrics({ asset, sentiment: snapshot });
+    } catch (error) {
+      console.warn(
+        `[LivePerceptionDataSource] failed to fetch sentiment for ${asset.symbol}`,
+        error,
+      );
+      return buildSentimentMetrics({ asset, sentiment: null });
+    }
+  }
+
+  private async syncCandlesForAsset(asset: Asset, timeframe: MarketTimeframe) {
     const to = new Date();
+    const windowDays = TIMEFRAME_SYNC_WINDOWS[timeframe] ?? MARKETDATA_SYNC_WINDOW_DAYS;
     const from = new Date(to);
-    from.setDate(to.getDate() - MARKETDATA_SYNC_WINDOW_DAYS + 1);
+    from.setDate(to.getDate() - windowDays + 1);
 
     try {
       await syncDailyCandlesForAsset({
-        assetId: asset.id,
-        symbol: asset.symbol,
+        asset,
+        timeframe,
         from,
         to,
       });
@@ -268,6 +339,57 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     }
     const close = Number(candle.close);
     return Number.isFinite(close) && close > 0;
+  }
+
+  private mapVolatilityLabel(score: number): VolatilityLabel {
+    if (score < 35) return "low";
+    if (score < 65) return "medium";
+    return "high";
+  }
+
+  private normalizeSentimentRaw(raw?: SentimentRawSnapshot | null) {
+    if (!raw) return undefined;
+    return {
+      source: raw.source,
+      fundingRate: raw.fundingRate,
+      fundingRateAnnualized: raw.fundingRateAnnualized,
+      openInterestUsd: raw.openInterestUsd,
+      openInterestChangePct: raw.openInterestChangePct,
+      longLiquidationsUsd: raw.longLiquidationsUsd,
+      shortLiquidationsUsd: raw.shortLiquidationsUsd,
+      timestamp: raw.timestamp?.toISOString(),
+    };
+  }
+
+  private deriveConfidenceScore(metrics: MarketMetrics): number {
+    let value = 65 + (metrics.trendScore - 50) * 0.3 + (metrics.momentumScore - 50) * 0.2;
+    value -= Math.abs(metrics.priceDriftPct) * 0.5;
+    if (metrics.isStale) value -= 20;
+    if (metrics.volatilityScore > 70) value -= 5;
+    return this.clampScore(value);
+  }
+
+  private adjustConfidenceForSentiment(
+    value: number,
+    direction: "long" | "short",
+    sentiment: SentimentMetrics,
+  ): number {
+    let adjusted = value;
+    if (direction === "long") {
+      if (sentiment.label === "bullish") adjusted += 3;
+      if (sentiment.label === "bearish") adjusted -= 6;
+    } else {
+      if (sentiment.label === "bearish") adjusted += 3;
+      if (sentiment.label === "bullish") adjusted -= 6;
+    }
+    if (sentiment.score >= 85 || sentiment.score <= 15) {
+      adjusted -= 4;
+    }
+    return this.clampScore(adjusted);
+  }
+
+  private clampScore(value: number): number {
+    return Math.max(0, Math.min(100, Math.round(value)));
   }
 }
 

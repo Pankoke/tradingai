@@ -10,7 +10,19 @@ function hashSymbolTimeframe(setup: Setup): number {
 }
 
 export function applySentimentScoring(setup: Setup): SentimentScoreResult {
+  if (typeof setup.sentiment?.score === "number") {
+    return {
+      sentimentScore: Math.min(100, Math.max(0, Math.round(setup.sentiment.score))),
+    };
+  }
+
+  if (typeof setup.sentimentScore === "number") {
+    return {
+      sentimentScore: Math.min(100, Math.max(0, Math.round(setup.sentimentScore))),
+    };
+  }
+
   const hash = hashSymbolTimeframe(setup);
-  const base = 20 + (hash % 61); // 20–80
+  const base = 20 + (hash % 61);
   return { sentimentScore: Math.min(100, Math.max(0, base)) };
 }

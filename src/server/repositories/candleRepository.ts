@@ -3,7 +3,7 @@ import { candles } from "../db/schema/candles";
 import { db as drizzleDb } from "../db/db";
 import { excluded } from "../db/sqlHelpers";
 
-type Candle = typeof candles["$inferSelect"];
+export type Candle = typeof candles["$inferSelect"];
 type CandleInsert = typeof candles["$inferInsert"];
 
 export type CandleInput = Omit<CandleInsert, "id">;
@@ -48,6 +48,24 @@ export async function getLatestCandleForAsset(params: {
     .orderBy(desc(candles.timestamp))
     .limit(1);
   return candle ?? null;
+}
+
+export async function getRecentCandlesForAsset(params: {
+  assetId: string;
+  timeframe: string;
+  limit: number;
+}): Promise<Candle[]> {
+  return drizzleDb
+    .select()
+    .from(candles)
+    .where(
+      and(
+        eq(candles.assetId, params.assetId),
+        eq(candles.timeframe, params.timeframe),
+      )
+    )
+    .orderBy(desc(candles.timestamp))
+    .limit(params.limit);
 }
 
 export async function upsertCandles(candleInputs: CandleInput[]): Promise<void> {
