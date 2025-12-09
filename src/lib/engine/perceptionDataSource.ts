@@ -17,7 +17,10 @@ import { buildMarketMetrics } from "@/src/lib/engine/marketMetrics";
 import type { MarketMetrics } from "@/src/lib/engine/marketMetrics";
 import { getPerceptionDataMode } from "@/src/lib/config/perceptionDataMode";
 import { resolveSentimentProvider } from "@/src/server/sentiment/providerResolver";
-import type { SentimentRawSnapshot } from "@/src/server/sentiment/SentimentProvider";
+import type {
+  SentimentContext,
+  SentimentRawSnapshot,
+} from "@/src/server/sentiment/SentimentProvider";
 import { buildSentimentMetrics, type SentimentMetrics } from "@/src/lib/engine/sentimentMetrics";
 
 export interface PerceptionDataSource {
@@ -101,6 +104,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
 
   async getSetupsForToday(): Promise<Setup[]> {
     const assets = await getActiveAssets();
+    const evaluationDate = new Date();
     const setups = await Promise.all(
       assets.map(async (asset, index) => {
         const template = setupDefinitions[index % setupDefinitions.length];
@@ -119,15 +123,33 @@ class LivePerceptionDataSource implements PerceptionDataSource {
           category: levelCategory,
         });
 
+        const biasSnapshot = await this.biasProvider.getBiasSnapshot({
+          assetId: asset.id,
+          date: evaluationDate,
+          timeframe: baseTimeframe as Timeframe,
+        });
+        const normalizedBiasScore = this.normalizeBiasScore(biasSnapshot?.biasScore);
+
         const timeframes = getTimeframesForAsset(asset);
         const metrics = await buildMarketMetrics({
           asset,
           referencePrice,
           timeframes,
         });
-        const sentiment = await this.buildSentimentMetricsForAsset(asset);
-
         const volatilityLabel = this.mapVolatilityLabel(metrics.volatilityScore);
+        const sentimentContext: SentimentContext = {
+          biasScore: normalizedBiasScore,
+          trendScore: metrics.trendScore,
+          momentumScore: metrics.momentumScore,
+          orderflowScore: metrics.momentumScore,
+          eventScore: 50,
+          rrr: computedLevels.riskReward.rrr ?? undefined,
+          riskPercent: computedLevels.riskReward.riskPercent ?? undefined,
+          volatilityLabel,
+          driftPct: metrics.priceDriftPct,
+        };
+        const sentiment = await this.buildSentimentMetricsForAsset(asset, sentimentContext);
+
         const enhancedRiskReward = {
           ...computedLevels.riskReward,
           volatilityLabel,
@@ -142,6 +164,8 @@ class LivePerceptionDataSource implements PerceptionDataSource {
           orderflowScore: metrics.momentumScore,
           sentimentScore: sentiment.score,
           sentiment: sentiment.score,
+          biasScore: normalizedBiasScore ?? 50,
+          bias: normalizedBiasScore ?? 50,
           confidenceScore: confidence,
         };
 
@@ -294,14 +318,17 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     await Promise.all(extras.map((tf) => this.syncCandlesForAsset(asset, tf)));
   }
 
-  private async buildSentimentMetricsForAsset(asset: Asset): Promise<SentimentMetrics> {
+  private async buildSentimentMetricsForAsset(
+    asset: Asset,
+    context: SentimentContext,
+  ): Promise<SentimentMetrics> {
     const provider = resolveSentimentProvider(asset);
     if (!provider) {
       return buildSentimentMetrics({ asset, sentiment: null });
     }
 
     try {
-      const snapshot = await provider.fetchSentiment({ asset });
+      const snapshot = await provider.fetchSentiment({ asset, context });
       return buildSentimentMetrics({ asset, sentiment: snapshot });
     } catch (error) {
       console.warn(
@@ -358,6 +385,15 @@ class LivePerceptionDataSource implements PerceptionDataSource {
       longLiquidationsUsd: raw.longLiquidationsUsd,
       shortLiquidationsUsd: raw.shortLiquidationsUsd,
       timestamp: raw.timestamp?.toISOString(),
+      biasScore: raw.biasScore,
+      trendScore: raw.trendScore,
+      momentumScore: raw.momentumScore,
+      orderflowScore: raw.orderflowScore,
+      eventScore: raw.eventScore,
+      rrr: raw.rrr,
+      riskPercent: raw.riskPercent,
+      volatilityLabel: raw.volatilityLabel,
+      driftPct: raw.driftPct,
     };
   }
 
@@ -375,17 +411,31 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     sentiment: SentimentMetrics,
   ): number {
     let adjusted = value;
+    const { label, score } = sentiment;
     if (direction === "long") {
-      if (sentiment.label === "bullish") adjusted += 3;
-      if (sentiment.label === "bearish") adjusted -= 6;
+      if (label === "bullish") adjusted += 3;
+      if (label === "extreme_bullish") adjusted += 5;
+      if (label === "bearish") adjusted -= 6;
+      if (label === "extreme_bearish") adjusted -= 8;
     } else {
-      if (sentiment.label === "bearish") adjusted += 3;
-      if (sentiment.label === "bullish") adjusted -= 6;
+      if (label === "bearish") adjusted += 3;
+      if (label === "extreme_bearish") adjusted += 5;
+      if (label === "bullish") adjusted -= 6;
+      if (label === "extreme_bullish") adjusted -= 8;
     }
-    if (sentiment.score >= 85 || sentiment.score <= 15) {
+    if (score >= 85 || score <= 15) {
+      // Extreme crowding reduces conviction irrespective of direction.
       adjusted -= 4;
     }
     return this.clampScore(adjusted);
+  }
+
+  private normalizeBiasScore(raw?: number | null): number | undefined {
+    if (typeof raw !== "number") {
+      return undefined;
+    }
+    const normalized = (raw + 100) / 2;
+    return this.clampScore(normalized);
   }
 
   private clampScore(value: number): number {

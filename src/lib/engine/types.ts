@@ -27,7 +27,13 @@ const setupRingsSchema = z.object({
 
 const sentimentDetailSchema = z.object({
   score: ringPercentSchema,
-  label: z.enum(["bullish", "neutral", "bearish"]),
+  label: z.enum([
+    "extreme_bullish",
+    "bullish",
+    "neutral",
+    "bearish",
+    "extreme_bearish",
+  ]),
   reasons: z.array(z.string()).optional(),
   raw: z
     .object({
@@ -39,6 +45,15 @@ const sentimentDetailSchema = z.object({
       shortLiquidationsUsd: z.number().nullable().optional(),
       source: z.string().optional(),
       timestamp: z.string().optional(),
+      biasScore: z.number().nullable().optional(),
+      trendScore: z.number().nullable().optional(),
+      momentumScore: z.number().nullable().optional(),
+      orderflowScore: z.number().nullable().optional(),
+      eventScore: z.number().nullable().optional(),
+      rrr: z.number().nullable().optional(),
+      riskPercent: z.number().nullable().optional(),
+      volatilityLabel: z.string().nullable().optional(),
+      driftPct: z.number().nullable().optional(),
     })
     .nullable()
     .optional(),

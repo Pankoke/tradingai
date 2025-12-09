@@ -1,7 +1,12 @@
 import type { Asset } from "@/src/server/repositories/assetRepository";
 import type { SentimentRawSnapshot } from "@/src/server/sentiment/SentimentProvider";
 
-export type SentimentLabel = "bullish" | "neutral" | "bearish";
+export type SentimentLabel =
+  | "extreme_bearish"
+  | "bearish"
+  | "neutral"
+  | "bullish"
+  | "extreme_bullish";
 
 export type SentimentMetrics = {
   score: number;
@@ -20,7 +25,9 @@ function clampScore(value: number): number {
 }
 
 function resolveLabel(score: number): SentimentLabel {
+  if (score >= 85) return "extreme_bullish";
   if (score >= 65) return "bullish";
+  if (score <= 15) return "extreme_bearish";
   if (score <= 35) return "bearish";
   return "neutral";
 }
@@ -28,6 +35,19 @@ function resolveLabel(score: number): SentimentLabel {
 function describeFunding(rate: number): string {
   const annualized = rate * 3 * 365 * 100;
   return `${annualized.toFixed(1)}% annualized`;
+}
+
+function pushReason(reasons: string[], text: string) {
+  if (text && reasons.length < 6) {
+    reasons.push(text);
+  }
+}
+
+function normalizeScore(value?: number | null): number | undefined {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return undefined;
+  }
+  return clampScore(value);
 }
 
 export function buildSentimentMetrics(params: BuildParams): SentimentMetrics {
@@ -45,82 +65,136 @@ export function buildSentimentMetrics(params: BuildParams): SentimentMetrics {
     };
   }
 
-  // Funding bias: strong positive → bearish (crowded longs), strong negative → bullish.
+  const biasScore = normalizeScore(sentiment.biasScore);
+  if (typeof biasScore === "number") {
+    if (biasScore >= 80) {
+      score += 15;
+      pushReason(reasons, `Bias very strong (${biasScore}) supports the trend`);
+    } else if (biasScore >= 65) {
+      score += 8;
+      pushReason(reasons, `Bias strong (${biasScore}) leans bullish`);
+    } else if (biasScore <= 20) {
+      score -= 15;
+      pushReason(reasons, `Bias very weak (${biasScore}) warns of distribution`);
+    } else if (biasScore <= 35) {
+      score -= 8;
+      pushReason(reasons, `Bias soft (${biasScore}) leans bearish`);
+    }
+  }
+
+  const trendScore = normalizeScore(sentiment.trendScore);
+  if (typeof trendScore === "number") {
+    if (trendScore >= 70) {
+      score += 6;
+      pushReason(reasons, `Trend firm (${trendScore})`);
+    } else if (trendScore <= 30) {
+      score -= 6;
+      pushReason(reasons, `Trend weak (${trendScore})`);
+    }
+  }
+
+  const momentumScore = normalizeScore(sentiment.momentumScore);
+  if (typeof momentumScore === "number") {
+    if (momentumScore >= 70) {
+      score += 5;
+      pushReason(reasons, `Momentum strong (${momentumScore})`);
+    } else if (momentumScore <= 30) {
+      score -= 5;
+      pushReason(reasons, `Momentum fading (${momentumScore})`);
+    }
+  }
+
+  const orderflowScore = normalizeScore(sentiment.orderflowScore);
+  if (typeof orderflowScore === "number") {
+    if (orderflowScore >= 70) {
+      score += 4;
+      pushReason(reasons, `Orderflow supportive (${orderflowScore})`);
+    } else if (orderflowScore <= 30) {
+      score -= 4;
+      pushReason(reasons, `Orderflow light (${orderflowScore})`);
+    }
+  }
+
+  const eventScore = normalizeScore(sentiment.eventScore);
+  if (typeof eventScore === "number") {
+    if (eventScore >= 65) {
+      score -= 6;
+      pushReason(reasons, `Event risk elevated (${eventScore})`);
+    } else if (eventScore <= 35) {
+      score += 3;
+      pushReason(reasons, `Event calendar calm (${eventScore})`);
+    }
+  }
+
+  if (typeof sentiment.rrr === "number") {
+    if (sentiment.rrr >= 3) {
+      score += 4;
+      pushReason(reasons, `RRR attractive (${sentiment.rrr.toFixed(2)}:1)`);
+    } else if (sentiment.rrr < 1.5) {
+      score -= 7;
+      pushReason(reasons, `RRR poor (${sentiment.rrr.toFixed(2)}:1)`);
+    }
+  }
+
+  if (typeof sentiment.riskPercent === "number") {
+    if (sentiment.riskPercent > 2.5) {
+      score -= 6;
+      pushReason(reasons, `Risk per trade high (${sentiment.riskPercent.toFixed(2)}%)`);
+    } else if (sentiment.riskPercent <= 1.2) {
+      score += 3;
+      pushReason(reasons, `Risk per trade moderate (${sentiment.riskPercent.toFixed(2)}%)`);
+    }
+  }
+
+  if (sentiment.volatilityLabel) {
+    if (sentiment.volatilityLabel === "high") {
+      score -= 5;
+      pushReason(reasons, "Volatility high - tape fragile");
+    } else if (sentiment.volatilityLabel === "low") {
+      score += 2;
+      pushReason(reasons, "Volatility low - controlled backdrop");
+    }
+  }
+
+  if (typeof sentiment.driftPct === "number" && Math.abs(sentiment.driftPct) > 4) {
+    score -= 4;
+    pushReason(reasons, `Price drift ${sentiment.driftPct.toFixed(2)}% - re-check setup`);
+  }
+
   if (typeof sentiment.fundingRate === "number") {
     const rate = sentiment.fundingRate;
     if (rate > 0.01) {
-      const impact = Math.min(18, Math.abs(rate) * 1800);
-      score -= impact;
-      reasons.push(`High positive funding (${describeFunding(rate)}) → crowded longs`);
-    } else if (rate > 0.004) {
-      score -= 6;
-      reasons.push(`Moderate positive funding (${describeFunding(rate)})`);
+      score -= Math.min(12, Math.abs(rate) * 1200);
+      pushReason(reasons, `High positive funding (${describeFunding(rate)})`);
     } else if (rate < -0.01) {
-      const impact = Math.min(18, Math.abs(rate) * 1800);
-      score += impact;
-      reasons.push(`High negative funding (${describeFunding(rate)}) → shorts paying`);
-    } else if (rate < -0.004) {
-      score += 6;
-      reasons.push(`Moderate negative funding (${describeFunding(rate)})`);
+      score += Math.min(12, Math.abs(rate) * 1200);
+      pushReason(reasons, `High negative funding (${describeFunding(rate)})`);
     }
   }
 
-  // Open interest change (percentage) → conviction build-up / unwind.
   if (typeof sentiment.openInterestChangePct === "number") {
     const change = sentiment.openInterestChangePct;
     if (change > 7) {
-      score += 8;
-      reasons.push(`Open interest rising ${change.toFixed(1)}%`);
-    } else if (change > 3) {
       score += 4;
-      reasons.push(`Open interest up ${change.toFixed(1)}%`);
+      pushReason(reasons, `Open interest rising ${change.toFixed(1)}%`);
     } else if (change < -7) {
-      score -= 8;
-      reasons.push(`Open interest falling ${change.toFixed(1)}%`);
-    } else if (change < -3) {
       score -= 4;
-      reasons.push(`Open interest down ${change.toFixed(1)}%`);
+      pushReason(reasons, `Open interest falling ${change.toFixed(1)}%`);
     }
-  }
-
-  // Long/short ratio from Binance global account data.
-  if (typeof sentiment.longShortRatio === "number") {
-    const ratio = sentiment.longShortRatio;
-    if (ratio >= 1.25) {
-      score -= 12;
-      reasons.push(`Long/short ratio ${ratio.toFixed(2)} – aggressive long crowding`);
-    } else if (ratio >= 1.1) {
-      score -= 6;
-      reasons.push(`Long/short ratio ${ratio.toFixed(2)} – longs dominant`);
-    } else if (ratio <= 0.8) {
-      score += 12;
-      reasons.push(`Long/short ratio ${ratio.toFixed(2)} – shorts dominant`);
-    } else if (ratio <= 0.9) {
-      score += 6;
-      reasons.push(`Long/short ratio ${ratio.toFixed(2)} – short-leaning`);
-    }
-  }
-
-  // Liquidations data (if provided later) – currently neutral but keep hook.
-  const longLiq = sentiment.longLiquidationsUsd ?? 0;
-  const shortLiq = sentiment.shortLiquidationsUsd ?? 0;
-  if (longLiq > shortLiq * 1.5 && longLiq > 1_000_000) {
-    score += 4;
-    reasons.push("Long liquidations spike (capitulation)");
-  } else if (shortLiq > longLiq * 1.5 && shortLiq > 1_000_000) {
-    score -= 4;
-    reasons.push("Short liquidations spike (squeeze risk)");
   }
 
   const finalScore = clampScore(score);
   const label = resolveLabel(finalScore);
-
-  if (label === "bullish") {
-    reasons.push("Sentiment leans bullish");
+  if (label === "extreme_bullish") {
+    pushReason(reasons, "Extreme bullish sentiment");
+  } else if (label === "bullish") {
+    pushReason(reasons, "Sentiment leans bullish");
   } else if (label === "bearish") {
-    reasons.push("Sentiment leans bearish");
+    pushReason(reasons, "Sentiment leans bearish");
+  } else if (label === "extreme_bearish") {
+    pushReason(reasons, "Extreme bearish sentiment");
   } else {
-    reasons.push("Sentiment neutral");
+    pushReason(reasons, "Sentiment neutral");
   }
 
   return {
@@ -130,3 +204,4 @@ export function buildSentimentMetrics(params: BuildParams): SentimentMetrics {
     raw: sentiment,
   };
 }
+
