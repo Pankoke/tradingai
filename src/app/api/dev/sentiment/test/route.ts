@@ -14,6 +14,11 @@ import { DbBiasProvider } from "@/src/server/providers/biasProvider";
 import type { Timeframe } from "@/src/server/providers/marketDataProvider";
 import { getLatestCandleForAsset } from "@/src/server/repositories/candleRepository";
 import type { SentimentContext } from "@/src/server/sentiment/SentimentProvider";
+import {
+  applySentimentConfidenceAdjustment,
+  computeSentimentRankingAdjustment,
+} from "@/src/lib/engine/sentimentAdjustments";
+import { deriveBaseConfidenceScore } from "@/src/lib/engine/confidence";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -44,7 +49,11 @@ export async function GET(request: Request) {
     );
   }
 
-  const sentimentContext = await buildContextForAsset(asset);
+  const {
+    context: sentimentContext,
+    metrics: marketMetrics,
+    baseConfidence,
+  } = await buildContextForAsset(asset);
   const raw = await provider.fetchSentiment({ asset, context: sentimentContext });
   const debug = provider.getLastDebug ? provider.getLastDebug() : null;
 
@@ -62,7 +71,12 @@ export async function GET(request: Request) {
     );
   }
 
-  const metrics = buildSentimentMetrics({ asset, sentiment: raw });
+  const sentimentMetrics = buildSentimentMetrics({ asset, sentiment: raw });
+  const confidenceAdjustment = applySentimentConfidenceAdjustment({
+    base: baseConfidence,
+    sentiment: sentimentMetrics,
+  });
+  const rankingAdjustment = computeSentimentRankingAdjustment(sentimentMetrics);
   const normalizedInputs = {
     usedBias: sentimentContext.biasScore ?? null,
     usedTrend: sentimentContext.trendScore ?? null,
@@ -78,17 +92,22 @@ export async function GET(request: Request) {
     ok: true,
     symbol: asset.symbol,
     provider: provider.source,
-    label: metrics.label,
-    reasonsPreview: metrics.reasons.slice(0, 3),
-    sentiment: metrics,
+    label: sentimentMetrics.label,
+    reasonsPreview: sentimentMetrics.reasons.slice(0, 3),
+    sentiment: sentimentMetrics,
     raw,
     inputs: normalizedInputs,
-    contributions: metrics.contributions ?? [],
-    flags: metrics.flags ?? [],
-    dominantDrivers: metrics.dominantDrivers ?? [],
+    contributions: sentimentMetrics.contributions ?? [],
+    flags: sentimentMetrics.flags ?? [],
+    dominantDrivers: sentimentMetrics.dominantDrivers ?? [],
+    confidenceAdjustment: confidenceAdjustment.delta,
+    rankingAdjustment: rankingAdjustment.delta,
+    rankingAdjustmentHint: rankingAdjustment.hint,
     debug: {
       ...debug,
       context: sentimentContext,
+      marketMetrics,
+      baseConfidence,
     },
   });
 }
@@ -96,7 +115,11 @@ export async function GET(request: Request) {
 const biasProvider = new DbBiasProvider();
 const DEFAULT_TIMEFRAME: MarketTimeframe = "1D";
 
-async function buildContextForAsset(asset: Asset): Promise<SentimentContext> {
+async function buildContextForAsset(asset: Asset): Promise<{
+  context: SentimentContext;
+  metrics: Awaited<ReturnType<typeof buildMarketMetrics>>;
+  baseConfidence: number;
+}> {
   const timeframe = DEFAULT_TIMEFRAME;
   const candle = await getLatestCandleForAsset({
     assetId: asset.id,
@@ -122,7 +145,7 @@ async function buildContextForAsset(asset: Asset): Promise<SentimentContext> {
     timeframe: timeframe as Timeframe,
   });
 
-  return {
+  const context: SentimentContext = {
     biasScore: normalizeBiasScore(biasSnapshot?.biasScore),
     trendScore: metrics.trendScore,
     momentumScore: metrics.momentumScore,
@@ -132,6 +155,11 @@ async function buildContextForAsset(asset: Asset): Promise<SentimentContext> {
     riskPercent: levels.riskReward.riskPercent ?? undefined,
     volatilityLabel: mapVolatilityLabel(metrics.volatilityScore),
     driftPct: metrics.priceDriftPct,
+  };
+  return {
+    context,
+    metrics,
+    baseConfidence: deriveBaseConfidenceScore(metrics),
   };
 }
 

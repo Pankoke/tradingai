@@ -32,6 +32,7 @@ export type RingSource = {
   biasScoreAtTime?: number | null;
   sentimentScore?: number | null;
   balanceScore?: number | null;
+  orderflowScore?: number | null;
   orderflowMode?: string | null;
   eventContext?: unknown | null;
   confidence?: number | null;
@@ -226,7 +227,12 @@ function resolveDirectionTilt(direction?: RingSource["direction"]): number {
 
 const MODE_DELTA_MAP: Record<string, number> = {
   trending: 5,
+  buyers: 5,
+  buyers_dominant: 5,
+  sellers: -5,
+  sellers_dominant: -5,
   choppy: -5,
+  balanced: 0,
   "mean-reversion": 0,
 };
 
@@ -237,6 +243,9 @@ function resolveModeDelta(source: RingSource): number {
 }
 
 function resolveOrderflowScore(source: RingSource): number {
+  if (typeof source.orderflowScore === "number" && !Number.isNaN(source.orderflowScore)) {
+    return clampPercent(source.orderflowScore);
+  }
   if (source.breakdown) {
     const base = energyComponent(source.breakdown);
     const tilt = resolveDirectionTilt(source.direction);
@@ -364,6 +373,7 @@ export function computeRingsForSnapshotItem(item: {
   biasScoreAtTime?: number | null;
   sentimentScore?: number | null;
   balanceScore?: number | null;
+  orderflowScore?: number | null;
   orderflowMode?: string | null;
   confidence?: number | null;
   direction?: "long" | "short" | "neutral" | null;
@@ -379,6 +389,7 @@ export function computeRingsForSnapshotItem(item: {
     biasScoreAtTime: item.biasScoreAtTime,
     sentimentScore: item.sentimentScore,
     balanceScore: item.balanceScore,
+    orderflowScore: item.orderflowScore ?? item.balanceScore ?? null,
     orderflowMode: item.orderflowMode,
     confidence: item.confidence,
     direction: item.direction ?? null,

@@ -20,6 +20,19 @@ export const sentimentLabelEnum = z.enum([
 ]);
 export type SentimentLabel = z.infer<typeof sentimentLabelEnum>;
 
+const sentimentRankingHintEnum = z.enum(["positive", "negative", "neutral"]);
+export type SentimentRankingHint = z.infer<typeof sentimentRankingHintEnum>;
+
+const orderflowModeSchema = z.enum([
+  "buyers_dominant",
+  "sellers_dominant",
+  "balanced",
+  "trending",
+  "choppy",
+  "mean-reversion",
+]);
+export type OrderflowModeLabel = z.infer<typeof orderflowModeSchema>;
+
 export const sentimentFlagEnum = z.enum([
   "supports_trend",
   "supports_bias",
@@ -68,7 +81,7 @@ const setupRingsSchema = z.object({
 const sentimentDetailSchema = z.object({
   score: ringPercentSchema,
   label: sentimentLabelEnum,
-  reasons: z.array(z.string()).optional(),
+  reasons: z.array(z.string()),
   raw: z
     .object({
       source: z.string().optional(),
@@ -108,6 +121,9 @@ const sentimentDetailSchema = z.object({
     .optional(),
   flags: z.array(sentimentFlagEnum).optional(),
   dominantDrivers: z.array(sentimentDriverSummarySchema).optional(),
+  confidenceDelta: z.number().optional(),
+  rankingDelta: z.number().optional(),
+  rankingHint: sentimentRankingHintEnum.optional(),
 });
 
 const levelDebugSchema = z.object({
@@ -168,6 +184,7 @@ export const setupSchema = z.object({
   takeProfit: z.string().nullable(),
   category: z.string().optional(),
   levelDebug: levelDebugSchema.optional(),
+  orderflowMode: orderflowModeSchema.optional().nullable(),
   type: setupTypeEnum,
   accessLevel: accessLevelSchema,
   rings: setupRingsSchema,

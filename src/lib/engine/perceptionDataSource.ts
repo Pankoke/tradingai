@@ -15,6 +15,10 @@ import type { MarketTimeframe } from "@/src/server/marketData/MarketDataProvider
 import { getTimeframesForAsset, TIMEFRAME_SYNC_WINDOWS } from "@/src/server/marketData/timeframeConfig";
 import { buildMarketMetrics } from "@/src/lib/engine/marketMetrics";
 import type { MarketMetrics } from "@/src/lib/engine/marketMetrics";
+import {
+  buildOrderflowMetrics,
+  type OrderflowMode,
+} from "@/src/lib/engine/orderflowMetrics";
 import { getPerceptionDataMode } from "@/src/lib/config/perceptionDataMode";
 import { resolveSentimentProvider } from "@/src/server/sentiment/providerResolver";
 import type {
@@ -22,6 +26,11 @@ import type {
   SentimentRawSnapshot,
 } from "@/src/server/sentiment/SentimentProvider";
 import { buildSentimentMetrics, type SentimentMetrics } from "@/src/lib/engine/sentimentMetrics";
+import {
+  applySentimentConfidenceAdjustment,
+  type ConfidenceAdjustmentResult,
+} from "@/src/lib/engine/sentimentAdjustments";
+import { deriveBaseConfidenceScore } from "@/src/lib/engine/confidence";
 
 export interface PerceptionDataSource {
   getSetupsForToday(params: { asOf: Date }): Promise<Setup[]>;
@@ -86,6 +95,15 @@ class MockPerceptionDataSource implements PerceptionDataSource {
 class LivePerceptionDataSource implements PerceptionDataSource {
   private biasProvider = new DbBiasProvider();
 
+  private static ORDERFLOW_MODE_MAPPING: Record<
+    OrderflowMode,
+    "buyers_dominant" | "sellers_dominant" | "balanced"
+  > = {
+    buyers: "buyers_dominant",
+    sellers: "sellers_dominant",
+    balanced: "balanced",
+  };
+
   private createDefaultRings(): Setup["rings"] {
     return {
       trendScore: 50,
@@ -136,12 +154,18 @@ class LivePerceptionDataSource implements PerceptionDataSource {
           referencePrice,
           timeframes,
         });
+        const orderflow = await buildOrderflowMetrics({
+          asset,
+          timeframes,
+        });
+        const orderflowMode =
+          LivePerceptionDataSource.ORDERFLOW_MODE_MAPPING[orderflow.mode];
         const volatilityLabel = this.mapVolatilityLabel(metrics.volatilityScore);
         const sentimentContext: SentimentContext = {
           biasScore: normalizedBiasScore,
           trendScore: metrics.trendScore,
           momentumScore: metrics.momentumScore,
-          orderflowScore: metrics.momentumScore,
+          orderflowScore: orderflow.flowScore,
           eventScore: 50,
           rrr: computedLevels.riskReward.rrr ?? undefined,
           riskPercent: computedLevels.riskReward.riskPercent ?? undefined,
@@ -155,18 +179,20 @@ class LivePerceptionDataSource implements PerceptionDataSource {
           volatilityLabel,
         };
 
-        let confidence = this.deriveConfidenceScore(metrics);
-        confidence = this.adjustConfidenceForSentiment(confidence, normalizedDirection, sentiment);
+        let confidence = deriveBaseConfidenceScore(metrics);
+        const confidenceAdjustment = this.adjustConfidenceForSentiment(confidence, sentiment);
+        confidence = confidenceAdjustment.adjusted;
 
         const rings = {
           ...this.createDefaultRings(),
           trendScore: metrics.trendScore,
-          orderflowScore: metrics.momentumScore,
+          orderflowScore: orderflow.flowScore,
           sentimentScore: sentiment.score,
           sentiment: sentiment.score,
           biasScore: normalizedBiasScore ?? 50,
           bias: normalizedBiasScore ?? 50,
           confidenceScore: confidence,
+          orderflow: orderflow.flowScore,
         };
 
         return {
@@ -189,6 +215,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
           type: "Regelbasiert",
           accessLevel: "free",
           rings,
+          orderflowMode,
           sentiment: {
             score: sentiment.score,
             label: sentiment.label,
@@ -197,6 +224,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
             contributions: sentiment.contributions,
             flags: sentiment.flags,
             dominantDrivers: sentiment.dominantDrivers,
+            confidenceDelta: confidenceAdjustment.delta,
           },
           validity: {
             isStale: metrics.isStale,
@@ -404,29 +432,8 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     return this.clampScore(value);
   }
 
-  private adjustConfidenceForSentiment(
-    value: number,
-    direction: "long" | "short",
-    sentiment: SentimentMetrics,
-  ): number {
-    let adjusted = value;
-    const { label, score } = sentiment;
-    if (direction === "long") {
-      if (label === "bullish") adjusted += 3;
-      if (label === "extreme_bullish") adjusted += 5;
-      if (label === "bearish") adjusted -= 6;
-      if (label === "extreme_bearish") adjusted -= 8;
-    } else {
-      if (label === "bearish") adjusted += 3;
-      if (label === "extreme_bearish") adjusted += 5;
-      if (label === "bullish") adjusted -= 6;
-      if (label === "extreme_bullish") adjusted -= 8;
-    }
-    if (score >= 85 || score <= 15) {
-      // Extreme crowding reduces conviction irrespective of direction.
-      adjusted -= 4;
-    }
-    return this.clampScore(adjusted);
+  private adjustConfidenceForSentiment(value: number, sentiment: SentimentMetrics): ConfidenceAdjustmentResult {
+    return applySentimentConfidenceAdjustment({ base: value, sentiment });
   }
 
   private normalizeBiasScore(raw?: number | null): number | undefined {
@@ -451,3 +458,6 @@ export function createPerceptionDataSource(): PerceptionDataSource {
 
   return new MockPerceptionDataSource();
 }
+
+
+

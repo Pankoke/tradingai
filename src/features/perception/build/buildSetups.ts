@@ -19,6 +19,8 @@ import {
 } from "@/src/lib/config/perceptionDataMode";
 import { buildRingAiSummaryForSetup } from "@/src/lib/engine/modules/ringAiSummary";
 import { maybeEnhanceRingAiSummaryWithLLM } from "@/src/server/ai/ringSummaryOpenAi";
+import { computeSentimentRankingAdjustment } from "@/src/lib/engine/sentimentAdjustments";
+import { clamp } from "@/src/lib/math";
 
 export type PerceptionSnapshotEngineResult = PerceptionSnapshot;
 
@@ -98,9 +100,12 @@ export async function buildAndStorePerceptionSnapshot(
       volatility: Math.abs(setup.eventScore - setup.biasScore),
       pattern: setup.balanceScore,
     });
+    const rankingAdjustment = computeSentimentRankingAdjustment(setup.sentiment);
+    const adjustedBreakdownTotal = clamp(breakdown.total + rankingAdjustment.delta, 0, 100);
+    const adjustedBreakdown = { ...breakdown, total: adjustedBreakdownTotal };
 
     const rings = computeRingsForSetup({
-      breakdown,
+      breakdown: adjustedBreakdown,
       biasScore: setup.biasScore,
       sentimentScore: setup.sentimentScore,
       balanceScore: setup.balanceScore,
@@ -113,7 +118,7 @@ export async function buildAndStorePerceptionSnapshot(
     });
     const confidence = computeSetupConfidence({
       setupId: setup.id,
-      score: breakdown,
+      score: adjustedBreakdown,
       rings,
     });
 
@@ -143,7 +148,7 @@ export async function buildAndStorePerceptionSnapshot(
       direction: normalizeDirection(setup.direction),
       rankOverall: overallRank,
       rankWithinAsset: assetRank,
-      scoreTotal: breakdown.total,
+      scoreTotal: adjustedBreakdown.total,
       scoreTrend: breakdown.trend ?? null,
       scoreMomentum: breakdown.momentum ?? null,
       scoreVolatility: breakdown.volatility ?? null,
@@ -158,11 +163,21 @@ export async function buildAndStorePerceptionSnapshot(
       createdAt: snapshotTime,
     });
 
+    const sentimentWithRanking =
+      setup.sentiment != null
+        ? {
+            ...setup.sentiment,
+            rankingDelta: rankingAdjustment.delta,
+            rankingHint: rankingAdjustment.hint,
+          }
+        : setup.sentiment;
+
     updatedSetups.push({
       ...setup,
       rings,
       confidence,
       ringAiSummary: enhancedRingAiSummary,
+      sentiment: sentimentWithRanking ?? undefined,
     });
   }
 
