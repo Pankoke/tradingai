@@ -91,8 +91,14 @@ export function SentimentInspector({
 
   const flags = useMemo(() => (sentiment?.flags ?? []).filter(Boolean) as SentimentFlag[], [sentiment?.flags]);
   const displayedFlags = useMemo(() => flags.slice(0, variant === "compact" ? 2 : 5), [flags, variant]);
+  const driverSummaries = useMemo(
+    () => (sentiment?.dominantDrivers ?? []).filter(Boolean).slice(0, variant === "compact" ? 2 : 3),
+    [sentiment?.dominantDrivers, variant],
+  );
 
-  if (!hasSentiment || (reasons.length === 0 && displayedFlags.length === 0)) {
+  const hasDrivers = driverSummaries.length > 0;
+
+  if (!hasSentiment || (reasons.length === 0 && displayedFlags.length === 0 && !hasDrivers)) {
     if (process.env.NODE_ENV !== "production" && meta?.setupId) {
       console.warn(
         "[SentimentInspector] Missing sentiment data",
@@ -118,26 +124,6 @@ export function SentimentInspector({
         className,
       )}
     >
-      {displayedFlags.length > 0 && (
-        <div className="mt-4 space-y-2">
-          <p className="text-[0.6rem] font-semibold uppercase tracking-[0.25em] text-slate-400">
-            {t("perception.sentiment.inspector.flagsTitle")}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {displayedFlags.map((flag) => (
-              <span
-                key={flag}
-                className={cn(
-                  "inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6rem] font-semibold",
-                  FLAG_STYLES[flag] ?? "border-slate-600 bg-slate-600/10 text-slate-200",
-                )}
-              >
-                {t(`perception.sentiment.flags.${flag}`)}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-[0.6rem] font-semibold uppercase tracking-[0.3em] text-slate-400">
@@ -179,6 +165,61 @@ export function SentimentInspector({
           })}
         </ul>
       </div>
+
+      {hasDrivers && (
+        <div className="mt-4 space-y-2">
+          <p className="text-[0.6rem] font-semibold uppercase tracking-[0.25em] text-slate-400">
+            {t("perception.sentiment.inspector.driversTitle")}
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {driverSummaries.map((driver, index) => {
+              const label = t(`perception.sentiment.driverCategory.${driver.category}`);
+              const contribution = driver.contribution;
+              const toneClass =
+                contribution >= 0
+                  ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-200"
+                  : "border-amber-500/50 bg-amber-500/10 text-amber-200";
+              const formattedContribution = `${contribution >= 0 ? "+" : ""}${Math.round(contribution)}`;
+              return (
+                <div
+                  key={`${driver.category}-${index}`}
+                  className="rounded-lg border border-slate-700/70 bg-slate-800/40 px-3 py-2 text-xs text-slate-100"
+                >
+                  <p className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-400">{label}</p>
+                  <p className="mt-1 text-sm font-semibold text-white">
+                    {formattedContribution}
+                    <span className="ml-1 text-xs text-slate-400">pts</span>
+                  </p>
+                  <span className={cn("mt-1 inline-flex rounded-full px-2 py-0.5 text-[0.6rem] font-semibold", toneClass)}>
+                    {contribution >= 0 ? t("perception.sentiment.driverPositive") : t("perception.sentiment.driverNegative")}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {displayedFlags.length > 0 && (
+        <div className="mt-4 space-y-2">
+          <p className="text-[0.6rem] font-semibold uppercase tracking-[0.25em] text-slate-400">
+            {t("perception.sentiment.inspector.flagsTitle")}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {displayedFlags.map((flag) => (
+              <span
+                key={flag}
+                className={cn(
+                  "inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6rem] font-semibold",
+                  FLAG_STYLES[flag] ?? "border-slate-600 bg-slate-600/10 text-slate-200",
+                )}
+              >
+                {t(`perception.sentiment.flags.${flag}`)}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
     </section>
   );
 }
