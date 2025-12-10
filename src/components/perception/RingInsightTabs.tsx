@@ -20,12 +20,23 @@ const tabLabelKey: Record<RingTabId, string> = {
 
 export function RingInsightTabs({ setup, variant = "full" }: RingInsightTabsProps) {
   const t = useT();
+  const hasOrderflowContent = (current: Setup): boolean => {
+    const orderflow = current.orderflow;
+    if (!orderflow) {
+      return false;
+    }
+    const hasScore = typeof orderflow.score === "number";
+    const reasonCount = orderflow.reasonDetails?.length ?? orderflow.reasons?.length ?? 0;
+    const hasReasons = reasonCount > 0;
+    const hasFlags = (orderflow.flags?.length ?? 0) > 0;
+    return hasScore || hasReasons || hasFlags;
+  };
   const availableTabs = useMemo<RingTabId[]>(() => {
     const items: RingTabId[] = [];
     if (setup.sentiment?.score !== undefined) {
       items.push("sentiment");
     }
-    if (setup.orderflow?.score !== undefined) {
+    if (hasOrderflowContent(setup)) {
       items.push("orderflow");
     }
     return items;

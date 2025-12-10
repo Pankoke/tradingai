@@ -67,10 +67,13 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
       takeProfit: item.takeProfit,
       type: item.type,
       accessLevel: "free",
-      rings: defaultRings,
+      rings: item.rings ?? defaultRings,
       riskReward: item.riskReward,
       levelDebug: item.levelDebug,
       sentiment: item.sentiment,
+      orderflow: item.orderflow,
+      orderflowConfidenceDelta: item.orderflowConfidenceDelta,
+      validity: item.validity,
     };
 
     const eventResult = applyEventScoring(base, events);
@@ -90,12 +93,14 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
       volatility: Math.abs(eventResult.eventScore - biasResult.biasScore),
       pattern: base.balanceScore,
     });
+    const effectiveOrderflowScore =
+      typeof base.orderflow?.score === "number" ? base.orderflow.score : base.balanceScore ?? 50;
     const rings = computeRingsForSetup({
       breakdown: scoreBreakdown,
       biasScore: biasResult.biasScore,
       sentimentScore,
       balanceScore: base.balanceScore,
-      orderflowScore: base.balanceScore,
+      orderflowScore: effectiveOrderflowScore,
       confidence: base.confidence,
       direction: (base.direction?.toLowerCase() as "long" | "short" | "neutral") ?? null,
       assetId: base.assetId,

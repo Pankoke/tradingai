@@ -40,6 +40,12 @@ const modeLabelMap: Record<string, string> = {
   balanced: "perception.orderflow.mode.balanced",
 };
 
+type OrderflowReasonDetailEntry = NonNullable<NonNullable<Setup["orderflow"]>["reasonDetails"]>[number];
+
+const isReasonDetail = (value: unknown): value is OrderflowReasonDetailEntry => {
+  return typeof value === "object" && value !== null && "text" in value && "category" in value;
+};
+
 function getScoreTier(score: number): keyof typeof scoreLabel {
   if (score >= 80) return "strong";
   if (score >= 60) return "supportive";
@@ -50,20 +56,28 @@ function getScoreTier(score: number): keyof typeof scoreLabel {
 export function OrderflowInspector({ setup, variant = "full" }: OrderflowInspectorProps): JSX.Element | null {
   const t = useT();
   const orderflow = setup.orderflow;
-  const score = orderflow?.score;
-
-  if (!score || !orderflow) {
+  if (!orderflow) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[OrderflowInspector] Missing orderflow data for setup", setup.id);
+    }
     return null;
   }
 
-  const tier = getScoreTier(score);
+  const hasScore = typeof orderflow.score === "number";
+  const tier = hasScore ? getScoreTier(orderflow.score) : "neutral";
   const modeKey = orderflow.mode ?? setup.orderflowMode ?? "balanced";
   const modeLabel = modeLabelMap[modeKey] ?? modeLabelMap.balanced;
 
-  const reasons = orderflow.reasonDetails ?? [];
-  const displayedReasons = reasons.slice(0, variant === "full" ? 3 : 1);
+  const reasonSource = orderflow.reasonDetails ?? orderflow.reasons ?? [];
+  const displayedReasons = reasonSource.slice(0, variant === "full" ? 3 : 1);
+  const hasReasons = displayedReasons.length > 0;
   const flags = orderflow.flags ?? [];
+  const hasFlags = flags.length > 0;
   const delta = orderflow.confidenceDelta;
+
+  if (!hasScore && !hasReasons && !hasFlags) {
+    return null;
+  }
 
   return (
     <section
@@ -77,8 +91,12 @@ export function OrderflowInspector({ setup, variant = "full" }: OrderflowInspect
           <p className="text-sm text-slate-200">{t(scoreLabel[tier])}</p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-3xl font-bold text-white">{Math.round(score)}</span>
-          <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">/100</span>
+          <span className={`text-3xl font-bold ${hasScore ? "text-white" : "text-slate-500"}`}>
+            {hasScore ? Math.round(orderflow.score as number) : "--"}
+          </span>
+          <span className={`text-xs font-semibold uppercase tracking-[0.3em] ${hasScore ? "text-slate-400" : "text-slate-600"}`}>
+            /100
+          </span>
         </div>
       </div>
 
@@ -96,19 +114,27 @@ export function OrderflowInspector({ setup, variant = "full" }: OrderflowInspect
         )}
       </div>
 
-      {variant === "full" && displayedReasons.length > 0 && (
+      {variant === "full" && hasReasons && (
         <div className="space-y-1">
           <p className="text-[0.7rem] uppercase tracking-[0.3em] text-slate-500">{t("perception.orderflow.reasonsTitle")}</p>
           <div className="space-y-1">
-            {displayedReasons.map((reason, idx) => (
-              <div key={`${reason.category}-${idx}`} className="flex items-center justify-between gap-2 text-xs text-slate-200">
-                <span className="text-slate-400">{t(`perception.orderflow.category.${reason.category}`) ?? reason.category}</span>
-                <span>{reason.text}</span>
-                <span className="rounded-full border border-slate-700 bg-slate-800 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-slate-400">
-                  {t("perception.orderflow.reasonLabel.default")}
-                </span>
-              </div>
-            ))}
+            {displayedReasons.map((reason, idx) => {
+              const detail = isReasonDetail(reason) ? reason : null;
+              const categoryLabel = detail
+                ? t(`perception.orderflow.category.${detail.category}`) ?? detail.category
+                : t("perception.orderflow.reasonsTitle");
+              const textValue = detail ? detail.text : String(reason ?? "");
+              const key = detail ? `${detail.category}-${idx}` : `${String(reason ?? "reason")}-${idx}`;
+              return (
+                <div key={key} className="flex items-center justify-between gap-2 text-xs text-slate-200">
+                  <span className="text-slate-400">{categoryLabel}</span>
+                  <span>{textValue}</span>
+                  <span className="rounded-full border border-slate-700 bg-slate-800 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-slate-400">
+                    {t("perception.orderflow.reasonLabel.default")}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

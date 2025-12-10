@@ -104,11 +104,14 @@ export async function buildAndStorePerceptionSnapshot(
     const adjustedBreakdownTotal = clamp(breakdown.total + rankingAdjustment.delta, 0, 100);
     const adjustedBreakdown = { ...breakdown, total: adjustedBreakdownTotal };
 
+    const effectiveOrderflowScore =
+      typeof setup.orderflow?.score === "number" ? setup.orderflow.score : setup.balanceScore ?? 50;
     const rings = computeRingsForSetup({
       breakdown: adjustedBreakdown,
       biasScore: setup.biasScore,
       sentimentScore: setup.sentimentScore,
       balanceScore: setup.balanceScore,
+      orderflowScore: effectiveOrderflowScore,
       confidence: setup.confidence,
       direction: setup.direction?.toLowerCase() as "long" | "short" | "neutral" | null,
       assetId,
