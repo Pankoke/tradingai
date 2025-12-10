@@ -19,7 +19,7 @@ jobs:
           CRON_ENDPOINT_URL: ${{ secrets.CRON_ENDPOINT_URL }}
         run: |
           echo "Calling $CRON_ENDPOINT_URL ..."
-          curl -sS -m 30 "$CRON_ENDPOINT_URL" || {
+          curl -sS -m 360 "$CRON_ENDPOINT_URL" || {
             echo "Request failed";
             exit 1;
           }

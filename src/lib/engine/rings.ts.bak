@@ -15,8 +15,6 @@ export type SetupRings = SetupRingScores & {
   sentiment: number;
   orderflow: number;
   confidence: number;
-  orderflowMode?: string | null;
-  orderflowFlags?: string[];
 };
 
 type Breakdown = {
@@ -36,7 +34,6 @@ export type RingSource = {
   balanceScore?: number | null;
   orderflowScore?: number | null;
   orderflowMode?: string | null;
-  orderflowFlags?: string[] | null;
   eventContext?: unknown | null;
   confidence?: number | null;
   direction?: "long" | "short" | "neutral" | null;
@@ -364,8 +361,6 @@ export function computeRingsFromSource(source: RingSource): SetupRings {
     sentiment: sentimentScore,
     orderflow: orderflowScore,
     confidence: confidenceScore,
-    orderflowMode: source.orderflowMode ?? null,
-    orderflowFlags: source.orderflowFlags ?? [],
   };
 }
 

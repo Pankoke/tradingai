@@ -21,8 +21,7 @@ import type { Setup } from "@/src/lib/engine/types";
 import { TraderNarrativeBlock } from "@/src/components/perception/TraderNarrativeBlock";
 import { SetupRatingBlock } from "@/src/components/perception/SetupRatingBlock";
 import { ScoreBreakdownChart } from "@/src/components/perception/ScoreBreakdownChart";
-import { SentimentInspector } from "@/src/components/perception/SentimentInspector";
-import { OrderflowInspector } from "@/src/components/perception/OrderflowInspector";
+import { RingInsightTabs } from "@/src/components/perception/RingInsightTabs";
 
 type Props = {
   setup: HomepageSetup;
@@ -163,12 +162,7 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
         ringAiSummary={setup.ringAiSummary ?? null}
         eventContext={setup.eventContext ?? undefined}
       />
-      <SentimentInspector
-        sentiment={setup.sentiment ?? null}
-        variant="compact"
-        meta={{ setupId: setup.id, assetId: setup.assetId, symbol: setup.symbol }}
-      />
-      <OrderflowInspector setup={setup as unknown as Setup} variant="compact" />
+      <RingInsightTabs setup={setup as unknown as Setup} variant="compact" />
       <SetupRatingBlock
         setup={
           {

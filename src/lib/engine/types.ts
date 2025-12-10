@@ -40,6 +40,7 @@ export const orderflowFlagEnum = z.enum([
   "orderflow_trend_conflict",
   "orderflow_bias_alignment",
   "orderflow_bias_conflict",
+  "high_risk_crowded",
 ]);
 export type OrderflowFlag = z.infer<typeof orderflowFlagEnum>;
 

@@ -695,6 +695,8 @@
 "perception.rings.bucket.low": "niedrig",
 "perception.rings.bucket.medium": "mittel",
 "perception.rings.bucket.high": "hoch",
+"perception.ringTabs.sentiment": "Sentiment",
+"perception.ringTabs.orderflow": "Orderflow",
 "perception.context.market": "Marktkontext",
 "perception.context.event": "Event-Ausblick",
 "perception.context.structure": "Struktur",
