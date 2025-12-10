@@ -26,6 +26,7 @@ import { SetupRatingBlock } from "@/src/components/perception/SetupRatingBlock";
 import { SetupLayoutFrame } from "@/src/components/perception/SetupLayoutFrame";
 import { OnboardingHint, OnboardingTourProvider, useOnboardingTour } from "@/src/components/perception/OnboardingTour";
 import { SentimentInspector } from "@/src/components/perception/SentimentInspector";
+import { OrderflowInspector } from "@/src/components/perception/OrderflowInspector";
 
 type SetupOfTheDayCardProps = {
   setup: SetupCardSetup;
@@ -212,6 +213,7 @@ function SetupOfTheDayCardInner({ setup }: SetupOfTheDayCardProps): JSX.Element 
           sentiment={setup.sentiment ?? null}
           meta={{ setupId: setup.id, assetId: setup.assetId, symbol: setup.symbol }}
         />
+        <OrderflowInspector setup={setup} variant="full" />
         <RingInsights
           rings={rings}
           assetLabel={assetLabel}

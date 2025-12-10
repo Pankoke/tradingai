@@ -22,6 +22,7 @@ import { TraderNarrativeBlock } from "@/src/components/perception/TraderNarrativ
 import { SetupRatingBlock } from "@/src/components/perception/SetupRatingBlock";
 import { ScoreBreakdownChart } from "@/src/components/perception/ScoreBreakdownChart";
 import { SentimentInspector } from "@/src/components/perception/SentimentInspector";
+import { OrderflowInspector } from "@/src/components/perception/OrderflowInspector";
 
 type Props = {
   setup: HomepageSetup;
@@ -167,6 +168,7 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
         variant="compact"
         meta={{ setupId: setup.id, assetId: setup.assetId, symbol: setup.symbol }}
       />
+      <OrderflowInspector setup={setup as unknown as Setup} variant="compact" />
       <SetupRatingBlock
         setup={
           {
