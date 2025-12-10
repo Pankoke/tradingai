@@ -4,11 +4,17 @@ import type { JSX } from "react";
 import { useMemo } from "react";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import { cn } from "@/lib/utils";
-import type { Setup } from "@/src/lib/engine/types";
+import type { SentimentFlag, Setup } from "@/src/lib/engine/types";
 
 type SentimentInspectorProps = {
   sentiment?: Setup["sentiment"] | null;
   className?: string;
+  variant?: "default" | "compact";
+  meta?: {
+    setupId?: string | null;
+    assetId?: string | null;
+    symbol?: string | null;
+  };
 };
 
 type ReasonCategory =
@@ -46,6 +52,17 @@ const CATEGORY_STYLES: Record<ReasonCategory, string> = {
   general: "border-slate-500/40 bg-slate-500/10 text-slate-200",
 };
 
+const FLAG_STYLES: Record<SentimentFlag, string> = {
+  supports_trend: "border-emerald-500/60 bg-emerald-500/10 text-emerald-200",
+  supports_bias: "border-lime-500/60 bg-lime-500/10 text-lime-200",
+  contrarian_to_trend: "border-amber-500/60 bg-amber-500/10 text-amber-200",
+  contrarian_to_bias: "border-amber-500/60 bg-amber-500/10 text-amber-200",
+  event_capped: "border-pink-500/60 bg-pink-500/10 text-pink-200",
+  rrr_mismatch: "border-cyan-500/60 bg-cyan-500/10 text-cyan-200",
+  high_risk_crowded: "border-rose-500/60 bg-rose-500/10 text-rose-200",
+  low_conviction: "border-slate-500/50 bg-slate-500/10 text-slate-200",
+};
+
 function inferCategory(reason: string): ReasonCategory {
   const target = reason.toLowerCase();
   for (const entry of Object.entries(CATEGORY_MATCHERS)) {
@@ -60,21 +77,39 @@ function inferCategory(reason: string): ReasonCategory {
 export function SentimentInspector({
   sentiment,
   className,
+  variant = "default",
+  meta,
 }: SentimentInspectorProps): JSX.Element | null {
   const t = useT();
   const hasSentiment =
     sentiment && typeof sentiment.score === "number" && Number.isFinite(sentiment.score);
 
-  const reasons = useMemo(
-    () => (sentiment?.reasons ?? []).slice(0, 3),
-    [sentiment?.reasons],
-  );
+  const reasons = useMemo(() => {
+    const trimmed = (sentiment?.reasons ?? []).filter(Boolean);
+    return trimmed.slice(0, variant === "compact" ? 2 : 3);
+  }, [sentiment?.reasons, variant]);
 
-  if (!hasSentiment) {
+  const flags = useMemo(() => (sentiment?.flags ?? []).filter(Boolean) as SentimentFlag[], [sentiment?.flags]);
+  const displayedFlags = useMemo(() => flags.slice(0, variant === "compact" ? 2 : 5), [flags, variant]);
+
+  if (!hasSentiment || (reasons.length === 0 && displayedFlags.length === 0)) {
+    if (process.env.NODE_ENV !== "production" && meta?.setupId) {
+      console.warn(
+        "[SentimentInspector] Missing sentiment data",
+        {
+          setupId: meta.setupId,
+          assetId: meta.assetId,
+          symbol: meta.symbol,
+          hasSentiment,
+          reasonCount: reasons.length,
+        },
+      );
+    }
     return null;
   }
 
   const labelKey = `perception.sentiment.labels.${sentiment!.label ?? "neutral"}`;
+  const isCompact = variant === "compact";
 
   return (
     <section
@@ -83,6 +118,26 @@ export function SentimentInspector({
         className,
       )}
     >
+      {displayedFlags.length > 0 && (
+        <div className="mt-4 space-y-2">
+          <p className="text-[0.6rem] font-semibold uppercase tracking-[0.25em] text-slate-400">
+            {t("perception.sentiment.inspector.flagsTitle")}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {displayedFlags.map((flag) => (
+              <span
+                key={flag}
+                className={cn(
+                  "inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6rem] font-semibold",
+                  FLAG_STYLES[flag] ?? "border-slate-600 bg-slate-600/10 text-slate-200",
+                )}
+              >
+                {t(`perception.sentiment.flags.${flag}`)}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-[0.6rem] font-semibold uppercase tracking-[0.3em] text-slate-400">
@@ -92,44 +147,42 @@ export function SentimentInspector({
             {t(labelKey)}
           </p>
         </div>
-        <div className="text-3xl font-bold text-white">
+        <div className={cn("font-bold text-white", isCompact ? "text-2xl" : "text-3xl")}> 
           {Math.round(sentiment!.score)}
           <span className="ml-1 text-xs text-slate-400">/100</span>
         </div>
       </div>
 
-      {reasons.length > 0 ? (
-        <div className="mt-4 space-y-3">
-          <p className="text-[0.6rem] font-semibold uppercase tracking-[0.25em] text-slate-400">
-            {t("perception.sentiment.inspector.reasonsTitle")}
-          </p>
-          <ul className="space-y-2">
-            {reasons.map((reason, index) => {
-              const category = inferCategory(reason);
-              const badgeLabel = t(
-                `perception.sentiment.reasonCategory.${category}`,
-              );
-              return (
-                <li key={`${reason}-${index}`} className="space-y-1">
-                  <span
-                    className={cn(
-                      "inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6rem] font-semibold",
-                      CATEGORY_STYLES[category],
-                    )}
-                  >
-                    {badgeLabel}
-                  </span>
-                  <p className="text-xs text-slate-100">{reason}</p>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ) : (
-        <p className="pt-2 text-xs text-slate-400">
-          {t("perception.sentiment.inspector.noReasons")}
+      <div className="mt-4 space-y-3">
+        <p className="text-[0.6rem] font-semibold uppercase tracking-[0.25em] text-slate-400">
+          {t("perception.sentiment.inspector.reasonsTitle")}
         </p>
-      )}
+        <ul className="space-y-2">
+          {reasons.map((reason, index) => {
+            const category = inferCategory(reason);
+            const badgeLabel = t(
+              `perception.sentiment.reasonCategory.${category}`,
+            );
+            return (
+              <li key={`${reason}-${index}`} className="space-y-1">
+                <span
+                  className={cn(
+                    "inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6rem] font-semibold",
+                    CATEGORY_STYLES[category],
+                  )}
+                >
+                  {badgeLabel}
+                </span>
+                <p className={cn("text-xs text-slate-100", isCompact && "text-[0.7rem]")}>{reason}</p>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </section>
   );
 }
+
+
+
+

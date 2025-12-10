@@ -208,6 +208,10 @@ function SetupOfTheDayCardInner({ setup }: SetupOfTheDayCardProps): JSX.Element 
             {t("perception.setup.sections.driversOverview")}
           </h3>
         </OnboardingHint>
+        <SentimentInspector
+          sentiment={setup.sentiment ?? null}
+          meta={{ setupId: setup.id, assetId: setup.assetId, symbol: setup.symbol }}
+        />
         <RingInsights
           rings={rings}
           assetLabel={assetLabel}
@@ -216,7 +220,6 @@ function SetupOfTheDayCardInner({ setup }: SetupOfTheDayCardProps): JSX.Element 
           ringAiSummary={setup.ringAiSummary ?? null}
           eventContext={setup.eventContext ?? undefined}
         />
-        <SentimentInspector sentiment={setup.sentiment ?? null} />
       </div>
 
       <div className="space-y-4 pt-3">

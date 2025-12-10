@@ -11,6 +11,46 @@ export type AccessLevel = z.infer<typeof accessLevelSchema>;
 
 const ringPercentSchema = z.number().min(0).max(100);
 
+export const sentimentLabelEnum = z.enum([
+  "extreme_bullish",
+  "bullish",
+  "neutral",
+  "bearish",
+  "extreme_bearish",
+]);
+export type SentimentLabel = z.infer<typeof sentimentLabelEnum>;
+
+export const sentimentFlagEnum = z.enum([
+  "supports_trend",
+  "supports_bias",
+  "contrarian_to_trend",
+  "contrarian_to_bias",
+  "event_capped",
+  "rrr_mismatch",
+  "high_risk_crowded",
+  "low_conviction",
+]);
+export type SentimentFlag = z.infer<typeof sentimentFlagEnum>;
+
+export const sentimentDriverCategoryEnum = z.enum([
+  "bias",
+  "trend",
+  "momentum",
+  "event",
+  "orderflow",
+  "rrr",
+  "risk",
+  "volatility",
+  "drift",
+]);
+export type SentimentDriverCategory = z.infer<typeof sentimentDriverCategoryEnum>;
+
+export const sentimentDriverSummarySchema = z.object({
+  category: sentimentDriverCategoryEnum,
+  contribution: z.number(),
+});
+export type SentimentDriverSummary = z.infer<typeof sentimentDriverSummarySchema>;
+
 const setupRingsSchema = z.object({
   trendScore: ringPercentSchema,
   eventScore: ringPercentSchema,
@@ -27,24 +67,13 @@ const setupRingsSchema = z.object({
 
 const sentimentDetailSchema = z.object({
   score: ringPercentSchema,
-  label: z.enum([
-    "extreme_bullish",
-    "bullish",
-    "neutral",
-    "bearish",
-    "extreme_bearish",
-  ]),
+  label: sentimentLabelEnum,
   reasons: z.array(z.string()).optional(),
   raw: z
     .object({
-      fundingRate: z.number().nullable().optional(),
-      fundingRateAnnualized: z.number().nullable().optional(),
-      openInterestUsd: z.number().nullable().optional(),
-      openInterestChangePct: z.number().nullable().optional(),
-      longLiquidationsUsd: z.number().nullable().optional(),
-      shortLiquidationsUsd: z.number().nullable().optional(),
       source: z.string().optional(),
       timestamp: z.string().optional(),
+      profileKey: z.string().optional(),
       biasScore: z.number().nullable().optional(),
       trendScore: z.number().nullable().optional(),
       momentumScore: z.number().nullable().optional(),
@@ -54,9 +83,31 @@ const sentimentDetailSchema = z.object({
       riskPercent: z.number().nullable().optional(),
       volatilityLabel: z.string().nullable().optional(),
       driftPct: z.number().nullable().optional(),
+      baseScore: z.number().nullable().optional(),
     })
     .nullable()
     .optional(),
+  contributions: z
+    .array(
+      z.object({
+        id: z.enum([
+          "bias",
+          "trend",
+          "momentum",
+          "orderflow",
+          "event",
+          "rrr",
+          "riskPercent",
+          "volatility",
+          "drift",
+        ]),
+        delta: z.number(),
+        reason: z.string().optional(),
+      }),
+    )
+    .optional(),
+  flags: z.array(sentimentFlagEnum).optional(),
+  dominantDrivers: z.array(sentimentDriverSummarySchema).optional(),
 });
 
 const levelDebugSchema = z.object({

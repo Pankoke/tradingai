@@ -162,7 +162,11 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
         ringAiSummary={setup.ringAiSummary ?? null}
         eventContext={setup.eventContext ?? undefined}
       />
-      <SentimentInspector sentiment={setup.sentiment ?? null} />
+      <SentimentInspector
+        sentiment={setup.sentiment ?? null}
+        variant="compact"
+        meta={{ setupId: setup.id, assetId: setup.assetId, symbol: setup.symbol }}
+      />
       <SetupRatingBlock
         setup={
           {

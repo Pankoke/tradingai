@@ -17,13 +17,7 @@ export type SentimentRawSnapshot = {
   symbol: string;
   source: string;
   timestamp: Date;
-  fundingRate: number | null;
-  fundingRateAnnualized?: number | null;
-  openInterestUsd: number | null;
-  openInterestChangePct: number | null;
-  longLiquidationsUsd?: number | null;
-  shortLiquidationsUsd?: number | null;
-  longShortRatio?: number | null;
+  profileKey?: string;
   biasScore?: number;
   trendScore?: number;
   momentumScore?: number;
@@ -33,6 +27,7 @@ export type SentimentRawSnapshot = {
   riskPercent?: number;
   volatilityLabel?: string;
   driftPct?: number;
+  baseScore?: number;
 };
 
 export interface SentimentProvider {

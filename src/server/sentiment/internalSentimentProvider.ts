@@ -17,13 +17,6 @@ export class InternalSentimentProvider implements SentimentProvider {
     const snapshot: SentimentRawSnapshot = {
       assetId: params.asset.id,
       symbol: params.asset.symbol,
-      fundingRate: null,
-      openInterestUsd: null,
-      openInterestChangePct: null,
-      longLiquidationsUsd: null,
-      shortLiquidationsUsd: null,
-      longShortRatio: null,
-      fundingRateAnnualized: null,
       source: this.source,
       timestamp: new Date(),
       biasScore: params.context?.biasScore,
@@ -35,6 +28,7 @@ export class InternalSentimentProvider implements SentimentProvider {
       riskPercent: params.context?.riskPercent,
       volatilityLabel: params.context?.volatilityLabel,
       driftPct: params.context?.driftPct,
+      baseScore: params.context?.biasScore ?? undefined,
     };
 
     this.lastDebug = {

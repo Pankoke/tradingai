@@ -64,13 +64,14 @@ export async function GET(request: Request) {
 
   const metrics = buildSentimentMetrics({ asset, sentiment: raw });
   const normalizedInputs = {
-    bias: sentimentContext.biasScore ?? null,
-    trend: sentimentContext.trendScore ?? null,
-    momentum: sentimentContext.momentumScore ?? null,
-    event: sentimentContext.eventScore ?? null,
-    orderflow: sentimentContext.orderflowScore ?? null,
-    rrr: sentimentContext.rrr ?? null,
-    riskPercent: sentimentContext.riskPercent ?? null,
+    usedBias: sentimentContext.biasScore ?? null,
+    usedTrend: sentimentContext.trendScore ?? null,
+    usedMomentum: sentimentContext.momentumScore ?? null,
+    usedEvent: sentimentContext.eventScore ?? null,
+    usedOrderflow: sentimentContext.orderflowScore ?? null,
+    usedRrr: sentimentContext.rrr ?? null,
+    usedRiskPercent: sentimentContext.riskPercent ?? null,
+    usedVolatilityLabel: sentimentContext.volatilityLabel ?? null,
   };
 
   return NextResponse.json({
@@ -82,6 +83,9 @@ export async function GET(request: Request) {
     sentiment: metrics,
     raw,
     inputs: normalizedInputs,
+    contributions: metrics.contributions ?? [],
+    flags: metrics.flags ?? [],
+    dominantDrivers: metrics.dominantDrivers ?? [],
     debug: {
       ...debug,
       context: sentimentContext,

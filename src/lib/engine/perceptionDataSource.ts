@@ -194,6 +194,9 @@ class LivePerceptionDataSource implements PerceptionDataSource {
             label: sentiment.label,
             reasons: sentiment.reasons,
             raw: this.normalizeSentimentRaw(sentiment.raw),
+            contributions: sentiment.contributions,
+            flags: sentiment.flags,
+            dominantDrivers: sentiment.dominantDrivers,
           },
           validity: {
             isStale: metrics.isStale,
@@ -378,13 +381,9 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     if (!raw) return undefined;
     return {
       source: raw.source,
-      fundingRate: raw.fundingRate,
-      fundingRateAnnualized: raw.fundingRateAnnualized,
-      openInterestUsd: raw.openInterestUsd,
-      openInterestChangePct: raw.openInterestChangePct,
-      longLiquidationsUsd: raw.longLiquidationsUsd,
-      shortLiquidationsUsd: raw.shortLiquidationsUsd,
+      profileKey: raw.profileKey,
       timestamp: raw.timestamp?.toISOString(),
+      baseScore: raw.baseScore ?? undefined,
       biasScore: raw.biasScore,
       trendScore: raw.trendScore,
       momentumScore: raw.momentumScore,

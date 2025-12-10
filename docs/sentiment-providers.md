@@ -1,45 +1,67 @@
 ## Sentiment Providers
 
-The perception engine currently uses a single internal heuristic provider. External feeds (Coinglass/Binance) were removed, but the abstraction remains so that new sources can be plugged in later without touching the engine.
+Die Perception-Engine nutzt derzeit ausschließlich den internen Heuristik-Provider. Externe Feeds (Coinglass/Binance) sind entfernt, die Abstraktion (`SentimentProvider` + Resolver) bleibt bestehen, sodass später neue Quellen angeschlossen werden können.
 
-### Internal Heuristic Provider
+### Interner Heuristik-Provider
 
-- **Source**: `src/server/sentiment/internalSentimentProvider.ts`
-- **Inputs** (all optional, depending on the available context):
-  - Normalised bias score (derived from bias snapshots)
-  - Trend & momentum scores from `marketMetrics`
-  - Orderflow proxy (currently momentum score)
-  - Event risk placeholder (kept at neutral until dedicated data feed exists)
-  - Risk/Reward summary (RRR, risk%, volatility label)
-  - Price drift information
-- **Output**: `SentimentRawSnapshot` with the above fields plus debug metadata (`source="internal_heuristic"`).
+- **Ort**: `src/server/sentiment/internalSentimentProvider.ts`
+- **Inputs** (alle optional, je nach verfügbarem Kontext):
+  - normalisierte Bias-Werte aus den Bias-Snapshots
+  - Trend-, Momentum-, Volatilitäts- und Drift-Signale aus `marketMetrics`
+  - Orderflow-Proxy (aktuell Momentum Score)
+  - Event-Risiko aus dem Event-Ring
+  - Risk/Reward (RRR, Risk%, Volatilitäts-Label)
+- **Output**: `SentimentRawSnapshot` mit oben genannten Feldern plus Debug-Metadaten (`source="internal_heuristic"`, `profileKey`, `baseScore`).
 
-### Sentiment Metrics Heuristics
+### Sentiment-Profile & Heuristik
 
-`buildSentimentMetrics` ( `src/lib/engine/sentimentMetrics.ts`) consumes the snapshot and produces a score in the **0–100** range as well as the label bucket:
+`buildSentimentMetrics` (`src/lib/engine/sentimentMetrics.ts`) konsumiert das Snapshot und erzeugt:
+
+- einen Score **0–100**
+- ein Label (`extreme_bearish` … `extreme_bullish`)
+- eine Reason-Liste (max. 6 Einträge)
+- optional `contributions`: Liste einzelner Faktor-Adjustments (Bias, Trend, Momentum, Event, RRR, Risiko, Volatilität, Drift)
+
+Die Heuristik basiert auf Profilen pro Asset-Klasse:
+
+| Profil     | Besonderheiten                                                   |
+|------------|------------------------------------------------------------------|
+| default    | Balanced Weights, Basis 50                                       |
+| crypto     | Momentum/Bias stärker, Event-/Volatilitäts-Abschläge kleiner     |
+| fx         | Event-Risiko stärker, RRR-Anforderungen niedriger                |
+| index      | Trend-Bonus reduziert, Volatilität etwas sensibler               |
+| commodity  | Event-Kalender wichtiger (Calm-Bonus erhöht)                     |
+
+Score-Beispiele (Standard-Profil):
 
 | Score        | Label             |
 |--------------|-------------------|
 | 0–20         | `extreme_bearish` |
-| 21–35        | `bearish`         |
-| 36–65        | `neutral`         |
-| 66–84        | `bullish`         |
-| 85–100       | `extreme_bullish` |
+| 21–40        | `bearish`         |
+| 41–60        | `neutral`         |
+| 61–80        | `bullish`         |
+| 81–100       | `extreme_bullish` |
 
-Adjustments are additive around a neutral base of 50:
-- Strong bias/trend/momentum/orderflow push the score up; weak readings subtract.
-- Elevated event risk or high volatility reduce conviction.
-- Attractive RRR / low risk per trade adds a few points; poor RRR subtracts.
-- Excessive price drift nudges the score back toward neutral.
-- Legacy hooks for funding/OI remain in the code path but are currently unused (their fields are `null`).
-- Each adjustment appends a short reason (max 5) that is exposed via `/api/dev/sentiment/test` and the setup payload.
+### Konfiguration
 
-### Configuration
+- `SENTIMENT_PROVIDER_MODE=internal` (Default)
+  - Interner Heuristik-Provider für alle Assets.
+- `SENTIMENT_PROVIDER_MODE=none`
+  - Provider wird übersprungen; die Engine fällt auf den Hash-basierten Fallback in `sentimentScoring` zurück.
 
-- `SENTIMENT_PROVIDER_MODE=internal` (default) — enables the heuristic provider for all assets.
-- `SENTIMENT_PROVIDER_MODE=none` — disables provider usage; the engine falls back to the hash-based placeholder defined in `sentimentScoring`.
+### Debug & Dev-Selfcheck
 
-To add a new provider later:
-1. Implement `SentimentProvider.fetchSentiment({ asset, context })` and return a `SentimentRawSnapshot`.
-2. Register the provider inside `src/server/sentiment/providerResolver.ts` (possibly guarded by a new mode/env flag).
-3. Extend this document and `.env.local.example` with the required configuration so it is discoverable for future developers.
+`/api/dev/sentiment/test?symbol=BTC-USD` liefert:
+
+- `sentiment`: Score, Label, Reasons, Contributions
+- `raw`: Snapshot inkl. Profil-Key und genutzten Input-Werten
+- `inputs`: normalisierte Werte (`usedBias`, `usedTrend`, …)
+- `debug`: Provider-Hinweise
+
+So lassen sich die Profile schnell feinjustieren, ohne die UI anzupassen.
+
+### Neue Provider hinzufügen
+
+1. `SentimentProvider.fetchSentiment({ asset, context })` implementieren, `SentimentRawSnapshot` zurückgeben.
+2. Provider im Resolver (`src/server/sentiment/providerResolver.ts`) registrieren und per Env-Flag auswählbar machen.
+3. Diese Dokumentation und `.env.local.example` aktualisieren.
