@@ -25,6 +25,7 @@ import { TraderNarrativeBlock } from "@/src/components/perception/TraderNarrativ
 import { SetupRatingBlock } from "@/src/components/perception/SetupRatingBlock";
 import { SetupLayoutFrame } from "@/src/components/perception/SetupLayoutFrame";
 import { OnboardingHint, OnboardingTourProvider, useOnboardingTour } from "@/src/components/perception/OnboardingTour";
+import { SentimentInspector } from "@/src/components/perception/SentimentInspector";
 
 type SetupOfTheDayCardProps = {
   setup: SetupCardSetup;
@@ -215,6 +216,7 @@ function SetupOfTheDayCardInner({ setup }: SetupOfTheDayCardProps): JSX.Element 
           ringAiSummary={setup.ringAiSummary ?? null}
           eventContext={setup.eventContext ?? undefined}
         />
+        <SentimentInspector sentiment={setup.sentiment ?? null} />
       </div>
 
       <div className="space-y-4 pt-3">

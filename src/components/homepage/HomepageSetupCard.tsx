@@ -21,6 +21,7 @@ import type { Setup } from "@/src/lib/engine/types";
 import { TraderNarrativeBlock } from "@/src/components/perception/TraderNarrativeBlock";
 import { SetupRatingBlock } from "@/src/components/perception/SetupRatingBlock";
 import { ScoreBreakdownChart } from "@/src/components/perception/ScoreBreakdownChart";
+import { SentimentInspector } from "@/src/components/perception/SentimentInspector";
 
 type Props = {
   setup: HomepageSetup;
@@ -161,6 +162,7 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
         ringAiSummary={setup.ringAiSummary ?? null}
         eventContext={setup.eventContext ?? undefined}
       />
+      <SentimentInspector sentiment={setup.sentiment ?? null} />
       <SetupRatingBlock
         setup={
           {

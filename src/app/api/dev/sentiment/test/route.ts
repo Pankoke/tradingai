@@ -63,12 +63,25 @@ export async function GET(request: Request) {
   }
 
   const metrics = buildSentimentMetrics({ asset, sentiment: raw });
+  const normalizedInputs = {
+    bias: sentimentContext.biasScore ?? null,
+    trend: sentimentContext.trendScore ?? null,
+    momentum: sentimentContext.momentumScore ?? null,
+    event: sentimentContext.eventScore ?? null,
+    orderflow: sentimentContext.orderflowScore ?? null,
+    rrr: sentimentContext.rrr ?? null,
+    riskPercent: sentimentContext.riskPercent ?? null,
+  };
+
   return NextResponse.json({
     ok: true,
     symbol: asset.symbol,
     provider: provider.source,
+    label: metrics.label,
+    reasonsPreview: metrics.reasons.slice(0, 3),
     sentiment: metrics,
     raw,
+    inputs: normalizedInputs,
     debug: {
       ...debug,
       context: sentimentContext,
