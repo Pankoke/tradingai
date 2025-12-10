@@ -24,14 +24,66 @@ const sentimentRankingHintEnum = z.enum(["positive", "negative", "neutral"]);
 export type SentimentRankingHint = z.infer<typeof sentimentRankingHintEnum>;
 
 const orderflowModeSchema = z.enum([
+  "buyers",
+  "sellers",
+  "balanced",
   "buyers_dominant",
   "sellers_dominant",
-  "balanced",
   "trending",
   "choppy",
   "mean-reversion",
 ]);
 export type OrderflowModeLabel = z.infer<typeof orderflowModeSchema>;
+
+export const orderflowFlagEnum = z.enum([
+  "orderflow_trend_alignment",
+  "orderflow_trend_conflict",
+  "orderflow_bias_alignment",
+  "orderflow_bias_conflict",
+]);
+export type OrderflowFlag = z.infer<typeof orderflowFlagEnum>;
+
+export const orderflowReasonCategoryEnum = z.enum([
+  "volume",
+  "price_action",
+  "structure",
+  "trend_alignment",
+  "trend_conflict",
+]);
+export type OrderflowReasonCategory = z.infer<typeof orderflowReasonCategoryEnum>;
+
+const orderflowReasonDetailSchema = z.object({
+  category: orderflowReasonCategoryEnum,
+  text: z.string(),
+});
+
+const orderflowMetaSchema = z
+  .object({
+    timeframeSamples: z.record(z.string(), z.number()).optional(),
+    context: z
+      .object({
+        trendScore: z.number().nullable().optional(),
+        biasScore: z.number().nullable().optional(),
+      })
+      .optional(),
+  })
+  .optional();
+
+const orderflowDetailSchema = z.object({
+  score: ringPercentSchema,
+  mode: orderflowModeSchema.optional().nullable(),
+  reasons: z.array(z.string()),
+  reasonDetails: z.array(orderflowReasonDetailSchema).optional(),
+  flags: z.array(orderflowFlagEnum).optional(),
+  meta: orderflowMetaSchema,
+  confidenceDelta: z.number().optional(),
+  clv: z.number().optional(),
+  relVolume: z.number().optional(),
+  expansion: z.number().optional(),
+  consistency: z.number().optional(),
+});
+
+export type OrderflowDetail = z.infer<typeof orderflowDetailSchema>;
 
 export const sentimentFlagEnum = z.enum([
   "supports_trend",
@@ -189,9 +241,11 @@ export const setupSchema = z.object({
   accessLevel: accessLevelSchema,
   rings: setupRingsSchema,
   riskReward: riskRewardSchema,
+  orderflowConfidenceDelta: z.number().optional(),
   ringAiSummary: ringAiSummarySchema.nullable().optional(),
   validity: setupValiditySchema.optional(),
   sentiment: sentimentDetailSchema.optional(),
+  orderflow: orderflowDetailSchema.optional(),
   eventContext: z
     .object({
       topEvents: z.array(

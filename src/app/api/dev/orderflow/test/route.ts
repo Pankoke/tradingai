@@ -6,6 +6,8 @@ import {
   ORDERFLOW_TIMEFRAMES,
 } from "@/src/lib/engine/orderflowMetrics";
 import type { MarketTimeframe } from "@/src/server/marketData/MarketDataProvider";
+import { applyOrderflowConfidenceAdjustment } from "@/src/lib/engine/orderflowAdjustments";
+import type { ConfidenceAdjustmentResult } from "@/src/lib/engine/sentimentAdjustments";
 
 export async function GET(request: NextRequest) {
   const symbolParam = request.nextUrl.searchParams.get("symbol");
@@ -37,6 +39,14 @@ export async function GET(request: NextRequest) {
   const metrics = await buildOrderflowMetrics({
     asset,
     timeframes,
+    trendScore: null,
+    biasScore: null,
+  });
+
+  const baseConfidence = 50;
+  const orderflowAdjustment: ConfidenceAdjustmentResult = applyOrderflowConfidenceAdjustment({
+    base: baseConfidence,
+    orderflow: metrics,
   });
 
   return NextResponse.json({
@@ -48,5 +58,8 @@ export async function GET(request: NextRequest) {
     },
     requestedTimeframes: timeframes,
     metrics,
+    orderflowFlags: metrics.flags ?? [],
+    orderflowConfidenceDelta: orderflowAdjustment.delta,
+    metaContext: metrics.meta,
   });
 }

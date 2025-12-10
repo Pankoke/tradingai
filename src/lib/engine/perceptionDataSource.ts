@@ -31,6 +31,7 @@ import {
   type ConfidenceAdjustmentResult,
 } from "@/src/lib/engine/sentimentAdjustments";
 import { deriveBaseConfidenceScore } from "@/src/lib/engine/confidence";
+import { applyOrderflowConfidenceAdjustment } from "@/src/lib/engine/orderflowAdjustments";
 
 export interface PerceptionDataSource {
   getSetupsForToday(params: { asOf: Date }): Promise<Setup[]>;
@@ -157,6 +158,8 @@ class LivePerceptionDataSource implements PerceptionDataSource {
         const orderflow = await buildOrderflowMetrics({
           asset,
           timeframes,
+          trendScore: metrics.trendScore,
+          biasScore: normalizedBiasScore,
         });
         const orderflowMode =
           LivePerceptionDataSource.ORDERFLOW_MODE_MAPPING[orderflow.mode];
@@ -180,8 +183,14 @@ class LivePerceptionDataSource implements PerceptionDataSource {
         };
 
         let confidence = deriveBaseConfidenceScore(metrics);
-        const confidenceAdjustment = this.adjustConfidenceForSentiment(confidence, sentiment);
-        confidence = confidenceAdjustment.adjusted;
+        const sentimentAdjustment = this.adjustConfidenceForSentiment(confidence, sentiment);
+        confidence = sentimentAdjustment.adjusted;
+        const orderflowAdjustment = applyOrderflowConfidenceAdjustment({
+          base: confidence,
+          orderflow,
+        });
+        confidence = orderflowAdjustment.adjusted;
+        const orderflowConfidenceDelta = orderflowAdjustment.delta;
 
         const rings = {
           ...this.createDefaultRings(),
@@ -224,7 +233,20 @@ class LivePerceptionDataSource implements PerceptionDataSource {
             contributions: sentiment.contributions,
             flags: sentiment.flags,
             dominantDrivers: sentiment.dominantDrivers,
-            confidenceDelta: confidenceAdjustment.delta,
+            confidenceDelta: sentimentAdjustment.delta,
+          },
+          orderflow: {
+            score: orderflow.flowScore,
+            mode: orderflow.mode,
+            clv: orderflow.clv,
+            relVolume: orderflow.relVolume,
+            expansion: orderflow.expansion,
+            consistency: orderflow.consistency,
+            reasons: orderflow.reasons,
+            reasonDetails: orderflow.reasonDetails,
+            flags: orderflow.flags,
+            meta: orderflow.meta,
+            confidenceDelta: orderflowConfidenceDelta,
           },
           validity: {
             isStale: metrics.isStale,

@@ -4,6 +4,24 @@ import type { MarketTimeframe } from "@/src/server/marketData/MarketDataProvider
 
 export type OrderflowMode = "buyers" | "sellers" | "balanced";
 
+export type OrderflowFlag =
+  | "orderflow_trend_alignment"
+  | "orderflow_trend_conflict"
+  | "orderflow_bias_alignment"
+  | "orderflow_bias_conflict";
+
+export type OrderflowReasonCategory =
+  | "volume"
+  | "price_action"
+  | "structure"
+  | "trend_alignment"
+  | "trend_conflict";
+
+export interface OrderflowReasonDetail {
+  category: OrderflowReasonCategory;
+  text: string;
+}
+
 export interface OrderflowMetrics {
   flowScore: number;
   mode: OrderflowMode;
@@ -12,8 +30,14 @@ export interface OrderflowMetrics {
   expansion: number; // 0..100 normalized expansion score
   consistency: number; // 0..100 dominance of one flow direction
   reasons: string[];
+  reasonDetails?: OrderflowReasonDetail[];
+  flags?: OrderflowFlag[];
   meta?: {
     timeframeSamples: Record<MarketTimeframe, number>;
+    context?: {
+      trendScore?: number | null;
+      biasScore?: number | null;
+    };
   };
 }
 
@@ -50,7 +74,7 @@ function normalizeCandles(candles: Candle[]): NormalizedCandle[] {
       low: Number(candle.low),
       volume: Number(candle.volume ?? 0),
     }))
-  .filter((item) => Number.isFinite(item.close) && Number.isFinite(item.volume));
+    .filter((item) => Number.isFinite(item.close) && Number.isFinite(item.volume));
 }
 
 function computeClv(candle: NormalizedCandle): number {
@@ -98,6 +122,8 @@ function computeConsistency(clvSeries: number[]): number {
 export async function buildOrderflowMetrics(params: {
   asset: Asset;
   timeframes?: MarketTimeframe[];
+  trendScore?: number | null;
+  biasScore?: number | null;
 }): Promise<OrderflowMetrics> {
   const requestedTfs = params.timeframes ?? ORDERFLOW_TIMEFRAMES;
   const uniqueTfs = Array.from(new Set(requestedTfs)).filter((tf) => ORDERFLOW_TIMEFRAMES.includes(tf));
@@ -136,7 +162,16 @@ export async function buildOrderflowMetrics(params: {
       expansion: 0,
       consistency: 50,
       reasons: ["Insufficient intraday data for orderflow"],
-      meta: { timeframeSamples },
+      reasonDetails: [
+        { category: "structure", text: "Insufficient intraday data for orderflow" },
+      ],
+      meta: {
+        timeframeSamples,
+        context: {
+          trendScore: params.trendScore ?? null,
+          biasScore: params.biasScore ?? null,
+        },
+      },
     };
   }
 
@@ -167,28 +202,72 @@ export async function buildOrderflowMetrics(params: {
   }
 
   const reasons: string[] = [];
+  const reasonDetails: OrderflowReasonDetail[] = [];
+  const pushReason = (category: OrderflowReasonCategory, text: string) => {
+    reasonDetails.push({ category, text });
+    reasons.push(text);
+  };
+
   if (Math.abs(clvAvg) >= 0.1) {
-    reasons.push(
-      `CLV skewed ${clvAvg > 0 ? "bullish" : "bearish"} (${(clvAvg * 100).toFixed(1)}%)`,
-    );
+    pushReason("price_action", "CLV skewed; price favors one side");
   }
   if (relVolume >= 1.1) {
-    reasons.push(`Volume ${relVolume.toFixed(2)}x average`);
+    pushReason("volume", "Volume outpaces recent average");
   } else if (relVolume <= 0.9) {
-    reasons.push(`Volume light (${relVolume.toFixed(2)}x avg)`);
+    pushReason("volume", "Volume lighter than average");
   }
   if (expansionRatio >= 0.15) {
-    reasons.push("Range expansion active");
+    pushReason("structure", "Range expansion active");
   } else if (expansionRatio <= -0.15) {
-    reasons.push("Range contraction");
+    pushReason("structure", "Range contraction");
   }
   if (consistency >= 0.7) {
-    reasons.push("Flow consistent across intraday candles");
+    pushReason("structure", "Flow consistent across intraday candles");
   } else if (consistency <= 0.3) {
-    reasons.push("Flow choppy / mixed");
+    pushReason("structure", "Flow choppy / mixed");
   }
-  if (!reasons.length) {
-    reasons.push("Orderflow neutral");
+  if (!reasonDetails.length) {
+    pushReason("structure", "Orderflow neutral");
+  }
+
+  const flags: OrderflowFlag[] = [];
+  const trendScore = params.trendScore ?? null;
+  const biasScore = params.biasScore ?? null;
+
+  if (typeof trendScore === "number") {
+    if (trendScore >= 60) {
+      if (mode === "buyers") flags.push("orderflow_trend_alignment");
+      if (mode === "sellers") flags.push("orderflow_trend_conflict");
+    } else if (trendScore <= 40) {
+      if (mode === "sellers") {
+        flags.push("orderflow_trend_alignment");
+      } else if (mode === "buyers") {
+        flags.push("orderflow_trend_conflict");
+      }
+    }
+  }
+
+  if (typeof biasScore === "number") {
+    if (biasScore >= 60) {
+      if (mode === "buyers") flags.push("orderflow_bias_alignment");
+      if (mode === "sellers") flags.push("orderflow_bias_conflict");
+    } else if (biasScore <= 40) {
+      if (mode === "sellers") {
+        flags.push("orderflow_bias_alignment");
+      } else if (mode === "buyers") {
+        flags.push("orderflow_bias_conflict");
+      }
+    }
+  }
+
+  if (flags.includes("orderflow_trend_alignment")) {
+    pushReason("trend_alignment", "Flow aligns with prevailing trend");
+  }
+  if (flags.includes("orderflow_trend_conflict")) {
+    pushReason("trend_conflict", "Flow diverges from prevailing trend");
+  }
+  if (flags.includes("orderflow_bias_conflict") && !flags.includes("orderflow_trend_conflict")) {
+    pushReason("trend_conflict", "Flow conflicts with directional bias");
   }
 
   return {
@@ -199,6 +278,14 @@ export async function buildOrderflowMetrics(params: {
     expansion: Number((expansionNormalized * 100).toFixed(1)),
     consistency: Number((consistency * 100).toFixed(1)),
     reasons,
-    meta: { timeframeSamples },
+    reasonDetails,
+    flags: flags.length ? Array.from(new Set(flags)) : undefined,
+    meta: {
+      timeframeSamples,
+      context: {
+        trendScore,
+        biasScore,
+      },
+    },
   };
 }
