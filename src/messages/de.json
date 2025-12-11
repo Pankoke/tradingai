@@ -887,5 +887,7 @@
   "perception.signalQuality.inline.A": "A - Starkes Setup",
   "perception.signalQuality.inline.B": "B - Solides Setup",
   "perception.signalQuality.inline.C": "C - Durchwachsenes Setup",
-  "perception.signalQuality.inline.D": "D - Schwaches Setup"
+  "perception.signalQuality.inline.D": "D - Schwaches Setup",
+  "perception.impactPlaybook.heading": "Impact & Playbook",
+  "perception.impactPlaybook.summaryFallback": "Keine KI-Zusammenfassung verfügbar."
 }

@@ -13,7 +13,6 @@ import { BigGauge, SmallGauge } from "@/src/components/perception/RingGauges";
 import { formatNumberText, formatRangeText } from "@/src/lib/formatters/levels";
 import { RiskRewardBlock } from "@/src/components/perception/RiskRewardBlock";
 import { buildEventTooltip } from "@/src/features/perception/ui/eventTooltip";
-import { RingInsights } from "@/src/components/perception/RingInsights";
 import { PrimaryTradeSignal } from "@/src/components/perception/PrimaryTradeSignal";
 import { TraderPlaybook } from "@/src/components/perception/TraderPlaybook";
 import { PositioningGuide } from "@/src/components/perception/PositioningGuide";
@@ -112,13 +111,16 @@ function SetupOfTheDayCardInner({ setup }: SetupOfTheDayCardProps): JSX.Element 
   ];
 
   const [showNarrative, setShowNarrative] = useState(false);
-  const [showAi, setShowAi] = useState(false);
   const [showImpact, setShowImpact] = useState(false);
   const signalQuality = useMemo(
     () => computeSignalQuality(setup as unknown as Setup),
     [setup],
   );
   const [activeRing, setActiveRing] = useState<RingTabId>("trend");
+  const impactSummaryText =
+    setup.ringAiSummary?.longSummary ??
+    setup.ringAiSummary?.shortSummary ??
+    t("perception.impactPlaybook.summaryFallback");
 
   const headerContent = !isCompleted ? (
     <div className="flex items-center justify-between rounded-lg border border-sky-700/60 bg-sky-900/30 px-4 py-2 text-xs text-slate-100">
@@ -201,6 +203,7 @@ function SetupOfTheDayCardInner({ setup }: SetupOfTheDayCardProps): JSX.Element 
             showSignalQualityInline={false}
             activeRing={activeRing}
             onActiveRingChange={setActiveRing}
+            showTabButtons={false}
           />
         </div>
       </div>
@@ -257,22 +260,19 @@ function SetupOfTheDayCardInner({ setup }: SetupOfTheDayCardProps): JSX.Element 
             {t("perception.setup.sections.driversOverview")}
           </h3>
         </OnboardingHint>
-        <RingInsights
-          rings={rings}
-          assetLabel={assetLabel}
-          timeframe={setup.timeframe}
-          direction={setup.direction}
-          ringAiSummary={setup.ringAiSummary ?? null}
-          eventContext={setup.eventContext ?? undefined}
-        />
-      </div>
-
-      <div className="space-y-4 pt-3">
-        <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
-          {t("perception.setup.sections.playbook")}
-        </h3>
-        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 shadow-[inset_0_0_10px_rgba(0,0,0,0.25)]">
-          <TraderPlaybook setup={setup} />
+        <div className="space-y-4 rounded-xl border border-slate-800 bg-slate-900/50 p-4 shadow-[inset_0_0_10px_rgba(0,0,0,0.25)]">
+          <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
+            {t("perception.impactPlaybook.heading")}
+          </h3>
+          <div className="space-y-1">
+            <p className="text-[0.6rem] uppercase tracking-[0.3em] text-slate-400">
+              {t("perception.setup.sections.aiSummary")}
+            </p>
+            <p className="text-sm text-slate-200">{impactSummaryText}</p>
+          </div>
+          <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+            <TraderPlaybook setup={setup} />
+          </div>
         </div>
       </div>
     </>
@@ -351,31 +351,6 @@ function SetupOfTheDayCardInner({ setup }: SetupOfTheDayCardProps): JSX.Element 
           </div>
         )}
       </div>
-
-      {setup.ringAiSummary && (
-        <div className="space-y-2">
-          <div className="space-y-1">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
-                {t("perception.setup.sections.aiSummary")}
-              </h3>
-              <button
-                type="button"
-                className="w-full text-left text-sm font-medium text-slate-200 transition hover:text-white sm:w-auto"
-                onClick={() => setShowAi((prev) => !prev)}
-              >
-                {showAi ? t("perception.setup.details.hideAi") : t("perception.setup.details.showAi")}
-              </button>
-            </div>
-            <p className="text-xs text-slate-400">{t("perception.setup.sections.aiHint")}</p>
-          </div>
-          {showAi && (
-            <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 text-sm text-slate-200 shadow-[inset_0_0_10px_rgba(0,0,0,0.25)] transition-all duration-300 ease-in-out">
-              {setup.ringAiSummary.longSummary ?? setup.ringAiSummary.shortSummary ?? ""}
-            </div>
-          )}
-        </div>
-      )}
 
       <div className="pt-4">
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 shadow-[inset_0_0_10px_rgba(0,0,0,0.25)]">

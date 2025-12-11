@@ -49,10 +49,13 @@ export function SmallGauge({
   const content = (
     <div
       className={clsx(
-        "flex flex-col items-center gap-2 rounded-2xl border border-transparent px-2 py-2 transition",
+        "flex flex-col items-center gap-2 rounded-2xl border border-transparent px-2 py-2 transition duration-300 ease-out transform",
         onClick && "cursor-pointer focus-within:outline-none focus-visible:outline-none",
-        isActive && "border-sky-500/70 bg-slate-800/60 shadow-[0_10px_30px_rgba(15,23,42,0.4)]",
-        !isActive && onClick && "hover:border-slate-700/70 hover:bg-slate-800/30",
+        isActive &&
+          "scale-105 border-sky-500/70 bg-slate-800/60 shadow-[0_10px_30px_rgba(15,23,42,0.4)] ring-1 ring-sky-400/30",
+        !isActive &&
+          onClick &&
+          "hover:border-slate-700/70 hover:bg-slate-800/30 hover:scale-105",
         className,
       )}
     >

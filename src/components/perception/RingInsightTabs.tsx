@@ -27,6 +27,7 @@ type RingInsightTabsProps = {
   showSignalQualityInline?: boolean;
   activeRing?: RingTabId | null;
   onActiveRingChange?: (id: RingTabId) => void;
+  showTabButtons?: boolean;
 };
 
 const hasOrderflowContent = (current: Setup): boolean => {
@@ -87,6 +88,7 @@ export function RingInsightTabs({
   showSignalQualityInline = true,
   activeRing = null,
   onActiveRingChange,
+  showTabButtons = true,
 }: RingInsightTabsProps) {
   const t = useT();
   const signalQuality = useMemo(() => computeSignalQuality(setup), [setup]);
@@ -139,22 +141,24 @@ export function RingInsightTabs({
       {variant === "full" && showSignalQualityInline && (
         <SignalQualityBadge quality={signalQuality} variant="inline" />
       )}
-      <div className="flex flex-wrap gap-2">
-        {availableTabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => handleSelect(tab.id)}
-            className={`rounded-full border px-3 py-1 text-[0.55rem] font-semibold uppercase tracking-[0.3em] transition ${
-              activeTab === tab.id
-                ? "bg-slate-800/70 text-slate-50 border-slate-600 shadow-[0_4px_18px_rgba(15,23,42,0.45)]"
-                : "bg-transparent text-slate-400 border-transparent hover:border-slate-700/70"
-            }`}
-          >
-            {t(tab.labelKey)}
-          </button>
-        ))}
-      </div>
+      {showTabButtons && (
+        <div className="flex flex-wrap gap-2">
+          {availableTabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => handleSelect(tab.id)}
+              className={`rounded-full border px-3 py-1 text-[0.55rem] font-semibold uppercase tracking-[0.3em] transition ${
+                activeTab === tab.id
+                  ? "bg-slate-800/70 text-slate-50 border-slate-600 shadow-[0_4px_18px_rgba(15,23,42,0.45)]"
+                  : "bg-transparent text-slate-400 border-transparent hover:border-slate-700/70"
+              }`}
+            >
+              {t(tab.labelKey)}
+            </button>
+          ))}
+        </div>
+      )}
       {content}
     </section>
   );

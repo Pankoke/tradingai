@@ -887,5 +887,7 @@
   "perception.signalQuality.inline.A": "A - strong setup",
   "perception.signalQuality.inline.B": "B - solid setup",
   "perception.signalQuality.inline.C": "C - mixed setup",
-  "perception.signalQuality.inline.D": "D - weak setup"
+  "perception.signalQuality.inline.D": "D - weak setup",
+  "perception.impactPlaybook.heading": "Impact & playbook",
+  "perception.impactPlaybook.summaryFallback": "AI summary not available for this setup."
 }
