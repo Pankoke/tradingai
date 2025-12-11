@@ -105,53 +105,43 @@ export function PositioningGuide({ setup }: PositioningGuideProps): JSX.Element 
   }
 
   // Timing heuristic
+  let timingKey: "event" | "flow" | "trend" | "neutral" = "neutral";
   let timingTone: Tone = "ok";
-  let timingText = t("perception.tradeDecision.positioning.timing.ok");
   if (eventBucket === "high") {
+    timingKey = "event";
     timingTone = "risk";
-    timingText = t("perception.tradeDecision.positioning.timing.eventRisk");
   } else if (flowBucket === "high" && (eventBucket === "low" || eventBucket === "medium")) {
+    timingKey = "flow";
     timingTone = "good";
-    timingText = t("perception.tradeDecision.positioning.timing.flowDriven");
   } else if (
     (bucket(rings.trendScore) === "high" || bucket(rings.biasScore) === "high") &&
     (eventBucket === "low" || eventBucket === "medium") &&
     !hasConflict
   ) {
+    timingKey = "trend";
     timingTone = "good";
-    timingText = t("perception.tradeDecision.positioning.timing.trendFollow");
-  } else if (
-    bucket(rings.trendScore) === "medium" &&
-    bucket(rings.biasScore) === "medium" &&
-    flowBucket === "medium" &&
-    (rrrBucket === null || rrrBucket === "weak")
-  ) {
-    timingTone = "weak";
-    timingText = t("perception.tradeDecision.positioning.timing.ok");
+  } else {
+    timingKey = "neutral";
+    timingTone = "ok";
   }
+  const timingText = t(`perception.tradeDecision.positioning.timing.${timingKey}`);
 
   // RRR fitness
-  let rrrTone: Tone = "weak";
-  let rrrText = t("perception.tradeDecision.positioning.rrr.weak");
-  if (rrr !== null) {
-    if (rrr >= 3) {
-      rrrTone = "good";
-      rrrText = t("perception.tradeDecision.positioning.rrr.good");
-    } else if (rrr >= 2) {
-      rrrTone = "ok";
-      rrrText = t("perception.tradeDecision.positioning.rrr.ok");
-    }
-  }
+  const rrrTone: Tone =
+    rrrBucket === "strong" ? "good" : rrrBucket === "ok" ? "ok" : "weak";
+  const rrrText = t(`perception.tradeDecision.positioning.rrr.${rrrBucket ?? "weak"}`);
 
   // Confidence badge text
   let confidenceTone: Tone = confBucket === "high" ? "good" : confBucket === "medium" ? "ok" : "weak";
-  let confidenceText = t(`perception.tradeDecision.positioning.confidence.${confBucket}`);
+  let confidenceText = t(`perception.tradeDecision.positioning.sizing.${sizing}`).replace(
+    "{confidence}",
+    `${Math.round(confidence)}%`,
+  );
   if (sizing === "aggressive") {
-    confidenceTone = confidenceTone === "good" ? "good" : "ok";
-    confidenceText = t("perception.tradeDecision.positioning.confidence.aggressive");
-  } else if (sizing === "small") {
+    confidenceTone = "good";
+  }
+  if (sizing === "small") {
     confidenceTone = "weak";
-    confidenceText = t("perception.tradeDecision.positioning.confidence.small");
   }
 
   const rows = [
@@ -166,7 +156,7 @@ export function PositioningGuide({ setup }: PositioningGuideProps): JSX.Element 
       value: rrrText,
     },
     {
-      label: t("perception.tradeDecision.positioning.confidence"),
+      label: t("perception.tradeDecision.positioning.sizingLabel"),
       tone: confidenceTone,
       value: confidenceText,
     },

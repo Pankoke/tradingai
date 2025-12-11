@@ -1,8 +1,10 @@
 "use client";
 
 import type { JSX } from "react";
+import { useMemo } from "react";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import type { RingAiSummary, RiskRewardSummary, Setup } from "@/src/lib/engine/types";
+import { computeSignalQuality } from "@/src/lib/engine/signalQuality";
 
 type Props = {
   setup: Setup;
@@ -19,8 +21,6 @@ const ratingPalette: Record<string, string> = {
   B: "bg-lime-400 text-slate-900",
   C: "bg-yellow-400 text-slate-900",
   D: "bg-orange-400 text-slate-900",
-  E: "bg-rose-500 text-white",
-  F: "bg-red-800 text-white",
 };
 
 function scoreBucket(score?: number | null): Bucket {
@@ -51,7 +51,7 @@ function riskPctBucket(risk?: number | null): Bucket {
   return "low";
 }
 
-export function SetupRatingBlock({ setup, ringAiSummary, riskReward, eventContext }: Props): JSX.Element {
+export function SetupRatingBlock({ setup, ringAiSummary, riskReward }: Props): JSX.Element {
   const t = useT();
 
   const rings =
@@ -72,10 +72,7 @@ export function SetupRatingBlock({ setup, ringAiSummary, riskReward, eventContex
   if (scoreBucket(rings.biasScore) === "high") drivers.push("bias");
   if (scoreBucket(rings.orderflowScore) === "high") drivers.push("flow");
   if (scoreBucket(rings.sentimentScore) === "high") drivers.push("sentiment");
-  if (
-    eventBucket(rings.eventScore) === "high" &&
-    !drivers.includes("event")
-  ) {
+  if (eventBucket(rings.eventScore) === "high" && !drivers.includes("event")) {
     drivers.push("event");
   }
 
@@ -89,72 +86,45 @@ export function SetupRatingBlock({ setup, ringAiSummary, riskReward, eventContex
   const rrr = rrrBucket(riskReward?.rrr);
   const riskPct = riskPctBucket(riskReward?.riskPercent);
 
-  const allMediumCluster =
-    scoreBucket(rings.trendScore) === "medium" &&
-    scoreBucket(rings.biasScore) === "medium" &&
-    scoreBucket(rings.orderflowScore) === "medium" &&
-    scoreBucket(rings.sentimentScore) === "medium" &&
-    eventBucket(rings.eventScore) === "medium";
+  const hasConflict =
+    conflicts.length > 0 || flowWeakVsDrivers || (eventHigh && (drivers.includes("bias") || drivers.includes("trend")));
 
-  const hasConflict = conflicts.length > 0 || flowWeakVsDrivers || (eventHigh && (drivers.includes("bias") || drivers.includes("trend")));
+  const signalQuality = useMemo(() => computeSignalQuality(setup), [setup]);
+  const rating = (signalQuality.grade ?? "D") as "A" | "B" | "C" | "D";
+  const ratingLabel = t(signalQuality.labelKey);
+  const confidenceLevel = scoreBucket(rings.confidenceScore);
+  const eventLevel = eventBucket(rings.eventScore);
 
-  let rating: "A" | "B" | "C" | "D" | "E" | "F" = "C";
-
-  const heavyConflict = hasConflict && eventHigh && flowWeakVsDrivers && confidenceLow;
-
-  if (heavyConflict) {
-    rating = "F";
-  } else if (
-    (rrr === "weak" || riskPct === "high") &&
-    (allMediumCluster || confidenceLow || hasConflict)
-  ) {
-    rating = "E";
-  } else if (
-    drivers.filter((d) => d !== "event").length >= 2 &&
-    rrr === "strong" &&
-    !eventHigh &&
-    scoreBucket(rings.confidenceScore) === "high" &&
-    !hasConflict
-  ) {
-    rating = "A";
-  } else if (
-    drivers.filter((d) => d !== "event").length >= 1 &&
-    (rrr === "ok" || rrr === "strong") &&
-    eventBucket(rings.eventScore) === "medium" &&
-    scoreBucket(rings.confidenceScore) !== "low"
-  ) {
-    rating = "B";
-  } else if (
-    allMediumCluster &&
-    rrr !== "weak"
-  ) {
-    rating = "C";
-  } else if (hasConflict || eventHigh || confidenceLow || rrr === "weak") {
-    rating = "D";
-  }
+  const metaLine = t("perception.setupRating.metaLine")
+    .replace("{quality}", ratingLabel)
+    .replace("{confidence}", t(`perception.setupRating.confidence.${confidenceLevel}`))
+    .replace("{event}", t(`perception.setupRating.event.${eventLevel}`));
 
   const reasons: string[] = [];
   if (drivers.length > 0) {
-    reasons.push(
-      t("perception.setupRating.reason.drivers").replace("{items}", drivers.join(", "))
-    );
+    reasons.push(t("perception.setupRating.reason.drivers").replace("{items}", drivers.join(", ")));
   }
   const riskItems: string[] = [];
-  if (eventHigh) riskItems.push(t("perception.tradeDecision.signal.cautious.teaser"));
-  if (rrr === "weak") riskItems.push("RRR weak");
-  if (riskPct === "high") riskItems.push("risk high");
-  if (confidenceLow) riskItems.push("confidence low");
-  if (scoreBucket(rings.orderflowScore) === "low") riskItems.push("weak flow");
+  if (eventHigh) riskItems.push(t("perception.setupRating.event.high"));
+  if (rrr === "weak") riskItems.push(t("perception.setupRating.risk.rrrWeak"));
+  if (riskPct === "high") riskItems.push(t("perception.setupRating.risk.highCapital"));
+  if (confidenceLow) riskItems.push(t("perception.setupRating.confidence.low"));
+  if (scoreBucket(rings.orderflowScore) === "low") riskItems.push(t("perception.setupRating.risk.flowWeak"));
   if (riskItems.length > 0) {
-    reasons.push(t("perception.setupRating.reason.risks").replace("{items}", riskItems.join(", ")));
-  }
-  if (hasConflict) {
     reasons.push(
-      t("perception.setupRating.reason.conflicts").replace("{items}", conflicts[0]?.value ?? "conflict present")
+      t("perception.setupRating.reason.risks").replace("{items}", riskItems.slice(0, 3).join(", ")),
     );
   }
-  if (allMediumCluster) {
-    reasons.push(t("perception.setupRating.reason.structure").replace("{items}", "mixed structure/no edge"));
+  if (hasConflict && reasons.length < 2) {
+    reasons.push(
+      t("perception.setupRating.reason.conflicts").replace(
+        "{items}",
+        conflicts[0]?.value ?? t("perception.setupRating.conflict.default"),
+      ),
+    );
+  }
+  if (reasons.length === 0) {
+    reasons.push(metaLine);
   }
 
   return (
@@ -169,13 +139,11 @@ export function SetupRatingBlock({ setup, ringAiSummary, riskReward, eventContex
           <p className="text-[0.65rem] uppercase tracking-[0.18em] text-slate-400">
             {t("perception.setupRating.title")}
           </p>
-          <p className="text-sm font-semibold text-slate-100">
-            {t(`perception.setupRating.rating.${rating}`).replace("{direction}", setup.direction)}
-          </p>
+          <p className="text-sm font-semibold text-slate-100">{metaLine}</p>
         </div>
       </div>
       <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-200">
-        {reasons.slice(0, 6).map((reason) => (
+        {reasons.slice(0, 2).map((reason) => (
           <li key={reason}>{reason}</li>
         ))}
       </ul>

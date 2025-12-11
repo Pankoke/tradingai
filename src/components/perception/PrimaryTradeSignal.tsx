@@ -4,6 +4,7 @@ import { ArrowDownRight, ArrowRightCircle, ArrowUpRight, LucideIcon } from "luci
 import type { JSX } from "react";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import type { Setup } from "@/src/lib/engine/types";
+import { computeSignalQuality } from "@/src/lib/engine/signalQuality";
 
 type PrimaryTradeSignalProps = {
   setup: Pick<
@@ -185,6 +186,31 @@ export function PrimaryTradeSignal({ setup }: PrimaryTradeSignalProps): JSX.Elem
 
   const Icon = ICONS[signal];
   const color = COLOR_CLASSES[signal];
+  const signalQuality = computeSignalQuality(setup as Setup);
+  const qualityLabel = t(signalQuality.labelKey);
+  const rings = setup.rings ?? {
+    trendScore: 0,
+    biasScore: setup.biasScore ?? 0,
+    orderflowScore: 0,
+    eventScore: setup.eventScore ?? 0,
+    sentimentScore: setup.sentimentScore ?? 0,
+    confidenceScore: setup.confidence ?? 0,
+  };
+  const confidenceScore = rings.confidenceScore ?? setup.confidence ?? 0;
+  const confLevel = confidenceBucket(confidenceScore);
+  const eventScore = rings.eventScore ?? setup.eventScore ?? 0;
+  const eventLevel = eventScore >= 75 ? "high" : eventScore >= 40 ? "medium" : "low";
+  const rrrValue = setup.riskReward?.rrr ?? null;
+  const rrrLevel = bucketRrr(rrrValue) ?? "weak";
+  const metaSegments = [
+    qualityLabel,
+    t(`perception.tradeDecision.signal.confidence.${confLevel}`),
+    t(`perception.tradeDecision.signal.event.${eventLevel}`),
+  ];
+  if (rrrLevel) {
+    metaSegments.push(t(`perception.tradeDecision.signal.rrr.${rrrLevel}`));
+  }
+  const metaSummary = metaSegments.join(" · ");
 
   return (
     <div className={`rounded-2xl border px-4 py-3 shadow-sm ${color}`}>
@@ -200,12 +226,7 @@ export function PrimaryTradeSignal({ setup }: PrimaryTradeSignalProps): JSX.Elem
             {t(`perception.tradeDecision.signal.${signal}.label`)}
           </p>
           <p className="text-xs text-slate-200/80">
-            {(() => {
-              const template = t(`perception.tradeDecision.signal.${signal}.teaser`);
-              return template
-                .replace("{timeframe}", setup.timeframe ?? "")
-                .replace("{asset}", setup.symbol ?? setup.assetId ?? "");
-            })()}
+            {metaSummary}
           </p>
         </div>
       </div>
