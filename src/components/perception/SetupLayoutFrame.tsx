@@ -23,11 +23,11 @@ export function SetupLayoutFrame({
     <PerceptionCard className={cn("p-0", className)} innerClassName="p-6 space-y-8">
       {header && <div className="space-y-4">{header}</div>}
 
-      <section className="space-y-8 border-b border-slate-800/60 pb-2">{decision}</section>
+      <div className="space-y-8 border-b border-slate-800/60 pb-2">{decision}</div>
 
-      <section className="space-y-8">{drivers}</section>
+      <div className="space-y-8">{drivers}</div>
 
-      <section className="space-y-8">{details}</section>
+      <div className="space-y-8">{details}</div>
     </PerceptionCard>
   );
 }

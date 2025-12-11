@@ -1,89 +1,129 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import type { JSX } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import type { Setup } from "@/src/lib/engine/types";
 import { SentimentInspector } from "@/src/components/perception/SentimentInspector";
 import { OrderflowInspector } from "@/src/components/perception/OrderflowInspector";
+import { TrendInspector } from "@/src/components/perception/TrendInspector";
+import { BiasInspector } from "@/src/components/perception/BiasInspector";
+import { EventInspector } from "@/src/components/perception/EventInspector";
 
-type RingTabId = "sentiment" | "orderflow";
+type RingTabId = "trend" | "event" | "bias" | "sentiment" | "orderflow";
+
+type RingTabConfig = {
+  id: RingTabId;
+  labelKey: string;
+  isVisible: (setup: Setup) => boolean;
+  render: (params: { setup: Setup; variant: "full" | "compact" }) => JSX.Element | null;
+};
 
 type RingInsightTabsProps = {
   setup: Setup;
   variant?: "full" | "compact";
 };
 
-const tabLabelKey: Record<RingTabId, string> = {
-  sentiment: "perception.ringTabs.sentiment",
-  orderflow: "perception.ringTabs.orderflow",
+const hasOrderflowContent = (current: Setup): boolean => {
+  const orderflow = current.orderflow;
+  if (!orderflow) {
+    return false;
+  }
+  const hasScore = typeof orderflow.score === "number";
+  const reasonCount = orderflow.reasonDetails?.length ?? orderflow.reasons?.length ?? 0;
+  const hasReasons = reasonCount > 0;
+  const hasFlags = (orderflow.flags?.length ?? 0) > 0;
+  return hasScore || hasReasons || hasFlags;
 };
+
+const ringTabs: RingTabConfig[] = [
+  {
+    id: "trend",
+    labelKey: "perception.ringTabs.trend",
+    isVisible: (setup) => typeof setup.rings?.trendScore === "number",
+    render: ({ setup }) => <TrendInspector setup={setup} />,
+  },
+  {
+    id: "event",
+    labelKey: "perception.ringTabs.event",
+    isVisible: (setup) =>
+      typeof setup.rings?.eventScore === "number" ||
+      (setup.eventContext?.topEvents?.length ?? 0) > 0,
+    render: ({ setup }) => <EventInspector setup={setup} />,
+  },
+  {
+    id: "bias",
+    labelKey: "perception.ringTabs.bias",
+    isVisible: (setup) => typeof setup.rings?.biasScore === "number",
+    render: ({ setup }) => <BiasInspector setup={setup} />,
+  },
+  {
+    id: "sentiment",
+    labelKey: "perception.ringTabs.sentiment",
+    isVisible: (setup) => setup.sentiment?.score !== undefined,
+    render: ({ setup, variant }) => (
+      <SentimentInspector
+        sentiment={setup.sentiment ?? null}
+        variant={variant === "compact" ? "compact" : "default"}
+      />
+    ),
+  },
+  {
+    id: "orderflow",
+    labelKey: "perception.ringTabs.orderflow",
+    isVisible: hasOrderflowContent,
+    render: ({ setup, variant }) => <OrderflowInspector setup={setup} variant={variant} />,
+  },
+];
 
 export function RingInsightTabs({ setup, variant = "full" }: RingInsightTabsProps) {
   const t = useT();
-  const hasOrderflowContent = (current: Setup): boolean => {
-    const orderflow = current.orderflow;
-    if (!orderflow) {
-      return false;
-    }
-    const hasScore = typeof orderflow.score === "number";
-    const reasonCount = orderflow.reasonDetails?.length ?? orderflow.reasons?.length ?? 0;
-    const hasReasons = reasonCount > 0;
-    const hasFlags = (orderflow.flags?.length ?? 0) > 0;
-    return hasScore || hasReasons || hasFlags;
-  };
-  const availableTabs = useMemo<RingTabId[]>(() => {
-    const items: RingTabId[] = [];
-    if (setup.sentiment?.score !== undefined) {
-      items.push("sentiment");
-    }
-    if (hasOrderflowContent(setup)) {
-      items.push("orderflow");
-    }
-    return items;
-  }, [setup]);
+  const availableTabs = useMemo(
+    () => ringTabs.filter((tab) => tab.isVisible(setup)),
+    [setup],
+  );
 
-  if (availableTabs.length === 0) {
+  const [activeTab, setActiveTab] = useState<RingTabId | null>(
+    availableTabs[0]?.id ?? null,
+  );
+
+  useEffect(() => {
+    if (!availableTabs.length) {
+      setActiveTab(null);
+      return;
+    }
+    if (!activeTab || !availableTabs.some((tab) => tab.id === activeTab)) {
+      setActiveTab(availableTabs[0]?.id ?? null);
+    }
+  }, [availableTabs, activeTab]);
+
+  if (availableTabs.length === 0 || !activeTab) {
     return null;
   }
 
-  const [activeTab, setActiveTab] = useState<RingTabId>(availableTabs[0]);
-
-  const sentimentVariant = variant === "compact" ? "compact" : "default";
-
-  const renderContent = () => {
-    if (activeTab === "sentiment") {
-      return (
-        <SentimentInspector
-          sentiment={setup.sentiment ?? null}
-          variant={sentimentVariant}
-        />
-      );
-    }
-    if (activeTab === "orderflow") {
-      return <OrderflowInspector setup={setup} variant={variant} />;
-    }
-    return null;
-  };
+  const activeConfig =
+    availableTabs.find((tab) => tab.id === activeTab) ?? availableTabs[0];
+  const content = activeConfig?.render({ setup, variant });
 
   return (
     <section className="rounded-xl border border-slate-800 bg-slate-900/50 p-3 sm:p-4 space-y-3">
       <div className="flex flex-wrap gap-2">
         {availableTabs.map((tab) => (
           <button
-            key={tab}
+            key={tab.id}
             type="button"
-            onClick={() => setActiveTab(tab)}
+            onClick={() => setActiveTab(tab.id)}
             className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] transition ${
-              activeTab === tab
+              activeTab === tab.id
                 ? "bg-slate-800 text-slate-50 border border-slate-700"
                 : "bg-transparent text-slate-400 border border-slate-800/60"
             }`}
           >
-            {t(tabLabelKey[tab])}
+            {t(tab.labelKey)}
           </button>
         ))}
       </div>
-      {renderContent()}
+      {content}
     </section>
   );
 }
