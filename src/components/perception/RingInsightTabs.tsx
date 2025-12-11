@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import type { JSX } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import type { Setup } from "@/src/lib/engine/types";
 import { SentimentInspector } from "@/src/components/perception/SentimentInspector";
@@ -41,7 +41,7 @@ const ringTabs: RingTabConfig[] = [
     id: "trend",
     labelKey: "perception.ringTabs.trend",
     isVisible: (setup) => typeof setup.rings?.trendScore === "number",
-    render: ({ setup }) => <TrendInspector setup={setup} />,
+    render: ({ setup, variant }) => <TrendInspector setup={setup} variant={variant} />,
   },
   {
     id: "event",
@@ -49,13 +49,13 @@ const ringTabs: RingTabConfig[] = [
     isVisible: (setup) =>
       typeof setup.rings?.eventScore === "number" ||
       (setup.eventContext?.topEvents?.length ?? 0) > 0,
-    render: ({ setup }) => <EventInspector setup={setup} />,
+    render: ({ setup, variant }) => <EventInspector setup={setup} variant={variant} />,
   },
   {
     id: "bias",
     labelKey: "perception.ringTabs.bias",
     isVisible: (setup) => typeof setup.rings?.biasScore === "number",
-    render: ({ setup }) => <BiasInspector setup={setup} />,
+    render: ({ setup, variant }) => <BiasInspector setup={setup} variant={variant} />,
   },
   {
     id: "sentiment",
@@ -83,19 +83,17 @@ export function RingInsightTabs({ setup, variant = "full" }: RingInsightTabsProp
     [setup],
   );
 
-  const [activeTab, setActiveTab] = useState<RingTabId | null>(
-    availableTabs[0]?.id ?? null,
-  );
+  const [selectedTab, setSelectedTab] = useState<RingTabId | null>(null);
 
-  useEffect(() => {
+  const activeTab = useMemo(() => {
     if (!availableTabs.length) {
-      setActiveTab(null);
-      return;
+      return null;
     }
-    if (!activeTab || !availableTabs.some((tab) => tab.id === activeTab)) {
-      setActiveTab(availableTabs[0]?.id ?? null);
+    if (selectedTab && availableTabs.some((tab) => tab.id === selectedTab)) {
+      return selectedTab;
     }
-  }, [availableTabs, activeTab]);
+    return availableTabs[0]?.id ?? null;
+  }, [availableTabs, selectedTab]);
 
   if (availableTabs.length === 0 || !activeTab) {
     return null;
@@ -112,7 +110,7 @@ export function RingInsightTabs({ setup, variant = "full" }: RingInsightTabsProp
           <button
             key={tab.id}
             type="button"
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => setSelectedTab(tab.id)}
             className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] transition ${
               activeTab === tab.id
                 ? "bg-slate-800 text-slate-50 border border-slate-700"

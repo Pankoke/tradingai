@@ -1,56 +1,95 @@
-"use client";
+﻿"use client";
 
 import type { JSX } from "react";
 import { useT } from "@/src/lib/i18n/ClientProvider";
-import type { Setup } from "@/src/lib/engine/types";
+import { RingInspectorLayout } from "@/src/components/perception/RingInspectorLayout";
+import type { RingInspectorBaseProps } from "@/src/components/perception/RingInspectorTypes";
 
-type BiasInspectorProps = {
-  setup: Setup;
-  variant?: "full" | "compact";
-  className?: string;
-};
-
-const bucketFromScore = (score: number) => {
+const bucketFromScore = (score: number): "low" | "medium" | "high" => {
   if (score >= 70) return "high";
   if (score >= 40) return "medium";
   return "low";
 };
 
-export function BiasInspector({ setup, className }: BiasInspectorProps): JSX.Element {
-  const t = useT();
-  const score = setup.rings?.biasScore ?? 50;
-  const bucket = bucketFromScore(score);
-  const direction = setup.direction ?? "Neutral";
+export type BiasInspectorProps = RingInspectorBaseProps;
 
+export function BiasInspector({
+  setup,
+  variant = "full",
+  className,
+}: BiasInspectorProps): JSX.Element {
+  const t = useT();
+  const score = setup.rings?.biasScore;
+
+  if (score === undefined) {
+    return (
+      <RingInspectorLayout
+        title={t("perception.bias.heading")}
+        variant={variant}
+        className={className}
+        emptyState={t("perception.bias.empty")}
+      />
+    );
+  }
+
+  const bucket = bucketFromScore(score);
+  const bucketLabel = t(`perception.rings.bucket.${bucket}`);
+  const directionKey = setup.direction
+    ? `perception.today.direction.${setup.direction.toLowerCase()}`
+    : "perception.today.direction.neutral";
+  const directionValue = t(directionKey);
   const directionText = t("perception.bias.directionLabel").replace(
     "{direction}",
-    direction,
+    directionValue,
   );
+  const bucketSummary = t(`perception.bias.summary.${bucket}`);
+  const summary =
+    variant === "compact"
+      ? bucketSummary
+      : `${directionText} - ${bucketSummary}`;
+
+  const bulletBase: string[] = [
+    t("perception.bias.detail.score")
+      .replace("{score}", String(Math.round(score)))
+      .replace("{bucket}", bucketLabel),
+    t("perception.bias.detail.directionHint").replace(
+      "{direction}",
+      directionValue,
+    ),
+  ];
+  if (setup.timeframe) {
+    bulletBase.push(
+      t("perception.bias.detail.timeframe").replace(
+        "{timeframe}",
+        setup.timeframe,
+      ),
+    );
+  }
+  const detailItems =
+    variant === "compact" ? bulletBase.slice(0, 1) : bulletBase;
+
+  const details =
+    detailItems.length > 0 ? (
+      <ul className="space-y-1">
+        {detailItems.map((item, index) => (
+          <li key={index} className="text-sm text-slate-300">
+            {item}
+          </li>
+        ))}
+      </ul>
+    ) : null;
 
   return (
-    <section
-      className={`rounded-xl border border-slate-800 bg-slate-900/40 p-4 shadow-[0_10px_40px_rgba(2,6,23,0.4)] ${className ?? ""}`}
+    <RingInspectorLayout
+      title={t("perception.bias.heading")}
+      scoreLabel={`${Math.round(score)} / 100`}
+      scoreTone={bucket}
+      summary={summary}
+      variant={variant}
+      className={className}
+      emptyState={t("perception.bias.empty")}
     >
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
-            {t("perception.bias.heading")}
-          </p>
-          <p className="text-sm text-slate-200">
-            {t("perception.rings.bucket." + bucket)}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-3xl font-bold text-white">{score}</span>
-          <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
-            /100
-          </span>
-        </div>
-      </div>
-      <div className="mt-3 space-y-2 text-sm text-slate-300">
-        <p>{directionText}</p>
-        <p>{t("perception.bias.summary." + bucket)}</p>
-      </div>
-    </section>
+      {details}
+    </RingInspectorLayout>
   );
 }

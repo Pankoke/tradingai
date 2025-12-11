@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
-import React from "react";
 import type { JSX } from "react";
 import { useT } from "@/src/lib/i18n/ClientProvider";
+import { RingInspectorLayout } from "@/src/components/perception/RingInspectorLayout";
 import type { Setup } from "@/src/lib/engine/types";
 
 type OrderflowInspectorProps = {
@@ -83,19 +83,23 @@ export function OrderflowInspector({ setup, variant = "full" }: OrderflowInspect
     if (process.env.NODE_ENV !== "production") {
       console.warn("[OrderflowInspector] Missing orderflow data for setup", setup.id);
     }
-    return null;
+    return (
+      <RingInspectorLayout
+        title={t("perception.orderflow.title")}
+        variant={variant}
+        emptyState={t("perception.orderflow.empty")}
+      />
+    );
   }
 
   const hasScore = typeof orderflow.score === "number";
-  const tier = hasScore ? getScoreTier(orderflow.score) : "neutral";
+  const tier = hasScore ? getScoreTier(orderflow.score as number) : "neutral";
   const modeKey = orderflow.mode ?? setup.orderflowMode ?? "balanced";
   const modeLabel = modeLabelMap[modeKey] ?? modeLabelMap.balanced;
 
   const reasonSource = orderflow.reasonDetails ?? orderflow.reasons ?? [];
   const displayedReasons = reasonSource.slice(0, variant === "full" ? 3 : 1);
-  const hasReasons = displayedReasons.length > 0;
   const flags = orderflow.flags ?? [];
-  const hasFlags = flags.length > 0;
   const delta = orderflow.confidenceDelta;
   const isNoData =
     typeof orderflow.score === "number" &&
@@ -115,131 +119,159 @@ export function OrderflowInspector({ setup, variant = "full" }: OrderflowInspect
     return translated;
   };
 
-  if (!hasScore && !hasReasons && !hasFlags) {
-    return null;
+  if (!hasScore && displayedReasons.length === 0 && flags.length === 0) {
+    return (
+      <RingInspectorLayout
+        title={t("perception.orderflow.title")}
+        variant={variant}
+        emptyState={t("perception.orderflow.empty")}
+      />
+    );
   }
 
-  return (
-    <section
-      className={`rounded-2xl border border-slate-800 bg-slate-900/40 p-4 shadow-[0_10px_40px_rgba(2,6,23,0.9)] ${
-        variant === "compact" ? "space-y-2" : "space-y-4"
-      }`}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">{t("perception.orderflow.title")}</p>
-          <p className="text-sm text-slate-200">{t(scoreLabel[tier])}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className={`text-3xl font-bold ${hasScore ? "text-white" : "text-slate-500"}`}>
-            {hasScore ? Math.round(orderflow.score as number) : "--"}
-          </span>
-          <span className={`text-xs font-semibold uppercase tracking-[0.3em] ${hasScore ? "text-slate-400" : "text-slate-600"}`}>
-            /100
-          </span>
-        </div>
-      </div>
+  const summary = t("perception.orderflow.summary")
+    .replace("{score}", t(scoreLabel[tier]))
+    .replace("{mode}", t(modeLabel));
+  const scoreTone = tier === "strong" ? "high" : tier === "supportive" ? "medium" : "low";
 
-      <div className="flex items-center gap-2">
-        <span className="rounded-full border border-slate-800 bg-slate-950/40 px-2 py-0.5 text-xs font-semibold text-slate-300">
-          {t(modeLabel)}
+  const infoBadges = (
+    <div className="flex flex-wrap gap-2 text-xs text-slate-200">
+      <span className="rounded-full border border-slate-700 bg-slate-900/50 px-2 py-0.5 font-semibold">
+        {t(modeLabel)}
+      </span>
+      {typeof delta === "number" && Math.abs(delta) >= 0.1 && (
+        <span
+          className={`rounded-full border px-2 py-0.5 font-semibold ${
+            delta >= 0
+              ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-200"
+              : "border-rose-500/60 bg-rose-500/10 text-rose-200"
+          }`}
+        >
+          {delta >= 0 ? "+" : ""}
+          {delta.toFixed(1)} {t("perception.orderflow.confidenceDelta")}
         </span>
-        {typeof delta === "number" && Math.abs(delta) >= 0.1 && (
-          <span
-            className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${delta >= 0 ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-300" : "border-rose-500/60 bg-rose-500/10 text-rose-300"}`}
-          >
-            {delta >= 0 ? "+" : ""}
-            {delta.toFixed(1)} {t("perception.orderflow.confidenceDelta")}
+      )}
+    </div>
+  );
+
+  const metaSection = orderflow.meta && (
+    <div className="space-y-1 text-xs text-slate-400">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+        <span>{t(resolveProfileLabelKey(orderflow.meta.profile))}</span>
+        {orderflow.meta.timeframeSamples && (
+          <span>
+            {t("perception.orderflow.metaLabel")}: {" "}
+            {Object.entries(orderflow.meta.timeframeSamples)
+              .filter(([, value]) => (value ?? 0) > 0)
+              .map(([tf, value]) => `${tf}: ${value}`)
+              .join(" · ") || "n/a"}
           </span>
         )}
       </div>
-
-      {orderflow.meta && (
-        <div className="space-y-1 text-xs text-slate-500">
-          <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-2">
-            <span>{t(resolveProfileLabelKey(orderflow.meta.profile))}</span>
-            {orderflow.meta.timeframeSamples && (
-              <span>
-                {t("perception.orderflow.metaLabel")}:{" "}
-                {Object.entries(orderflow.meta.timeframeSamples)
-                  .filter(([, value]) => (value ?? 0) > 0)
-                  .map(([tf, value]) => `${tf}: ${value}`)
-                  .join(" · ") || "n/a"}
-              </span>
-            )}
-          </div>
-          {orderflow.meta.context && (
-            <span>
-              {t(
-                resolveTrendAlignmentKey(
-                  orderflow.meta.context.trendScore ?? null,
-                  orderflow.mode ?? setup.orderflowMode ?? null,
-                ),
-              )}
-            </span>
+      {orderflow.meta.context && (
+        <span>
+          {t(
+            resolveTrendAlignmentKey(
+              orderflow.meta.context.trendScore ?? null,
+              orderflow.mode ?? setup.orderflowMode ?? null,
+            ),
           )}
-        </div>
+        </span>
       )}
+    </div>
+  );
 
-      {isNoData && (
-        <div className="space-y-1">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-            {t("perception.orderflow.noData.headline")}
-          </p>
-          <p className="text-sm text-slate-300">
-            {t("perception.orderflow.noData.body")}
-          </p>
-        </div>
-      )}
-
-      {variant === "full" && hasReasons && (
-        <div className="space-y-1">
-          <p className="text-[0.7rem] uppercase tracking-[0.3em] text-slate-500">{t("perception.orderflow.reasonsTitle")}</p>
-          <div className="space-y-1">
-            {displayedReasons.map((reason, idx) => {
-              const detail = isReasonDetail(reason) ? reason : null;
-              const categoryLabel = detail ? resolveCategoryLabel(detail.category) : t("perception.orderflow.reasonsTitle");
-              const textValue = detail ? detail.text : String(reason ?? "");
-              const key = detail ? `${detail.category}-${idx}` : `${String(reason ?? "reason")}-${idx}`;
-              return (
-                <div key={key} className="flex items-center justify-between gap-2 text-xs text-slate-200">
-                  <span className="text-slate-400">{categoryLabel}</span>
-                  <span>{textValue}</span>
-                  <span className="rounded-full border border-slate-700 bg-slate-800 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-slate-400">
-                    {t("perception.orderflow.reasonLabel.default")}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-            {flags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {flags.map((flag) => {
-                  const isAlignment = alignmentFlags.has(flag);
-                  const isConflict = conflictFlags.has(flag);
-                  const isHighRisk = flag === "high_risk_crowded";
-                  return (
-                    <span
-                      key={flag}
-                      className={`rounded-full border px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.25em] ${
-                        isAlignment
-                          ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-300"
-                          : isConflict
-                          ? "border-amber-500/60 bg-amber-500/10 text-amber-300"
-                          : isHighRisk
-                          ? "border-rose-500/60 bg-rose-500/10 text-rose-300"
-                          : "border-slate-700 bg-slate-800 text-slate-200"
-                      }`}
-                    >
-                      {t(flagLabelMap[flag] ?? `perception.orderflow.flags.${flag}`)}
-                    </span>
-                  );
-                })}
+  const reasonsSection =
+    displayedReasons.length > 0 && (
+      <div className="space-y-2">
+        <p className="text-[0.65rem] font-semibold uppercase tracking-[0.25em] text-slate-400">
+          {t("perception.orderflow.reasonsTitle")}
+        </p>
+        <div className="space-y-2">
+          {displayedReasons.map((reason, idx) => {
+            const detail = isReasonDetail(reason) ? reason : null;
+            const categoryLabel = detail
+              ? resolveCategoryLabel(detail.category)
+              : t("perception.orderflow.category.other");
+            const textValue = detail ? detail.text : String(reason ?? "");
+            const key = detail
+              ? `${detail.category}-${idx}`
+              : `${String(reason ?? "reason")}-${idx}`;
+            return (
+              <div
+                key={key}
+                className="rounded-lg border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-xs text-slate-200"
+              >
+                <p className="text-[0.6rem] uppercase tracking-[0.25em] text-slate-400">
+                  {categoryLabel}
+                </p>
+                <p className="mt-1 text-sm text-slate-100">{textValue}</p>
               </div>
-            )}
-    </section>
+            );
+          })}
+        </div>
+      </div>
+    );
+
+  const flagsSection =
+    flags.length > 0 && (
+      <div className="space-y-2">
+        <p className="text-[0.65rem] font-semibold uppercase tracking-[0.25em] text-slate-400">
+          {t("perception.orderflow.flagsTitle")}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {flags.map((flag) => {
+            const isAlignment = alignmentFlags.has(flag);
+            const isConflict = conflictFlags.has(flag);
+            const isHighRisk = flag === "high_risk_crowded";
+            return (
+              <span
+                key={flag}
+                className={`rounded-full border px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.25em] ${
+                  isAlignment
+                    ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-200"
+                    : isConflict
+                      ? "border-amber-500/60 bg-amber-500/10 text-amber-200"
+                      : isHighRisk
+                        ? "border-rose-500/60 bg-rose-500/10 text-rose-200"
+                        : "border-slate-700 bg-slate-800 text-slate-200"
+                }`}
+              >
+                {t(flagLabelMap[flag] ?? `perception.orderflow.flags.${flag}`)}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+    );
+
+  const noDataSection = isNoData && (
+    <div className="space-y-1">
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+        {t("perception.orderflow.noData.headline")}
+      </p>
+      <p className="text-sm text-slate-300">
+        {t("perception.orderflow.noData.body")}
+      </p>
+    </div>
+  );
+
+  return (
+    <RingInspectorLayout
+      title={t("perception.orderflow.title")}
+      scoreLabel={hasScore ? `${Math.round(orderflow.score as number)} / 100` : undefined}
+      scoreTone={scoreTone}
+      summary={summary}
+      variant={variant}
+      emptyState={t("perception.orderflow.empty")}
+    >
+      <div className="space-y-4">
+        {infoBadges}
+        {metaSection}
+        {noDataSection}
+        {reasonsSection}
+        {variant === "full" && flagsSection}
+      </div>
+    </RingInspectorLayout>
   );
 }
