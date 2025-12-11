@@ -157,10 +157,13 @@ function SetupOfTheDayCardInner({ setup }: SetupOfTheDayCardProps): JSX.Element 
         </div>
       </OnboardingHint>
 
-      <div className="grid grid-cols-2 gap-3 text-[0.65rem] sm:grid-cols-3 lg:grid-cols-5">
-        {compactRings.map((ring) => (
-          <SmallGauge key={ring.label} label={ring.label} value={ring.value} tone={ring.tone} tooltip={ring.tooltip} />
-        ))}
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-3 text-[0.65rem] sm:grid-cols-3 lg:grid-cols-5">
+          {compactRings.map((ring) => (
+            <SmallGauge key={ring.label} label={ring.label} value={ring.value} tone={ring.tone} tooltip={ring.tooltip} />
+          ))}
+        </div>
+        <RingInsightTabs setup={setup} variant="full" showSignalQualityInline={false} />
       </div>
 
       <div className="space-y-4">
@@ -215,7 +218,6 @@ function SetupOfTheDayCardInner({ setup }: SetupOfTheDayCardProps): JSX.Element 
             {t("perception.setup.sections.driversOverview")}
           </h3>
         </OnboardingHint>
-        <RingInsightTabs setup={setup} variant="full" />
         <RingInsights
           rings={rings}
           assetLabel={assetLabel}

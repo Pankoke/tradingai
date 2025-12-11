@@ -24,6 +24,7 @@ type RingTabConfig = {
 type RingInsightTabsProps = {
   setup: Setup;
   variant?: "full" | "compact";
+  showSignalQualityInline?: boolean;
 };
 
 const hasOrderflowContent = (current: Setup): boolean => {
@@ -78,7 +79,11 @@ const ringTabs: RingTabConfig[] = [
   },
 ];
 
-export function RingInsightTabs({ setup, variant = "full" }: RingInsightTabsProps) {
+export function RingInsightTabs({
+  setup,
+  variant = "full",
+  showSignalQualityInline = true,
+}: RingInsightTabsProps) {
   const t = useT();
   const signalQuality = useMemo(() => computeSignalQuality(setup), [setup]);
   const availableTabs = useMemo(
@@ -108,7 +113,7 @@ export function RingInsightTabs({ setup, variant = "full" }: RingInsightTabsProp
 
   return (
     <section className="rounded-xl border border-slate-800 bg-slate-900/50 p-3 sm:p-4 space-y-3">
-      {variant === "full" && (
+      {variant === "full" && showSignalQualityInline && (
         <SignalQualityBadge quality={signalQuality} variant="inline" />
       )}
       <div className="flex flex-wrap gap-2">
