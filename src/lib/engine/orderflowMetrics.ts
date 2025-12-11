@@ -22,6 +22,33 @@ export interface OrderflowReasonDetail {
   text: string;
 }
 
+const ORDERFLOW_TUNING = {
+  default: {
+    id: "default" as const,
+    volumeStrongThreshold: 1.4,
+    volumeStrongBonus: 0,
+    lowConsistencyThreshold: 0.2,
+    lowConsistencyPenalty: 0,
+    expansionLowThreshold: 0.35,
+    expansionLowBonus: 0,
+    expansionHighThreshold: 0.75,
+    expansionHighPenalty: 0,
+  },
+  crypto: {
+    id: "crypto" as const,
+    volumeStrongThreshold: 1.3,
+    volumeStrongBonus: 4,
+    lowConsistencyThreshold: 0.2,
+    lowConsistencyPenalty: 6,
+    expansionLowThreshold: 0.4,
+    expansionLowBonus: 3,
+    expansionHighThreshold: 0.8,
+    expansionHighPenalty: 3,
+  },
+};
+
+export type OrderflowTuningProfileId = keyof typeof ORDERFLOW_TUNING;
+
 export interface OrderflowMetrics {
   flowScore: number;
   mode: OrderflowMode;
@@ -33,6 +60,7 @@ export interface OrderflowMetrics {
   reasonDetails?: OrderflowReasonDetail[];
   flags?: OrderflowFlag[];
   meta?: {
+    profile?: OrderflowTuningProfileId;
     timeframeSamples: Record<MarketTimeframe, number>;
     context?: {
       trendScore?: number | null;
@@ -175,6 +203,11 @@ export async function buildOrderflowMetrics(params: {
     };
   }
 
+  const profile =
+    params.asset.assetClass === "crypto"
+      ? ORDERFLOW_TUNING.crypto
+      : ORDERFLOW_TUNING.default;
+
   const clvSeries = (fifteen.length ? fifteen : oneHour).map(computeClv);
   const clvAvg = clamp(average(clvSeries), -1, 1);
 
@@ -230,6 +263,37 @@ export async function buildOrderflowMetrics(params: {
     pushReason("structure", "Orderflow neutral");
   }
 
+  if (profile.volumeStrongBonus && relVolume > profile.volumeStrongThreshold) {
+    flowScore += profile.volumeStrongBonus;
+    pushReason("volume", "Crypto flow: strong participation");
+  }
+
+  if (
+    profile.lowConsistencyPenalty &&
+    consistency <= profile.lowConsistencyThreshold
+  ) {
+    flowScore -= profile.lowConsistencyPenalty;
+    pushReason("structure", "Crypto flow choppy / mixed");
+  }
+
+  if (
+    profile.expansionLowBonus &&
+    expansionNormalized <= profile.expansionLowThreshold &&
+    (params.trendScore ?? 0) >= 55 &&
+    (params.biasScore ?? 0) >= 55
+  ) {
+    flowScore += profile.expansionLowBonus;
+    pushReason("structure", "Healthy consolidation despite strong backdrop");
+  }
+
+  if (
+    profile.expansionHighPenalty &&
+    expansionNormalized >= profile.expansionHighThreshold
+  ) {
+    flowScore -= profile.expansionHighPenalty;
+    pushReason("structure", "Overextended expansion – watch for reversals");
+  }
+
   const flags: OrderflowFlag[] = [];
   const trendScore = params.trendScore ?? null;
   const biasScore = params.biasScore ?? null;
@@ -281,6 +345,7 @@ export async function buildOrderflowMetrics(params: {
     reasonDetails,
     flags: flags.length ? Array.from(new Set(flags)) : undefined,
     meta: {
+      profile: profile.id,
       timeframeSamples,
       context: {
         trendScore,
