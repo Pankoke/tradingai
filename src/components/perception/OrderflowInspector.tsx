@@ -74,6 +74,23 @@ export function OrderflowInspector({ setup, variant = "full" }: OrderflowInspect
   const flags = orderflow.flags ?? [];
   const hasFlags = flags.length > 0;
   const delta = orderflow.confidenceDelta;
+  const isNoData =
+    typeof orderflow.score === "number" &&
+    Math.abs(orderflow.score - 50) < 1 &&
+    (orderflow.reasonDetails?.length ?? 0) === 1 &&
+    orderflow.reasonDetails?.[0]?.category === "structure";
+
+  const resolveCategoryLabel = (category?: string): string => {
+    if (!category) {
+      return t("perception.orderflow.category.other");
+    }
+    const key = `perception.orderflow.category.${category}`;
+    const translated = t(key);
+    if (translated === key) {
+      return t("perception.orderflow.category.other");
+    }
+    return translated;
+  };
 
   if (!hasScore && !hasReasons && !hasFlags) {
     return null;
@@ -104,7 +121,7 @@ export function OrderflowInspector({ setup, variant = "full" }: OrderflowInspect
         <span className="rounded-full border border-slate-800 bg-slate-950/40 px-2 py-0.5 text-xs font-semibold text-slate-300">
           {t(modeLabel)}
         </span>
-        {delta !== null && delta !== undefined && (
+        {typeof delta === "number" && Math.abs(delta) >= 0.1 && (
           <span
             className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${delta >= 0 ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-300" : "border-rose-500/60 bg-rose-500/10 text-rose-300"}`}
           >
@@ -114,15 +131,24 @@ export function OrderflowInspector({ setup, variant = "full" }: OrderflowInspect
         )}
       </div>
 
+      {isNoData && (
+        <div className="space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+            {t("perception.orderflow.noData.headline")}
+          </p>
+          <p className="text-sm text-slate-300">
+            {t("perception.orderflow.noData.body")}
+          </p>
+        </div>
+      )}
+
       {variant === "full" && hasReasons && (
         <div className="space-y-1">
           <p className="text-[0.7rem] uppercase tracking-[0.3em] text-slate-500">{t("perception.orderflow.reasonsTitle")}</p>
           <div className="space-y-1">
             {displayedReasons.map((reason, idx) => {
               const detail = isReasonDetail(reason) ? reason : null;
-              const categoryLabel = detail
-                ? t(`perception.orderflow.category.${detail.category}`) ?? detail.category
-                : t("perception.orderflow.reasonsTitle");
+              const categoryLabel = detail ? resolveCategoryLabel(detail.category) : t("perception.orderflow.reasonsTitle");
               const textValue = detail ? detail.text : String(reason ?? "");
               const key = detail ? `${detail.category}-${idx}` : `${String(reason ?? "reason")}-${idx}`;
               return (

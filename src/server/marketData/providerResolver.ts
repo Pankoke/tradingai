@@ -14,14 +14,15 @@ const MARKET_PROVIDER_MODE: ProviderMode =
 
 export function resolveMarketDataProvider(asset: Asset): MarketDataProvider {
   const preferred = resolvePreferredSource(asset);
+  const prefersBinance = preferred.provider === "binance";
 
   switch (MARKET_PROVIDER_MODE) {
     case "binance":
-      return preferred.provider === "binance" ? binanceProvider : yahooProvider;
+      return prefersBinance ? binanceProvider : yahooProvider;
     case "mixed":
-      return preferred.provider === "binance" ? binanceProvider : yahooProvider;
+      return prefersBinance ? binanceProvider : yahooProvider;
     case "yahoo":
     default:
-      return yahooProvider;
+      return prefersBinance ? binanceProvider : yahooProvider;
   }
 }
