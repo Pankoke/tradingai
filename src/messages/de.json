@@ -816,5 +816,11 @@
   "perception.orderflow.flags.choppy": "unruhiger Markt",
   "perception.orderflow.reasonLabel": "Grund",
   "perception.orderflow.confidenceDelta": "Confidence-Punkte",
-  "perception.orderflow.reasonsTitle": "Flow-Insights"
+  "perception.orderflow.reasonsTitle": "Flow-Insights",
+"perception.orderflow.profile.crypto": "Profil: Crypto (Intraday-Flow)",
+"perception.orderflow.profile.default": "Profil: Standard",
+"perception.orderflow.metaLabel": "Flow-Kontext",
+"perception.orderflow.context.aligned": "Flow vs Trend: im Einklang",
+"perception.orderflow.context.conflict": "Flow vs Trend: Konflikt",
+"perception.orderflow.context.neutral": "Flow vs Trend: neutral"
 }

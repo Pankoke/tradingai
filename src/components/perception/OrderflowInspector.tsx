@@ -46,6 +46,29 @@ const isReasonDetail = (value: unknown): value is OrderflowReasonDetailEntry => 
   return typeof value === "object" && value !== null && "text" in value && "category" in value;
 };
 
+const resolveProfileLabelKey = (profile?: string | null): string => {
+  if (profile === "crypto") return "perception.orderflow.profile.crypto";
+  return "perception.orderflow.profile.default";
+};
+
+const resolveTrendAlignmentKey = (
+  trendScore: number | null | undefined,
+  mode?: string | null,
+): string => {
+  if (typeof trendScore !== "number" || !mode) {
+    return "perception.orderflow.context.neutral";
+  }
+  if (trendScore >= 60) {
+    if (mode === "buyers") return "perception.orderflow.context.aligned";
+    if (mode === "sellers") return "perception.orderflow.context.conflict";
+  }
+  if (trendScore <= 40) {
+    if (mode === "sellers") return "perception.orderflow.context.aligned";
+    if (mode === "buyers") return "perception.orderflow.context.conflict";
+  }
+  return "perception.orderflow.context.neutral";
+};
+
 function getScoreTier(score: number): keyof typeof scoreLabel {
   if (score >= 80) return "strong";
   if (score >= 60) return "supportive";
@@ -130,6 +153,33 @@ export function OrderflowInspector({ setup, variant = "full" }: OrderflowInspect
           </span>
         )}
       </div>
+
+      {orderflow.meta && (
+        <div className="space-y-1 text-xs text-slate-500">
+          <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-2">
+            <span>{t(resolveProfileLabelKey(orderflow.meta.profile))}</span>
+            {orderflow.meta.timeframeSamples && (
+              <span>
+                {t("perception.orderflow.metaLabel")}:{" "}
+                {Object.entries(orderflow.meta.timeframeSamples)
+                  .filter(([, value]) => (value ?? 0) > 0)
+                  .map(([tf, value]) => `${tf}: ${value}`)
+                  .join(" · ") || "n/a"}
+              </span>
+            )}
+          </div>
+          {orderflow.meta.context && (
+            <span>
+              {t(
+                resolveTrendAlignmentKey(
+                  orderflow.meta.context.trendScore ?? null,
+                  orderflow.mode ?? setup.orderflowMode ?? null,
+                ),
+              )}
+            </span>
+          )}
+        </div>
+      )}
 
       {isNoData && (
         <div className="space-y-1">

@@ -816,5 +816,11 @@
   "perception.orderflow.flags.choppy": "unsteady market",
   "perception.orderflow.reasonLabel": "Reason",
   "perception.orderflow.confidenceDelta": "confidence pts",
-  "perception.orderflow.reasonsTitle": "Flow insights"
+  "perception.orderflow.reasonsTitle": "Flow insights",
+  "perception.orderflow.profile.crypto": "Profile: Crypto (intraday flow)",
+  "perception.orderflow.profile.default": "Profile: Standard",
+  "perception.orderflow.metaLabel": "Flow context",
+  "perception.orderflow.context.aligned": "Flow vs trend: aligned",
+  "perception.orderflow.context.conflict": "Flow vs trend: in conflict",
+  "perception.orderflow.context.neutral": "Flow vs trend: neutral"
 }

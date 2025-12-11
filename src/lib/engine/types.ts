@@ -64,6 +64,7 @@ const orderflowMetaSchema = z
     relVolume: z.number().optional(),
     expansion: z.number().optional(),
     consistency: z.number().optional(),
+    profile: z.string().optional(),
     timeframeSamples: z.record(z.string(), z.number()).optional(),
     context: z
       .object({
