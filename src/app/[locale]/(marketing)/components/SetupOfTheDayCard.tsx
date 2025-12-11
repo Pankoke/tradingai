@@ -26,6 +26,7 @@ import { SetupRatingBlock } from "@/src/components/perception/SetupRatingBlock";
 import { SetupLayoutFrame } from "@/src/components/perception/SetupLayoutFrame";
 import { OnboardingHint, OnboardingTourProvider, useOnboardingTour } from "@/src/components/perception/OnboardingTour";
 import { RingInsightTabs } from "@/src/components/perception/RingInsightTabs";
+import type { RingTabId } from "@/src/components/perception/RingInsightTabs";
 import { SignalQualityBadge } from "@/src/components/perception/SignalQualityBadge";
 import { computeSignalQuality } from "@/src/lib/engine/signalQuality";
 
@@ -74,30 +75,35 @@ function SetupOfTheDayCardInner({ setup }: SetupOfTheDayCardProps): JSX.Element 
   const assetLabel = formatAssetLabel(setup.assetId, setup.symbol);
   const compactRings = [
     {
+      id: "trend" as RingTabId,
       label: t("perception.today.scoreTrend"),
       value: rings.trendScore,
       tone: "teal" as const,
       tooltip: t("perception.rings.tooltip.trend"),
     },
     {
+      id: "event" as RingTabId,
       label: t("perception.today.eventRing"),
       value: rings.eventScore,
       tone: "accent" as const,
       tooltip: buildEventTooltip(t("perception.rings.tooltip.event"), setup.eventContext, t),
     },
     {
+      id: "bias" as RingTabId,
       label: t("perception.today.biasRing"),
       value: rings.biasScore,
       tone: "green" as const,
       tooltip: t("perception.rings.tooltip.bias"),
     },
     {
+      id: "sentiment" as RingTabId,
       label: t("perception.today.sentimentRing"),
       value: rings.sentimentScore,
       tone: "teal" as const,
       tooltip: t("perception.rings.tooltip.sentiment"),
     },
     {
+      id: "orderflow" as RingTabId,
       label: t("perception.today.orderflowRing"),
       value: rings.orderflowScore,
       tone: "accent" as const,
@@ -112,6 +118,7 @@ function SetupOfTheDayCardInner({ setup }: SetupOfTheDayCardProps): JSX.Element 
     () => computeSignalQuality(setup as unknown as Setup),
     [setup],
   );
+  const [activeRing, setActiveRing] = useState<RingTabId>("trend");
 
   const headerContent = !isCompleted ? (
     <div className="flex items-center justify-between rounded-lg border border-sky-700/60 bg-sky-900/30 px-4 py-2 text-xs text-slate-100">
@@ -133,37 +140,69 @@ function SetupOfTheDayCardInner({ setup }: SetupOfTheDayCardProps): JSX.Element 
         title={t("perception.onboarding.decision.title")}
         description={t("perception.onboarding.decision.description")}
       >
-        <div className="flex flex-col gap-4 sm:gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex flex-1 flex-col gap-4">
-            <div className="space-y-2">
-              <p className="text-[0.58rem] font-semibold uppercase tracking-[0.35em] text-slate-300">
-                {t("setups.setupOfTheDay")}
-              </p>
-              <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-                {headline} · {setup.timeframe}
-              </h2>
-              <p className={`text-4xl font-bold ${isLong ? "text-emerald-400" : "text-rose-400"}`}>{setup.direction}</p>
-              <p className="text-sm text-slate-400">{meta.name}</p>
-              <span className="inline-flex w-fit rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-200">
-                {setup.type === "Regelbasiert" ? t("setups.type.ruleBased") : t("setups.type.ai")}
-              </span>
-              <SignalQualityBadge quality={signalQuality} variant="full" className="mt-3" />
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-col items-center gap-3 sm:items-center lg:mt-0 lg:w-64 lg:items-end">
-            <BigGauge value={rings.confidenceScore} label={t("perception.today.confidenceRing")} tooltip={t("perception.rings.tooltip.confidence")} />
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <p className="text-[0.58rem] font-semibold uppercase tracking-[0.35em] text-slate-300">
+              {t("setups.setupOfTheDay")}
+            </p>
+            <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+              {headline} · {setup.timeframe}
+            </h2>
+            <p className={`text-4xl font-bold ${isLong ? "text-emerald-400" : "text-rose-400"}`}>{setup.direction}</p>
+            <p className="text-sm text-slate-400">{meta.name}</p>
+            <span className="inline-flex w-fit rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-200">
+              {setup.type === "Regelbasiert" ? t("setups.type.ruleBased") : t("setups.type.ai")}
+            </span>
           </div>
         </div>
       </OnboardingHint>
 
-      <div className="space-y-3">
-        <div className="grid grid-cols-2 gap-3 text-[0.65rem] sm:grid-cols-3 lg:grid-cols-5">
-          {compactRings.map((ring) => (
-            <SmallGauge key={ring.label} label={ring.label} value={ring.value} tone={ring.tone} tooltip={ring.tooltip} />
-          ))}
+      <div className="space-y-4">
+        <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-[0_12px_35px_rgba(15,23,42,0.55)]">
+          <p className="text-[0.58rem] font-semibold uppercase tracking-[0.35em] text-slate-300">
+            {t("perception.metaSignals.heading")}
+          </p>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="space-y-3">
+              <SignalQualityBadge quality={signalQuality} variant="full" />
+              <p className="text-xs text-slate-400">{t("perception.signalQuality.description")}</p>
+            </div>
+            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-3">
+              <p className="text-[0.6rem] uppercase tracking-[0.35em] text-slate-400">
+                {t("perception.today.confidenceRing")}
+              </p>
+              <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center">
+                <div className="scale-90 sm:scale-100">
+                  <BigGauge value={rings.confidenceScore} label={t("perception.today.confidenceRing")} tooltip={t("perception.rings.tooltip.confidence")} />
+                </div>
+                <p className="text-xs text-slate-400 sm:max-w-xs">{t("perception.confidence.description")}</p>
+              </div>
+            </div>
+          </div>
         </div>
-        <RingInsightTabs setup={setup} variant="full" showSignalQualityInline={false} />
+
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3 text-[0.65rem] sm:grid-cols-3 lg:grid-cols-5">
+            {compactRings.map((ring) => (
+              <SmallGauge
+                key={ring.id}
+                label={ring.label}
+                value={ring.value}
+                tone={ring.tone}
+                tooltip={ring.tooltip}
+                isActive={activeRing === ring.id}
+                onClick={() => setActiveRing(ring.id)}
+              />
+            ))}
+          </div>
+          <RingInsightTabs
+            setup={setup}
+            variant="full"
+            showSignalQualityInline={false}
+            activeRing={activeRing}
+            onActiveRingChange={setActiveRing}
+          />
+        </div>
       </div>
 
       <div className="space-y-4">

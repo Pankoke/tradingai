@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import type { JSX } from "react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import type { Setup } from "@/src/lib/engine/types";
 import { SentimentInspector } from "@/src/components/perception/SentimentInspector";
@@ -12,7 +12,7 @@ import { EventInspector } from "@/src/components/perception/EventInspector";
 import { SignalQualityBadge } from "@/src/components/perception/SignalQualityBadge";
 import { computeSignalQuality } from "@/src/lib/engine/signalQuality";
 
-type RingTabId = "trend" | "event" | "bias" | "sentiment" | "orderflow";
+export type RingTabId = "trend" | "event" | "bias" | "sentiment" | "orderflow";
 
 type RingTabConfig = {
   id: RingTabId;
@@ -25,6 +25,8 @@ type RingInsightTabsProps = {
   setup: Setup;
   variant?: "full" | "compact";
   showSignalQualityInline?: boolean;
+  activeRing?: RingTabId | null;
+  onActiveRingChange?: (id: RingTabId) => void;
 };
 
 const hasOrderflowContent = (current: Setup): boolean => {
@@ -83,6 +85,8 @@ export function RingInsightTabs({
   setup,
   variant = "full",
   showSignalQualityInline = true,
+  activeRing = null,
+  onActiveRingChange,
 }: RingInsightTabsProps) {
   const t = useT();
   const signalQuality = useMemo(() => computeSignalQuality(setup), [setup]);
@@ -93,15 +97,27 @@ export function RingInsightTabs({
 
   const [selectedTab, setSelectedTab] = useState<RingTabId | null>(null);
 
+  useEffect(() => {
+    if (!onActiveRingChange || !availableTabs.length) return;
+    if (activeRing && availableTabs.some((tab) => tab.id === activeRing)) {
+      return;
+    }
+    const fallback = availableTabs[0]?.id ?? null;
+    if (fallback && activeRing !== fallback) {
+      onActiveRingChange(fallback);
+    }
+  }, [activeRing, onActiveRingChange, availableTabs]);
+
   const activeTab = useMemo(() => {
+    const candidate = activeRing ?? selectedTab;
+    if (candidate && availableTabs.some((tab) => tab.id === candidate)) {
+      return candidate;
+    }
     if (!availableTabs.length) {
       return null;
     }
-    if (selectedTab && availableTabs.some((tab) => tab.id === selectedTab)) {
-      return selectedTab;
-    }
     return availableTabs[0]?.id ?? null;
-  }, [availableTabs, selectedTab]);
+  }, [availableTabs, selectedTab, activeRing]);
 
   if (availableTabs.length === 0 || !activeTab) {
     return null;
@@ -110,6 +126,13 @@ export function RingInsightTabs({
   const activeConfig =
     availableTabs.find((tab) => tab.id === activeTab) ?? availableTabs[0];
   const content = activeConfig?.render({ setup, variant });
+
+  const handleSelect = (id: RingTabId) => {
+    setSelectedTab(id);
+    if (onActiveRingChange) {
+      onActiveRingChange(id);
+    }
+  };
 
   return (
     <section className="rounded-xl border border-slate-800 bg-slate-900/50 p-3 sm:p-4 space-y-3">
@@ -121,11 +144,11 @@ export function RingInsightTabs({
           <button
             key={tab.id}
             type="button"
-            onClick={() => setSelectedTab(tab.id)}
-            className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] transition ${
+            onClick={() => handleSelect(tab.id)}
+            className={`rounded-full border px-3 py-1 text-[0.55rem] font-semibold uppercase tracking-[0.3em] transition ${
               activeTab === tab.id
-                ? "bg-slate-800 text-slate-50 border border-slate-700"
-                : "bg-transparent text-slate-400 border border-slate-800/60"
+                ? "bg-slate-800/70 text-slate-50 border-slate-600 shadow-[0_4px_18px_rgba(15,23,42,0.45)]"
+                : "bg-transparent text-slate-400 border-transparent hover:border-slate-700/70"
             }`}
           >
             {t(tab.labelKey)}

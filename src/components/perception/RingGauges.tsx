@@ -2,6 +2,7 @@
 
 import { Tooltip } from "@/src/components/ui/tooltip";
 import type { JSX, ReactNode } from "react";
+import clsx from "clsx";
 
 type GaugeTone = "accent" | "green" | "teal" | "neutral";
 
@@ -10,16 +11,27 @@ export type SmallGaugeProps = {
   value: number;
   tone?: GaugeTone;
   tooltip?: ReactNode;
+  isActive?: boolean;
+  onClick?: () => void;
+  className?: string;
 };
 
-export function SmallGauge({ label, value, tone = "accent", tooltip }: SmallGaugeProps): JSX.Element {
+export function SmallGauge({
+  label,
+  value,
+  tone = "accent",
+  tooltip,
+  isActive = false,
+  onClick,
+  className,
+}: SmallGaugeProps): JSX.Element {
   const clamped = Math.max(0, Math.min(100, value));
   const display = Math.round(clamped);
   const toneColor =
     tone === "green" ? "#22c55e" : tone === "teal" ? "#14b8a6" : tone === "neutral" ? "#475569" : "#0ea5e9";
 
-  const gauge = (
-    <div className="flex flex-col items-center gap-2">
+  const gaugeInner = (
+    <>
       <div
         className="relative flex h-16 w-16 items-center justify-center rounded-full"
         style={{
@@ -31,10 +43,37 @@ export function SmallGauge({ label, value, tone = "accent", tooltip }: SmallGaug
         </div>
       </div>
       {label ? <span className="text-[0.7rem] text-slate-300">{label}</span> : null}
+    </>
+  );
+
+  const content = (
+    <div
+      className={clsx(
+        "flex flex-col items-center gap-2 rounded-2xl border border-transparent px-2 py-2 transition",
+        onClick && "cursor-pointer focus-within:outline-none focus-visible:outline-none",
+        isActive && "border-sky-500/70 bg-slate-800/60 shadow-[0_10px_30px_rgba(15,23,42,0.4)]",
+        !isActive && onClick && "hover:border-slate-700/70 hover:bg-slate-800/30",
+        className,
+      )}
+    >
+      {gaugeInner}
     </div>
   );
 
-  return tooltip ? <Tooltip content={tooltip}>{gauge}</Tooltip> : gauge;
+  const interactive = onClick
+    ? (
+      <button
+        type="button"
+        onClick={onClick}
+        className="rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+        aria-pressed={isActive}
+      >
+        {content}
+      </button>
+    )
+    : content;
+
+  return tooltip ? <Tooltip content={tooltip}>{interactive}</Tooltip> : interactive;
 }
 
 type BigGaugeProps = {
