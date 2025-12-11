@@ -51,29 +51,11 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
 
   const enriched: Setup[] = setups.map((item) => {
     const base: Setup = {
-      id: item.id,
+      ...item,
       assetId: item.assetId ?? item.symbol,
-      symbol: item.symbol,
-      timeframe: item.timeframe,
-      direction: item.direction,
-      confidence: item.confidence,
-      eventScore: item.eventScore,
-      biasScore: item.biasScore,
-      sentimentScore: item.sentimentScore,
-      balanceScore: item.balanceScore,
       orderflowMode: item.orderflowMode ?? null,
-      entryZone: item.entryZone,
-      stopLoss: item.stopLoss,
-      takeProfit: item.takeProfit,
-      type: item.type,
-      accessLevel: "free",
       rings: item.rings ?? defaultRings,
-      riskReward: item.riskReward,
-      levelDebug: item.levelDebug,
-      sentiment: item.sentiment,
-      orderflow: item.orderflow,
-      orderflowConfidenceDelta: item.orderflowConfidenceDelta,
-      validity: item.validity,
+      accessLevel: "free",
     };
 
     const eventResult = applyEventScoring(base, events);

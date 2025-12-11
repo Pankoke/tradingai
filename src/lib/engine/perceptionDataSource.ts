@@ -204,6 +204,15 @@ class LivePerceptionDataSource implements PerceptionDataSource {
           orderflow: orderflow.flowScore,
         };
 
+        const orderflowMeta = {
+          clv: orderflow.clv,
+          relVolume: orderflow.relVolume,
+          expansion: orderflow.expansion,
+          consistency: orderflow.consistency,
+          timeframeSamples: orderflow.meta?.timeframeSamples,
+          context: orderflow.meta?.context,
+        };
+
         return {
           id: `${asset.id}-${template.id}`,
           assetId: asset.id,
@@ -245,7 +254,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
             reasons: orderflow.reasons,
             reasonDetails: orderflow.reasonDetails,
             flags: orderflow.flags,
-            meta: orderflow.meta,
+            meta: orderflowMeta,
             confidenceDelta: orderflowConfidenceDelta,
           },
           validity: {
@@ -480,6 +489,5 @@ export function createPerceptionDataSource(): PerceptionDataSource {
 
   return new MockPerceptionDataSource();
 }
-
 
 

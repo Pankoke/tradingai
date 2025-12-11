@@ -60,6 +60,10 @@ const orderflowReasonDetailSchema = z.object({
 
 const orderflowMetaSchema = z
   .object({
+    clv: z.number().optional(),
+    relVolume: z.number().optional(),
+    expansion: z.number().optional(),
+    consistency: z.number().optional(),
     timeframeSamples: z.record(z.string(), z.number()).optional(),
     context: z
       .object({
