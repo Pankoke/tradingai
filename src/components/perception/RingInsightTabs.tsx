@@ -9,6 +9,8 @@ import { OrderflowInspector } from "@/src/components/perception/OrderflowInspect
 import { TrendInspector } from "@/src/components/perception/TrendInspector";
 import { BiasInspector } from "@/src/components/perception/BiasInspector";
 import { EventInspector } from "@/src/components/perception/EventInspector";
+import { SignalQualityBadge } from "@/src/components/perception/SignalQualityBadge";
+import { computeSignalQuality } from "@/src/lib/engine/signalQuality";
 
 type RingTabId = "trend" | "event" | "bias" | "sentiment" | "orderflow";
 
@@ -78,6 +80,7 @@ const ringTabs: RingTabConfig[] = [
 
 export function RingInsightTabs({ setup, variant = "full" }: RingInsightTabsProps) {
   const t = useT();
+  const signalQuality = useMemo(() => computeSignalQuality(setup), [setup]);
   const availableTabs = useMemo(
     () => ringTabs.filter((tab) => tab.isVisible(setup)),
     [setup],
@@ -105,6 +108,9 @@ export function RingInsightTabs({ setup, variant = "full" }: RingInsightTabsProp
 
   return (
     <section className="rounded-xl border border-slate-800 bg-slate-900/50 p-3 sm:p-4 space-y-3">
+      {variant === "full" && (
+        <SignalQualityBadge quality={signalQuality} variant="inline" />
+      )}
       <div className="flex flex-wrap gap-2">
         {availableTabs.map((tab) => (
           <button

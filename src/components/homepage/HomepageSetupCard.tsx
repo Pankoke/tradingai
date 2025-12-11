@@ -22,6 +22,8 @@ import { TraderNarrativeBlock } from "@/src/components/perception/TraderNarrativ
 import { SetupRatingBlock } from "@/src/components/perception/SetupRatingBlock";
 import { ScoreBreakdownChart } from "@/src/components/perception/ScoreBreakdownChart";
 import { RingInsightTabs } from "@/src/components/perception/RingInsightTabs";
+import { SignalQualityBadge } from "@/src/components/perception/SignalQualityBadge";
+import { computeSignalQuality } from "@/src/lib/engine/signalQuality";
 
 type Props = {
   setup: HomepageSetup;
@@ -106,6 +108,7 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
     },
   ];
   const confidenceValue = rings.confidenceScore;
+  const signalQuality = computeSignalQuality(setup as unknown as Setup);
 
   const detailBoxClass = "rounded-2xl border border-slate-800 bg-[#0f172a]/80 px-4 py-3 shadow-[inset_0_0_25px_rgba(15,23,42,0.9)]";
   const baseCardClass = "flex h-full flex-col justify-between rounded-3xl border border-slate-800 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),_transparent_55%),_rgba(4,7,15,0.98)] px-5 py-7 shadow-[0_24px_80px_rgba(0,0,0,0.85)] md:px-8 md:py-8";
@@ -140,6 +143,9 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
           label={labels.confidence}
           tooltip={t("perception.rings.tooltip.confidence")}
         />
+      </div>
+      <div className="mt-3">
+        <SignalQualityBadge quality={signalQuality} variant="compact" />
       </div>
 
       <div className="mt-4 grid grid-cols-3 gap-2 text-[0.65rem] sm:grid-cols-4 md:grid-cols-6">

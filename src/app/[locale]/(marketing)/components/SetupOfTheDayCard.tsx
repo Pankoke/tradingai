@@ -26,6 +26,8 @@ import { SetupRatingBlock } from "@/src/components/perception/SetupRatingBlock";
 import { SetupLayoutFrame } from "@/src/components/perception/SetupLayoutFrame";
 import { OnboardingHint, OnboardingTourProvider, useOnboardingTour } from "@/src/components/perception/OnboardingTour";
 import { RingInsightTabs } from "@/src/components/perception/RingInsightTabs";
+import { SignalQualityBadge } from "@/src/components/perception/SignalQualityBadge";
+import { computeSignalQuality } from "@/src/lib/engine/signalQuality";
 
 type SetupOfTheDayCardProps = {
   setup: SetupCardSetup;
@@ -106,6 +108,10 @@ function SetupOfTheDayCardInner({ setup }: SetupOfTheDayCardProps): JSX.Element 
   const [showNarrative, setShowNarrative] = useState(false);
   const [showAi, setShowAi] = useState(false);
   const [showImpact, setShowImpact] = useState(false);
+  const signalQuality = useMemo(
+    () => computeSignalQuality(setup as unknown as Setup),
+    [setup],
+  );
 
   const headerContent = !isCompleted ? (
     <div className="flex items-center justify-between rounded-lg border border-sky-700/60 bg-sky-900/30 px-4 py-2 text-xs text-slate-100">
@@ -141,6 +147,7 @@ function SetupOfTheDayCardInner({ setup }: SetupOfTheDayCardProps): JSX.Element 
               <span className="inline-flex w-fit rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-200">
                 {setup.type === "Regelbasiert" ? t("setups.type.ruleBased") : t("setups.type.ai")}
               </span>
+              <SignalQualityBadge quality={signalQuality} variant="full" className="mt-3" />
             </div>
           </div>
 
