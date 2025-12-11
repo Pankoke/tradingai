@@ -14,6 +14,11 @@ export const ORDERFLOW_CONFIDENCE_TUNING = {
   highVolumeThreshold: 1.35,
   choppyPenalty: 2,
   choppyThreshold: 35,
+  volumeSurgeBonus: 1,
+  volumeDryPenalty: 1,
+  cryptoChoppyPenalty: 1.5,
+  surgeChoppyPenalty: 1,
+  expansionFlagPenalty: 1,
 } as const;
 
 type AdjustmentParams = {
@@ -63,6 +68,25 @@ export function applyOrderflowConfidenceAdjustment(
 
   if (orderflow.consistency <= ORDERFLOW_CONFIDENCE_TUNING.choppyThreshold) {
     delta -= ORDERFLOW_CONFIDENCE_TUNING.choppyPenalty;
+  }
+
+  if (flags.has("volume_surge")) {
+    delta += ORDERFLOW_CONFIDENCE_TUNING.volumeSurgeBonus;
+    if (flags.has("choppy")) {
+      delta -= ORDERFLOW_CONFIDENCE_TUNING.surgeChoppyPenalty;
+    }
+  }
+
+  if (flags.has("volume_dry")) {
+    delta -= ORDERFLOW_CONFIDENCE_TUNING.volumeDryPenalty;
+  }
+
+  if (flags.has("choppy")) {
+    delta -= ORDERFLOW_CONFIDENCE_TUNING.cryptoChoppyPenalty;
+  }
+
+  if (flags.has("expansion")) {
+    delta -= ORDERFLOW_CONFIDENCE_TUNING.expansionFlagPenalty;
   }
 
   const adjusted = clamp(Math.round(base + delta), 0, 100);

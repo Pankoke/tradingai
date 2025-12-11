@@ -8,7 +8,11 @@ export type OrderflowFlag =
   | "orderflow_trend_alignment"
   | "orderflow_trend_conflict"
   | "orderflow_bias_alignment"
-  | "orderflow_bias_conflict";
+  | "orderflow_bias_conflict"
+  | "volume_surge"
+  | "volume_dry"
+  | "choppy"
+  | "expansion";
 
 export type OrderflowReasonCategory =
   | "volume"
@@ -236,7 +240,13 @@ export async function buildOrderflowMetrics(params: {
 
   const reasons: string[] = [];
   const reasonDetails: OrderflowReasonDetail[] = [];
+  const MAX_REASON_DETAILS = 4;
+  const reasonDedup = new Set<string>();
   const pushReason = (category: OrderflowReasonCategory, text: string) => {
+    if (reasonDedup.has(text) || reasonDetails.length >= MAX_REASON_DETAILS) {
+      return;
+    }
+    reasonDedup.add(text);
     reasonDetails.push({ category, text });
     reasons.push(text);
   };
@@ -294,43 +304,57 @@ export async function buildOrderflowMetrics(params: {
     pushReason("structure", "Overextended expansion – watch for reversals");
   }
 
-  const flags: OrderflowFlag[] = [];
+  const flags = new Set<OrderflowFlag>();
   const trendScore = params.trendScore ?? null;
   const biasScore = params.biasScore ?? null;
 
   if (typeof trendScore === "number") {
     if (trendScore >= 60) {
-      if (mode === "buyers") flags.push("orderflow_trend_alignment");
-      if (mode === "sellers") flags.push("orderflow_trend_conflict");
+      if (mode === "buyers") flags.add("orderflow_trend_alignment");
+      if (mode === "sellers") flags.add("orderflow_trend_conflict");
     } else if (trendScore <= 40) {
       if (mode === "sellers") {
-        flags.push("orderflow_trend_alignment");
+        flags.add("orderflow_trend_alignment");
       } else if (mode === "buyers") {
-        flags.push("orderflow_trend_conflict");
+        flags.add("orderflow_trend_conflict");
       }
     }
   }
 
   if (typeof biasScore === "number") {
     if (biasScore >= 60) {
-      if (mode === "buyers") flags.push("orderflow_bias_alignment");
-      if (mode === "sellers") flags.push("orderflow_bias_conflict");
+      if (mode === "buyers") flags.add("orderflow_bias_alignment");
+      if (mode === "sellers") flags.add("orderflow_bias_conflict");
     } else if (biasScore <= 40) {
       if (mode === "sellers") {
-        flags.push("orderflow_bias_alignment");
+        flags.add("orderflow_bias_alignment");
       } else if (mode === "buyers") {
-        flags.push("orderflow_bias_conflict");
+        flags.add("orderflow_bias_conflict");
       }
     }
   }
 
-  if (flags.includes("orderflow_trend_alignment")) {
+  if (relVolume >= 1.4) {
+    flags.add("volume_surge");
+  } else if (relVolume <= 0.7) {
+    flags.add("volume_dry");
+  }
+
+  if (consistency <= 0.2) {
+    flags.add("choppy");
+  }
+
+  if (expansionNormalized >= 0.6) {
+    flags.add("expansion");
+  }
+
+  if (flags.has("orderflow_trend_alignment")) {
     pushReason("trend_alignment", "Flow aligns with prevailing trend");
   }
-  if (flags.includes("orderflow_trend_conflict")) {
+  if (flags.has("orderflow_trend_conflict")) {
     pushReason("trend_conflict", "Flow diverges from prevailing trend");
   }
-  if (flags.includes("orderflow_bias_conflict") && !flags.includes("orderflow_trend_conflict")) {
+  if (flags.has("orderflow_bias_conflict") && !flags.has("orderflow_trend_conflict")) {
     pushReason("trend_conflict", "Flow conflicts with directional bias");
   }
 
@@ -343,7 +367,7 @@ export async function buildOrderflowMetrics(params: {
     consistency: Number((consistency * 100).toFixed(1)),
     reasons,
     reasonDetails,
-    flags: flags.length ? Array.from(new Set(flags)) : undefined,
+    flags: flags.size ? Array.from(flags) : undefined,
     meta: {
       profile: profile.id,
       timeframeSamples,
