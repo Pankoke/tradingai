@@ -16,6 +16,7 @@ type TraderContextOverlayProps = {
     | "timeframe"
     | "symbol"
     | "assetId"
+    | "direction"
   > & { riskReward?: Setup["riskReward"] | null; ringAiSummary?: RingAiSummary | null };
 };
 
@@ -25,19 +26,6 @@ const bucketFromScore = (score: number): Bucket => {
   if (score >= 70) return "high";
   if (score >= 40) return "medium";
   return "low";
-};
-
-const bucketConfidence = (score: number): Bucket => {
-  if (score > 70) return "high";
-  if (score >= 46) return "medium";
-  return "low";
-};
-
-const bucketRrr = (rrr?: number | null): "weak" | "ok" | "strong" | null => {
-  if (rrr === undefined || rrr === null || Number.isNaN(rrr)) return null;
-  if (rrr < 2) return "weak";
-  if (rrr < 3) return "ok";
-  return "strong";
 };
 
 const bucketRisk = (risk?: number | null): "low" | "medium" | "high" | null => {
@@ -71,31 +59,27 @@ export function TraderContextOverlay({ setup }: TraderContextOverlayProps): JSX.
     confidenceScore: setup.confidence ?? 0,
   };
 
-  const confidenceBucket = bucketConfidence(rings.confidenceScore ?? setup.confidence ?? 0);
   const eventBucket = rings.eventScore >= 75 ? "high" : rings.eventScore >= 40 ? "medium" : "low";
-  const rrrBucket = bucketRrr(setup.riskReward?.rrr ?? null);
   const riskBucket = bucketRisk(setup.riskReward?.riskPercent ?? null);
 
   const drivers = setup.ringAiSummary?.keyFacts?.find((f) => f.label.toLowerCase().includes("driver"))?.value;
-  const conflict = setup.ringAiSummary?.keyFacts?.find((f) => f.label.toLowerCase().includes("conflict"))?.value;
+  const structureFact = setup.ringAiSummary?.keyFacts?.find((f) => f.label.toLowerCase().includes("structure"))?.value;
   const riskFact = setup.ringAiSummary?.keyFacts?.find((f) => f.label.toLowerCase().includes("risk"))?.value;
 
   const topEvent = setup.eventContext?.topEvents?.[0];
   const eventTiming = topEvent?.scheduledAt ? formatEventTiming(topEvent.scheduledAt, t) : null;
 
+  const directionKey = setup.direction?.toLowerCase() ?? "neutral";
+  const directionLabel =
+    directionKey === "long" || directionKey === "short"
+      ? t(`perception.today.direction.${directionKey}`)
+      : t("perception.today.direction.neutral");
+
   const rows = [
     {
       icon: Globe2,
       label: t("perception.context.market"),
-      text: drivers
-        ? drivers
-        : `${t("perception.tradeDecision.signal.title")}: ${t(
-            confidenceBucket === "high"
-              ? "perception.rings.insights.confidence.high"
-              : confidenceBucket === "medium"
-                ? "perception.rings.insights.confidence.medium"
-                : "perception.rings.insights.confidence.low",
-          ).replace("{score}", Math.round(rings.confidenceScore ?? 0).toString())}`,
+      text: drivers ?? t("perception.context.marketPrimary").replace("{bias}", directionLabel),
     },
     {
       icon: CalendarClock,
@@ -103,31 +87,22 @@ export function TraderContextOverlay({ setup }: TraderContextOverlayProps): JSX.
       text:
         topEvent && eventTiming
           ? `${topEvent.title ?? ""} (${eventTiming})`
-          : t(
-              eventBucket === "high"
-                ? "perception.tradeDecision.playbook.highEvent"
-                : eventBucket === "medium"
-                  ? "perception.tradeDecision.playbook.mediumEvent"
-                  : "perception.context.noEvent",
-            ),
+          : t(`perception.setupRating.event.${eventBucket}`),
     },
     {
       icon: Layers,
       label: t("perception.context.structure"),
-      text: conflict
-        ? conflict
-        : `${t("perception.tradeDecision.positioning.rrr")}: ${
-            rrrBucket ? t(`perception.riskReward.tooltip.rrr.${rrrBucket}`).replace("{rrr}", "") : t("perception.riskReward.valueNA")
-          }`,
+      text: structureFact ?? t("perception.context.structureNeutral"),
     },
     {
       icon: Activity,
       label: t("perception.context.volatility"),
       text: riskFact
         ? riskFact
-        : `${t("perception.riskReward.riskLabel")}: ${
-            riskBucket ? t(`perception.riskReward.riskNote.${riskBucket}`).replace("{risk}", "") : t("perception.riskReward.valueNA")
-          }`,
+        : t("perception.context.volatilityPrimary").replace(
+            "{level}",
+            riskBucket ? t(`perception.context.volatilityLevel.${riskBucket}`) : t("perception.context.volatilityLevel.unknown"),
+          ),
     },
   ];
 

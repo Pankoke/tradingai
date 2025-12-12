@@ -14,7 +14,7 @@ import { formatNumberText, formatRangeText } from "@/src/lib/formatters/levels";
 import { RiskRewardBlock } from "@/src/components/perception/RiskRewardBlock";
 import { buildEventTooltip } from "@/src/features/perception/ui/eventTooltip";
 import { PrimaryTradeSignal } from "@/src/components/perception/PrimaryTradeSignal";
-import { TraderPlaybook } from "@/src/components/perception/TraderPlaybook";
+import { ImpactPlaybookCard } from "@/src/components/perception/ImpactPlaybookCard";
 import { PositioningGuide } from "@/src/components/perception/PositioningGuide";
 import { TraderContextOverlay } from "@/src/components/perception/TraderContextOverlay";
 import { EventMicroTimingStrip } from "@/src/components/perception/EventMicroTimingStrip";
@@ -260,20 +260,7 @@ function SetupOfTheDayCardInner({ setup }: SetupOfTheDayCardProps): JSX.Element 
             {t("perception.setup.sections.driversOverview")}
           </h3>
         </OnboardingHint>
-        <div className="space-y-4 rounded-xl border border-slate-800 bg-slate-900/50 p-4 shadow-[inset_0_0_10px_rgba(0,0,0,0.25)]">
-          <h3 className="text-sm font-semibold tracking-wide text-slate-300/90">
-            {t("perception.impactPlaybook.heading")}
-          </h3>
-          <div className="space-y-1">
-            <p className="text-[0.6rem] uppercase tracking-[0.3em] text-slate-400">
-              {t("perception.setup.sections.aiSummary")}
-            </p>
-            <p className="text-sm text-slate-200">{impactSummaryText}</p>
-          </div>
-          <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
-            <TraderPlaybook setup={setup} />
-          </div>
-        </div>
+        <ImpactPlaybookCard summary={impactSummaryText} setup={setup as unknown as Setup} />
       </div>
     </>
   );
