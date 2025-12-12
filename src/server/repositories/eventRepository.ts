@@ -1,4 +1,5 @@
-import { and, desc, gte, lte } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
+import { and, desc, gte, lte, eq, sql } from "drizzle-orm";
 import { db } from "../db/db";
 import { events } from "../db/schema/events";
 import { excluded } from "../db/sqlHelpers";
@@ -57,4 +58,57 @@ export async function insertOrUpdateEvents(eventInputs: EventInput[]): Promise<v
         updatedAt: excluded(events.updatedAt.name)
       }
     });
+}
+
+export async function listRecentEvents(limit = 100): Promise<Event[]> {
+  return db.select().from(events).orderBy(desc(events.scheduledAt)).limit(limit);
+}
+
+export async function getEventById(id: string): Promise<Event | undefined> {
+  const [event] = await db.select().from(events).where(eq(events.id, id)).limit(1);
+  return event;
+}
+
+export async function createEvent(input: Omit<EventInput, "id" | "createdAt" | "updatedAt"> & { id?: string }): Promise<Event> {
+  const id = input.id ?? randomUUID();
+  const [created] = await db
+    .insert(events)
+    .values({
+      ...input,
+      id,
+      updatedAt: new Date(),
+    })
+    .returning();
+  return created;
+}
+
+export async function updateEvent(id: string, updates: Partial<Omit<EventInput, "id">>): Promise<Event | undefined> {
+  const [updated] = await db
+    .update(events)
+    .set({
+      ...updates,
+      updatedAt: new Date(),
+    })
+    .where(eq(events.id, id))
+    .returning();
+  return updated;
+}
+
+export async function deleteEvent(id: string): Promise<void> {
+  await db.delete(events).where(eq(events.id, id));
+}
+
+export async function countAllEvents(): Promise<number> {
+  const [result] = await db.select({ value: sql<number>`count(*)` }).from(events);
+  return result?.value ?? 0;
+}
+
+export async function countUpcomingEvents(daysAhead = 7): Promise<number> {
+  const now = new Date();
+  const future = new Date(now.getTime() + daysAhead * 24 * 60 * 60 * 1000);
+  const [result] = await db
+    .select({ value: sql<number>`count(*)` })
+    .from(events)
+    .where(and(gte(events.scheduledAt, now), lte(events.scheduledAt, future)));
+  return result?.value ?? 0;
 }
