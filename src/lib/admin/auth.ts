@@ -66,6 +66,8 @@ export function createAdminSessionCookie() {
     exp: now + SESSION_DURATION_MS,
   });
 
+  // Admin-Routen enthalten ein Locale-Segment (z. B. /de/admin), daher kann der Cookie-Pfad
+  // nicht enger als "/" gesetzt werden, ohne zusätzliche Locale-Informationen beim Login zu benötigen.
   return {
     name: SESSION_COOKIE_NAME,
     value: token,

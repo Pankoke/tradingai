@@ -8,11 +8,12 @@ import { getLatestSnapshot } from "@/src/server/repositories/perceptionSnapshotR
 import type { Locale } from "@/i18n";
 
 type Props = {
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 };
 
 export default async function AdminDashboardPage({ params }: Props) {
-  const locale = params.locale as Locale;
+  const resolvedParams = await params;
+  const locale = resolvedParams.locale as Locale;
   const [assetsCount, eventsCount, upcomingEvents, latestSnapshot] = await Promise.all([
     countAssets(),
     countAllEvents(),

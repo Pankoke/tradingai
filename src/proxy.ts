@@ -2,6 +2,7 @@ import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { locales, defaultLocale } from "@/i18n";
 import { isAdminSessionFromRequest } from "@/src/lib/admin/auth";
+import { isAdminEnabled } from "@/src/lib/admin/security";
 
 function extractLocale(pathname: string): string {
   const segments = pathname.split("/").filter(Boolean);
@@ -30,6 +31,17 @@ export default clerkMiddleware((auth, request) => {
   void auth();
   const { nextUrl } = request;
   const pathname = nextUrl.pathname;
+  const adminEnabled = isAdminEnabled();
+
+  const isAdminApi = pathname.startsWith("/api/admin");
+  const isAdminPath = isProtectedAdminRoute(pathname) || pathname.startsWith("/api/admin");
+
+  if (!adminEnabled && isAdminPath) {
+    if (isAdminApi) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    return NextResponse.rewrite(new URL("/404", request.url));
+  }
 
   if (!isProtectedAdminRoute(pathname)) {
     return;

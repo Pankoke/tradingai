@@ -4,22 +4,25 @@ import { AdminLoginForm } from "@/src/components/admin/AdminLoginForm";
 import { locales, type Locale } from "@/i18n";
 
 type Props = {
-  params: { locale: string };
-  searchParams: { redirect?: string };
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{ redirect?: string }>;
 };
 
-export function generateMetadata({ params }: Props): Metadata {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const resolved = await params;
   return {
-    title: `Admin Login – ${params.locale}`,
+    title: `Admin Login – ${resolved.locale}`,
   };
 }
 
-export default function AdminLoginPage({ params, searchParams }: Props) {
-  const locale = params.locale as Locale;
+export default async function AdminLoginPage({ params, searchParams }: Props) {
+  const resolvedParams = await params;
+  const locale = resolvedParams.locale as Locale;
   if (!(locales as readonly string[]).includes(locale)) {
     notFound();
   }
-  const redirectTo = searchParams.redirect;
+  const resolvedSearch = await searchParams;
+  const redirectTo = resolvedSearch.redirect;
   return (
     <div className="space-y-6 text-slate-100">
       <div>
