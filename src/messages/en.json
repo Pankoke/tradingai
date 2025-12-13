@@ -930,5 +930,14 @@
   "perception.setupRating.rating.C": "Mixed drivers and neutral structure.",
   "perception.setupRating.rating.D": "Conflicts or elevated risks present.",
   "perception.setupRating.rating.E": "Weak edge; quality limited.",
-  "perception.setupRating.rating.F": "Heavy conflicts and high risk."
+  "perception.setupRating.rating.F": "Heavy conflicts and high risk.",
+  "admin.dashboard.snapshots.cardTitle": "Snapshots",
+  "admin.dashboard.snapshots.listTitle": "Latest snapshots",
+  "admin.dashboard.snapshots.empty": "No snapshots available.",
+  "admin.dashboard.snapshots.status.fresh": "Current",
+  "admin.dashboard.snapshots.status.stale": "Stale",
+  "admin.dashboard.snapshots.status.critical": "Critical",
+  "admin.dashboard.events.highImpactTitle": "High-impact events (next 7 days)",
+  "admin.dashboard.events.empty": "No high-impact events in the next 7 days.",
+  "admin.dashboard.events.impactLabel": "Impact"
 }

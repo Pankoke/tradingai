@@ -930,5 +930,14 @@
   "perception.setupRating.risk.rrrWeak": "RRR schwach",
   "perception.setupRating.risk.highCapital": "Risiko pro Trade hoch",
   "perception.setupRating.risk.flowWeak": "Flow schwach",
-  "perception.setupRating.conflict.default": "Konflikt vorhanden"
+  "perception.setupRating.conflict.default": "Konflikt vorhanden",
+  "admin.dashboard.snapshots.cardTitle": "Snapshots",
+  "admin.dashboard.snapshots.listTitle": "Letzte Snapshots",
+  "admin.dashboard.snapshots.empty": "Keine Snapshots vorhanden.",
+  "admin.dashboard.snapshots.status.fresh": "Aktuell",
+  "admin.dashboard.snapshots.status.stale": "Veraltet",
+  "admin.dashboard.snapshots.status.critical": "Kritisch",
+  "admin.dashboard.events.highImpactTitle": "High-Impact-Events (nächste 7 Tage)",
+  "admin.dashboard.events.empty": "Keine High-Impact-Events in den nächsten 7 Tagen.",
+  "admin.dashboard.events.impactLabel": "Impact"
 }

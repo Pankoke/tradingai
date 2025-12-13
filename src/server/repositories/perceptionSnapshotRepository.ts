@@ -93,3 +93,11 @@ export async function insertSnapshotWithItems(params: {
     await tx.insert(perceptionSnapshotItems).values(params.items);
   });
 }
+
+export async function listRecentSnapshots(limit = 5): Promise<PerceptionSnapshot[]> {
+  return db
+    .select()
+    .from(perceptionSnapshots)
+    .orderBy(desc(perceptionSnapshots.snapshotTime))
+    .limit(limit);
+}

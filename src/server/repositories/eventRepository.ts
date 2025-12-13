@@ -112,3 +112,28 @@ export async function countUpcomingEvents(daysAhead = 7): Promise<number> {
     .where(and(gte(events.scheduledAt, now), lte(events.scheduledAt, future)));
   return result?.value ?? 0;
 }
+
+export async function listHighImpactUpcomingEvents({
+  impactThreshold = 3,
+  daysAhead = 7,
+  limit = 3,
+}: {
+  impactThreshold?: number;
+  daysAhead?: number;
+  limit?: number;
+} = {}): Promise<Event[]> {
+  const now = new Date();
+  const future = new Date(now.getTime() + daysAhead * 24 * 60 * 60 * 1000);
+  return db
+    .select()
+    .from(events)
+    .where(
+      and(
+        gte(events.scheduledAt, now),
+        lte(events.scheduledAt, future),
+        gte(events.impact, impactThreshold),
+      ),
+    )
+    .orderBy(events.scheduledAt)
+    .limit(limit);
+}

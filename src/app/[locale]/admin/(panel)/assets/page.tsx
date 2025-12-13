@@ -4,11 +4,12 @@ import { getAllAssets } from "@/src/server/repositories/assetRepository";
 import type { Locale } from "@/i18n";
 
 type Props = {
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 };
 
 export default async function AdminAssetsPage({ params }: Props) {
-  const locale = params.locale as Locale;
+  const resolvedParams = await params;
+  const locale = resolvedParams.locale as Locale;
   const assets = await getAllAssets();
 
   return (

@@ -4,11 +4,12 @@ import { listRecentEvents } from "@/src/server/repositories/eventRepository";
 import type { Locale } from "@/i18n";
 
 type Props = {
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 };
 
 export default async function AdminEventsPage({ params }: Props) {
-  const locale = params.locale as Locale;
+  const resolvedParams = await params;
+  const locale = resolvedParams.locale as Locale;
   const events = await listRecentEvents(50);
 
   return (
