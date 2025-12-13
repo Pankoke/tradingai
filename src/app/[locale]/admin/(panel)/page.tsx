@@ -58,11 +58,16 @@ export default async function AdminDashboardPage({ params }: Props) {
       stale: messages["admin.dashboard.snapshots.status.stale"],
       critical: messages["admin.dashboard.snapshots.status.critical"],
     },
+    viewAll: messages["admin.dashboard.snapshots.viewAll"],
   };
   const eventCardMessages = {
     highImpactTitle: messages["admin.dashboard.events.highImpactTitle"],
     empty: messages["admin.dashboard.events.empty"],
     impactLabel: messages["admin.dashboard.events.impactLabel"],
+    manage: messages["admin.dashboard.events.manage"],
+  };
+  const assetCardMessages = {
+    manage: messages["admin.dashboard.assets.manage"],
   };
   const [assetsCount, eventsCount, upcomingEvents, snapshots, highImpactEvents] = await Promise.all([
     countAssets(),
@@ -93,18 +98,24 @@ export default async function AdminDashboardPage({ params }: Props) {
           <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Aktive Assets</p>
           <p className="mt-2 text-3xl font-semibold text-white">{assetsCount}</p>
           <Link className="mt-4 inline-flex text-sm text-sky-300 hover:text-sky-100" href={`/${locale}/admin/assets`}>
-            Zu Assets →
+            {assetCardMessages.manage}
           </Link>
         </div>
         <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
           <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Events gesamt</p>
           <p className="mt-2 text-3xl font-semibold text-white">{eventsCount}</p>
           <p className="text-sm text-slate-400">Davon nächste 7 Tage: {upcomingEvents}</p>
+          <Link className="mt-2 inline-flex text-xs text-sky-300 hover:text-sky-100" href={`/${locale}/admin/events`}>
+            {eventCardMessages.manage}
+          </Link>
         </div>
         <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="space-y-1">
               <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{snapshotMessages.cardTitle}</p>
+              <Link href={`/${locale}/admin/snapshots`} className="text-xs text-sky-300 hover:text-sky-100">
+                {snapshotMessages.viewAll}
+              </Link>
             </div>
             <span className={clsx("rounded-full border px-3 py-1 text-xs font-semibold", statusTone)}>
               {snapshotMessages.status[snapshotStatus]}
