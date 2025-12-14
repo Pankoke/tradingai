@@ -1,0 +1,160 @@
+import clsx from "clsx";
+import type { Locale } from "@/i18n";
+import { getMarketDataHealth } from "@/src/server/admin/marketDataHealth";
+import type { MarketDataStatus } from "@/src/server/admin/marketDataHealth";
+import deMessages from "@/src/messages/de.json";
+import enMessages from "@/src/messages/en.json";
+
+type Props = {
+  params: Promise<{ locale: string }>;
+};
+
+const STATUS_TONE: Record<MarketDataStatus, string> = {
+  fresh: "border-emerald-500/40 bg-emerald-500/10 text-emerald-200",
+  stale: "border-amber-500/40 bg-amber-500/10 text-amber-200",
+  critical: "border-rose-500/40 bg-rose-500/10 text-rose-200",
+};
+
+const MS_MINUTE = 60 * 1000;
+const MS_HOUR = 60 * MS_MINUTE;
+const MS_DAY = 24 * MS_HOUR;
+
+export default async function AdminMarketDataPage({ params }: Props) {
+  const resolvedParams = await params;
+  const locale = resolvedParams.locale as Locale;
+  const messages = locale === "de" ? deMessages : enMessages;
+  const health = await getMarketDataHealth();
+
+  const statusMessages = {
+    fresh: messages["admin.common.status.fresh"],
+    stale: messages["admin.common.status.stale"],
+    critical: messages["admin.common.status.critical"],
+  };
+
+  const providerLabelMap: Record<string, string> = {
+    yahoo: messages["admin.marketdata.provider.yahoo"],
+    binance: messages["admin.marketdata.provider.binance"],
+  };
+
+  const formatDate = (value: Date | null): string =>
+    value ? new Date(value).toLocaleString(locale === "de" ? "de-DE" : "en-US") : messages["admin.marketdata.delay.unknown"];
+
+  const formatDelay = (delayMs: number | null): string => {
+    if (delayMs == null) {
+      return messages["admin.marketdata.delay.unknown"];
+    }
+    if (delayMs < MS_HOUR) {
+      const minutes = Math.max(1, Math.round(delayMs / MS_MINUTE));
+      return messages["admin.marketdata.delay.minutes"].replace("{value}", minutes.toString());
+    }
+    if (delayMs < MS_DAY) {
+      const hours = Math.max(1, Math.round(delayMs / MS_HOUR));
+      return messages["admin.marketdata.delay.hours"].replace("{value}", hours.toString());
+    }
+    const days = Math.max(1, Math.round(delayMs / MS_DAY));
+    return messages["admin.marketdata.delay.days"].replace("{value}", days.toString());
+  };
+
+  return (
+    <div className="space-y-8">
+      <header className="space-y-2">
+        <p className="text-xs uppercase tracking-[0.3em] text-slate-500">{messages["admin.marketdata.title"]}</p>
+        <h1 className="text-3xl font-semibold text-white">{messages["admin.marketdata.title"]}</h1>
+        <p className="text-sm text-slate-400">{messages["admin.marketdata.subtitle"]}</p>
+      </header>
+
+      <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-500">{messages["admin.marketdata.provider.heading"]}</p>
+            <p className="text-lg text-slate-200">
+              {messages["admin.marketdata.provider.summaryLabel"].replace(
+                "{status}",
+                statusMessages[health.overallStatus],
+              )}
+            </p>
+          </div>
+          <span className={clsx("rounded-full border px-3 py-1 text-xs font-semibold", STATUS_TONE[health.overallStatus])}>
+            {statusMessages[health.overallStatus]}
+          </span>
+        </div>
+
+        <div className="overflow-x-auto rounded-xl border border-slate-800">
+          <table className="min-w-full divide-y divide-slate-800 text-sm">
+            <thead className="bg-slate-900/60 text-left text-xs uppercase tracking-wide text-slate-400">
+              <tr>
+                <th className="px-4 py-3">{messages["admin.marketdata.table.provider"]}</th>
+                <th className="px-4 py-3">{messages["admin.marketdata.table.timeframe"]}</th>
+                <th className="px-4 py-3">{messages["admin.marketdata.table.last"]}</th>
+                <th className="px-4 py-3">{messages["admin.marketdata.table.delay"]}</th>
+                <th className="px-4 py-3">{messages["admin.marketdata.table.status"]}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-900 text-slate-200">
+              {health.providerSummaries.map((summary) => (
+                <tr key={`${summary.provider}-${summary.timeframe}`}>
+                  <td className="px-4 py-3 font-semibold">{providerLabelMap[summary.provider] ?? summary.provider}</td>
+                  <td className="px-4 py-3">{summary.timeframe}</td>
+                  <td className="px-4 py-3">{formatDate(summary.lastCandleAt)}</td>
+                  <td className="px-4 py-3">{formatDelay(summary.delayMs)}</td>
+                  <td className="px-4 py-3">
+                    <span className={clsx("rounded-full border px-2 py-0.5 text-xs", STATUS_TONE[summary.status])}>
+                      {statusMessages[summary.status]}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-500">{messages["admin.marketdata.staleAssets.title"]}</p>
+            <p className="text-sm text-slate-400">{messages["admin.marketdata.staleAssets.subtitle"]}</p>
+          </div>
+        </div>
+
+        {health.staleAssets.length === 0 ? (
+          <p className="text-sm text-slate-400">{messages["admin.marketdata.staleAssets.empty"]}</p>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-slate-800">
+            <table className="min-w-full divide-y divide-slate-800 text-sm">
+              <thead className="bg-slate-900/60 text-left text-xs uppercase tracking-wide text-slate-400">
+                <tr>
+                  <th className="px-4 py-3">{messages["admin.marketdata.table.symbol"]}</th>
+                  <th className="px-4 py-3">{messages["admin.marketdata.table.provider"]}</th>
+                  <th className="px-4 py-3">{messages["admin.marketdata.table.timeframe"]}</th>
+                  <th className="px-4 py-3">{messages["admin.marketdata.table.last"]}</th>
+                  <th className="px-4 py-3">{messages["admin.marketdata.table.delay"]}</th>
+                  <th className="px-4 py-3">{messages["admin.marketdata.table.status"]}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-900 text-slate-200">
+                {health.staleAssets.map((entry) => (
+                  <tr key={`${entry.assetId}-${entry.provider}-${entry.timeframe}`}>
+                    <td className="px-4 py-3">
+                      <div className="font-semibold">{entry.symbol}</div>
+                      <div className="text-xs text-slate-500">{entry.assetClass}</div>
+                    </td>
+                    <td className="px-4 py-3">{providerLabelMap[entry.provider] ?? entry.provider}</td>
+                    <td className="px-4 py-3">{entry.timeframe}</td>
+                    <td className="px-4 py-3">{formatDate(entry.lastCandleAt)}</td>
+                    <td className="px-4 py-3">{formatDelay(entry.delayMs)}</td>
+                    <td className="px-4 py-3">
+                      <span className={clsx("rounded-full border px-2 py-0.5 text-xs", STATUS_TONE[entry.status])}>
+                        {statusMessages[entry.status]}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}

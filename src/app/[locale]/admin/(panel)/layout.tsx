@@ -19,6 +19,8 @@ export default async function AdminPanelLayout({ params, children }: Props) {
   const navItems = [
     { href: `/${locale}/admin`, label: messages["admin.nav.dashboard"] },
     { href: `/${locale}/admin/snapshots`, label: messages["admin.nav.snapshots"] },
+    { href: `/${locale}/admin/marketdata`, label: messages["admin.nav.marketdata"] },
+    { href: `/${locale}/admin/ops`, label: messages["admin.nav.ops"] },
     { href: `/${locale}/admin/events`, label: messages["admin.nav.events"] },
     { href: `/${locale}/admin/assets`, label: messages["admin.nav.assets"] },
   ];

@@ -44,6 +44,7 @@ type Props = {
   quality?: SignalQuality | null;
   expanded: boolean;
   onToggle: (next: boolean) => void;
+  anchorId?: string;
 };
 
 const ringKeys: RingKey[] = [
@@ -63,6 +64,7 @@ export function SnapshotSetupCard({
   quality,
   expanded,
   onToggle,
+  anchorId,
 }: Props): JSX.Element {
   const rings = setup.rings;
   const riskReward = setup.riskReward;
@@ -76,7 +78,7 @@ export function SnapshotSetupCard({
   };
 
   return (
-    <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
+    <div id={anchorId} className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-lg font-semibold text-white">

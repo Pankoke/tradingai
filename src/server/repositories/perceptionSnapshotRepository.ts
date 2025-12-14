@@ -1,11 +1,11 @@
 import { db } from "../db/db";
-import { and, desc, eq, gte, lte, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, gte, lte, lt, sql, type SQL } from "drizzle-orm";
 import { perceptionSnapshotItems } from "../db/schema/perceptionSnapshotItems";
 import { perceptionSnapshots } from "../db/schema/perceptionSnapshots";
 import { excluded } from "../db/sqlHelpers";
 import type { Setup } from "@/src/lib/engine/types";
 
-type PerceptionSnapshot = typeof perceptionSnapshots["$inferSelect"];
+export type PerceptionSnapshot = typeof perceptionSnapshots["$inferSelect"];
 export type PerceptionSnapshotInput = typeof perceptionSnapshots["$inferInsert"];
 type PerceptionSnapshotItem = typeof perceptionSnapshotItems["$inferSelect"];
 export type PerceptionSnapshotItemInput = typeof perceptionSnapshotItems["$inferInsert"];
@@ -172,4 +172,26 @@ export async function getSnapshotWithItems(snapshotId: string): Promise<Percepti
 
 export async function listSnapshotItems(snapshotId: string): Promise<PerceptionSnapshotItem[]> {
   return loadSnapshotItems(snapshotId);
+}
+
+export async function getPreviousSnapshot(snapshotTime: Date): Promise<PerceptionSnapshot | undefined> {
+  const [snapshot] = await db
+    .select()
+    .from(perceptionSnapshots)
+    .where(lt(perceptionSnapshots.snapshotTime, snapshotTime))
+    .orderBy(desc(perceptionSnapshots.snapshotTime))
+    .limit(1);
+  return snapshot;
+}
+
+export async function getPreviousSnapshotWithItems(
+  snapshotTime: Date,
+): Promise<PerceptionSnapshotWithItems | undefined> {
+  const snapshot = await getPreviousSnapshot(snapshotTime);
+  if (!snapshot) {
+    return undefined;
+  }
+  const items = await loadSnapshotItems(snapshot.id);
+  const setups = (snapshot.setups ?? []) as Setup[];
+  return { snapshot, items, setups };
 }

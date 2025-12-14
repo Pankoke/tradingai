@@ -1,10 +1,14 @@
 import { notFound } from "next/navigation";
-import { getSnapshotWithItems } from "@/src/server/repositories/perceptionSnapshotRepository";
+import { getSnapshotWithItems, getPreviousSnapshotWithItems } from "@/src/server/repositories/perceptionSnapshotRepository";
 import type { Locale } from "@/i18n";
 import type { Setup } from "@/src/lib/engine/types";
 import { JsonReveal } from "@/src/components/admin/JsonReveal";
 import type { RingKey, SnapshotSetupRankInfo } from "@/src/components/admin/SnapshotSetupCard";
 import { SnapshotSetupList } from "@/src/components/admin/SnapshotSetupList";
+import { SnapshotDiffPanel } from "@/src/components/admin/SnapshotDiffPanel";
+import { diffSnapshots, getSetupMatchKey } from "@/src/server/admin/snapshotDiff";
+import type { SnapshotDiffResult } from "@/src/server/admin/snapshotDiff";
+import type { SnapshotDiffClientResult } from "@/src/components/admin/SnapshotDiffPanel";
 import deMessages from "@/src/messages/de.json";
 import enMessages from "@/src/messages/en.json";
 
@@ -38,6 +42,23 @@ export default async function AdminSnapshotDetailPage({ params }: PageProps) {
   }
   const { snapshot, items } = snapshotData;
   const setups: Setup[] = Array.isArray(snapshot.setups) ? (snapshot.setups as Setup[]) : [];
+  const currentData = { snapshot, items, setups };
+  const previousSnapshotData = await getPreviousSnapshotWithItems(new Date(snapshot.snapshotTime));
+  const snapshotDiff: SnapshotDiffResult | null = previousSnapshotData
+    ? diffSnapshots({
+        current: currentData,
+        previous: previousSnapshotData,
+      })
+    : null;
+  const snapshotDiffClient: SnapshotDiffClientResult | null = snapshotDiff
+    ? {
+        ...snapshotDiff,
+        previousSnapshot: {
+          ...snapshotDiff.previousSnapshot,
+          snapshotTime: new Date(snapshotDiff.previousSnapshot.snapshotTime).toISOString(),
+        },
+      }
+    : null;
   const itemBySetup = new Map(items.map((item) => [item.setupId, item]));
 
   const ringLabels: Record<RingKey, string> = {
@@ -67,6 +88,27 @@ export default async function AdminSnapshotDetailPage({ params }: PageProps) {
     notAvailableLabel: messages["admin.common.na"],
   };
 
+  const diffMessages = {
+    title: messages["admin.snapshots.diff.title"],
+    comparedTo: messages["admin.snapshots.diff.comparedTo"],
+    noPrevious: messages["admin.snapshots.diff.noPrevious"],
+    sectionAdded: messages["admin.snapshots.diff.added"],
+    sectionRemoved: messages["admin.snapshots.diff.removed"],
+    sectionChanged: messages["admin.snapshots.diff.changed"],
+    none: messages["admin.snapshots.diff.none"],
+    more: messages["admin.snapshots.diff.more"],
+    qualityLabel: messages["admin.snapshots.diff.quality"],
+    topGainers: messages["admin.snapshots.diff.topGainers"],
+    topLosers: messages["admin.snapshots.diff.topLosers"],
+    significantOnly: messages["admin.snapshots.diff.significantOnly"],
+    thresholdHint: messages["admin.snapshots.diff.thresholdHint"],
+    jump: messages["admin.snapshots.diff.jump"],
+    topRingDeltas: messages["admin.snapshots.diff.topRingDeltas"],
+    symbolLabel: messages["admin.marketdata.table.symbol"],
+    statusLabel: messages["admin.marketdata.table.status"],
+    naLabel: messages["admin.common.na"],
+  };
+
   const listMessages = {
     sortLabel: messages["admin.snapshotDetail.sort.label"],
     sortQualityDesc: messages["admin.snapshotDetail.sort.qualityDesc"],
@@ -80,6 +122,15 @@ export default async function AdminSnapshotDetailPage({ params }: PageProps) {
     summary: messages["admin.snapshotDetail.setups.summary"],
   };
 
+  const ringDeltaLabelMap = {
+    trend: ringLabels.trendScore,
+    event: ringLabels.eventScore,
+    bias: ringLabels.biasScore,
+    sentiment: ringLabels.sentimentScore,
+    orderflow: ringLabels.orderflowScore,
+    confidence: ringLabels.confidenceScore,
+  };
+
   const setupEntries = setups.map((setup) => {
     const item = itemBySetup.get(setup.id);
     const rank: SnapshotSetupRankInfo | undefined = item
@@ -91,6 +142,7 @@ export default async function AdminSnapshotDetailPage({ params }: PageProps) {
     return {
       setup,
       rank,
+      matchKey: getSetupMatchKey(setup),
     };
   });
 
@@ -148,6 +200,15 @@ export default async function AdminSnapshotDetailPage({ params }: PageProps) {
             listMessages={listMessages}
           />
         )}
+      </section>
+
+      <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
+        <SnapshotDiffPanel
+          diff={snapshotDiffClient}
+          locale={locale as Locale}
+          messages={diffMessages}
+          ringDeltaLabelMap={ringDeltaLabelMap}
+        />
       </section>
     </div>
   );

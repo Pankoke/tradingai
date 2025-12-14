@@ -14,6 +14,7 @@ import {
 type SetupRow = {
   setup: Setup;
   rank?: SnapshotSetupRankInfo;
+  matchKey: string;
 };
 
 type SortValue = "qualityDesc" | "qualityAsc" | "confidenceDesc" | "trendDesc" | "eventDesc" | "symbolAsc";
@@ -37,6 +38,8 @@ type Props = {
   setupMessages: SnapshotSetupMessages;
   listMessages: SnapshotSetupListMessages;
 };
+
+export const SNAPSHOT_SETUP_EXPAND_EVENT = "snapshot-setup-expand";
 
 const gradeWeight: Record<SignalQuality["grade"], number> = {
   A: 4,
@@ -71,13 +74,24 @@ export function SnapshotSetupList({ setups, ringLabels, setupMessages, listMessa
     setExpandedIds((prev) => {
       const next: Record<string, boolean> = {};
       for (const row of rows) {
-        if (prev[row.setup.id]) {
-          next[row.setup.id] = true;
+        if (prev[row.matchKey]) {
+          next[row.matchKey] = true;
         }
       }
       return next;
     });
   }, [rows]);
+
+  useEffect(() => {
+    const listener = (event: Event) => {
+      const customEvent = event as CustomEvent<{ matchKey: string }>;
+      const targetKey = customEvent.detail?.matchKey;
+      if (!targetKey) return;
+      setExpandedIds((prev) => ({ ...prev, [targetKey]: true }));
+    };
+    window.addEventListener(SNAPSHOT_SETUP_EXPAND_EVENT, listener as EventListener);
+    return () => window.removeEventListener(SNAPSHOT_SETUP_EXPAND_EVENT, listener as EventListener);
+  }, []);
 
   const sortOptions: { value: SortValue; label: string }[] = [
     { value: "qualityDesc", label: listMessages.sortQualityDesc },
@@ -131,14 +145,14 @@ export function SnapshotSetupList({ setups, ringLabels, setupMessages, listMessa
       sortOptions.find((option) => option.value === sortValue)?.label ?? listMessages.sortQualityDesc,
     );
 
-  const toggleExpanded = (id: string) => {
-    setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }));
+  const toggleExpanded = (key: string) => {
+    setExpandedIds((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   const expandAll = () => {
     const next: Record<string, boolean> = {};
     for (const row of rows) {
-      next[row.setup.id] = true;
+      next[row.matchKey] = true;
     }
     setExpandedIds(next);
   };
@@ -147,7 +161,7 @@ export function SnapshotSetupList({ setups, ringLabels, setupMessages, listMessa
     setExpandedIds({});
   };
 
-  const allExpanded = rows.length > 0 && rows.every((row) => expandedIds[row.setup.id]);
+  const allExpanded = rows.length > 0 && rows.every((row) => expandedIds[row.matchKey]);
 
   return (
     <div className="space-y-4">
@@ -181,14 +195,15 @@ export function SnapshotSetupList({ setups, ringLabels, setupMessages, listMessa
       <div className="space-y-4">
         {sortedRows.map((row) => (
           <SnapshotSetupCard
-            key={row.setup.id}
+            key={row.matchKey}
+            anchorId={`setup-${row.matchKey}`}
             setup={row.setup}
             ringLabels={ringLabels}
             messages={setupMessages}
             rank={row.rank}
             quality={row.quality}
-            expanded={!!expandedIds[row.setup.id]}
-            onToggle={() => toggleExpanded(row.setup.id)}
+            expanded={!!expandedIds[row.matchKey]}
+            onToggle={() => toggleExpanded(row.matchKey)}
           />
         ))}
       </div>
