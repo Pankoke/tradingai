@@ -1,9 +1,12 @@
 import { OpsActionsPanel } from "@/src/components/admin/OpsActionsPanel";
 import type { LockStatusState } from "@/src/components/admin/OpsActionsPanel";
+import { EventsIngestionPanel } from "@/src/components/admin/EventsIngestionPanel";
+import type { EventsIngestionRunInfo } from "@/src/components/admin/EventsIngestionPanel";
 import type { Locale } from "@/i18n";
 import deMessages from "@/src/messages/de.json";
 import enMessages from "@/src/messages/en.json";
 import { getLatestSnapshot } from "@/src/server/repositories/perceptionSnapshotRepository";
+import { listAuditRuns } from "@/src/server/repositories/auditRunRepository";
 import {
   getSnapshotSourceFromNotes,
   getSnapshotBuildStatus,
@@ -18,7 +21,11 @@ export default async function AdminOpsPage({ params }: Props) {
   const resolvedParams = await params;
   const locale = resolvedParams.locale as Locale;
   const messages = locale === "de" ? deMessages : enMessages;
-  const latestSnapshot = await getLatestSnapshot();
+  const [latestSnapshot, rawLockStatus, eventsAudit] = await Promise.all([
+    getLatestSnapshot(),
+    getSnapshotBuildStatus(),
+    listAuditRuns({ filters: { action: "events.ingest" }, limit: 1 }),
+  ]);
   const latestSnapshotInfo = latestSnapshot
     ? {
         snapshotId: latestSnapshot.snapshot.id,
@@ -28,7 +35,6 @@ export default async function AdminOpsPage({ params }: Props) {
           | "unknown",
       }
     : null;
-  const rawLockStatus = await getSnapshotBuildStatus();
   const lockStatus: LockStatusState = rawLockStatus
     ? {
         locked: rawLockStatus.locked,
@@ -107,7 +113,39 @@ export default async function AdminOpsPage({ params }: Props) {
       hideDetails: messages["admin.common.hideJson"],
       refresh: messages["admin.ops.common.refresh"],
     },
+    eventsIngestion: {
+      title: messages["admin.eventsIngestion.title"],
+      description: messages["admin.eventsIngestion.description"],
+      button: messages["admin.eventsIngestion.button"],
+      selectLabel: messages["admin.eventsIngestion.selectLabel"],
+      selectOptions: {
+        "30": messages["admin.eventsIngestion.option30"],
+        "45": messages["admin.eventsIngestion.option45"],
+        "60": messages["admin.eventsIngestion.option60"],
+      },
+      lastRunLabel: messages["admin.eventsIngestion.lastRun"],
+      noRuns: messages["admin.eventsIngestion.noRuns"],
+      statusSuccess: messages["admin.eventsIngestion.status.success"],
+      statusFailed: messages["admin.eventsIngestion.status.failed"],
+      countsLabel: messages["admin.eventsIngestion.counts"],
+      windowLabel: messages["admin.eventsIngestion.window"],
+      runAtLabel: messages["admin.eventsIngestion.runAt"],
+      errorLabel: messages["admin.eventsIngestion.error"],
+      resultLabel: messages["admin.eventsIngestion.result"],
+    },
   };
+
+  const lastEventsRun: EventsIngestionRunInfo | null = eventsAudit.runs[0]
+    ? {
+        id: eventsAudit.runs[0].id,
+        ok: eventsAudit.runs[0].ok ?? false,
+        createdAt: eventsAudit.runs[0].createdAt?.toISOString() ?? new Date().toISOString(),
+        durationMs: eventsAudit.runs[0].durationMs ?? undefined,
+        message: eventsAudit.runs[0].message ?? undefined,
+        error: eventsAudit.runs[0].error ?? undefined,
+        meta: (eventsAudit.runs[0].meta as EventsIngestionRunInfo["meta"]) ?? null,
+      }
+    : null;
 
   return (
     <div className="space-y-6">
@@ -121,6 +159,11 @@ export default async function AdminOpsPage({ params }: Props) {
         messages={opsMessages}
         latestSnapshot={latestSnapshotInfo}
         initialLockStatus={lockStatus}
+      />
+      <EventsIngestionPanel
+        locale={locale}
+        messages={opsMessages.eventsIngestion}
+        lastRun={lastEventsRun}
       />
     </div>
   );

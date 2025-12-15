@@ -3,6 +3,7 @@
 import { describe, it, expect } from "vitest";
 import type { Setup } from "@/src/lib/engine/types";
 import { classifyTradeSignal } from "@/src/components/perception/PrimaryTradeSignal";
+import { createDefaultRings } from "@/src/lib/engine/rings";
 
 type ScoreSet = {
   trendScore: number;
@@ -28,6 +29,13 @@ type TestCase = {
   expected: ReturnType<typeof classifyTradeSignal>;
 };
 
+const baseRingState = (() => {
+  const rings = createDefaultRings();
+  rings.confidenceScore = 60;
+  rings.confidence = 60;
+  return rings;
+})();
+
 const baseSetup: Setup = {
   id: "setup-test",
   assetId: "asset",
@@ -48,19 +56,7 @@ const baseSetup: Setup = {
   levelDebug: undefined,
   type: "Regelbasiert",
   accessLevel: "free",
-  rings: {
-    trendScore: 50,
-    eventScore: 50,
-    biasScore: 50,
-    sentimentScore: 50,
-    orderflowScore: 50,
-    confidenceScore: 60,
-    event: 50,
-    bias: 50,
-    sentiment: 50,
-    orderflow: 50,
-    confidence: 60,
-  },
+  rings: baseRingState,
   riskReward: {
     riskPercent: 1,
     rewardPercent: 3,
@@ -76,6 +72,8 @@ function buildSetup(overrides: Partial<Setup> & { rings?: Partial<Setup["rings"]
     ...baseSetup.rings,
     ...(overrides.rings ?? {}),
   };
+  rings.meta =
+    overrides.rings?.meta ?? JSON.parse(JSON.stringify(baseSetup.rings.meta));
   const riskReward = {
     ...baseSetup.riskReward,
     ...(overrides.riskReward ?? {}),

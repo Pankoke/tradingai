@@ -1,8 +1,9 @@
-import type { Setup, Direction } from "@/src/lib/engine/types";
+import type { Setup, Direction, RingMeta } from "@/src/lib/engine/types";
 import type { BiasSnapshot, BiasEntry, BiasDirection } from "@/src/lib/engine/eventsBiasTypes";
 
 export type BiasScoreResult = {
   biasScore: number;
+  meta: RingMeta;
 };
 
 function clamp(value: number, min: number, max: number): number {
@@ -73,7 +74,14 @@ export function scoreFromBias(
 export function applyBiasScoring(setup: Setup, biasSnapshot: BiasSnapshot): BiasScoreResult {
   const entry = findBiasEntry(setup, biasSnapshot);
   if (!entry) {
-    return { biasScore: 50 };
+    return {
+      biasScore: 50,
+      meta: {
+        quality: "fallback",
+        timeframe: "unknown",
+        notes: ["no_bias_snapshot"],
+      },
+    };
   }
   const biasScore = scoreFromBias(
     setup.direction,
@@ -81,5 +89,17 @@ export function applyBiasScoring(setup: Setup, biasSnapshot: BiasSnapshot): Bias
     entry.confidence,
     entry.biasScore,
   );
-  return { biasScore };
+  const timeframe = entry.timeframe?.toLowerCase().includes("1d")
+    ? "daily"
+    : entry.timeframe?.toLowerCase().includes("4h") || entry.timeframe?.toLowerCase().includes("1h")
+      ? "intraday"
+      : "unknown";
+  return {
+    biasScore,
+    meta: {
+      quality: "live",
+      timeframe,
+      asOf: biasSnapshot.generatedAt,
+    },
+  };
 }

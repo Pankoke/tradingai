@@ -10,7 +10,7 @@ import { RiskRewardBlock } from "@/src/components/perception/RiskRewardBlock";
 import { PerceptionCard } from "@/src/components/perception/PerceptionCard";
 import type { Setup } from "@/src/lib/engine/types";
 import type { SetupRingScores, SetupRings } from "@/src/lib/engine/rings";
-import { computeRingsForSnapshotItem } from "@/src/lib/engine/rings";
+import { computeRingsForSnapshotItem, createDefaultRings } from "@/src/lib/engine/rings";
 import { fetchPerceptionToday, type PerceptionTodayResponse } from "@/src/lib/api/perceptionClient";
 import { BigGauge, SmallGauge } from "@/src/components/perception/RingGauges";
 import { formatRelativeTime } from "@/src/lib/formatters/datetime";
@@ -27,25 +27,14 @@ const DIRECTION_META: Record<Direction, { Icon: LucideIcon; accent: string }> = 
   neutral: { Icon: ArrowRight, accent: "text-slate-300 border-slate-500/40 bg-slate-500/10" },
 };
 
-const DEFAULT_RING_VALUES: SetupRings = {
-  trendScore: 50,
-  eventScore: 50,
-  biasScore: 50,
-  sentimentScore: 50,
-  orderflowScore: 50,
-  confidenceScore: 50,
-  event: 50,
-  bias: 50,
-  sentiment: 50,
-  orderflow: 50,
-  confidence: 50,
-};
+const DEFAULT_RING_VALUES: SetupRings = createDefaultRings();
 
 type RingDefinition = {
   key: keyof SetupRingScores;
   label: string;
   tone: "accent" | "green" | "teal" | "neutral";
   tooltip: string;
+  metaKey?: keyof Setup["rings"]["meta"];
 };
 
 type PerceptionTodayItem = PerceptionTodayResponse["items"][number];
@@ -238,11 +227,11 @@ export function PerceptionTodayPanel(): JSX.Element {
   }, [heroSetup, heroItem]);
 
   const heroRingDefinitions = useMemo<RingDefinition[]>(() => [
-    { key: "trendScore", label: t("perception.today.scoreTrend"), tone: "teal", tooltip: t("perception.rings.tooltip.trend") },
-    { key: "eventScore", label: t("perception.today.eventRing"), tone: "accent", tooltip: t("perception.rings.tooltip.event") },
-    { key: "biasScore", label: t("perception.today.biasRing"), tone: "green", tooltip: t("perception.rings.tooltip.bias") },
-    { key: "sentimentScore", label: t("perception.today.sentimentRing"), tone: "teal", tooltip: t("perception.rings.tooltip.sentiment") },
-    { key: "orderflowScore", label: t("perception.today.orderflowRing"), tone: "accent", tooltip: t("perception.rings.tooltip.orderflow") },
+    { key: "trendScore", label: t("perception.today.scoreTrend"), tone: "teal", tooltip: t("perception.rings.tooltip.trend"), metaKey: "trend" },
+    { key: "eventScore", label: t("perception.today.eventRing"), tone: "accent", tooltip: t("perception.rings.tooltip.event"), metaKey: "event" },
+    { key: "biasScore", label: t("perception.today.biasRing"), tone: "green", tooltip: t("perception.rings.tooltip.bias"), metaKey: "bias" },
+    { key: "sentimentScore", label: t("perception.today.sentimentRing"), tone: "teal", tooltip: t("perception.rings.tooltip.sentiment"), metaKey: "sentiment" },
+    { key: "orderflowScore", label: t("perception.today.orderflowRing"), tone: "accent", tooltip: t("perception.rings.tooltip.orderflow"), metaKey: "orderflow" },
   ], [t]);
 
   const itemRingDefinitions = useMemo<RingDefinition[]>(
@@ -253,6 +242,7 @@ export function PerceptionTodayPanel(): JSX.Element {
         label: t("perception.today.confidenceRing"),
         tone: "green",
         tooltip: t("perception.rings.tooltip.confidence"),
+        metaKey: "confidence",
       },
     ],
     [heroRingDefinitions, t],
@@ -393,6 +383,7 @@ export function PerceptionTodayPanel(): JSX.Element {
                     value={heroBaseRings.confidenceScore}
                     label={t("perception.today.confidenceRing")}
                     tooltip={t("perception.rings.tooltip.confidence")}
+                    meta={heroBaseRings.meta.confidence}
                   />
                 </div>
 
@@ -420,13 +411,10 @@ export function PerceptionTodayPanel(): JSX.Element {
                     tone={ring.tone}
                     tooltip={
                       ring.key === "eventScore"
-                        ? buildEventTooltip(
-                            ring.tooltip,
-                            heroEventContext,
-                            t,
-                          )
+                        ? buildEventTooltip(ring.tooltip, heroEventContext, t)
                         : ring.tooltip
                     }
+                    meta={ring.metaKey ? heroBaseRings.meta[ring.metaKey] : undefined}
                   />
                 ))}
               </div>
@@ -502,17 +490,18 @@ export function PerceptionTodayPanel(): JSX.Element {
                                   key={ring.label}
                                   label={ring.label}
                                   value={rings[ring.key]}
-                              tone={ring.tone}
-                              tooltip={
-                                ring.key === "eventScore"
-                                  ? buildEventTooltip(
-                                      ring.tooltip,
-                                      item.eventContext ?? setup?.eventContext ?? null,
-                                      t,
-                                    )
-                                  : ring.tooltip
-                              }
-                            />
+                                  tone={ring.tone}
+                                  tooltip={
+                                    ring.key === "eventScore"
+                                      ? buildEventTooltip(
+                                          ring.tooltip,
+                                          item.eventContext ?? setup?.eventContext ?? null,
+                                          t,
+                                        )
+                                      : ring.tooltip
+                                  }
+                                  meta={ring.metaKey ? rings.meta[ring.metaKey] : undefined}
+                                />
                               ))}
                             </div>
                             {setup ? (

@@ -4,6 +4,7 @@ import { perceptionSnapshotItems } from "../db/schema/perceptionSnapshotItems";
 import { perceptionSnapshots } from "../db/schema/perceptionSnapshots";
 import { excluded } from "../db/sqlHelpers";
 import type { Setup } from "@/src/lib/engine/types";
+import { createDefaultRings, ensureRingMeta } from "@/src/lib/engine/rings";
 
 export type PerceptionSnapshot = typeof perceptionSnapshots["$inferSelect"];
 export type PerceptionSnapshotInput = typeof perceptionSnapshots["$inferInsert"];
@@ -24,6 +25,25 @@ type SnapshotFilters = {
 };
 
 let ensuredRingSummaryColumn = false;
+
+function normalizeSetups(rawSetups: Setup[]): Setup[] {
+  return rawSetups.map((setup) => {
+    if (!setup.rings) {
+      return {
+        ...setup,
+        rings: createDefaultRings(),
+      };
+    }
+
+    return {
+      ...setup,
+      rings: {
+        ...setup.rings,
+        meta: ensureRingMeta(setup.rings.meta),
+      },
+    };
+  });
+}
 
 async function loadSnapshotItems(snapshotId: string) {
   return db
@@ -63,7 +83,7 @@ export async function getLatestSnapshot(): Promise<PerceptionSnapshotWithItems |
   }
 
   const items = await loadSnapshotItems(snapshot.id);
-  const setups = (snapshot.setups ?? []) as Setup[];
+  const setups = normalizeSetups((snapshot.setups ?? []) as Setup[]);
   return { snapshot, items, setups };
 }
 
@@ -81,7 +101,7 @@ export async function getSnapshotByTime(params: {
   }
 
   const items = await loadSnapshotItems(snapshot.id);
-  const setups = (snapshot.setups ?? []) as Setup[];
+  const setups = normalizeSetups((snapshot.setups ?? []) as Setup[]);
   return { snapshot, items, setups };
 }
 
@@ -171,7 +191,7 @@ export async function getSnapshotWithItems(snapshotId: string): Promise<Percepti
   const snapshot = await getSnapshotById(snapshotId);
   if (!snapshot) return undefined;
   const items = await loadSnapshotItems(snapshotId);
-  const setups = (snapshot.setups ?? []) as Setup[];
+  const setups = normalizeSetups((snapshot.setups ?? []) as Setup[]);
   return { snapshot, items, setups };
 }
 
@@ -197,6 +217,6 @@ export async function getPreviousSnapshotWithItems(
     return undefined;
   }
   const items = await loadSnapshotItems(snapshot.id);
-  const setups = (snapshot.setups ?? []) as Setup[];
+  const setups = normalizeSetups((snapshot.setups ?? []) as Setup[]);
   return { snapshot, items, setups };
 }

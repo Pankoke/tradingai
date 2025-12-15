@@ -6,25 +6,161 @@ import { createPerceptionDataSource } from "@/src/lib/engine/perceptionDataSourc
 import { computeSetupBalanceScore, computeSetupConfidence, computeSetupScore } from "@/src/lib/engine/scoring";
 import { perceptionSnapshotSchema, type AccessLevel, type PerceptionSnapshot, type Setup } from "@/src/lib/engine/types";
 import type { BiasSnapshot } from "@/src/lib/engine/eventsBiasTypes";
-import { computeRingsForSetup } from "@/src/lib/engine/rings";
+import { computeRingsForSetup, createDefaultRings } from "@/src/lib/engine/rings";
 import { buildRingAiSummaryForSetup } from "@/src/lib/engine/modules/ringAiSummary";
+import type { RingMeta, SetupRingMeta } from "@/src/lib/engine/types";
+import { getPerceptionDataMode } from "@/src/lib/config/perceptionDataMode";
 
 const ENGINE_VERSION = "0.1.0";
 const dataSource = createPerceptionDataSource();
 
-const defaultRings = {
-  trendScore: 50,
-  eventScore: 50,
-  biasScore: 50,
-  sentimentScore: 50,
-  orderflowScore: 50,
-  confidenceScore: 50,
-  event: 50,
-  bias: 50,
-  sentiment: 50,
-  orderflow: 50,
-  confidence: 50,
-};
+const defaultRings = createDefaultRings();
+
+const QUALITY_NOTES = {
+  noEvents: "no_events",
+  mockMode: "mock_mode",
+  noBias: "no_bias_snapshot",
+  hashFallback: "hash_fallback",
+  noIntraday: "no_intraday_candles",
+  staleSignal: "stale_signal",
+  noMarketData: "no_market_data",
+  aggregate: "meta_aggregate",
+} as const;
+
+function clampRingScore(value?: number | null, fallback = 50): number {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return fallback;
+  }
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function mergeMetaNotes(existing?: string[], additions?: string[]): string[] | undefined {
+  if (!existing && !additions) return undefined;
+  const values = [...(existing ?? []), ...(additions ?? [])].filter(Boolean);
+  return Array.from(new Set(values));
+}
+
+function buildTrendMeta(setup: Setup): RingMeta {
+  const notes: string[] = [];
+  const validity = setup.validity;
+  const reasonText = validity?.reasons ?? [];
+  if (reasonText.some((reason) => reason.toLowerCase().includes("no market data"))) {
+    notes.push(QUALITY_NOTES.noMarketData);
+  }
+  if (validity?.isStale) {
+    notes.push(QUALITY_NOTES.staleSignal);
+  }
+  return {
+    quality: notes.includes(QUALITY_NOTES.noMarketData)
+      ? "fallback"
+      : validity?.isStale
+        ? "stale"
+        : "live",
+    timeframe: "daily",
+    asOf: validity?.evaluatedAt,
+    notes: notes.length ? notes : undefined,
+  };
+}
+
+function buildEventMeta(eventContext: Setup["eventContext"] | undefined, dataMode: "live" | "mock"): RingMeta {
+  const hasEvents = Boolean(eventContext?.topEvents?.length);
+  const notes: string[] = [];
+  if (!hasEvents) {
+    notes.push(QUALITY_NOTES.noEvents);
+  }
+  if (dataMode === "mock") {
+    notes.push(QUALITY_NOTES.mockMode);
+  }
+  return {
+    quality: hasEvents ? "live" : "fallback",
+    timeframe: "intraday",
+    notes: notes.length ? notes : undefined,
+  };
+}
+
+function buildBiasMeta(meta?: { quality: RingMeta["quality"]; asOf?: string; timeframe?: RingMeta["timeframe"]; notes?: string[] }): RingMeta {
+  if (!meta) {
+    return {
+      quality: "fallback",
+      timeframe: "unknown",
+      notes: [QUALITY_NOTES.noBias],
+    };
+  }
+  return {
+    quality: meta.quality,
+    timeframe: meta.timeframe ?? "unknown",
+    asOf: meta.asOf,
+    notes: meta.notes,
+  };
+}
+
+function buildSentimentMeta(base: Setup, sentimentProvided: boolean): RingMeta {
+  if (!sentimentProvided) {
+    return {
+      quality: "heuristic",
+      timeframe: "unknown",
+      notes: [QUALITY_NOTES.hashFallback],
+    };
+  }
+  return {
+    quality: "live",
+    timeframe: "daily",
+    asOf: base.sentiment?.raw?.timestamp ?? base.snapshotCreatedAt ?? undefined,
+    notes: base.sentiment?.raw?.source ? [base.sentiment.raw.source] : undefined,
+  };
+}
+
+function buildOrderflowMeta(base: Setup): RingMeta {
+  if (!base.orderflow) {
+    return {
+      quality: "fallback",
+      timeframe: "intraday",
+      notes: [QUALITY_NOTES.noIntraday],
+    };
+  }
+  const hasNoData = base.orderflow.reasons?.some((reason) =>
+    reason.toLowerCase().includes("insufficient intraday data"),
+  );
+  const notes = hasNoData ? [QUALITY_NOTES.noIntraday] : undefined;
+  return {
+    quality: hasNoData ? "fallback" : "derived",
+    timeframe: "intraday",
+    notes,
+  };
+}
+
+function buildConfidenceMeta(meta: SetupRingMeta): RingMeta {
+  const note = QUALITY_NOTES.aggregate;
+  const mergedNotes = mergeMetaNotes([note], mergeMetaNotes(meta.event.notes, meta.bias.notes));
+  return {
+    quality: "derived",
+    timeframe: "unknown",
+    notes: mergedNotes,
+  };
+}
+
+function createRingMetaOverrides(params: {
+  setup: Setup;
+  eventContext?: Setup["eventContext"];
+  biasMeta?: { quality: RingMeta["quality"]; asOf?: string; timeframe?: RingMeta["timeframe"]; notes?: string[] };
+  sentimentProvided: boolean;
+  dataMode: "live" | "mock";
+}): SetupRingMeta {
+  const overrides: SetupRingMeta = {
+    trend: buildTrendMeta(params.setup),
+    event: buildEventMeta(params.eventContext, params.dataMode),
+    bias: buildBiasMeta(params.biasMeta),
+    sentiment: buildSentimentMeta(params.setup, params.sentimentProvided),
+    orderflow: buildOrderflowMeta(params.setup),
+    confidence: {
+      quality: "derived",
+      timeframe: "unknown",
+      notes: [QUALITY_NOTES.aggregate],
+    },
+  };
+  overrides.confidence = buildConfidenceMeta(overrides);
+  return overrides;
+}
 
 export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promise<PerceptionSnapshot> {
   const asOf = options?.asOf ?? new Date();
@@ -49,6 +185,7 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
     date: asOf,
   });
 
+  const dataMode = getPerceptionDataMode();
   const enriched: Setup[] = setups.map((item) => {
     const base: Setup = {
       ...item,
@@ -62,6 +199,7 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
     const biasResult = applyBiasScoring(base, biasSnapshot);
     const sentimentResult = applySentimentScoring(base);
     const sentimentScore = base.sentiment?.score ?? sentimentResult.sentimentScore;
+    const hasSentimentProvider = Boolean(base.sentiment);
     const sentimentDetail =
       base.sentiment ?? {
         score: sentimentScore,
@@ -75,8 +213,16 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
       volatility: Math.abs(eventResult.eventScore - biasResult.biasScore),
       pattern: base.balanceScore,
     });
-    const effectiveOrderflowScore =
-      typeof base.orderflow?.score === "number" ? base.orderflow.score : base.balanceScore ?? 50;
+    const effectiveOrderflowScore = clampRingScore(
+      typeof base.orderflow?.score === "number" ? base.orderflow.score : base.balanceScore ?? 50,
+    );
+    const ringMetaOverrides = createRingMetaOverrides({
+      setup: base,
+      eventContext: eventResult.context,
+      biasMeta: biasResult.meta,
+      sentimentProvided: hasSentimentProvider,
+      dataMode,
+    });
     const rings = computeRingsForSetup({
       breakdown: scoreBreakdown,
       biasScore: biasResult.biasScore,
@@ -89,6 +235,9 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
       symbol: base.symbol,
       timeframe: base.timeframe,
       setupId: base.id,
+      ringMeta: ringMetaOverrides,
+      eventContext: eventResult.context,
+      dataMode,
     });
     const confidence = computeSetupConfidence({
       setupId: base.id,
@@ -122,6 +271,13 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
       },
     });
 
+    const sanitizedOrderflow = base.orderflow
+      ? {
+          ...base.orderflow,
+          score: effectiveOrderflowScore,
+        }
+      : undefined;
+
     return {
         ...base,
         eventScore: eventResult.eventScore,
@@ -134,6 +290,7 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
         sentiment: sentimentDetail,
         eventContext: eventResult.context,
         ringAiSummary,
+        orderflow: sanitizedOrderflow,
       };
     });
 

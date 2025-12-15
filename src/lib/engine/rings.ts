@@ -1,4 +1,8 @@
 import { clamp } from "@/src/lib/math";
+import type { RingMeta, SetupRingMeta } from "@/src/lib/engine/types";
+
+const RING_NAMES = ["trend", "event", "bias", "sentiment", "orderflow", "confidence"] as const;
+type RingName = (typeof RING_NAMES)[number];
 
 export type SetupRingScores = {
   trendScore: number;
@@ -17,6 +21,7 @@ export type SetupRings = SetupRingScores & {
   confidence: number;
   orderflowMode?: string | null;
   orderflowFlags?: string[];
+  meta: SetupRingMeta;
 };
 
 type Breakdown = {
@@ -25,6 +30,40 @@ type Breakdown = {
   volatility?: number | null;
   pattern?: number | null;
 };
+
+type RingMetaOverrides = Partial<SetupRingMeta>;
+
+const defaultMeta = (): SetupRingMeta =>
+  RING_NAMES.reduce((acc, key) => {
+    acc[key] = { quality: "unknown", timeframe: "unknown", notes: [] };
+    return acc;
+  }, {} as Record<RingName, RingMeta>);
+
+const mergeNotes = (notes?: string[]): string[] | undefined => {
+  if (!notes || !notes.length) return undefined;
+  return Array.from(new Set(notes.filter(Boolean)));
+};
+
+function createRingMeta(overrides?: Partial<RingMeta>): RingMeta {
+  return {
+    quality: overrides?.quality ?? "unknown",
+    timeframe: overrides?.timeframe ?? "unknown",
+    asOf: overrides?.asOf,
+    notes: mergeNotes(overrides?.notes),
+  };
+}
+
+function mergeRingMeta(overrides?: RingMetaOverrides): SetupRingMeta {
+  const merged = defaultMeta();
+  for (const key of RING_NAMES) {
+    merged[key] = createRingMeta(overrides?.[key]);
+  }
+  return merged;
+}
+
+export function ensureRingMeta(overrides?: Partial<SetupRingMeta>): SetupRingMeta {
+  return mergeRingMeta(overrides);
+}
 
 export type RingSource = {
   breakdown?: Breakdown;
@@ -37,7 +76,6 @@ export type RingSource = {
   orderflowScore?: number | null;
   orderflowMode?: string | null;
   orderflowFlags?: string[] | null;
-  eventContext?: unknown | null;
   confidence?: number | null;
   direction?: "long" | "short" | "neutral" | null;
   trendScore?: number | null;
@@ -45,6 +83,9 @@ export type RingSource = {
   symbol?: string;
   timeframe?: string | null;
   setupId?: string;
+  ringMeta?: RingMetaOverrides;
+  eventContext?: { topEvents?: Array<{ id?: string }> } | null;
+  dataMode?: "live" | "mock";
 };
 
 const clampPercent = (value?: number | null, fallback = 50): number => {
@@ -344,6 +385,24 @@ function resolveTrendScore(source: RingSource): number {
   return clampPercent(source.breakdown?.trend);
 }
 
+function enhanceEventMeta(source: RingSource, meta: SetupRingMeta): SetupRingMeta {
+  const eventMeta = { ...meta.event };
+  if (!meta.event.quality || meta.event.quality === "unknown") {
+    const hasEvents = Boolean(source.eventContext && Array.isArray(source.eventContext.topEvents) && source.eventContext.topEvents.length > 0);
+    eventMeta.quality = hasEvents ? "live" : "fallback";
+    if (!hasEvents) {
+      const existingNotes = eventMeta.notes ?? [];
+      eventMeta.notes = mergeNotes([...existingNotes, "no_events"]);
+    }
+  }
+  if (source.dataMode === "mock") {
+    const existing = eventMeta.notes ?? [];
+    eventMeta.notes = mergeNotes([...existing, "mock_mode"]);
+  }
+  meta.event = eventMeta;
+  return meta;
+}
+
 export function computeRingsFromSource(source: RingSource): SetupRings {
   const trendScore = resolveTrendScore(source);
   const eventScore = resolveEventScore(source);
@@ -351,6 +410,8 @@ export function computeRingsFromSource(source: RingSource): SetupRings {
   const sentimentScore = resolveSentimentScore(source);
   const orderflowScore = resolveOrderflowScore(source);
   const confidenceScore = resolveConfidence(source);
+  let meta = mergeRingMeta(source.ringMeta);
+  meta = enhanceEventMeta(source, meta);
 
   return {
     trendScore,
@@ -366,6 +427,26 @@ export function computeRingsFromSource(source: RingSource): SetupRings {
     confidence: confidenceScore,
     orderflowMode: source.orderflowMode ?? null,
     orderflowFlags: source.orderflowFlags ?? [],
+    meta,
+  };
+}
+
+export function createDefaultRings(): SetupRings {
+  return {
+    trendScore: 50,
+    eventScore: 50,
+    biasScore: 50,
+    sentimentScore: 50,
+    orderflowScore: 50,
+    confidenceScore: 50,
+    event: 50,
+    bias: 50,
+    sentiment: 50,
+    orderflow: 50,
+    confidence: 50,
+    orderflowMode: null,
+    orderflowFlags: [],
+    meta: mergeRingMeta(),
   };
 }
 

@@ -1,4 +1,5 @@
 import type { Setup } from "./engine/types";
+import { createDefaultRings } from "@/src/lib/engine/rings";
 
 const buildMockRings = (scores: {
   trendScore: number;
@@ -8,12 +9,21 @@ const buildMockRings = (scores: {
   orderflowScore: number;
   confidenceScore: number;
 }): Setup["rings"] => ({
+  ...createDefaultRings(),
   ...scores,
   event: scores.eventScore,
   bias: scores.biasScore,
   sentiment: scores.sentimentScore,
   orderflow: scores.orderflowScore,
   confidence: scores.confidenceScore,
+  meta: {
+    trend: { quality: "heuristic", timeframe: "unknown", notes: ["mock_mode"] },
+    event: { quality: "heuristic", timeframe: "unknown", notes: ["mock_mode"] },
+    bias: { quality: "heuristic", timeframe: "unknown", notes: ["mock_mode"] },
+    sentiment: { quality: "heuristic", timeframe: "unknown", notes: ["mock_mode"] },
+    orderflow: { quality: "heuristic", timeframe: "unknown", notes: ["mock_mode"] },
+    confidence: { quality: "derived", timeframe: "unknown", notes: ["mock_mode"] },
+  },
 });
 
 export const mockSetups: Setup[] = [

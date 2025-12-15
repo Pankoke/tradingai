@@ -4,7 +4,15 @@ import type { PerceptionSnapshotWithItems } from "@/src/server/repositories/perc
 
 type RingDeltaKey = "trend" | "event" | "bias" | "sentiment" | "orderflow" | "confidence";
 
-const RING_KEYS: Array<{ key: RingDeltaKey; ringKey: keyof Setup["rings"] }> = [
+type SetupRingScoreKey =
+  | "trendScore"
+  | "eventScore"
+  | "biasScore"
+  | "sentimentScore"
+  | "orderflowScore"
+  | "confidenceScore";
+
+const RING_KEYS: Array<{ key: RingDeltaKey; ringKey: SetupRingScoreKey }> = [
   { key: "trend", ringKey: "trendScore" },
   { key: "event", ringKey: "eventScore" },
   { key: "bias", ringKey: "biasScore" },

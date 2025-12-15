@@ -11,6 +11,30 @@ export type AccessLevel = z.infer<typeof accessLevelSchema>;
 
 const ringPercentSchema = z.number().min(0).max(100);
 
+export const ringQualityEnum = z.enum(["live", "derived", "fallback", "heuristic", "stale", "unknown"]);
+export type RingQuality = z.infer<typeof ringQualityEnum>;
+
+const ringTimeframeEnum = z.enum(["intraday", "daily", "swing", "unknown"]);
+export type RingTimeframe = z.infer<typeof ringTimeframeEnum>;
+
+export const ringMetaSchema = z.object({
+  quality: ringQualityEnum,
+  timeframe: ringTimeframeEnum.optional(),
+  asOf: z.string().optional(),
+  notes: z.array(z.string()).optional(),
+});
+export type RingMeta = z.infer<typeof ringMetaSchema>;
+
+const ringMetaMapSchema = z.object({
+  trend: ringMetaSchema,
+  event: ringMetaSchema,
+  bias: ringMetaSchema,
+  sentiment: ringMetaSchema,
+  orderflow: ringMetaSchema,
+  confidence: ringMetaSchema,
+});
+export type SetupRingMeta = z.infer<typeof ringMetaMapSchema>;
+
 export const sentimentLabelEnum = z.enum([
   "extreme_bullish",
   "bullish",
@@ -138,6 +162,7 @@ const setupRingsSchema = z.object({
   sentiment: ringPercentSchema,
   orderflow: ringPercentSchema,
   confidence: ringPercentSchema,
+  meta: ringMetaMapSchema,
 });
 
 const sentimentDetailSchema = z.object({

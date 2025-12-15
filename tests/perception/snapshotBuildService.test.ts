@@ -13,32 +13,14 @@ const snapshotStoreMock = vi.hoisted(() => ({
   loadLatestSnapshotFromStore: vi.fn(async () => null as PerceptionSnapshotWithItems | null),
 }));
 
-type ReservedMock = ((...args: unknown[]) => Promise<Array<Record<string, unknown>>>) & {
-  unsafe: (...args: unknown[]) => Promise<Array<Record<string, unknown>>>;
-  release: () => void;
-};
-
-const lockQueryQueue = vi.hoisted(() => [] as Array<Array<Record<string, unknown>>>);
-
-const createReservedMock = (): ReservedMock => {
-  const queryFn = vi.fn(async () => lockQueryQueue.shift() ?? []);
-  const unsafeFn = vi.fn(async () => lockQueryQueue.shift() ?? []);
-  const reserved = queryFn as ReservedMock;
-  reserved.unsafe = unsafeFn;
-  reserved.release = vi.fn(() => undefined);
-  return reserved;
-};
-
-const lockReserveMock = vi.hoisted(() => vi.fn(async () => createReservedMock()));
+const dbExecuteQueue = vi.hoisted(() => [] as Array<Array<Record<string, unknown>>>);
+const dbExecuteMock = vi.hoisted(() => vi.fn(async () => dbExecuteQueue.shift() ?? []));
 
 vi.mock("@/src/features/perception/build/buildSetups", () => buildSetupsMock);
 vi.mock("@/src/features/perception/cache/snapshotStore", () => snapshotStoreMock);
 vi.mock("@/src/server/db/db", () => ({
   db: {
-    execute: vi.fn(),
-  },
-  lockClient: {
-    reserve: lockReserveMock,
+    execute: dbExecuteMock,
   },
 }));
 
@@ -52,8 +34,8 @@ describe("snapshotBuildService", () => {
     buildSetupsMock.buildAndStorePerceptionSnapshot.mockResolvedValue(
       createSnapshot("built-snapshot", "2099-01-02T07:30:00Z"),
     );
-    lockQueryQueue.length = 0;
-    lockReserveMock.mockClear();
+    dbExecuteQueue.length = 0;
+    dbExecuteMock.mockClear();
     await __dangerouslyResetSnapshotBuildStateForTests();
   });
 
@@ -71,7 +53,7 @@ describe("snapshotBuildService", () => {
     expect(result.snapshot).toBe(cachedSnapshot);
     expect(result.reused).toBe(true);
     expect(buildSetupsMock.buildAndStorePerceptionSnapshot).not.toHaveBeenCalled();
-    expect(lockReserveMock).not.toHaveBeenCalled();
+    expect(dbExecuteMock).not.toHaveBeenCalled();
   });
 
   it("builds a snapshot when the cache is empty", async () => {
@@ -84,7 +66,7 @@ describe("snapshotBuildService", () => {
     expect(result.snapshot).toBe(builtSnapshot);
     expect(result.reused).toBe(false);
     expect(buildSetupsMock.buildAndStorePerceptionSnapshot).toHaveBeenCalledWith({ source: "cron" });
-    expect(lockReserveMock).toHaveBeenCalledTimes(1);
+    expect(dbExecuteMock).toHaveBeenCalledTimes(2);
   });
 
   it("forces a rebuild even if a cached snapshot exists", async () => {
@@ -96,7 +78,7 @@ describe("snapshotBuildService", () => {
 
     expect(result.reused).toBe(false);
     expect(buildSetupsMock.buildAndStorePerceptionSnapshot).toHaveBeenCalledTimes(1);
-    expect(lockReserveMock).toHaveBeenCalledTimes(1);
+    expect(dbExecuteMock).toHaveBeenCalledTimes(2);
   });
 
   it("rebuilds when cached snapshot is stale", async () => {
@@ -108,14 +90,14 @@ describe("snapshotBuildService", () => {
 
     expect(result.reused).toBe(false);
     expect(buildSetupsMock.buildAndStorePerceptionSnapshot).toHaveBeenCalledTimes(1);
-    expect(lockReserveMock).toHaveBeenCalledTimes(1);
+    expect(dbExecuteMock).toHaveBeenCalledTimes(2);
     expect(result.snapshot.snapshot.id).toBe("built-snapshot");
   });
 });
 
 function mockSuccessfulLockCycle() {
-  lockQueryQueue.push([{ locked: true }]);
-  lockQueryQueue.push([{ released: true }]);
+  dbExecuteQueue.push([{ locked: true }]);
+  dbExecuteQueue.push([{ released: true }]);
 }
 
 function createSnapshot(id: string, isoTime: string): PerceptionSnapshotWithItems {

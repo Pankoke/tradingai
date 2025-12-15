@@ -4,16 +4,10 @@ import { useState, type JSX } from "react";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import { cn } from "@/lib/utils";
 import type { RingAiSummary, Setup } from "@/src/lib/engine/types";
+import { summarizeRingMeta } from "@/src/components/perception/RingGauges";
 
 type RingInsightsProps = {
-  rings: {
-    trendScore: number;
-    eventScore: number;
-    biasScore: number;
-    sentimentScore: number;
-    orderflowScore: number;
-    confidenceScore?: number;
-  };
+  rings: Setup["rings"];
   assetLabel?: string | null;
   timeframe?: string | null;
   direction?: "Long" | "Short" | "Neutral" | null;
@@ -41,6 +35,13 @@ function eventBucketFromScore(score: number): Bucket {
   if (score >= 40) return "medium";
   return "low";
 }
+
+const metaBadgeTone = {
+  accent: "border-sky-400/60 bg-sky-500/10 text-sky-200",
+  green: "border-emerald-400/60 bg-emerald-500/10 text-emerald-200",
+  teal: "border-teal-400/60 bg-teal-500/10 text-teal-100",
+  neutral: "border-slate-600 bg-slate-800 text-slate-300",
+};
 
 function formatInsightText(
   translate: (key: string) => string,
@@ -142,26 +143,31 @@ export function RingInsights({
       key: "trend",
       score: rings.trendScore,
       bucket: bucketFromScore(rings.trendScore),
+      meta: rings.meta.trend,
     },
     {
       key: "event",
       score: rings.eventScore,
       bucket: eventBucketFromScore(rings.eventScore),
+      meta: rings.meta.event,
     },
     {
       key: "bias",
       score: rings.biasScore,
       bucket: bucketFromScore(rings.biasScore),
+      meta: rings.meta.bias,
     },
     {
       key: "sentiment",
       score: rings.sentimentScore,
       bucket: bucketFromScore(rings.sentimentScore),
+      meta: rings.meta.sentiment,
     },
     {
       key: "orderflow",
       score: rings.orderflowScore,
       bucket: bucketFromScore(rings.orderflowScore),
+      meta: rings.meta.orderflow,
     },
   ] as const;
 
@@ -202,6 +208,7 @@ export function RingInsights({
         {items.map((item) => {
           const label = t(`perception.rings.title.${item.key}`);
           const score = Math.round(item.score);
+          const metaSummary = summarizeRingMeta(item.meta);
           const description =
             item.key === "event" && topEvent
               ? formatInsightText(t, "perception.rings.insights.event.context", {
@@ -221,12 +228,27 @@ export function RingInsights({
           return (
             <div key={item.key} className="space-y-2 rounded-lg border border-slate-800 bg-slate-900/60 p-3 shadow-inner">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</span>
+                  {metaSummary ? (
+                    <span
+                      className={cn(
+                        "rounded-full px-2 py-0.5 text-[0.6rem] font-semibold uppercase",
+                        metaBadgeTone[metaSummary.tone],
+                      )}
+                    >
+                      {metaSummary.label}
+                    </span>
+                  ) : null}
+                </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold text-slate-200">{score}%</span>
                   <span className={cardBadge(item.bucket)}>{t(`perception.rings.bucket.${item.bucket}`)}</span>
                 </div>
               </div>
+              {metaSummary?.lines?.length ? (
+                <p className="text-[0.6rem] text-slate-400">{metaSummary.lines.join(" · ")}</p>
+              ) : null}
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
                 <div className={heatBar(item.bucket)} style={{ width: `${score}%` }} />
               </div>

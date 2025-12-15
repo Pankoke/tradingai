@@ -31,6 +31,7 @@ import {
   type ConfidenceAdjustmentResult,
 } from "@/src/lib/engine/sentimentAdjustments";
 import { deriveBaseConfidenceScore } from "@/src/lib/engine/confidence";
+import { createDefaultRings } from "@/src/lib/engine/rings";
 import { applyOrderflowConfidenceAdjustment } from "@/src/lib/engine/orderflowAdjustments";
 
 export interface PerceptionDataSource {
@@ -105,22 +106,6 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     balanced: "balanced",
   };
 
-  private createDefaultRings(): Setup["rings"] {
-    return {
-      trendScore: 50,
-      eventScore: 50,
-      biasScore: 50,
-      sentimentScore: 50,
-      orderflowScore: 50,
-      confidenceScore: 50,
-      event: 50,
-      bias: 50,
-      sentiment: 50,
-      orderflow: 50,
-      confidence: 50,
-    };
-  }
-
   async getSetupsForToday(): Promise<Setup[]> {
     const assets = await getActiveAssets();
     const evaluationDate = new Date();
@@ -193,7 +178,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
         const orderflowConfidenceDelta = orderflowAdjustment.delta;
 
         const rings = {
-          ...this.createDefaultRings(),
+          ...createDefaultRings(),
           trendScore: metrics.trendScore,
           orderflowScore: orderflow.flowScore,
           sentimentScore: sentiment.score,
@@ -489,5 +474,4 @@ export function createPerceptionDataSource(): PerceptionDataSource {
 
   return new MockPerceptionDataSource();
 }
-
 

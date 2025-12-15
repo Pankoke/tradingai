@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { JSX } from "react";
+import type { Setup } from "@/src/lib/engine/types";
 
 type LevelDebugBlockProps = {
   category?: string | null;
@@ -12,7 +13,7 @@ type LevelDebugBlockProps = {
   stopLoss?: string | null;
   takeProfit?: string | null;
   scoreVolatility?: number | null;
-  rings?: Record<string, number>;
+  rings?: Setup["rings"];
   snapshotId?: string | null;
   snapshotCreatedAt?: string | null;
   eventContext?: {

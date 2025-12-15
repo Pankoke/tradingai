@@ -78,30 +78,35 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
   const smallRingDefinitions = [
     {
       key: "trendScore" as const,
+      metaKey: "trend" as const,
       label: t("perception.today.scoreTrend"),
       tone: "teal" as const,
       tooltip: t("perception.rings.tooltip.trend"),
     },
     {
       key: "eventScore" as const,
+      metaKey: "event" as const,
       label: t("perception.today.eventRing"),
       tone: "accent" as const,
       tooltip: buildEventTooltip(t("perception.rings.tooltip.event"), setup.eventContext, t),
     },
     {
       key: "biasScore" as const,
+      metaKey: "bias" as const,
       label: t("perception.today.biasRing"),
       tone: "green" as const,
       tooltip: t("perception.rings.tooltip.bias"),
     },
     {
       key: "sentimentScore" as const,
+      metaKey: "sentiment" as const,
       label: t("perception.today.sentimentRing"),
       tone: "teal" as const,
       tooltip: t("perception.rings.tooltip.sentiment"),
     },
     {
       key: "orderflowScore" as const,
+      metaKey: "orderflow" as const,
       label: t("perception.today.orderflowRing"),
       tone: "accent" as const,
       tooltip: t("perception.rings.tooltip.orderflow"),
@@ -142,6 +147,7 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
           value={confidenceValue}
           label={labels.confidence}
           tooltip={t("perception.rings.tooltip.confidence")}
+          meta={rings.meta.confidence}
         />
       </div>
       <div className="mt-3">
@@ -156,6 +162,7 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
             value={rings[ring.key]}
             tone={ring.tone}
             tooltip={ring.tooltip}
+            meta={rings.meta[ring.metaKey]}
           />
         ))}
       </div>

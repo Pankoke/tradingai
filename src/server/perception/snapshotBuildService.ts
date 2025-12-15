@@ -1,9 +1,8 @@
 import { sql } from "drizzle-orm";
-import type { ReservedSql } from "postgres";
 import { buildAndStorePerceptionSnapshot, type SnapshotBuildSource } from "@/src/features/perception/build/buildSetups";
 import { loadLatestSnapshotFromStore } from "@/src/features/perception/cache/snapshotStore";
 import type { PerceptionSnapshotWithItems } from "@/src/server/repositories/perceptionSnapshotRepository";
-import { db, lockClient } from "@/src/server/db/db";
+import { db } from "@/src/server/db/db";
 import { logger } from "@/src/lib/logger";
 import { toErrorMessage } from "@/src/lib/utils";
 
@@ -24,9 +23,9 @@ type BuildRunState = {
 };
 
 let currentLock: LockState | null = null;
-let hasDbLock = false;
-let lockConnection: ReservedSql | null = null;
 let lastRunState: BuildRunState = { status: "idle" };
+let inProcessLock = false;
+let lockSessionPid: number | null = null;
 
 export class SnapshotBuildInProgressError extends Error {
   constructor(public readonly source: SnapshotBuildSource | "unknown", message = "Snapshot build already running") {
@@ -46,46 +45,45 @@ function isSnapshotFromToday(snapshotTime: Date | string): boolean {
 }
 
 async function acquireLock(source: SnapshotBuildSource) {
-  if (hasDbLock) {
+  if (inProcessLock) {
     throw new SnapshotBuildInProgressError(currentLock?.source ?? "unknown");
   }
-  const reserved = await lockClient.reserve();
-  try {
-    const result = await reserved.unsafe<Array<{ locked: boolean }>>(
-      "select pg_try_advisory_lock($1) as locked",
-      [Number(SNAPSHOT_LOCK_KEY)],
-    );
-    const locked = Boolean(result[0]?.locked);
-    if (!locked) {
-      await reserved.release();
-      throw new SnapshotBuildInProgressError(currentLock?.source ?? "unknown");
-    }
-    lockConnection = reserved;
-    hasDbLock = true;
-    currentLock = { source, startedAt: new Date() };
-  } catch (error) {
-    try {
-      reserved.release();
-    } catch {
-      // ignore
-    }
-    throw error;
+  const result = await db.execute<{ locked: boolean; pid: number }>(
+    sql`select pg_try_advisory_lock(${SNAPSHOT_LOCK_KEY}) as locked, pg_backend_pid() as pid`,
+  );
+  const locked = Boolean(result[0]?.locked);
+  if (!locked) {
+    throw new SnapshotBuildInProgressError(currentLock?.source ?? "unknown");
   }
+  inProcessLock = true;
+  lockSessionPid = typeof result[0]?.pid === "number" ? result[0]?.pid : Number(result[0]?.pid ?? null) || null;
+  currentLock = { source, startedAt: new Date() };
 }
 
 async function releaseLock() {
   const previousLock = currentLock;
   currentLock = null;
-  const reserved = lockConnection;
-  lockConnection = null;
-  if (!hasDbLock || !reserved) {
+  if (!inProcessLock) {
     return;
   }
-  hasDbLock = false;
+  inProcessLock = false;
+  const expectedPid = lockSessionPid;
+  lockSessionPid = null;
   try {
-    const result = await reserved.unsafe<Array<{ released: boolean }>>(
-      "select pg_advisory_unlock($1) as released",
-      [Number(SNAPSHOT_LOCK_KEY)],
+    if (expectedPid != null) {
+      const pidResult = await db.execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
+      const currentPid = typeof pidResult[0]?.pid === "number" ? pidResult[0]?.pid : Number(pidResult[0]?.pid ?? null);
+      if (currentPid && currentPid !== expectedPid) {
+        logger.warn("Skipping advisory unlock because session changed", {
+          expectedPid,
+          currentPid,
+          source: previousLock?.source,
+        });
+        return;
+      }
+    }
+    const result = await db.execute<{ released: boolean }>(
+      sql`select pg_advisory_unlock(${SNAPSHOT_LOCK_KEY}) as released`,
     );
     const released = Boolean(result[0]?.released);
     if (!released) {
@@ -93,12 +91,6 @@ async function releaseLock() {
     }
   } catch (error) {
     logger.warn("Failed to release snapshot build lock", { error: toErrorMessage(error) });
-  } finally {
-    try {
-      reserved.release();
-    } catch (releaseError) {
-      logger.warn("Failed to release lock connection", { error: toErrorMessage(releaseError) });
-    }
   }
 }
 
@@ -112,14 +104,16 @@ async function isLockedInAnotherProcess(): Promise<boolean> {
   }
   try {
     const result = await db.execute<{ locked: boolean }>(
-      sql`select pg_try_advisory_lock(${SNAPSHOT_LOCK_KEY}) as locked`,
+      sql`
+        with attempt as (
+          select pg_try_advisory_lock(${SNAPSHOT_LOCK_KEY}) as locked
+        )
+        select locked, case when locked then pg_advisory_unlock(${SNAPSHOT_LOCK_KEY}) else false end as released
+        from attempt
+      `,
     );
     const acquired = Boolean(result[0]?.locked);
-    if (acquired) {
-      await db.execute(sql`select pg_advisory_unlock(${SNAPSHOT_LOCK_KEY})`);
-      return false;
-    }
-    return true;
+    return !acquired;
   } catch (error) {
     logger.warn("Failed to read snapshot lock status", { error: toErrorMessage(error) });
     return false;
@@ -208,6 +202,6 @@ export async function __dangerouslyResetSnapshotBuildStateForTests(): Promise<vo
   if (currentLock) {
     await releaseLock();
   }
-  hasDbLock = false;
+  inProcessLock = false;
   lastRunState = { status: "idle" };
 }

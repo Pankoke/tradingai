@@ -90,6 +90,22 @@ type OpsMessages = {
     hideDetails: string;
     refresh?: string;
   };
+  eventsIngestion: {
+    title: string;
+    description: string;
+    button: string;
+    selectLabel: string;
+    selectOptions: Record<string, string>;
+    lastRunLabel: string;
+    noRuns: string;
+    statusSuccess: string;
+    statusFailed: string;
+    countsLabel: string;
+    windowLabel: string;
+    runAtLabel: string;
+    errorLabel: string;
+    resultLabel: string;
+  };
 };
 
 type Props = {

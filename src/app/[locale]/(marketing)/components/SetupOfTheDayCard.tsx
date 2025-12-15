@@ -79,6 +79,7 @@ function SetupOfTheDayCardInner({ setup }: SetupOfTheDayCardProps): JSX.Element 
       value: rings.trendScore,
       tone: "teal" as const,
       tooltip: t("perception.rings.tooltip.trend"),
+      meta: rings.meta.trend,
     },
     {
       id: "event" as RingTabId,
@@ -86,6 +87,7 @@ function SetupOfTheDayCardInner({ setup }: SetupOfTheDayCardProps): JSX.Element 
       value: rings.eventScore,
       tone: "accent" as const,
       tooltip: buildEventTooltip(t("perception.rings.tooltip.event"), setup.eventContext, t),
+      meta: rings.meta.event,
     },
     {
       id: "bias" as RingTabId,
@@ -93,6 +95,7 @@ function SetupOfTheDayCardInner({ setup }: SetupOfTheDayCardProps): JSX.Element 
       value: rings.biasScore,
       tone: "green" as const,
       tooltip: t("perception.rings.tooltip.bias"),
+      meta: rings.meta.bias,
     },
     {
       id: "sentiment" as RingTabId,
@@ -100,6 +103,7 @@ function SetupOfTheDayCardInner({ setup }: SetupOfTheDayCardProps): JSX.Element 
       value: rings.sentimentScore,
       tone: "teal" as const,
       tooltip: t("perception.rings.tooltip.sentiment"),
+      meta: rings.meta.sentiment,
     },
     {
       id: "orderflow" as RingTabId,
@@ -107,6 +111,7 @@ function SetupOfTheDayCardInner({ setup }: SetupOfTheDayCardProps): JSX.Element 
       value: rings.orderflowScore,
       tone: "accent" as const,
       tooltip: t("perception.rings.tooltip.orderflow"),
+      meta: rings.meta.orderflow,
     },
   ];
 
@@ -175,7 +180,12 @@ function SetupOfTheDayCardInner({ setup }: SetupOfTheDayCardProps): JSX.Element 
               </p>
               <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center">
                 <div className="scale-90 sm:scale-100">
-                  <BigGauge value={rings.confidenceScore} label={t("perception.today.confidenceRing")} tooltip={t("perception.rings.tooltip.confidence")} />
+                  <BigGauge
+                    value={rings.confidenceScore}
+                    label={t("perception.today.confidenceRing")}
+                    tooltip={t("perception.rings.tooltip.confidence")}
+                    meta={rings.meta.confidence}
+                  />
                 </div>
                 <p className="text-xs text-slate-400 sm:max-w-xs">{t("perception.confidence.description")}</p>
               </div>
@@ -194,6 +204,7 @@ function SetupOfTheDayCardInner({ setup }: SetupOfTheDayCardProps): JSX.Element 
                 tooltip={ring.tooltip}
                 isActive={activeRing === ring.id}
                 onClick={() => setActiveRing(ring.id)}
+                meta={ring.meta}
               />
             ))}
           </div>

@@ -132,6 +132,9 @@ export async function buildMarketMetrics(params: {
     : 0;
 
   const reasons: string[] = [];
+  if (!dailyCandles.length && !fourHour.length && !oneHour.length) {
+    reasons.push("No market data for trend");
+  }
   if (dailyCandles.length && !isFresh(dailyCandles[0].timestamp, 2 * 24 * 60 * 60 * 1000)) {
     reasons.push("Daily candle outdated");
   }
