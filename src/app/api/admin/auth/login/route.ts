@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createAdminSessionCookie, verifyAdminPassword } from "@/src/lib/admin/auth";
+import { AdminAuthConfigError, createAdminSessionCookie, verifyAdminPassword } from "@/src/lib/admin/auth";
 import {
   canAttemptAdminLogin,
   clearAdminLoginAttempts,
@@ -59,8 +59,15 @@ export async function POST(request: NextRequest) {
   }
 
   clearAdminLoginAttempts(identifier);
-  const cookie = createAdminSessionCookie();
-  const response = NextResponse.json({ ok: true });
-  response.cookies.set(cookie.name, cookie.value, cookie.options);
-  return response;
+  try {
+    const cookie = createAdminSessionCookie();
+    const response = NextResponse.json({ ok: true });
+    response.cookies.set(cookie.name, cookie.value, cookie.options);
+    return response;
+  } catch (error) {
+    if (error instanceof AdminAuthConfigError) {
+      return NextResponse.json({ error: "Admin authentication unavailable" }, { status: 503 });
+    }
+    throw error;
+  }
 }

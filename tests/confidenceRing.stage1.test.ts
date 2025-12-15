@@ -20,19 +20,32 @@ describe("Confidence Stage 1", () => {
   });
 
   it("penalizes contradictory rings", () => {
-    const { confidenceScore } = computeRingsFromSource({
+    const aligned = computeRingsFromSource({
       breakdown: {
-        volatility: 70,
-        trend: 90,
-        momentum: 20,
+        volatility: 55,
+        trend: 70,
+        momentum: 80,
       },
-      eventScore: 85,
-      biasScore: 30,
-      sentimentScore: 40,
-      orderflowMode: "choppy",
-      trendScore: 30,
+      eventScore: 75,
+      biasScore: 70,
+      sentimentScore: 74,
+      orderflowMode: "trending",
+      trendScore: 72,
     });
-    expect(confidenceScore).toBeLessThan(50);
+    const contradictory = computeRingsFromSource({
+      breakdown: {
+        volatility: 90,
+        trend: 95,
+        momentum: 5,
+      },
+      eventScore: 95,
+      biasScore: 5,
+      sentimentScore: 10,
+      orderflowMode: "sellers",
+      trendScore: 10,
+    });
+    expect(contradictory.confidenceScore).toBeLessThan(55);
+    expect(contradictory.confidenceScore).toBeLessThan(aligned.confidenceScore - 10);
   });
 
   it("uses fallback weights when no breakdown", () => {

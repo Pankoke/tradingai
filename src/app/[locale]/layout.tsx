@@ -3,8 +3,14 @@ import { notFound } from "next/navigation";
 import { Header } from "../../components/Header";
 import { Footer } from "../../components/Footer";
 import { ClientI18nProvider } from "../../lib/i18n/ClientProvider";
-import { i18nConfig, type Locale } from "../../lib/i18n/config";
 import { ClerkRootProvider } from "@/src/components/layout/ClerkRootProvider";
+import {
+  getSupportedLocales,
+  isSupportedLocale,
+  loadLocaleMessages,
+  resolveLocale,
+  type Locale,
+} from "@/src/lib/intl";
 
 type LocaleLayoutProps = {
   children: ReactNode;
@@ -12,18 +18,17 @@ type LocaleLayoutProps = {
 };
 
 export function generateStaticParams(): Array<{ locale: Locale }> {
-  return i18nConfig.locales.map((locale) => ({ locale }));
+  return getSupportedLocales().map((locale) => ({ locale }));
 }
 
 export default async function LocaleLayout({ children, params }: LocaleLayoutProps) {
   const { locale: localeParam } = await params;
-  const locale = localeParam as Locale;
-
-  if (!i18nConfig.locales.includes(locale)) {
+  if (!localeParam || !isSupportedLocale(localeParam)) {
     notFound();
   }
+  const locale = resolveLocale(localeParam);
 
-  const messages = (await import(`../../messages/${locale}.json`)).default as Record<string, string>;
+  const messages = await loadLocaleMessages(locale);
 
   return (
     <ClientI18nProvider messages={messages}>

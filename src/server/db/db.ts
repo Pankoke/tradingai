@@ -7,6 +7,8 @@ if (!databaseUrl) {
   throw new Error("DATABASE_URL is not set");
 }
 
-const client = postgres(databaseUrl, { max: 1 });
+const primaryClient = postgres(databaseUrl, { max: 1 });
+const lockClient = postgres(databaseUrl, { max: 1 });
 
-export const db = drizzle(client);
+export const db = drizzle(primaryClient);
+export { lockClient };

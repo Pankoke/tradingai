@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-import { setPerceptionSnapshot } from "@/src/lib/cache/perceptionCache";
-import { addPerceptionHistoryEntry } from "@/src/lib/cache/perceptionHistory";
 import type { PerceptionSnapshot, Setup } from "@/src/lib/engine/types";
 import { requestSnapshotBuild } from "@/src/server/perception/snapshotBuildService";
 import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
@@ -33,9 +31,6 @@ export async function GET(): Promise<NextResponse<CronSuccessBody | CronErrorBod
       universe: setups.map((setup) => setup.symbol).filter(Boolean),
       setupOfTheDayId: setups[0]?.id ?? snapshotRecord.id,
     };
-    addPerceptionHistoryEntry({ snapshot, events: [], biasSnapshot: null });
-    setPerceptionSnapshot(snapshot);
-
     const body: CronSuccessBody = {
       ok: true,
       generatedAt: snapshot.generatedAt,

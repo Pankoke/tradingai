@@ -28,6 +28,7 @@ type ActionResult = {
     startedAt?: string;
     expiresAt?: string;
     remainingMs?: number;
+    state?: BuildStatusState;
   };
 };
 
@@ -137,12 +138,22 @@ type LatestSnapshotInfo = {
   source: SnapshotSourceLabel;
 } | null;
 
-type LockStatusState = {
+export type BuildStatusState = {
+  status: "idle" | "running" | "succeeded" | "failed";
+  source?: SnapshotSourceLabel;
+  startedAt?: string;
+  finishedAt?: string;
+  error?: string | null;
+  reused?: boolean;
+};
+
+export type LockStatusState = {
   locked: boolean;
   source?: SnapshotSourceLabel;
   startedAt?: string;
   expiresAt?: string;
   remainingMs?: number;
+  state?: BuildStatusState;
 };
 
 export function OpsActionsPanel({
@@ -231,6 +242,12 @@ export function OpsActionsPanel({
             startedAt: data.lockStatus.startedAt,
             expiresAt: data.lockStatus.expiresAt,
             remainingMs: data.lockStatus.remainingMs,
+            state: data.lockStatus.state
+              ? {
+                  ...data.lockStatus.state,
+                  source: data.lockStatus.state.source as SnapshotSourceLabel | undefined,
+                }
+              : undefined,
           });
         }
       }
@@ -276,6 +293,12 @@ export function OpsActionsPanel({
               startedAt: data.lockStatus.startedAt,
               expiresAt: data.lockStatus.expiresAt,
               remainingMs: data.lockStatus.remainingMs,
+              state: data.lockStatus.state
+                ? {
+                    ...data.lockStatus.state,
+                    source: data.lockStatus.state.source as SnapshotSourceLabel | undefined,
+                  }
+                : undefined,
             });
           }
           return;
@@ -301,6 +324,12 @@ export function OpsActionsPanel({
               startedAt: data.lockStatus.startedAt,
               expiresAt: data.lockStatus.expiresAt,
               remainingMs: data.lockStatus.remainingMs,
+              state: data.lockStatus.state
+                ? {
+                    ...data.lockStatus.state,
+                    source: data.lockStatus.state.source as SnapshotSourceLabel | undefined,
+                  }
+                : undefined,
             });
           }
           await refreshStatus();

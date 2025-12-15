@@ -7,10 +7,8 @@ import type {
   PerceptionSnapshotInput,
   PerceptionSnapshotWithItems,
 } from "@/src/server/repositories/perceptionSnapshotRepository";
-import {
-  getSnapshotByTime,
-  insertSnapshotWithItems,
-} from "@/src/server/repositories/perceptionSnapshotRepository";
+import { getSnapshotByTime } from "@/src/server/repositories/perceptionSnapshotRepository";
+import { saveSnapshotToStore } from "@/src/features/perception/cache/snapshotStore";
 import { getActiveAssets } from "@/src/server/repositories/assetRepository";
 import { computeRingsForSetup } from "@/src/lib/engine/rings";
 import {
@@ -211,7 +209,7 @@ export async function buildAndStorePerceptionSnapshot(
     setups: setupsWithMetadata,
   };
 
-  await insertSnapshotWithItems({ snapshot, items });
+  await saveSnapshotToStore({ snapshot, items });
 
   const persisted = await getSnapshotByTime({ snapshotTime });
   if (!persisted) {

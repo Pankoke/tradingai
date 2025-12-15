@@ -1,52 +1,35 @@
-import type { PerceptionSnapshot } from "@/src/lib/engine/types";
 import type { Event, BiasSnapshot } from "@/src/lib/engine/eventsBiasTypes";
+import type { PerceptionSnapshot as EngineSnapshot, Setup } from "@/src/lib/engine/types";
+import { listSnapshotsFromStore } from "@/src/features/perception/cache/snapshotStore";
 
 export type PerceptionHistoryEntry = {
   id: string;
   createdAt: string;
-  snapshot: PerceptionSnapshot;
+  snapshot: EngineSnapshot;
   events: Event[];
   biasSnapshot: BiasSnapshot | null;
 };
 
-const perceptionHistory: PerceptionHistoryEntry[] = [];
-let sequence = 0;
-
-function createHistoryId(): string {
-  sequence += 1;
-  return `${Date.now()}-${sequence}`;
+/**
+ * @deprecated In-memory history is deprecated. This helper now reads from the database.
+ */
+export async function getPerceptionHistory(limit?: number): Promise<PerceptionHistoryEntry[]> {
+  const snapshots = await listSnapshotsFromStore(limit ?? 20);
+  return snapshots.map((snapshot) => ({
+    id: snapshot.id,
+    createdAt: (snapshot.createdAt ?? snapshot.snapshotTime).toISOString(),
+    snapshot: mapSnapshotToEngine(snapshot, (snapshot.setups ?? []) as Setup[]),
+    events: [],
+    biasSnapshot: null,
+  }));
 }
 
-export function addPerceptionHistoryEntry(input: {
-  snapshot: PerceptionSnapshot;
-  events: Event[];
-  biasSnapshot: BiasSnapshot | null;
-}): PerceptionHistoryEntry {
-  const entry: PerceptionHistoryEntry = {
-    id: createHistoryId(),
-    createdAt: new Date().toISOString(),
-    snapshot: input.snapshot,
-    events: input.events,
-    biasSnapshot: input.biasSnapshot,
+function mapSnapshotToEngine(snapshot: { id: string; version: string | null; snapshotTime: Date | string }, setups: Setup[]): EngineSnapshot {
+  return {
+    generatedAt: new Date(snapshot.snapshotTime).toISOString(),
+    setupOfTheDayId: setups[0]?.id ?? snapshot.id,
+    setups,
+    universe: [],
+    version: snapshot.version ?? "unknown",
   };
-
-  perceptionHistory.push(entry);
-
-  if (perceptionHistory.length > 50) {
-    perceptionHistory.shift();
-  }
-
-  return entry;
-}
-
-export function getPerceptionHistory(limit?: number): PerceptionHistoryEntry[] {
-  const sorted = [...perceptionHistory].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  if (limit && limit > 0) {
-    return sorted.slice(0, limit);
-  }
-  return sorted;
-}
-
-export function clearPerceptionHistory(): void {
-  perceptionHistory.length = 0;
 }

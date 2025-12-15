@@ -1,4 +1,5 @@
 import { OpsActionsPanel } from "@/src/components/admin/OpsActionsPanel";
+import type { LockStatusState } from "@/src/components/admin/OpsActionsPanel";
 import type { Locale } from "@/i18n";
 import deMessages from "@/src/messages/de.json";
 import enMessages from "@/src/messages/en.json";
@@ -27,7 +28,26 @@ export default async function AdminOpsPage({ params }: Props) {
           | "unknown",
       }
     : null;
-  const lockStatus = getSnapshotBuildStatus();
+  const rawLockStatus = await getSnapshotBuildStatus();
+  const lockStatus: LockStatusState = rawLockStatus
+    ? {
+        locked: rawLockStatus.locked,
+        source: rawLockStatus.source ?? undefined,
+        startedAt: rawLockStatus.startedAt,
+        expiresAt: rawLockStatus.expiresAt,
+        remainingMs: rawLockStatus.remainingMs,
+        state: rawLockStatus.state
+          ? {
+              status: rawLockStatus.state.status,
+              source: rawLockStatus.state.source as SnapshotBuildSource | undefined,
+              startedAt: rawLockStatus.state.startedAt,
+              finishedAt: rawLockStatus.state.finishedAt,
+              error: rawLockStatus.state.error ?? null,
+              reused: rawLockStatus.state.reused,
+            }
+          : undefined,
+      }
+    : { locked: false };
 
   const opsMessages = {
     title: messages["admin.ops.title"],

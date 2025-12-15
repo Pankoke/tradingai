@@ -23,6 +23,8 @@ type SnapshotFilters = {
   to?: Date;
 };
 
+let ensuredRingSummaryColumn = false;
+
 async function loadSnapshotItems(snapshotId: string) {
   return db
     .select()
@@ -88,7 +90,10 @@ export async function insertSnapshotWithItems(params: {
   items: PerceptionSnapshotItemInput[];
 }): Promise<void> {
   // Ensure new JSONB columns exist in legacy DBs before inserting
-  await db.execute(sql`ALTER TABLE perception_snapshot_items ADD COLUMN IF NOT EXISTS ring_ai_summary JSONB;`);
+  if (!ensuredRingSummaryColumn) {
+    await db.execute(sql`ALTER TABLE perception_snapshot_items ADD COLUMN IF NOT EXISTS ring_ai_summary JSONB;`);
+    ensuredRingSummaryColumn = true;
+  }
 
   await db.transaction(async (tx) => {
     await tx

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { getPerceptionSnapshot } from "@/src/lib/cache/perceptionCache";
 import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
 import type { Setup, PerceptionSnapshot } from "@/src/lib/engine/types";
+import { loadLatestSnapshotFromStore } from "@/src/features/perception/cache/snapshotStore";
 
 type TodaySetupsResponse = {
   setups: Setup[];
@@ -14,8 +14,18 @@ type ErrorBody = {
 
 export async function GET(): Promise<NextResponse<TodaySetupsResponse | ErrorBody>> {
   try {
-    const cached = getPerceptionSnapshot();
-    const snapshot: PerceptionSnapshot = cached ?? (await buildPerceptionSnapshot());
+    const persisted = await loadLatestSnapshotFromStore();
+    if (persisted) {
+      const setups = (persisted.setups ?? []) as Setup[];
+      const setupOfTheDayId =
+        persisted.items.find((item) => item.isSetupOfTheDay)?.setupId ?? setups[0]?.id ?? persisted.snapshot.id;
+      return NextResponse.json({
+        setups,
+        setupOfTheDayId,
+      });
+    }
+
+    const snapshot: PerceptionSnapshot = await buildPerceptionSnapshot();
 
     const body: TodaySetupsResponse = {
       setups: snapshot.setups,

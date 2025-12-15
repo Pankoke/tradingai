@@ -1,4 +1,6 @@
 import type { NextRequest } from "next/server";
+import { logger } from "@/src/lib/logger";
+import { resolveAdminAuthConfig } from "@/src/server/auth/authConfig";
 
 const WINDOW_MS = 10 * 60 * 1000; // 10 Minuten
 const BLOCK_MS = 15 * 60 * 1000;
@@ -10,9 +12,18 @@ type RateLimitEntry = {
 };
 
 const loginAttempts = new Map<string, RateLimitEntry>();
+let loggedDisabledReason = false;
 
 export function isAdminEnabled(): boolean {
-  return process.env.NODE_ENV !== "production";
+  if (process.env.NODE_ENV === "production") {
+    return false;
+  }
+  const config = resolveAdminAuthConfig();
+  if (!config.enabled && config.reason && !loggedDisabledReason) {
+    logger.warn("Admin interface disabled", { reason: config.reason });
+    loggedDisabledReason = true;
+  }
+  return config.enabled;
 }
 
 function getEntry(identifier: string): RateLimitEntry {

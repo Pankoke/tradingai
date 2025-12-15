@@ -35,13 +35,7 @@ type SnapshotInfoPayload = {
   reused?: boolean;
 };
 
-type LockStatusPayload = {
-  locked: boolean;
-  source?: string;
-  startedAt?: string;
-  expiresAt?: string;
-  remainingMs?: number;
-};
+type LockStatusPayload = Awaited<ReturnType<typeof getSnapshotBuildStatus>>;
 
 function unauthorizedResponse(message: string, status = 401) {
   const body: ActionError = { ok: false, errorCode: "unauthorized", message };
@@ -101,7 +95,7 @@ export async function POST(request: NextRequest) {
         source: snapshotSource,
         reused: result.reused,
       },
-      lockStatus: getSnapshotBuildStatus(),
+      lockStatus: await getSnapshotBuildStatus(),
     };
     await createAuditRun({
       action: "snapshot_build",
@@ -126,7 +120,7 @@ export async function POST(request: NextRequest) {
         ok: false,
         errorCode: "snapshot_locked",
         message: "Snapshot-Build läuft bereits – bitte warten",
-        lockStatus: getSnapshotBuildStatus(),
+        lockStatus: await getSnapshotBuildStatus(),
       };
       return NextResponse.json(body, { status: 409 });
     }
@@ -144,7 +138,7 @@ export async function POST(request: NextRequest) {
       ok: false,
       errorCode: "snapshot_failed",
       message: error instanceof Error ? error.message : "Snapshot failed",
-      lockStatus: getSnapshotBuildStatus(),
+      lockStatus: await getSnapshotBuildStatus(),
     };
     return NextResponse.json(body, { status: 500 });
   }
@@ -177,7 +171,7 @@ export async function GET(request: NextRequest) {
           reused: true,
         }
       : null,
-    lockStatus: getSnapshotBuildStatus(),
+    lockStatus: await getSnapshotBuildStatus(),
   };
   return NextResponse.json(payload);
 }

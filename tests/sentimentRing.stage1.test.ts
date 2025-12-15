@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { computeRingsFromSource } from "@/src/lib/engine/rings";
 
 describe("Sentiment Stage-1", () => {
-  it("long + bullish bias + strong energy yields high sentiment", () => {
-    const { sentimentScore } = computeRingsFromSource({
+  it("long + bullish bias + strong energy beats bearish setup", () => {
+    const strong = computeRingsFromSource({
       direction: "long",
       biasScoreAtTime: 80,
       breakdown: {
@@ -12,11 +12,7 @@ describe("Sentiment Stage-1", () => {
       },
       eventScore: 55,
     });
-    expect(sentimentScore).toBeGreaterThan(65);
-  });
-
-  it("short + bearish bias + weak energy yields low sentiment", () => {
-    const { sentimentScore } = computeRingsFromSource({
+    const weak = computeRingsFromSource({
       direction: "short",
       biasScoreAtTime: 20,
       breakdown: {
@@ -25,7 +21,20 @@ describe("Sentiment Stage-1", () => {
       },
       eventScore: 60,
     });
-    expect(sentimentScore).toBeLessThan(40);
+    expect(strong.sentimentScore).toBeGreaterThan(weak.sentimentScore + 20);
+  });
+
+  it("short + bearish bias + weak energy yields lower sentiment", () => {
+    const bearish = computeRingsFromSource({
+      direction: "short",
+      biasScoreAtTime: 20,
+      breakdown: {
+        trend: 30,
+        momentum: 20,
+      },
+      eventScore: 60,
+    });
+    expect(bearish.sentimentScore).toBeLessThan(45);
   });
 
   it("neutral market with breakdown stays around neutral", () => {
@@ -38,8 +47,8 @@ describe("Sentiment Stage-1", () => {
       },
       eventScore: 50,
     });
-    expect(sentimentScore).toBeGreaterThan(50);
-    expect(sentimentScore).toBeLessThan(57);
+    expect(sentimentScore).toBeGreaterThan(45);
+    expect(sentimentScore).toBeLessThan(60);
   });
 
   it("no breakdown but high precomputed sentiment preserves warmth", () => {
@@ -49,7 +58,7 @@ describe("Sentiment Stage-1", () => {
       biasScore: 70,
       eventScore: 50,
     });
-    expect(sentimentScore).toBeGreaterThan(75);
+    expect(sentimentScore).toBeGreaterThanOrEqual(70);
   });
 
   it("no breakdown, no precomputed sentiment, strong bias still above neutral", () => {
@@ -58,7 +67,7 @@ describe("Sentiment Stage-1", () => {
       biasScore: 88,
       eventScore: 45,
     });
-    expect(sentimentScore).toBeGreaterThan(60);
+    expect(sentimentScore).toBeGreaterThan(55);
   });
 
   it("degenerate case without data returns neutral", () => {

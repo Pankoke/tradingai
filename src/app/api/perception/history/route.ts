@@ -9,7 +9,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<Perception
     const limitParam = searchParams.get("limit");
     const limit = limitParam ? Math.min(50, Math.max(1, Number(limitParam) || 0)) : 20;
 
-    const history = getPerceptionHistory(limit > 0 ? limit : undefined);
+    const history = await getPerceptionHistory(limit > 0 ? limit : undefined);
     return NextResponse.json(history);
   } catch (error) {
     console.error("Failed to load perception history", error);

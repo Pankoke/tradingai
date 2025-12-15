@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import type { NextRequest } from "next/server";
 import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
+import { resolveAdminAuthConfig } from "@/src/server/auth/authConfig";
 
 const SESSION_COOKIE_NAME = "admin_session";
 const SESSION_DURATION_MS = 1000 * 60 * 60 * 12; // 12 Stunden
@@ -11,38 +12,51 @@ type SessionPayload = {
   exp: number;
 };
 
-function getEnv(key: "ADMIN_PASSWORD" | "ADMIN_SESSION_SECRET"): string {
-  const value = process.env[key];
-  if (!value) {
-    throw new Error(`Environment variable ${key} is not set.`);
+export class AdminAuthConfigError extends Error {
+  constructor(message = "Admin authentication is not configured") {
+    super(message);
+    this.name = "AdminAuthConfigError";
   }
-  return value;
 }
 
 export function verifyAdminPassword(input: string): boolean {
-  const expected = getEnv("ADMIN_PASSWORD");
+  const config = resolveAdminAuthConfig();
+  if (!config.enabled || !config.password) {
+    return false;
+  }
   const a = Buffer.from(input ?? "");
-  const b = Buffer.from(expected);
+  const b = Buffer.from(config.password);
   if (a.length !== b.length) {
     return false;
   }
   return crypto.timingSafeEqual(a, b);
 }
 
+function getSessionSecretOrThrow(): string {
+  const config = resolveAdminAuthConfig();
+  if (!config.enabled || !config.sessionSecret) {
+    throw new AdminAuthConfigError();
+  }
+  return config.sessionSecret;
+}
+
 function signPayload(payload: SessionPayload): string {
-  const secret = getEnv("ADMIN_SESSION_SECRET");
+  const secret = getSessionSecretOrThrow();
   const payloadSerialized = Buffer.from(JSON.stringify(payload)).toString("base64url");
   const signature = crypto.createHmac("sha256", secret).update(payloadSerialized).digest("base64url");
   return `${payloadSerialized}.${signature}`;
 }
 
 function parseSessionToken(token: string): SessionPayload | null {
+  const secretConfig = resolveAdminAuthConfig();
+  if (!secretConfig.enabled || !secretConfig.sessionSecret) {
+    return null;
+  }
   const [payload, signature] = token.split(".");
   if (!payload || !signature) {
     return null;
   }
-  const secret = getEnv("ADMIN_SESSION_SECRET");
-  const expectedSig = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
+  const expectedSig = crypto.createHmac("sha256", secretConfig.sessionSecret).update(payload).digest("base64url");
   const sigBuffer = Buffer.from(signature);
   const expectedBuffer = Buffer.from(expectedSig);
   if (sigBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
