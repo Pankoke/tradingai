@@ -1,7 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { buildAndStorePerceptionSnapshot } from "@/src/features/perception/build/buildSetups";
+import {
+  requestSnapshotBuild,
+  SnapshotBuildInProgressError,
+  getSnapshotSourceFromNotes,
+  getSnapshotBuildStatus,
+} from "@/src/server/perception/snapshotBuildService";
+import { getLatestSnapshot } from "@/src/server/repositories/perceptionSnapshotRepository";
 import { isAdminSessionFromRequest } from "@/src/lib/admin/auth";
 import { isAdminEnabled, validateAdminRequestOrigin } from "@/src/lib/admin/security";
+import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
 
 type ActionSuccess = {
   ok: true;
@@ -10,12 +17,30 @@ type ActionSuccess = {
   durationMs: number;
   message: string;
   details?: Record<string, unknown>;
+  lastSnapshot: SnapshotInfoPayload | null;
+  lockStatus: LockStatusPayload;
 };
 
 type ActionError = {
   ok: false;
   errorCode: string;
   message: string;
+  lockStatus?: LockStatusPayload;
+};
+
+type SnapshotInfoPayload = {
+  snapshotId?: string;
+  snapshotTime?: string;
+  source?: string | null;
+  reused?: boolean;
+};
+
+type LockStatusPayload = {
+  locked: boolean;
+  source?: string;
+  startedAt?: string;
+  expiresAt?: string;
+  remainingMs?: number;
 };
 
 function unauthorizedResponse(message: string, status = 401) {
@@ -44,37 +69,115 @@ export async function POST(request: NextRequest) {
     return forbiddenResponse("Invalid request origin");
   }
 
+  const body = await request.json().catch(() => ({}));
+  const force = Boolean(body?.force);
+
   const startedAt = new Date();
   try {
-    const result = await buildAndStorePerceptionSnapshot();
-    const snapshot = result.snapshot;
+    const result = await requestSnapshotBuild({ source: "admin", force });
+    const snapshotWithItems = result.snapshot;
+    const snapshot = snapshotWithItems.snapshot;
+    const snapshotSource = getSnapshotSourceFromNotes(snapshot.notes) ?? "admin";
     const finishedAt = new Date();
+    const durationMs = finishedAt.getTime() - startedAt.getTime();
     const response: ActionSuccess = {
       ok: true,
       startedAt: startedAt.toISOString(),
       finishedAt: finishedAt.toISOString(),
-      durationMs: finishedAt.getTime() - startedAt.getTime(),
-      message: `Snapshot ${snapshot.id} erzeugt`,
+      durationMs,
+      message: result.reused ? `Snapshot bereits aktuell (${snapshot.id})` : `Snapshot ${snapshot.id} erzeugt`,
       details: {
         snapshotId: snapshot.id,
         label: snapshot.label,
         snapshotTime: snapshot.snapshotTime,
         dataMode: snapshot.dataMode,
         setups: Array.isArray(snapshot.setups) ? snapshot.setups.length : undefined,
+        reused: result.reused,
+        source: snapshotSource,
       },
+      lastSnapshot: {
+        snapshotId: snapshot.id,
+        snapshotTime: snapshot.snapshotTime instanceof Date ? snapshot.snapshotTime.toISOString() : undefined,
+        source: snapshotSource,
+        reused: result.reused,
+      },
+      lockStatus: getSnapshotBuildStatus(),
     };
+    await createAuditRun({
+      action: "snapshot_build",
+      source: "admin",
+      ok: true,
+      durationMs,
+      message: response.message,
+      meta: { snapshotId: snapshot.id, reused: result.reused, force },
+    });
     return NextResponse.json(response);
   } catch (error) {
+    if (error instanceof SnapshotBuildInProgressError) {
+      await createAuditRun({
+        action: "snapshot_build",
+        source: "admin",
+        ok: false,
+        durationMs: Date.now() - startedAt.getTime(),
+        message: "lock_in_progress",
+        meta: { force },
+      });
+      const body: ActionError = {
+        ok: false,
+        errorCode: "snapshot_locked",
+        message: "Snapshot-Build läuft bereits – bitte warten",
+        lockStatus: getSnapshotBuildStatus(),
+      };
+      return NextResponse.json(body, { status: 409 });
+    }
     console.error("[admin.ops.perception] failed", error);
+    await createAuditRun({
+      action: "snapshot_build",
+      source: "admin",
+      ok: false,
+      durationMs: Date.now() - startedAt.getTime(),
+      message: "snapshot_build_failed",
+      error: error instanceof Error ? error.message : "unknown error",
+      meta: { force },
+    });
     const body: ActionError = {
       ok: false,
       errorCode: "snapshot_failed",
       message: error instanceof Error ? error.message : "Snapshot failed",
+      lockStatus: getSnapshotBuildStatus(),
     };
     return NextResponse.json(body, { status: 500 });
   }
 }
 
-export function GET() {
-  return NextResponse.json({ ok: false, errorCode: "method_not_allowed", message: "Use POST" }, { status: 405 });
+export async function GET(request: NextRequest) {
+  if (!isAdminEnabled()) {
+    return disabledResponse();
+  }
+  if (!isAdminSessionFromRequest(request)) {
+    return unauthorizedResponse("Missing or invalid admin session");
+  }
+  if (!validateAdminRequestOrigin(request)) {
+    return forbiddenResponse("Invalid request origin");
+  }
+
+  const latest = await getLatestSnapshot();
+  const snapshotSource = latest ? getSnapshotSourceFromNotes(latest.snapshot.notes) ?? null : null;
+  const payload: ActionSuccess = {
+    ok: true,
+    startedAt: new Date().toISOString(),
+    finishedAt: new Date().toISOString(),
+    durationMs: 0,
+    message: "Status",
+    lastSnapshot: latest
+      ? {
+          snapshotId: latest.snapshot.id,
+          snapshotTime: latest.snapshot.snapshotTime.toISOString(),
+          source: snapshotSource,
+          reused: true,
+        }
+      : null,
+    lockStatus: getSnapshotBuildStatus(),
+  };
+  return NextResponse.json(payload);
 }

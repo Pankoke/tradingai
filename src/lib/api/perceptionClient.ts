@@ -1,5 +1,6 @@
 import { fetcher } from "@/src/lib/fetcher";
 import { setupSchema, type Setup, riskRewardSchema, type RiskRewardSummary } from "@/src/lib/engine/types";
+import type { PerceptionSnapshotWithItems } from "@/src/server/repositories/perceptionSnapshotRepository";
 import { z } from "zod";
 
 const eventContextSchema = z
@@ -73,32 +74,47 @@ export async function fetchPerceptionToday(): Promise<PerceptionTodayResponse> {
     return await fetcher(resolveUrl("/api/perception/today"), perceptionTodaySchema);
   } catch (error) {
     if (typeof window === "undefined") {
-      const { buildAndStorePerceptionSnapshot } = await import(
-        "@/src/features/perception/build/buildSetups"
+      const { requestSnapshotBuild, SnapshotBuildInProgressError } = await import(
+        "@/src/server/perception/snapshotBuildService"
       );
-      const persisted = await buildAndStorePerceptionSnapshot();
-      return {
-        snapshot: {
-          ...persisted.snapshot,
-          snapshotTime: persisted.snapshot.snapshotTime.toISOString(),
-          createdAt: persisted.snapshot.createdAt
-            ? persisted.snapshot.createdAt.toISOString()
-            : new Date().toISOString(),
-        },
-        items: persisted.items.map((item) => ({
-          ...item,
-          direction: item.direction.toLowerCase() as "long" | "short" | "neutral",
-          createdAt: item.createdAt
-            ? item.createdAt.toISOString()
-            : new Date().toISOString(),
-          riskReward: (item.riskReward ?? null) as RiskRewardSummary | null,
-          eventContext: (item as { eventContext?: unknown }).eventContext ?? null,
-        })),
-        setups: persisted.setups,
-      };
+      const { getLatestSnapshot } = await import("@/src/server/repositories/perceptionSnapshotRepository");
+      let persistedResult;
+      try {
+        persistedResult = await requestSnapshotBuild({ source: "ui" });
+      } catch (err) {
+        if (err instanceof SnapshotBuildInProgressError) {
+          const latest = await getLatestSnapshot();
+          if (latest) {
+            return mapSnapshotToResponse(latest);
+          }
+        }
+        throw err;
+      }
+      const persisted = persistedResult.snapshot;
+      return mapSnapshotToResponse(persisted);
     }
     throw error;
   }
+}
+
+function mapSnapshotToResponse(snapshot: PerceptionSnapshotWithItems) {
+  return {
+    snapshot: {
+      ...snapshot.snapshot,
+      snapshotTime: snapshot.snapshot.snapshotTime.toISOString(),
+      createdAt: snapshot.snapshot.createdAt
+        ? snapshot.snapshot.createdAt.toISOString()
+        : new Date().toISOString(),
+    },
+    items: snapshot.items.map((item) => ({
+      ...item,
+      direction: item.direction.toLowerCase() as "long" | "short" | "neutral",
+      createdAt: item.createdAt ? item.createdAt.toISOString() : new Date().toISOString(),
+      riskReward: (item.riskReward ?? null) as RiskRewardSummary | null,
+      eventContext: (item as { eventContext?: unknown }).eventContext ?? null,
+    })),
+    setups: snapshot.setups,
+  };
 }
 
 export async function fetchTodaySetups(): Promise<{ setups: Setup[]; setupOfTheDayId: string }> {

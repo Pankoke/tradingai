@@ -27,6 +27,7 @@ export type PerceptionSnapshotEngineResult = PerceptionSnapshot;
 type BuildParams = {
   snapshotTime?: Date;
   mode?: PerceptionDataMode;
+  source?: SnapshotBuildSource;
 };
 
 const SNAPSHOT_VERSION = "v1.0.0";
@@ -53,6 +54,8 @@ function createId(prefix: string): string {
   }
   return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 }
+
+export type SnapshotBuildSource = "ui" | "admin" | "cron";
 
 export async function buildAndStorePerceptionSnapshot(
   params: BuildParams = {},
@@ -192,6 +195,11 @@ export async function buildAndStorePerceptionSnapshot(
     ringAiSummary: setup.ringAiSummary ?? null,
   }));
 
+  let notes: string | null = null;
+  if (params.source) {
+    notes = JSON.stringify({ source: params.source });
+  }
+
   const snapshot: PerceptionSnapshotInput = {
     id: snapshotId,
     snapshotTime,
@@ -199,7 +207,7 @@ export async function buildAndStorePerceptionSnapshot(
     version: SNAPSHOT_VERSION,
     dataMode: mode,
     generatedMs,
-    notes: null,
+    notes,
     setups: setupsWithMetadata,
   };
 

@@ -21,6 +21,8 @@ export default async function AdminPanelLayout({ params, children }: Props) {
     { href: `/${locale}/admin/snapshots`, label: messages["admin.nav.snapshots"] },
     { href: `/${locale}/admin/marketdata`, label: messages["admin.nav.marketdata"] },
     { href: `/${locale}/admin/ops`, label: messages["admin.nav.ops"] },
+    { href: `/${locale}/admin/system`, label: messages["admin.nav.system"] },
+    { href: `/${locale}/admin/audit`, label: messages["admin.nav.audit"] },
     { href: `/${locale}/admin/events`, label: messages["admin.nav.events"] },
     { href: `/${locale}/admin/assets`, label: messages["admin.nav.assets"] },
   ];

@@ -3,6 +3,7 @@ import { computeTechnicalBiasForAllActiveAssets } from "@/src/features/bias/comp
 import { isAdminSessionFromRequest } from "@/src/lib/admin/auth";
 import { isAdminEnabled, validateAdminRequestOrigin } from "@/src/lib/admin/security";
 import type { Timeframe } from "@/src/server/providers/marketDataProvider";
+import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
 
 type SuccessResponse = {
   ok: true;
@@ -54,12 +55,13 @@ export async function POST(request: NextRequest) {
       timeframe,
     });
     const finishedAt = new Date();
+    const durationMs = finishedAt.getTime() - startedAt.getTime();
     const response: SuccessResponse = {
       ok: true,
       startedAt: startedAt.toISOString(),
       finishedAt: finishedAt.toISOString(),
-      durationMs: finishedAt.getTime() - startedAt.getTime(),
-      message: "Bias-Sync abgeschlossen",
+      durationMs,
+      message: "Bias sync completed",
       details: {
         processed: result.processed,
         skipped: result.skipped,
@@ -67,8 +69,30 @@ export async function POST(request: NextRequest) {
         timeframe: timeframeValue,
       },
     };
+    await createAuditRun({
+      action: "bias_sync",
+      source: "admin",
+      ok: true,
+      durationMs,
+      message: response.message,
+      meta: {
+        processed: result.processed,
+        skipped: result.skipped,
+        timeframe: timeframeValue,
+        date: date.toISOString(),
+      },
+    });
     return NextResponse.json(response);
   } catch (error) {
+    await createAuditRun({
+      action: "bias_sync",
+      source: "admin",
+      ok: false,
+      durationMs: Date.now() - startedAt.getTime(),
+      message: "bias_sync_failed",
+      error: error instanceof Error ? error.message : "unknown error",
+      meta: { timeframe: timeframeValue, date: date.toISOString() },
+    });
     const body: ErrorResponse = {
       ok: false,
       errorCode: "bias_failed",

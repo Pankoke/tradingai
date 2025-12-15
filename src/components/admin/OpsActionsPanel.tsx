@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useMemo, useState, type JSX } from "react";
+import { useCallback, useEffect, useMemo, useState, type JSX } from "react";
 import clsx from "clsx";
 import type { Locale } from "@/i18n";
 import { JsonReveal } from "@/src/components/admin/JsonReveal";
+import type { SnapshotBuildSource } from "@/src/features/perception/build/buildSetups";
 
 type ActionKey = "perception" | "marketdata" | "bias";
 
@@ -15,6 +16,19 @@ type ActionResult = {
   durationMs?: number;
   details?: unknown;
   errorCode?: string;
+  lastSnapshot?: {
+    snapshotId?: string;
+    snapshotTime?: string;
+    source?: string;
+    reused?: boolean;
+  };
+  lockStatus?: {
+    locked: boolean;
+    source?: string;
+    startedAt?: string;
+    expiresAt?: string;
+    remainingMs?: number;
+  };
 };
 
 type ActionState = {
@@ -30,6 +44,22 @@ type OpsMessages = {
     title: string;
     description: string;
     button: string;
+    lastSourceLabel: string;
+    snapshotTimeLabel: string;
+    sources: Record<SnapshotSourceLabel, string>;
+    forceLabel: string;
+    buildRunning: string;
+    locked: string;
+    unlocked: string;
+    lockSourceLabel: string;
+    lockSinceLabel: string;
+    lockEtaLabel: string;
+    forceConfirm: {
+      title: string;
+      body: string;
+      cancel: string;
+      confirm: string;
+    };
   };
   marketdata: {
     title: string;
@@ -57,12 +87,15 @@ type OpsMessages = {
   common: {
     showDetails: string;
     hideDetails: string;
+    refresh?: string;
   };
 };
 
 type Props = {
   locale: Locale;
   messages: OpsMessages;
+  latestSnapshot?: LatestSnapshotInfo | null;
+  initialLockStatus?: LockStatusState;
 };
 
 type ActionConfig = {
@@ -96,13 +129,50 @@ function formatDuration(ms?: number): string | null {
   return `${seconds}s`;
 }
 
-export function OpsActionsPanel({ locale, messages }: Props): JSX.Element {
+type SnapshotSourceLabel = SnapshotBuildSource | "unknown";
+
+type LatestSnapshotInfo = {
+  snapshotId?: string;
+  snapshotTime?: string;
+  source: SnapshotSourceLabel;
+} | null;
+
+type LockStatusState = {
+  locked: boolean;
+  source?: SnapshotSourceLabel;
+  startedAt?: string;
+  expiresAt?: string;
+  remainingMs?: number;
+};
+
+export function OpsActionsPanel({
+  locale,
+  messages,
+  latestSnapshot,
+  initialLockStatus,
+}: Props): JSX.Element {
   const [states, setStates] = useState<Record<ActionKey, ActionState>>({
     perception: { status: "idle" },
     marketdata: { status: "idle" },
     bias: { status: "idle" },
   });
   const [symbol, setSymbol] = useState("");
+  const [forceRebuild, setForceRebuild] = useState(false);
+  const [latestSnapshotState, setLatestSnapshotState] = useState<LatestSnapshotInfo>(latestSnapshot ?? null);
+  const [lockStatus, setLockStatus] = useState<LockStatusState>(initialLockStatus ?? { locked: false });
+  const [forceConfirmOpen, setForceConfirmOpen] = useState(false);
+  const [pendingForceAction, setPendingForceAction] = useState<(() => void) | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    setLatestSnapshotState(latestSnapshot ?? null);
+  }, [latestSnapshot?.snapshotId, latestSnapshot?.snapshotTime, latestSnapshot?.source, latestSnapshot]);
+
+  useEffect(() => {
+    if (initialLockStatus) {
+      setLockStatus(initialLockStatus);
+    }
+  }, [initialLockStatus?.locked, initialLockStatus?.source, initialLockStatus?.startedAt, initialLockStatus?.expiresAt]);
 
   const configs: ActionConfig[] = useMemo(
     () => [
@@ -138,6 +208,45 @@ export function OpsActionsPanel({ locale, messages }: Props): JSX.Element {
     }));
   }, []);
 
+  const refreshStatus = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const response = await fetch("/api/admin/ops/perception", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data: ActionResult = await response.json();
+      if (response.ok && data.ok) {
+        if (data.lastSnapshot) {
+          setLatestSnapshotState({
+            snapshotId: data.lastSnapshot.snapshotId,
+            snapshotTime: data.lastSnapshot.snapshotTime,
+            source: (data.lastSnapshot.source as SnapshotSourceLabel) ?? "unknown",
+          });
+        }
+        if (data.lockStatus) {
+          setLockStatus({
+            locked: data.lockStatus.locked,
+            source: data.lockStatus.source as SnapshotSourceLabel | undefined,
+            startedAt: data.lockStatus.startedAt,
+            expiresAt: data.lockStatus.expiresAt,
+            remainingMs: data.lockStatus.remainingMs,
+          });
+        }
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!lockStatus.locked) return undefined;
+    const id = window.setInterval(() => {
+      refreshStatus();
+    }, 10000);
+    return () => window.clearInterval(id);
+  }, [lockStatus.locked, refreshStatus]);
+
   const executeAction = useCallback(
     async (config: ActionConfig, payload?: Record<string, unknown>) => {
       updateState(config.key, { status: "running" });
@@ -151,19 +260,51 @@ export function OpsActionsPanel({ locale, messages }: Props): JSX.Element {
         });
         const data: ActionResult = await response.json();
         if (!response.ok || !data.ok) {
+          const messageOverride =
+            response.status === 409 && config.key === "perception" ? messages.perception.buildRunning : undefined;
           updateState(config.key, {
             status: "error",
             lastResult: data ?? {
               ok: false,
-              message: "Unknown error",
+              message: messageOverride ?? "Unknown error",
             },
           });
+          if (data?.lockStatus) {
+            setLockStatus({
+              locked: data.lockStatus.locked,
+              source: data.lockStatus.source as SnapshotSourceLabel | undefined,
+              startedAt: data.lockStatus.startedAt,
+              expiresAt: data.lockStatus.expiresAt,
+              remainingMs: data.lockStatus.remainingMs,
+            });
+          }
           return;
         }
         updateState(config.key, {
           status: "success",
           lastResult: data,
         });
+        if (config.key === "perception") {
+          setForceRebuild(false);
+          if (data.details && typeof data.details === "object") {
+            const info = data.details as { snapshotId?: string; snapshotTime?: string; source?: SnapshotSourceLabel };
+            setLatestSnapshotState((prev) => ({
+              snapshotId: info.snapshotId ?? prev?.snapshotId,
+              snapshotTime: info.snapshotTime ?? prev?.snapshotTime,
+              source: info.source ?? prev?.source ?? "unknown",
+            }));
+          }
+          if (data.lockStatus) {
+            setLockStatus({
+              locked: data.lockStatus.locked,
+              source: data.lockStatus.source as SnapshotSourceLabel | undefined,
+              startedAt: data.lockStatus.startedAt,
+              expiresAt: data.lockStatus.expiresAt,
+              remainingMs: data.lockStatus.remainingMs,
+            });
+          }
+          await refreshStatus();
+        }
       } catch (error) {
         updateState(config.key, {
           status: "error",
@@ -174,7 +315,7 @@ export function OpsActionsPanel({ locale, messages }: Props): JSX.Element {
         });
       }
     },
-    [updateState],
+    [messages.perception.buildRunning, refreshStatus, updateState],
   );
 
   return (
@@ -185,6 +326,11 @@ export function OpsActionsPanel({ locale, messages }: Props): JSX.Element {
         const duration = formatDuration(state.lastResult?.durationMs);
         const hasDetails = state.lastResult?.details != null;
         const isMarketData = config.key === "marketdata";
+        const isPerception = config.key === "perception";
+        const lastSourceLabel = latestSnapshotState
+          ? messages.perception.sources[latestSnapshotState.source] ?? messages.perception.sources.unknown
+          : messages.perception.sources.unknown;
+        const lockTone = lockStatus.locked ? "bg-amber-500/20 text-amber-200 border-amber-400/50" : "bg-emerald-500/20 text-emerald-200 border-emerald-400/50";
         return (
           <div key={config.key} className="rounded-2xl border border-slate-800 bg-slate-950/40 p-5 shadow-lg shadow-black/30">
             <div className="flex items-center justify-between">
@@ -212,12 +358,80 @@ export function OpsActionsPanel({ locale, messages }: Props): JSX.Element {
                 <p className="text-xs text-slate-500">{messages.marketdata.runAllLabel}</p>
               </div>
             )}
+            {isPerception && (
+              <div className="mt-4 space-y-3 rounded-xl border border-slate-800/70 bg-slate-900/40 p-3 text-xs text-slate-300">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={clsx("rounded-full border px-2 py-0.5 text-[0.65rem] font-semibold", lockTone)}>
+                    {lockStatus.locked ? messages.perception.locked : messages.perception.unlocked}
+                  </span>
+                  {messages.common.refresh && (
+                    <button
+                      type="button"
+                      onClick={refreshStatus}
+                      disabled={isRefreshing}
+                      className="rounded border border-slate-700 px-2 py-1 text-[0.65rem] text-slate-200 hover:border-sky-500"
+                    >
+                      {isRefreshing ? "…" : messages.common.refresh}
+                    </button>
+                  )}
+                </div>
+                <p>
+                  {messages.perception.lastSourceLabel}:{" "}
+                  <span className="font-semibold text-slate-100">{lastSourceLabel}</span>
+                </p>
+                <p>
+                  {messages.perception.snapshotTimeLabel}:{" "}
+                  <span className="text-slate-100">
+                    {latestSnapshotState?.snapshotTime
+                      ? formatTimestamp(latestSnapshotState.snapshotTime, locale) ?? latestSnapshotState.snapshotTime
+                      : messages.status.none}
+                  </span>
+                </p>
+                {lockStatus.locked && (
+                  <div className="space-y-1 text-[0.7rem] text-slate-400">
+                    <p>
+                      {messages.perception.lockSourceLabel}:{" "}
+                      <span className="text-slate-100">
+                        {lockStatus.source
+                          ? messages.perception.sources[lockStatus.source] ?? lockStatus.source
+                          : messages.perception.sources.unknown}
+                      </span>
+                    </p>
+                    <p>
+                      {messages.perception.lockSinceLabel}:{" "}
+                      <span className="text-slate-100">
+                        {lockStatus.startedAt
+                          ? formatTimestamp(lockStatus.startedAt, locale) ?? lockStatus.startedAt
+                          : "–"}
+                      </span>
+                    </p>
+                    <p>
+                      {messages.perception.lockEtaLabel}:{" "}
+                      <span className="text-slate-100">
+                        {lockStatus.remainingMs != null
+                          ? `${Math.ceil(lockStatus.remainingMs / 1000)}s`
+                          : lockStatus.expiresAt
+                            ? formatTimestamp(lockStatus.expiresAt, locale)
+                            : "–"}
+                      </span>
+                    </p>
+                  </div>
+                )}
+                <label className="mt-1 flex items-center gap-2 text-[0.7rem] text-slate-400">
+                  <input
+                    type="checkbox"
+                    checked={forceRebuild}
+                    onChange={(event) => setForceRebuild(event.target.checked)}
+                    className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-sky-500 focus:ring-sky-500"
+                  />
+                  {messages.perception.forceLabel}
+                </label>
+              </div>
+            )}
 
             <button
               type="button"
-              onClick={() =>
-                executeAction(config, config.key === "marketdata" ? { symbol: symbol || undefined } : undefined)
-              }
+              onClick={() => handleRunClick(config)}
               disabled={state.status === "running"}
               className={clsx(
                 "mt-4 inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold transition",
@@ -256,6 +470,56 @@ export function OpsActionsPanel({ locale, messages }: Props): JSX.Element {
           </div>
         );
       })}
+      {forceConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+          <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900/95 p-6 text-slate-100 shadow-xl">
+            <h2 className="text-lg font-semibold">{messages.perception.forceConfirm.title}</h2>
+            <p className="mt-2 text-sm text-slate-300">{messages.perception.forceConfirm.body}</p>
+            <div className="mt-6 flex justify-end gap-3 text-sm">
+              <button
+                type="button"
+                onClick={() => {
+                  setForceConfirmOpen(false);
+                  setPendingForceAction(null);
+                }}
+                className="rounded-lg border border-slate-600 px-4 py-2 text-slate-200 hover:border-slate-400"
+              >
+                {messages.perception.forceConfirm.cancel}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setForceConfirmOpen(false);
+                  const action = pendingForceAction;
+                  setPendingForceAction(null);
+                  action?.();
+                }}
+                className="rounded-lg border border-rose-400 bg-rose-500/20 px-4 py-2 text-rose-100 hover:border-rose-200"
+              >
+                {messages.perception.forceConfirm.confirm}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+
+  function handleRunClick(config: ActionConfig) {
+    if (config.key === "perception") {
+      const payload = { force: forceRebuild };
+      if (forceRebuild) {
+        setPendingForceAction(() => () => executeAction(config, payload));
+        setForceConfirmOpen(true);
+        return;
+      }
+      executeAction(config, payload);
+      return;
+    }
+    if (config.key === "marketdata") {
+      executeAction(config, { symbol: symbol || undefined });
+      return;
+    }
+    executeAction(config);
+  }
 }

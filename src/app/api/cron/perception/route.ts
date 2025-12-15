@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
 import { setPerceptionSnapshot } from "@/src/lib/cache/perceptionCache";
 import { addPerceptionHistoryEntry } from "@/src/lib/cache/perceptionHistory";
-import type { PerceptionSnapshot } from "@/src/lib/engine/types";
-import { buildAndStorePerceptionSnapshot } from "@/src/features/perception/build/buildSetups";
+import type { PerceptionSnapshot, Setup } from "@/src/lib/engine/types";
+import { requestSnapshotBuild } from "@/src/server/perception/snapshotBuildService";
+import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
 
 type CronSuccessBody = {
   ok: true;
@@ -17,21 +17,50 @@ type CronErrorBody = {
 };
 
 export async function GET(): Promise<NextResponse<CronSuccessBody | CronErrorBody>> {
+  const startedAt = Date.now();
   try {
-    const snapshot: PerceptionSnapshot = await buildPerceptionSnapshot();
+    const result = await requestSnapshotBuild({ source: "cron", force: true });
+    const snapshotRecord = result.snapshot.snapshot;
+    const snapshotTime =
+      snapshotRecord.snapshotTime instanceof Date
+        ? snapshotRecord.snapshotTime
+        : new Date(snapshotRecord.snapshotTime);
+    const setups = (snapshotRecord.setups ?? []) as Setup[];
+    const snapshot: PerceptionSnapshot = {
+      ...snapshotRecord,
+      setups,
+      generatedAt: snapshotTime.toISOString(),
+      universe: setups.map((setup) => setup.symbol).filter(Boolean),
+      setupOfTheDayId: setups[0]?.id ?? snapshotRecord.id,
+    };
     addPerceptionHistoryEntry({ snapshot, events: [], biasSnapshot: null });
     setPerceptionSnapshot(snapshot);
-    await buildAndStorePerceptionSnapshot({ snapshotTime: new Date(snapshot.generatedAt) });
 
     const body: CronSuccessBody = {
       ok: true,
       generatedAt: snapshot.generatedAt,
-      totalSetups: snapshot.setups.length,
+      totalSetups: setups.length,
     };
 
+    await createAuditRun({
+      action: "snapshot_build",
+      source: "cron",
+      ok: true,
+      durationMs: Date.now() - startedAt,
+      message: "cron_snapshot_build",
+      meta: { reused: result.reused, totalSetups: setups.length },
+    });
     return NextResponse.json(body);
   } catch (error) {
     console.error("Failed to build perception snapshot", error);
+    await createAuditRun({
+      action: "snapshot_build",
+      source: "cron",
+      ok: false,
+      durationMs: Date.now() - startedAt,
+      message: "cron_snapshot_failed",
+      error: error instanceof Error ? error.message : "unknown error",
+    });
     const body: CronErrorBody = {
       ok: false,
       error: "Failed to build perception snapshot",

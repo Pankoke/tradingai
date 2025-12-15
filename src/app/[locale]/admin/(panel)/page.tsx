@@ -102,6 +102,11 @@ export default async function AdminDashboardPage({ params }: Props) {
   const assetCardMessages = {
     manage: messages["admin.dashboard.assets.manage"],
   };
+  const systemCardMessages = {
+    title: messages["admin.dashboard.system.title"],
+    description: messages["admin.dashboard.system.description"],
+    link: messages["admin.dashboard.system.link"],
+  };
   const marketDataCardMessages = {
     title: messages["admin.dashboard.marketdataHealth.title"],
     viewDetails: messages["admin.dashboard.marketdataHealth.viewDetails"],
@@ -233,6 +238,16 @@ export default async function AdminDashboardPage({ params }: Props) {
           <a className="text-sm text-sky-300 hover:text-sky-100" href="/api/health/perception" target="_blank">
             Health öffnen
           </a>
+        </div>
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{systemCardMessages.title}</p>
+          <p className="mt-2 text-sm text-slate-300">{systemCardMessages.description}</p>
+          <Link
+            className="mt-4 inline-flex text-sm text-sky-300 hover:text-sky-100"
+            href={`/${locale}/admin/system`}
+          >
+            {systemCardMessages.link}
+          </Link>
         </div>
 
         <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">

@@ -3,6 +3,7 @@ import { syncDailyCandlesForAsset } from "@/src/features/marketData/syncDailyCan
 import { getActiveAssets } from "@/src/server/repositories/assetRepository";
 import { isAdminSessionFromRequest } from "@/src/lib/admin/auth";
 import { isAdminEnabled, validateAdminRequestOrigin } from "@/src/lib/admin/security";
+import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
 
 type ActionSuccess = {
   ok: true;
@@ -58,7 +59,15 @@ export async function POST(request: NextRequest) {
     : assets;
 
   if (symbolInput && matchedAssets.length === 0) {
-    const body: ActionError = { ok: false, errorCode: "unknown_symbol", message: `Kein Asset f\u00fcr ${symbolInput}` };
+    const body: ActionError = { ok: false, errorCode: "unknown_symbol", message: `No asset for ${symbolInput}` };
+    await createAuditRun({
+      action: "marketdata_sync",
+      source: "admin",
+      ok: false,
+      durationMs: 0,
+      message: "unknown_symbol",
+      meta: { symbol: symbolInput },
+    });
     return NextResponse.json(body, { status: 400 });
   }
 
@@ -67,46 +76,76 @@ export async function POST(request: NextRequest) {
   let failed = 0;
 
   const startedAt = new Date();
-  for (const asset of matchedAssets) {
-    try {
-      await syncDailyCandlesForAsset({
-        asset,
-        from,
-        to: now,
-      });
-      processed += 1;
-      logs.push({
-        symbol: asset.symbol,
-        timeframeCount: asset.assetClass === "crypto" ? 4 : 1,
-      });
-    } catch (error) {
-      failed += 1;
-      logs.push({
-        symbol: asset.symbol,
-        timeframeCount: asset.assetClass === "crypto" ? 4 : 1,
-        error: error instanceof Error ? error.message : "unknown error",
-      });
+  try {
+    for (const asset of matchedAssets) {
+      try {
+        await syncDailyCandlesForAsset({
+          asset,
+          from,
+          to: now,
+        });
+        processed += 1;
+        logs.push({
+          symbol: asset.symbol,
+          timeframeCount: asset.assetClass === "crypto" ? 4 : 1,
+        });
+      } catch (error) {
+        failed += 1;
+        logs.push({
+          symbol: asset.symbol,
+          timeframeCount: asset.assetClass === "crypto" ? 4 : 1,
+          error: error instanceof Error ? error.message : "unknown error",
+        });
+      }
     }
+    const finishedAt = new Date();
+
+    const response: ActionSuccess = {
+      ok: true,
+      startedAt: startedAt.toISOString(),
+      finishedAt: finishedAt.toISOString(),
+      durationMs: finishedAt.getTime() - startedAt.getTime(),
+      message: symbolInput
+        ? `Market-Data sync for ${symbolInput} completed`
+        : `Market-Data sync for ${matchedAssets.length} assets completed`,
+      details: {
+        processed,
+        failed,
+        logs: logs.slice(0, 20),
+        lookbackDays,
+      },
+    };
+
+    await createAuditRun({
+      action: "marketdata_sync",
+      source: "admin",
+      ok: true,
+      durationMs: response.durationMs,
+      message: response.message,
+      meta: {
+        symbol: symbolInput || "all",
+        processed,
+        failed,
+        lookbackDays,
+      },
+    });
+
+    return NextResponse.json(response);
+  } catch (error) {
+    await createAuditRun({
+      action: "marketdata_sync",
+      source: "admin",
+      ok: false,
+      durationMs: Date.now() - startedAt.getTime(),
+      message: "marketdata_sync_failed",
+      error: error instanceof Error ? error.message : "unknown error",
+      meta: { symbol: symbolInput || "all", lookbackDays },
+    });
+    return NextResponse.json(
+      { ok: false, errorCode: "marketdata_failed", message: error instanceof Error ? error.message : "Failed" },
+      { status: 500 },
+    );
   }
-  const finishedAt = new Date();
-
-  const response: ActionSuccess = {
-    ok: true,
-    startedAt: startedAt.toISOString(),
-    finishedAt: finishedAt.toISOString(),
-    durationMs: finishedAt.getTime() - startedAt.getTime(),
-    message: symbolInput
-      ? `Market-Data Sync f\u00fcr ${symbolInput} abgeschlossen`
-      : `Market-Data Sync f\u00fcr ${matchedAssets.length} Assets abgeschlossen`,
-    details: {
-      processed,
-      failed,
-      logs: logs.slice(0, 20),
-      lookbackDays,
-    },
-  };
-
-  return NextResponse.json(response);
 }
 
 export function GET() {

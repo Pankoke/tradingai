@@ -2,6 +2,12 @@ import { OpsActionsPanel } from "@/src/components/admin/OpsActionsPanel";
 import type { Locale } from "@/i18n";
 import deMessages from "@/src/messages/de.json";
 import enMessages from "@/src/messages/en.json";
+import { getLatestSnapshot } from "@/src/server/repositories/perceptionSnapshotRepository";
+import {
+  getSnapshotSourceFromNotes,
+  getSnapshotBuildStatus,
+} from "@/src/server/perception/snapshotBuildService";
+import type { SnapshotBuildSource } from "@/src/features/perception/build/buildSetups";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -11,6 +17,17 @@ export default async function AdminOpsPage({ params }: Props) {
   const resolvedParams = await params;
   const locale = resolvedParams.locale as Locale;
   const messages = locale === "de" ? deMessages : enMessages;
+  const latestSnapshot = await getLatestSnapshot();
+  const latestSnapshotInfo = latestSnapshot
+    ? {
+        snapshotId: latestSnapshot.snapshot.id,
+        snapshotTime: latestSnapshot.snapshot.snapshotTime.toISOString(),
+        source: (getSnapshotSourceFromNotes(latestSnapshot.snapshot.notes) ?? "unknown") as
+          | SnapshotBuildSource
+          | "unknown",
+      }
+    : null;
+  const lockStatus = getSnapshotBuildStatus();
 
   const opsMessages = {
     title: messages["admin.ops.title"],
@@ -20,6 +37,27 @@ export default async function AdminOpsPage({ params }: Props) {
       title: messages["admin.ops.perception.title"],
       description: messages["admin.ops.perception.description"],
       button: messages["admin.ops.perception.button"],
+      lastSourceLabel: messages["admin.ops.perception.lastSourceLabel"],
+      snapshotTimeLabel: messages["admin.ops.perception.snapshotTimeLabel"],
+      sources: {
+        admin: messages["admin.ops.perception.source.admin"],
+        ui: messages["admin.ops.perception.source.ui"],
+        cron: messages["admin.ops.perception.source.cron"],
+        unknown: messages["admin.ops.perception.source.unknown"],
+      },
+      forceLabel: messages["admin.ops.perception.forceLabel"],
+      buildRunning: messages["admin.ops.perception.buildRunning"],
+      locked: messages["admin.ops.perception.locked"],
+      unlocked: messages["admin.ops.perception.unlocked"],
+      lockSourceLabel: messages["admin.ops.perception.lockSourceLabel"],
+      lockSinceLabel: messages["admin.ops.perception.lockSinceLabel"],
+      lockEtaLabel: messages["admin.ops.perception.lockEtaLabel"],
+      forceConfirm: {
+        title: messages["admin.ops.perception.forceConfirm.title"],
+        body: messages["admin.ops.perception.forceConfirm.body"],
+        cancel: messages["admin.ops.perception.forceConfirm.cancel"],
+        confirm: messages["admin.ops.perception.forceConfirm.confirm"],
+      },
     },
     marketdata: {
       title: messages["admin.ops.marketdata.title"],
@@ -47,6 +85,7 @@ export default async function AdminOpsPage({ params }: Props) {
     common: {
       showDetails: messages["admin.common.showJson"],
       hideDetails: messages["admin.common.hideJson"],
+      refresh: messages["admin.ops.common.refresh"],
     },
   };
 
@@ -57,7 +96,12 @@ export default async function AdminOpsPage({ params }: Props) {
         <h1 className="text-3xl font-semibold text-white">{opsMessages.title}</h1>
         <p className="text-sm text-slate-400">{opsMessages.description}</p>
       </header>
-      <OpsActionsPanel locale={locale} messages={opsMessages} />
+      <OpsActionsPanel
+        locale={locale}
+        messages={opsMessages}
+        latestSnapshot={latestSnapshotInfo}
+        initialLockStatus={lockStatus}
+      />
     </div>
   );
 }
