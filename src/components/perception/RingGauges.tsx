@@ -34,6 +34,46 @@ const badgeTone: Record<GaugeTone, string> = {
   neutral: "bg-slate-700/60 text-slate-200 border-slate-500",
 };
 
+export type GaugePalette = {
+  primary: string;
+  secondary: string;
+  border: string;
+};
+
+const DEFAULT_PALETTE: GaugePalette = {
+  primary: "#22c55e",
+  secondary: "rgba(226,232,240,0.15)",
+  border: "rgba(34,197,94,0.5)",
+};
+
+const NEUTRAL_SECONDARY = "rgba(226,232,240,0.15)";
+
+const SIGNAL_PALETTES: Array<{ min: number; palette: GaugePalette }> = [
+  { min: 75, palette: { primary: "#22c55e", secondary: NEUTRAL_SECONDARY, border: "rgba(16,185,129,0.6)" } },
+  { min: 60, palette: { primary: "#a3e635", secondary: NEUTRAL_SECONDARY, border: "rgba(132,204,22,0.6)" } },
+  { min: 45, palette: { primary: "#f97316", secondary: NEUTRAL_SECONDARY, border: "rgba(249,115,22,0.6)" } },
+  { min: 30, palette: { primary: "#fb923c", secondary: NEUTRAL_SECONDARY, border: "rgba(251,146,60,0.6)" } },
+  { min: 0, palette: { primary: "#ef4444", secondary: NEUTRAL_SECONDARY, border: "rgba(239,68,68,0.6)" } },
+];
+
+const CONFIDENCE_PALETTES: Array<{ min: number; palette: GaugePalette }> = [
+  { min: 75, palette: { primary: "#38bdf8", secondary: NEUTRAL_SECONDARY, border: "rgba(14,165,233,0.6)" } },
+  { min: 60, palette: { primary: "#0ea5e9", secondary: NEUTRAL_SECONDARY, border: "rgba(14,165,233,0.6)" } },
+  { min: 45, palette: { primary: "#60a5fa", secondary: NEUTRAL_SECONDARY, border: "rgba(59,130,246,0.6)" } },
+  { min: 30, palette: { primary: "#94a3b8", secondary: NEUTRAL_SECONDARY, border: "rgba(148,163,184,0.6)" } },
+  { min: 0, palette: { primary: "#475569", secondary: NEUTRAL_SECONDARY, border: "rgba(71,85,105,0.7)" } },
+];
+
+export function getSignalQualityGaugePalette(score: number): GaugePalette {
+  const normalized = Math.max(0, Math.min(100, score));
+  return SIGNAL_PALETTES.find((entry) => normalized >= entry.min)?.palette ?? DEFAULT_PALETTE;
+}
+
+export function getConfidenceGaugePalette(score: number): GaugePalette {
+  const normalized = Math.max(0, Math.min(100, score));
+  return CONFIDENCE_PALETTES.find((entry) => normalized >= entry.min)?.palette ?? DEFAULT_PALETTE;
+}
+
 export function summarizeRingMeta(meta?: RingMeta):
   | { label: string; tone: GaugeTone; lines: string[] }
   | null {
@@ -87,10 +127,12 @@ export type SmallGaugeProps = {
   value: number;
   tone?: GaugeTone;
   tooltip?: ReactNode;
+  tooltipClassName?: string;
   isActive?: boolean;
   onClick?: () => void;
   className?: string;
   meta?: RingMeta;
+  fillColor?: string;
 };
 
 export function SmallGauge({
@@ -98,17 +140,20 @@ export function SmallGauge({
   value,
   tone = "accent",
   tooltip,
+  tooltipClassName,
   isActive = false,
   onClick,
   className,
   meta,
+  fillColor,
 }: SmallGaugeProps): JSX.Element {
   const clamped = Math.max(0, Math.min(100, value));
   const display = Math.round(clamped);
   const metaSummary = summarizeRingMeta(meta);
   const combinedTooltip = mergeTooltipContent(tooltip, metaSummary);
   const toneColor =
-    tone === "green" ? "#22c55e" : tone === "teal" ? "#14b8a6" : tone === "neutral" ? "#475569" : "#0ea5e9";
+    fillColor ??
+    (tone === "green" ? "#22c55e" : tone === "teal" ? "#14b8a6" : tone === "neutral" ? "#475569" : "#0ea5e9");
 
   const gaugeInner = (
     <>
@@ -166,7 +211,13 @@ export function SmallGauge({
     )
     : content;
 
-  return combinedTooltip ? <Tooltip content={combinedTooltip}>{interactive}</Tooltip> : interactive;
+  return combinedTooltip ? (
+    <Tooltip content={combinedTooltip} contentClassName={tooltipClassName}>
+      {interactive}
+    </Tooltip>
+  ) : (
+    interactive
+  );
 }
 
 type BigGaugeProps = {
@@ -174,20 +225,23 @@ type BigGaugeProps = {
   label?: string;
   tooltip?: string;
   meta?: RingMeta;
+  palette?: GaugePalette;
 };
 
-export function BigGauge({ value, label, tooltip, meta }: BigGaugeProps): JSX.Element {
+export function BigGauge({ value, label, tooltip, meta, palette }: BigGaugeProps): JSX.Element {
   const clamped = Math.max(0, Math.min(100, value));
   const display = Math.round(clamped);
   const metaSummary = summarizeRingMeta(meta);
   const combinedTooltip = mergeTooltipContent(tooltip ? <div>{tooltip}</div> : undefined, metaSummary);
+  const tonePalette = palette ?? DEFAULT_PALETTE;
 
   const gauge = (
     <div className="flex flex-col items-center gap-2 lg:items-end">
       <div
         className="relative flex h-36 w-36 items-center justify-center rounded-full"
         style={{
-          background: `conic-gradient(#22c55e ${clamped}%, rgba(226,232,240,0.15) ${clamped}% 100%)`,
+          background: `conic-gradient(${tonePalette.primary} ${clamped}%, ${tonePalette.secondary} ${clamped}% 100%)`,
+          border: `1px solid ${tonePalette.border}`,
         }}
       >
         <div className="flex h-[68%] w-[68%] flex-col items-center justify-center rounded-full bg-slate-900 shadow-inner shadow-black/40">

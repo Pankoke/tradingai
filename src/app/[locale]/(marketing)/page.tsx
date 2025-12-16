@@ -117,6 +117,7 @@ export default function MarketingPage(): JSX.Element {
   const [setupOfTheDay, setSetupOfTheDay] =
     useState<HomepageSetup | null>(null);
   const [setupOfTheDayRaw, setSetupOfTheDayRaw] = useState<Setup | null>(null);
+  const [snapshotTime, setSnapshotTime] = useState<string | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
 
   const locale = useMemo(() => {
@@ -141,6 +142,7 @@ export default function MarketingPage(): JSX.Element {
       const winner = heroSetup ?? data.setups[0] ?? null;
       setSetupOfTheDay(winner ? toHomepageSetup(winner) : null);
       setSetupOfTheDayRaw(winner);
+      setSnapshotTime(data.snapshot.snapshotTime);
       setState("ready");
     } catch (error) {
       console.error(error);
@@ -241,7 +243,7 @@ export default function MarketingPage(): JSX.Element {
           </div>
           <div>
             {setupOfTheDayRaw ? (
-              <SetupOfTheDayCard setup={setupOfTheDayRaw} />
+              <SetupOfTheDayCard setup={setupOfTheDayRaw} generatedAt={snapshotTime ?? undefined} />
             ) : (
               <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 text-sm text-[var(--text-secondary)]">
                 {labels.heroFallback}

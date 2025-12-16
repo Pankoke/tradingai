@@ -172,7 +172,7 @@ export default async function SetupsPage({ params }: PageProps): Promise<JSX.Ele
         <section className="space-y-4">
           <h2 className="text-lg font-semibold tracking-tight sm:text-xl">Setup des Tages</h2>
           {setupOfTheDayRaw ? (
-            <SetupOfTheDayCard setup={setupOfTheDayRaw} />
+            <SetupOfTheDayCard setup={setupOfTheDayRaw} generatedAt={snapshot.snapshotTime} />
           ) : (
             <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 text-sm text-[var(--text-secondary)]">
               Aktuell kein Setup des Tages verfügbar.

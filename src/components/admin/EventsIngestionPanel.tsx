@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useActionState } from "react";
 import type { JSX } from "react";
 import { useRouter } from "next/navigation";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
 import type { Locale } from "@/i18n";
 import {
   triggerEventsIngestionAction,
@@ -52,7 +52,7 @@ type Props = {
 };
 
 export function EventsIngestionPanel({ locale, messages, lastRun }: Props): JSX.Element {
-  const [state, formAction] = useFormState<EventsIngestionFormState, FormData>(
+  const [state, formAction] = useActionState<EventsIngestionFormState, FormData>(
     triggerEventsIngestionAction,
     INITIAL_EVENTS_INGESTION_STATE,
   );
