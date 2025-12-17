@@ -7,23 +7,33 @@ import { excluded } from "../db/sqlHelpers";
 export type Event = typeof events["$inferSelect"];
 export type EventInput = typeof events["$inferInsert"];
 
-export async function getEventsInRange(params: {
-  from: Date;
-  to: Date;
-}): Promise<Event[]> {
+export async function getEventsInRange(
+  params: {
+    from: Date;
+    to: Date;
+  },
+  filters?: { category?: string; impact?: number },
+): Promise<Event[]> {
   if (params.from > params.to) {
     throw new Error("`from` must be before `to`");
+  }
+
+  const conditions = [
+    gte(events.scheduledAt, params.from),
+    lte(events.scheduledAt, params.to),
+  ];
+
+  if (filters?.category) {
+    conditions.push(eq(events.category, filters.category));
+  }
+  if (filters?.impact) {
+    conditions.push(eq(events.impact, filters.impact));
   }
 
   return db
     .select()
     .from(events)
-    .where(
-      and(
-        gte(events.scheduledAt, params.from),
-        lte(events.scheduledAt, params.to)
-      )
-    )
+    .where(and(...conditions))
     .orderBy(desc(events.scheduledAt));
 }
 

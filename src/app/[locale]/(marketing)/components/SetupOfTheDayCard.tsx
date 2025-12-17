@@ -15,6 +15,7 @@ import {
   SmallGauge,
   getConfidenceGaugePalette,
   getSignalQualityGaugePalette,
+  type GaugePalette,
 } from "@/src/components/perception/RingGauges";
 import { formatNumberText, formatRangeText } from "@/src/lib/formatters/levels";
 import { RiskRewardBlock } from "@/src/components/perception/RiskRewardBlock";
@@ -54,8 +55,7 @@ type RingTileDefinition = {
 };
 
 type RingCategoryPalette = {
-  borderClass: string;
-  activeBorderClass: string;
+  activeRingClass: string;
   labelClass: string;
   gaugeColor: string;
 };
@@ -65,39 +65,33 @@ const RING_SCORE_LEVELS = [75, 60, 45, 30, 0];
 const RING_CATEGORY_THEMES: Record<
   RingTabId,
   {
-    borderClass: string;
-    activeBorderClass: string;
+    activeRingClass: string;
     labelClass: string;
     colors: string[];
   }
 > = {
   trend: {
-    borderClass: "border-teal-500/20",
-    activeBorderClass: "border-teal-400/70",
+    activeRingClass: "ring-teal-400/80",
     labelClass: "text-teal-200",
     colors: ["#14b8a6", "#2dd4bf", "#38bdf8", "#0ea5e9", "#06b6d4"],
   },
   event: {
-    borderClass: "border-violet-500/20",
-    activeBorderClass: "border-violet-400/70",
+    activeRingClass: "ring-violet-400/80",
     labelClass: "text-violet-200",
     colors: ["#a855f7", "#c084fc", "#d946ef", "#e879f9", "#9333ea"],
   },
   bias: {
-    borderClass: "border-emerald-500/20",
-    activeBorderClass: "border-emerald-400/70",
+    activeRingClass: "ring-emerald-400/80",
     labelClass: "text-emerald-200",
     colors: ["#22c55e", "#21c2a1", "#34d399", "#4ade80", "#22c55e"],
   },
   sentiment: {
-    borderClass: "border-amber-500/20",
-    activeBorderClass: "border-amber-400/70",
+    activeRingClass: "ring-amber-400/80",
     labelClass: "text-amber-200",
     colors: ["#f97316", "#fbbf24", "#f59e0b", "#d97706", "#fbbf24"],
   },
   orderflow: {
-    borderClass: "border-sky-500/20",
-    activeBorderClass: "border-sky-400/70",
+    activeRingClass: "ring-sky-400/80",
     labelClass: "text-sky-200",
     colors: ["#0ea5e9", "#38bdf8", "#60a5fa", "#3b82f6", "#2563eb"],
   },
@@ -115,8 +109,7 @@ function getRingCategoryPalette(id: RingTabId, score: number): RingCategoryPalet
   }
   const color = theme.colors[Math.min(index, theme.colors.length - 1)];
   return {
-    borderClass: theme.borderClass,
-    activeBorderClass: theme.activeBorderClass,
+    activeRingClass: theme.activeRingClass,
     labelClass: theme.labelClass,
     gaugeColor: color,
   };
@@ -159,6 +152,9 @@ function formatGeneratedAtLabel(value: string | null | undefined, locale: Locale
     return null;
   }
   const formatter = new Intl.DateTimeFormat(toIntlLocale(locale), {
+    year: "numeric",
+    month: locale === "de" ? "2-digit" : "short",
+    day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
@@ -247,12 +243,16 @@ function SetupOfTheDayCardInner({ setup, generatedAt }: SetupOfTheDayCardProps):
         onClick={onClick}
         aria-pressed={isActive}
         className={clsx(
-          "flex flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-[0.7rem] font-semibold transition duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60",
-          "bg-slate-900/50 shadow-[0_10px_25px_rgba(2,6,23,0.5)]",
-          palette.borderClass,
-          isActive ? `${palette.activeBorderClass} bg-slate-800` : "border-slate-700/40",
+          "group relative flex cursor-pointer flex-col items-center gap-2 rounded-2xl px-4 py-3 text-[0.7rem] font-semibold transition duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950",
+          "shadow-[0_10px_25px_rgba(2,6,23,0.45)]",
+          isActive
+            ? `bg-slate-900/80 ring-2 ${palette.activeRingClass} ring-offset-2 ring-offset-slate-950`
+            : "bg-slate-900/30 hover:bg-slate-900/55 hover:shadow-[0_15px_30px_rgba(2,6,23,0.55)]",
         )}
       >
+        {isActive ? (
+          <span className="absolute -top-2 h-1 w-8 rounded-full bg-white/60" aria-hidden="true" />
+        ) : null}
         <SmallGauge
           value={ring.value}
           label=""
@@ -277,6 +277,11 @@ function SetupOfTheDayCardInner({ setup, generatedAt }: SetupOfTheDayCardProps):
   const confidenceSummaryLabel = t("perception.confidence.summaryLabel").replace(
     "{score}",
     String(Math.round(confidenceScore)),
+  );
+  const signalGradeLabel = t("perception.signalQuality.gradeLabel").replace("{grade}", signalQuality.grade);
+  const signalSummaryLabel = t("perception.signalQuality.scoreHint").replace(
+    "{score}",
+    String(Math.round(signalQuality.score)),
   );
   const consistencyLevel = deriveConsistencyLevel(confidenceScore);
   const eventRiskLevel = deriveEventRiskLevel(rings.eventScore);
@@ -344,7 +349,28 @@ function SetupOfTheDayCardInner({ setup, generatedAt }: SetupOfTheDayCardProps):
       </OnboardingHint>
 
       <div className="space-y-4">
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 shadow-[0_12px_35px_rgba(15,23,42,0.55)]">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <SignalInsightCard
+            title={t("perception.signalQuality.label")}
+            summary={signalSummaryLabel}
+            gaugeLabel={signalGradeLabel}
+            gaugeValue={signalQuality.score}
+            gaugePalette={signalPalette}
+            bullets={signalQualityReasons.map((reason) => t(reason))}
+            description={t("perception.signalQuality.description")}
+          />
+          <SignalInsightCard
+            title={t("perception.today.confidenceLabel")}
+            summary={confidenceSummaryLabel}
+            gaugeLabel={t("perception.today.confidenceLabel")}
+            gaugeValue={confidenceScore}
+            gaugePalette={confidencePalette}
+            bullets={confidenceBullets}
+            description={t("perception.confidence.description")}
+          />
+        </div>
+
+        <div className="rounded-3xl bg-slate-950/35 p-5 shadow-[0_18px_45px_rgba(2,6,23,0.6)]">
           <p className="text-[0.58rem] font-semibold uppercase tracking-[0.3em] text-slate-300">
             {t("perception.metaSignals.heading")}
           </p>
@@ -360,7 +386,7 @@ function SetupOfTheDayCardInner({ setup, generatedAt }: SetupOfTheDayCardProps):
           </div>
           <div
             className={clsx(
-              "relative mt-4 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-4 transition-all duration-300",
+              "relative mt-4 overflow-hidden rounded-2xl bg-slate-950/30 px-3 py-4 transition-all duration-300",
               detailExpanded ? "max-h-[1200px]" : "max-h-[260px]",
             )}
           >
@@ -553,6 +579,55 @@ function SetupOfTheDayCardInner({ setup, generatedAt }: SetupOfTheDayCardProps):
 }
 
 const detailBoxClass = "rounded-2xl border border-slate-800 bg-[#0f172a]/80 px-4 py-3 shadow-[inset_0_0_25px_rgba(15,23,42,0.9)]";
+
+type SignalInsightCardProps = {
+  title: string;
+  summary: string;
+  gaugeLabel: string;
+  gaugeValue: number;
+  gaugePalette: GaugePalette;
+  bullets: string[];
+  description: string;
+};
+
+function SignalInsightCard({
+  title,
+  summary,
+  gaugeLabel,
+  gaugeValue,
+  gaugePalette,
+  bullets,
+  description,
+}: SignalInsightCardProps): JSX.Element {
+  return (
+    <div className="flex flex-col gap-4 rounded-2xl border border-slate-800 bg-slate-950/40 p-5 shadow-[0_20px_45px_rgba(2,6,23,0.55)]">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <p className="text-[0.58rem] font-semibold uppercase tracking-[0.35em] text-slate-300">{title}</p>
+          <p className="text-xs text-slate-400">{summary}</p>
+        </div>
+      </div>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center">
+        <div className="flex justify-center md:block">
+          <BigGauge value={gaugeValue} label={gaugeLabel} palette={gaugePalette} />
+        </div>
+        <div className="flex-1 space-y-2">
+          <div className="rounded-2xl border border-slate-800/60 bg-slate-900/60 p-4">
+            <ul className="space-y-1 text-sm text-slate-100">
+              {bullets.map((line, index) => (
+                <li key={`${line}-${index}`} className="flex items-start gap-2 leading-snug">
+                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-slate-400" />
+                  <span className="flex-1">{line}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+      <p className="text-xs text-slate-400 line-clamp-3">{description}</p>
+    </div>
+  );
+}
 
 function LevelBox({ label, value, tone = "neutral" }: LevelBoxPropsDay): JSX.Element {
   return (

@@ -4,7 +4,7 @@ import { getEventById } from "@/src/server/repositories/eventRepository";
 import type { Locale } from "@/i18n";
 
 type Props = {
-  params: { locale: string; id: string };
+  params: Promise<{ locale: string; id: string }>;
 };
 
 function toInputDate(value: Date | string | null | undefined): string {
@@ -14,8 +14,9 @@ function toInputDate(value: Date | string | null | undefined): string {
 }
 
 export default async function AdminEventDetailPage({ params }: Props) {
-  const locale = params.locale as Locale;
-  const event = await getEventById(params.id);
+  const resolvedParams = await params;
+  const locale = resolvedParams.locale as Locale;
+  const event = await getEventById(resolvedParams.id);
   if (!event) {
     notFound();
   }

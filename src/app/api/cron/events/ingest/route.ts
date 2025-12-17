@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { ingestJbNewsCalendar } from "@/src/server/events/ingest/ingestJbNewsCalendar";
 import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
 import { logger } from "@/src/lib/logger";
+import { revalidatePath } from "next/cache";
+import { i18nConfig } from "@/src/lib/i18n/config";
 
 const cronLogger = logger.child({ route: "cron-events-ingest" });
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -48,6 +50,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessBo
       message: "cron_events_ingest_success",
       meta: result,
     });
+    revalidateEventsPages();
     return NextResponse.json({ ok: true, result });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
@@ -120,4 +123,10 @@ function parseParams(
   }
 
   return { params: Object.keys(options).length ? options : undefined };
+}
+
+function revalidateEventsPages(): void {
+  for (const locale of i18nConfig.locales) {
+    revalidatePath(`/${locale}/events`);
+  }
 }

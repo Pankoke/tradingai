@@ -6,6 +6,7 @@ import { ensureAdminSession } from "@/src/lib/admin/guards";
 import { logger } from "@/src/lib/logger";
 import { ingestJbNewsCalendar } from "@/src/server/events/ingest/ingestJbNewsCalendar";
 import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
+import { i18nConfig } from "@/src/lib/i18n/config";
 
 export type EventsIngestionFormState = {
   ok: boolean | null;
@@ -36,6 +37,7 @@ export async function triggerEventsIngestionAction(
       meta: result,
     });
     revalidatePath(`/${locale}/admin/ops`);
+    revalidateEventsPages();
     return {
       ok: true,
       message: `Imported ${result.imported}, updated ${result.updated}, skipped ${result.skipped}`,
@@ -69,4 +71,10 @@ function parseLookahead(raw?: string): number | undefined {
     return MAX_LOOKAHEAD;
   }
   return parsed;
+}
+
+function revalidateEventsPages(): void {
+  for (const locale of i18nConfig.locales) {
+    revalidatePath(`/${locale}/events`);
+  }
 }
