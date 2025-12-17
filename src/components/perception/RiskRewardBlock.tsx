@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { JSX } from "react";
+import clsx from "clsx";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import type { RiskRewardSummary } from "@/src/lib/engine/levels";
 import {
@@ -22,14 +23,6 @@ const determineRRRColor = (value?: number | null): string => {
   if (value < 1.0) return "text-rose-400";
   if (value < 2.0) return "text-amber-300";
   return "text-emerald-400";
-};
-
-const barWidth = (value?: number | null): string => {
-  if (!value || !Number.isFinite(value)) {
-    return "w-[35%]";
-  }
-  const pct = Math.min(Math.abs(value), 20);
-  return `w-[${Math.round(pct * 2.5)}%]`;
 };
 
 type RrrClass = "conservative" | "balanced" | "aggressive";
@@ -91,17 +84,31 @@ export function RiskRewardBlock({ riskReward, className }: Props): JSX.Element {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (data as any)?.confidenceScore ?? null,
   );
+  const confidenceScore =
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    typeof (data as any)?.confidenceScore === "number" ? (data as any).confidenceScore as number : null;
+  const maxPercent = Math.max(
+    Math.abs(data.rewardPercent ?? 0),
+    Math.abs(data.riskPercent ?? 0),
+    1,
+  );
+  const rewardWidth = ratioWidth(data.rewardPercent, maxPercent);
+  const riskWidth = ratioWidth(data.riskPercent, maxPercent);
+  const chips: string[] = [];
+  chips.push(`${t("perception.riskReward.volatilityLabel")}: ${volatilityDisplay}`);
+  if (confidenceScore !== null) {
+    chips.push(t("perception.execution.chip.confidence").replace("{value}", String(Math.round(confidenceScore))));
+  }
+  if (riskBucket) {
+    chips.push(t(`perception.riskReward.riskChip.${riskBucket}`));
+  }
 
   return (
     <div
       className={`rounded-2xl border border-slate-800 bg-[#0f172a]/80 px-4 py-4 shadow-[inset_0_0_25px_rgba(15,23,42,0.9)] ${className ?? ""}`}
     >
-      <div className="text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-slate-400">
-        {t("perception.riskReward.title")}
-      </div>
-
-      <div className="mt-3 flex flex-col gap-3">
-        <div className="flex items-end justify-between">
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <Tooltip
               content={
@@ -111,88 +118,92 @@ export function RiskRewardBlock({ riskReward, className }: Props): JSX.Element {
                       .replace(
                         "{confidence}",
                         confidenceBucket ? t(`perception.rings.insights.confidence.${confidenceBucket}`) : "",
-                      )}${
-                      (data as any)?.eventScore && (data as any)?.eventScore >= 75
-                        ? ` ${t("perception.tradeDecision.playbook.highEvent")}`
-                        : (data as any)?.eventScore && (data as any)?.eventScore >= 40
-                          ? ` ${t("perception.tradeDecision.playbook.mediumEvent")}`
-                          : ""
-                    }`
+                      )}`
                   : t("perception.riskReward.tooltip.rrrDefault")
               }
               side="top"
             >
               <p className="flex cursor-help items-center gap-2 text-[0.55rem] uppercase tracking-[0.35em] text-slate-500">
                 {t("perception.riskReward.rrrLabel")}
-                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-slate-700 text-[0.55rem] text-slate-400">i</span>
+                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-slate-700 text-[0.55rem] text-slate-400">
+                  i
+                </span>
               </p>
             </Tooltip>
-            <p className={`text-3xl font-bold ${determineRRRColor(data.rrr)}`}>
-              {formatRRR(data.rrr)}
-            </p>
-            {rrrClass && (
-              <span
-                className={`mt-2 inline-flex items-center gap-1 rounded-full border px-2 py-[0.15rem] text-[0.6rem] uppercase tracking-[0.25em] ${classStyles[rrrClass]}`}
-              >
-                {t(`perception.riskReward.rrrClass.${rrrClass}`)}
-              </span>
-            )}
+            <div className="flex items-baseline gap-3">
+              <p className={`text-4xl font-bold ${determineRRRColor(data.rrr)}`}>{formatRRR(data.rrr)}</p>
+              {rrrClass && (
+                <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${classStyles[rrrClass]}`}>
+                  {t(`perception.riskReward.rrrClass.${rrrClass}`)}
+                </span>
+              )}
+            </div>
             {rrrBucket ? (
-              <p className="mt-1 text-[11px] text-slate-300">
+              <p className="mt-1 text-xs text-slate-300">
                 {t(`perception.riskReward.rrrNote.${rrrBucket}`).replace("{rrr}", formatRRR(data.rrr))}
               </p>
             ) : null}
           </div>
-          <div className="h-2 w-[110px] rounded-full border border-slate-800 bg-slate-900">
-            <div className={`h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 ${barWidth(data.rrr)}`} />
-          </div>
+          {chips.length > 0 ? (
+            <div className="flex flex-wrap gap-2 text-[0.6rem] uppercase tracking-[0.2em] text-slate-300">
+              {chips.map((chip) => (
+                <span key={chip} className="rounded-full border border-slate-700/60 px-3 py-1 text-slate-200">
+                  {chip}
+                </span>
+              ))}
+            </div>
+          ) : null}
         </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <MetricCard
+            label={t("perception.riskReward.rewardLabel")}
+            value={formatRewardPercent(data.rewardPercent)}
+            barColor="bg-emerald-400"
+            width={rewardWidth}
+          />
+          <MetricCard
+            label={t("perception.riskReward.riskLabel")}
+            value={formatRiskPercent(data.riskPercent)}
+            barColor="bg-rose-500"
+            width={riskWidth}
+            note={
+              riskBucket
+                ? t(`perception.riskReward.riskNote.${riskBucket}`)
+                    .replace("{risk}", formatRiskPercent(data.riskPercent))
+                    .replace("{rrr}", formatRRR(data.rrr))
+                : null
+            }
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
 
-        <div className="grid gap-2 text-[0.7rem] sm:grid-cols-3">
-          <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3 text-slate-300">
-            <div className="text-[0.55rem] uppercase tracking-[0.3em] text-slate-500">
-              {t("perception.riskReward.rewardLabel")}
-            </div>
-            <div className="mt-1 text-sm font-semibold text-emerald-400">
-              {formatRewardPercent(data.rewardPercent)}
-            </div>
-            <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-slate-800">
-              <div className={`h-full rounded-full bg-emerald-400 ${barWidth(data.rewardPercent)}`} />
-            </div>
-          </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3 text-slate-300">
-            <div className="text-[0.55rem] uppercase tracking-[0.3em] text-slate-500">
-              {t("perception.riskReward.riskLabel")}
-            </div>
-            <div className="mt-1 text-sm font-semibold text-rose-400">
-              {formatRiskPercent(data.riskPercent)}
-            </div>
-            {riskBucket ? (
-              <p className="mt-1 text-[11px] text-slate-300">
-                {t(`perception.riskReward.riskNote.${riskBucket}`)
-                  .replace("{risk}", formatRiskPercent(data.riskPercent))
-                  .replace("{rrr}", formatRRR(data.rrr))}
-              </p>
-            ) : null}
-            <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-slate-800">
-              <div className={`h-full rounded-full bg-rose-500 ${barWidth(data.riskPercent)}`} />
-            </div>
-          </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3 text-slate-300">
-            <Tooltip content={t("perception.riskReward.tooltip.volatility")} side="top">
-              <div className="flex cursor-help items-center gap-2 text-[0.55rem] uppercase tracking-[0.3em] text-slate-500">
-                {t("perception.riskReward.volatilityLabel")}
-                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-slate-700 text-[0.55rem] text-slate-400">i</span>
-              </div>
-            </Tooltip>
-            <div className="mt-1 flex items-center justify-between text-xs font-semibold">
-              <span>{volatilityDisplay}</span>
-              <span className="rounded-full border border-slate-700 bg-slate-900 px-2 py-[0.15rem] text-[0.6rem] tracking-[0.2em] text-slate-400">
-                {data.volatilityLabel ?? t("perception.riskReward.valueNA")}
-              </span>
-            </div>
-          </div>
-        </div>
+function ratioWidth(value?: number | null, max = 1): string {
+  if (value === undefined || value === null || !Number.isFinite(value)) {
+    return "10%";
+  }
+  const ratio = Math.max(0.08, Math.min(1, Math.abs(value) / max));
+  return `${Math.round(ratio * 100)}%`;
+}
+
+type MetricCardProps = {
+  label: string;
+  value: string;
+  width: string;
+  barColor: string;
+  note?: string | null;
+};
+
+function MetricCard({ label, value, width, barColor, note }: MetricCardProps): JSX.Element {
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3 text-slate-300">
+      <div className="text-[0.55rem] uppercase tracking-[0.3em] text-slate-500">{label}</div>
+      <div className="mt-1 text-sm font-semibold">{value}</div>
+      {note ? <p className="mt-1 text-[11px] text-slate-400">{note}</p> : null}
+      <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+        <div className={clsx("h-full rounded-full", barColor)} style={{ width }} />
       </div>
     </div>
   );

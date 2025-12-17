@@ -1,7 +1,8 @@
-﻿"use client";
+"use client";
 
 import type { JSX } from "react";
 import { useMemo, useState, useEffect } from "react";
+import clsx from "clsx";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import type { Setup } from "@/src/lib/engine/types";
 import { SentimentInspector } from "@/src/components/perception/SentimentInspector";
@@ -28,6 +29,7 @@ type RingInsightTabsProps = {
   activeRing?: RingTabId | null;
   onActiveRingChange?: (id: RingTabId) => void;
   showTabButtons?: boolean;
+  frameClassName?: string | null;
 };
 
 const hasOrderflowContent = (current: Setup): boolean => {
@@ -82,6 +84,9 @@ const ringTabs: RingTabConfig[] = [
   },
 ];
 
+const DEFAULT_FRAME_CLASS = "rounded-xl border border-slate-800 bg-slate-900/50 p-3 sm:p-4";
+const STACK_CLASS = "space-y-3";
+
 export function RingInsightTabs({
   setup,
   variant = "full",
@@ -89,6 +94,7 @@ export function RingInsightTabs({
   activeRing = null,
   onActiveRingChange,
   showTabButtons = true,
+  frameClassName,
 }: RingInsightTabsProps) {
   const t = useT();
   const signalQuality = useMemo(() => computeSignalQuality(setup), [setup]);
@@ -136,8 +142,8 @@ export function RingInsightTabs({
     }
   };
 
-  return (
-    <section className="rounded-xl border border-slate-800 bg-slate-900/50 p-3 sm:p-4 space-y-3">
+  const inner = (
+    <div className={STACK_CLASS}>
       {variant === "full" && showSignalQualityInline && (
         <SignalQualityBadge quality={signalQuality} variant="inline" />
       )}
@@ -160,6 +166,12 @@ export function RingInsightTabs({
         </div>
       )}
       {content}
-    </section>
+    </div>
   );
+
+  if (frameClassName === null) {
+    return inner;
+  }
+
+  return <section className={clsx(DEFAULT_FRAME_CLASS, frameClassName)}>{inner}</section>;
 }
