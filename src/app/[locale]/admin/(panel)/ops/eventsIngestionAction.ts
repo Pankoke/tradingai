@@ -15,19 +15,15 @@ export type EventsIngestionFormState = {
   result?: Awaited<ReturnType<typeof ingestJbNewsCalendar>>;
 };
 
-const MAX_LOOKAHEAD = 60;
-
 export async function triggerEventsIngestionAction(
   _prevState: EventsIngestionFormState,
   formData: FormData,
 ): Promise<EventsIngestionFormState> {
   await ensureAdminSession();
   const locale = formData.get("locale")?.toString() || defaultLocale;
-  const lookaheadRaw = formData.get("lookaheadDays")?.toString();
-  const lookaheadDays = parseLookahead(lookaheadRaw);
   const startedAt = Date.now();
   try {
-    const result = await ingestJbNewsCalendar({ lookaheadDays });
+    const result = await ingestJbNewsCalendar();
     await createAuditRun({
       action: "events.ingest",
       source: "admin",
@@ -59,18 +55,6 @@ export async function triggerEventsIngestionAction(
       error: message,
     };
   }
-}
-
-function parseLookahead(raw?: string): number | undefined {
-  if (!raw) return undefined;
-  const parsed = Number.parseInt(raw, 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return undefined;
-  }
-  if (parsed > MAX_LOOKAHEAD) {
-    return MAX_LOOKAHEAD;
-  }
-  return parsed;
 }
 
 function revalidateEventsPages(): void {

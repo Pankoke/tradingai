@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, desc, gte, lte, eq, sql, or, isNull } from "drizzle-orm";
+import { and, desc, gte, lte, eq, sql, or, isNull, isNotNull } from "drizzle-orm";
 import { db } from "../db/db";
 import { events } from "../db/schema/events";
 import { excluded } from "../db/sqlHelpers";
@@ -36,6 +36,22 @@ export async function getEventsInRange(
     .from(events)
     .where(and(...conditions))
     .orderBy(desc(events.scheduledAt));
+}
+
+const DEFAULT_SWEEP_LIMIT = 5000;
+
+export async function listEventsForDedupSweep(params: {
+  from: Date;
+  to: Date;
+  limit?: number;
+}): Promise<Event[]> {
+  const limit = clampLimit(params.limit ?? DEFAULT_SWEEP_LIMIT + 1);
+  return db
+    .select()
+    .from(events)
+    .where(and(gte(events.scheduledAt, params.from), lte(events.scheduledAt, params.to)))
+    .orderBy(events.scheduledAt)
+    .limit(limit);
 }
 
 export async function insertOrUpdateEvents(eventInputs: EventInput[]): Promise<void> {
@@ -88,7 +104,7 @@ export async function listEventsForEnrichment(params: {
       and(
         gte(events.scheduledAt, params.from),
         lte(events.scheduledAt, params.to),
-        or(isNull(events.summary), isNull(events.enrichedAt)),
+        isNull(events.enrichedAt),
       ),
     )
     .orderBy(events.scheduledAt)
@@ -191,4 +207,63 @@ export async function listHighImpactUpcomingEvents({
     )
     .orderBy(events.scheduledAt)
     .limit(limit);
+}
+
+export type EventEnrichmentStats = {
+  total: number;
+  enriched: number;
+  fallbackOnly: number;
+  candidates: number;
+  lastEnrichedAt: Date | null;
+};
+
+export async function getEventEnrichmentStats(windowDays = 14): Promise<EventEnrichmentStats> {
+  const from = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const to = new Date(Date.now() + windowDays * 24 * 60 * 60 * 1000);
+
+  const [
+    totalRows,
+    enrichedRows,
+    fallbackRows,
+    lastRows,
+    candidateRows,
+  ] = await Promise.all([
+    db.select({ value: sql<number>`count(*)` }).from(events),
+    db.select({ value: sql<number>`count(*)` }).from(events).where(isNotNull(events.enrichedAt)),
+    db
+      .select({ value: sql<number>`count(*)` })
+      .from(events)
+      .where(and(isNull(events.enrichedAt), or(isNull(events.summary), eq(events.summary, "")))),
+    db.select({ value: sql<Date | null>`max(${events.enrichedAt})` }).from(events),
+    db
+      .select({ value: sql<number>`count(*)` })
+      .from(events)
+      .where(and(gte(events.scheduledAt, from), lte(events.scheduledAt, to), isNull(events.enrichedAt))),
+  ]);
+
+  const totalRow = totalRows[0];
+  const enrichedRow = enrichedRows[0];
+  const fallbackRow = fallbackRows[0];
+  const lastRow = lastRows[0];
+  const candidatesRow = candidateRows[0];
+
+  const lastEnrichedAt =
+    lastRow?.value instanceof Date
+      ? lastRow.value
+      : lastRow?.value
+        ? new Date(lastRow.value)
+        : null;
+
+  return {
+    total: Number(totalRow?.value ?? 0),
+    enriched: Number(enrichedRow?.value ?? 0),
+    fallbackOnly: Number(fallbackRow?.value ?? 0),
+    candidates: Number(candidatesRow?.value ?? 0),
+    lastEnrichedAt,
+  };
+}
+
+function clampLimit(limit: number): number {
+  if (!Number.isFinite(limit)) return DEFAULT_SWEEP_LIMIT;
+  return Math.max(1, Math.min(10000, Math.trunc(limit)));
 }

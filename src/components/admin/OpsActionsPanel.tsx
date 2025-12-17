@@ -94,18 +94,23 @@ type OpsMessages = {
     title: string;
     description: string;
     button: string;
-    selectLabel: string;
-    selectOptions: Record<string, string>;
+    rollingWindowLabel: string;
+    rollingWindowValue: string;
+    sourceLabel: string;
+    sourceValue: string;
     lastRunLabel: string;
     noRuns: string;
     statusSuccess: string;
     statusFailed: string;
     countsLabel: string;
-    windowLabel: string;
+    retentionLabel: string;
+    deletedLabel: string;
     runAtLabel: string;
     errorLabel: string;
     resultLabel: string;
   };
+  eventsEnrichment: unknown;
+  eventsDedup: unknown;
 };
 
 type Props = {

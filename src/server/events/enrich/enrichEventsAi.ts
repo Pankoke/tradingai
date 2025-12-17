@@ -11,6 +11,7 @@ import {
   MARKET_SCOPE_ENUM,
   type MarketScopeEnum,
 } from "@/src/server/events/eventDescription";
+import { shouldEnrichWithAi } from "@/src/server/events/enrich/enrichmentRules";
 
 type EnrichOptions = {
   limit?: number;
@@ -26,13 +27,16 @@ export type EnrichEventsResult = {
   windowFrom: Date | null;
   windowTo: Date | null;
   totalRetries: number;
+  skippedLowValueMacro: number;
+  skippedAlreadyEnriched: number;
 };
 
 const enrichmentLogger = logger.child({ module: "events-ai-enrichment" });
 const DEFAULT_LIMIT = Number.parseInt(process.env.EVENTS_AI_ENRICH_LIMIT ?? "15", 10);
 const MAX_LIMIT = 50;
-const DEFAULT_WINDOW_DAYS = 14;
-const MAX_WINDOW_DAYS = 30;
+const DEFAULT_WINDOW_DAYS = 3;
+const MAX_WINDOW_DAYS = 14;
+const LOOKBACK_HOURS = 24;
 const MODEL = process.env.EVENTS_AI_ENRICH_MODEL ?? "gpt-4o-mini";
 const parsedTimeout = Number.parseInt(process.env.EVENTS_AI_TIMEOUT_MS ?? "", 10);
 const DEFAULT_TIMEOUT_MS = Number.isFinite(parsedTimeout) ? parsedTimeout : 12_000;
@@ -42,7 +46,6 @@ const ALLOW_EXPECTATION_DETAILS = process.env.EVENTS_AI_ALLOW_EXPECTATION === "1
 const STANDARD_EXPECTATION_NOTE =
   "Informational-only, consensus-style context; not a prediction or trading advice.";
 const SUMMARY_MAX_LENGTH = 240;
-
 const MARKET_SCOPE_VALUES = Object.values(MARKET_SCOPE_ENUM);
 
 const ENRICHMENT_SCHEMA = z.object({
@@ -93,6 +96,8 @@ export async function enrichEventsAi(options?: EnrichOptions): Promise<EnrichEve
       windowFrom: null,
       windowTo: null,
       totalRetries: 0,
+      skippedLowValueMacro: 0,
+      skippedAlreadyEnriched: 0,
     };
   }
 
@@ -108,13 +113,15 @@ export async function enrichEventsAi(options?: EnrichOptions): Promise<EnrichEve
       windowFrom: null,
       windowTo: null,
       totalRetries: 0,
+      skippedLowValueMacro: 0,
+      skippedAlreadyEnriched: 0,
     };
   }
 
   const limit = clampNumber(options?.limit ?? DEFAULT_LIMIT, 1, Math.min(MAX_LIMIT, DEFAULT_LIMIT));
   const windowDays = clampNumber(options?.daysAhead ?? DEFAULT_WINDOW_DAYS, 1, MAX_WINDOW_DAYS);
   const now = new Date();
-  const from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const from = new Date(now.getTime() - LOOKBACK_HOURS * 60 * 60 * 1000);
   const to = new Date(now.getTime() + windowDays * 24 * 60 * 60 * 1000);
   const candidates = await listEventsForEnrichment({ from, to, limit });
 
@@ -131,14 +138,30 @@ export async function enrichEventsAi(options?: EnrichOptions): Promise<EnrichEve
       windowFrom: from,
       windowTo: to,
       totalRetries: 0,
+      skippedLowValueMacro: 0,
+      skippedAlreadyEnriched: 0,
     };
   }
 
   let enriched = 0;
   let failed = 0;
   let skipped = 0;
+  let skippedLowValueMacro = 0;
+  let skippedAlreadyEnriched = 0;
 
   for (const event of candidates) {
+    const alreadyEnriched = Boolean(event.enrichedAt);
+    if (alreadyEnriched) {
+      skippedAlreadyEnriched += 1;
+      skipped += 1;
+      continue;
+    }
+    if (!shouldEnrichWithAi(event)) {
+      skippedLowValueMacro += 1;
+      skipped += 1;
+      continue;
+    }
+
     try {
       const payload = await generateEnrichment(event, apiKey, retryStats);
       await updateEventEnrichment(event.id, {
@@ -164,6 +187,8 @@ export async function enrichEventsAi(options?: EnrichOptions): Promise<EnrichEve
     windowFrom: from,
     windowTo: to,
     totalRetries: retryStats.totalRetries,
+    skippedLowValueMacro,
+    skippedAlreadyEnriched,
   };
 }
 
@@ -210,11 +235,12 @@ function buildPrompt(event: Event): string {
 You will enrich an economic calendar event for an internal knowledge base.
 Use only the provided metadata. Summaries must be informational, consensus-style, and highlight why the event matters for traders.
 Instruction set:
-- summary: 1-2 sentences (<=${SUMMARY_MAX_LENGTH} chars) explaining what the event measures and potential market impact. English only.
+- summary: 1-2 sentences (<=${SUMMARY_MAX_LENGTH} chars) describing expected volatility and which markets typically react. Do NOT define the indicator. English only.
 - marketScope: choose EXACTLY one enum token from ${MARKET_SCOPE_VALUES.join(", ")} (e.g. FX_RATES_INDICES = FX, rates, index futures; CRYPTO = crypto assets; COMMODITIES = commodities; EQUITIES_INDICES = equities; GLOBAL = broad impact; UNKNOWN = unsure).
 - expectationLabel: choose "above", "inline", "below", or "unknown". If unclear, return "unknown".
-- expectationConfidence: integer 0-100 only if label != "unknown". Otherwise null.
+- expectationConfidence: integer 0-100 (use 0 when label is "unknown").
 - expectationNote: optional short phrase (<=160 chars) reinforcing that this is informational/consensus-style, not advice.
+- Do NOT mention forecast/actual/previous unless provided above (they usually are not).
 - Never provide trading instructions, positions, or forecasts beyond generic statements.
 - Output ONLY valid JSON with keys: summary, marketScope, expectationLabel, expectationConfidence, expectationNote.
 - Do not wrap JSON in code fences.

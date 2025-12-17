@@ -141,5 +141,7 @@ function serializeResult(result: Awaited<ReturnType<typeof enrichEventsAi>>) {
     totalCandidates: result.totalCandidates,
     limitUsed: result.limitUsed,
     totalRetries: result.totalRetries,
+    skippedLowValueMacro: result.skippedLowValueMacro,
+    skippedAlreadyEnriched: result.skippedAlreadyEnriched,
   };
 }

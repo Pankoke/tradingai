@@ -14,14 +14,17 @@ type EventsIngestionMessages = {
   title: string;
   description: string;
   button: string;
-  selectLabel: string;
-  selectOptions: Record<string, string>;
+  rollingWindowLabel: string;
+  rollingWindowValue: string;
+  sourceLabel: string;
+  sourceValue: string;
   lastRunLabel: string;
   noRuns: string;
   statusSuccess: string;
   statusFailed: string;
   countsLabel: string;
-  windowLabel: string;
+  retentionLabel: string;
+  deletedLabel: string;
   runAtLabel: string;
   errorLabel: string;
   resultLabel: string;
@@ -31,8 +34,8 @@ type LastRunMeta = {
   imported?: number;
   updated?: number;
   skipped?: number;
-  from?: string;
-  to?: string;
+  retentionDays?: number;
+  deletedOldEvents?: number;
 };
 
 export type EventsIngestionRunInfo = {
@@ -72,23 +75,15 @@ export function EventsIngestionPanel({ locale, messages, lastRun }: Props): JSX.
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-slate-500">{messages.title}</p>
           <p className="text-sm text-slate-400">{messages.description}</p>
+          <p className="text-xs text-slate-500">
+            <span className="font-semibold">{messages.rollingWindowLabel}:</span> {messages.rollingWindowValue}
+          </p>
+          <p className="text-xs text-slate-500">
+            <span className="font-semibold">{messages.sourceLabel}:</span> {messages.sourceValue}
+          </p>
         </div>
         <form className="flex flex-col gap-2 sm:flex-row sm:items-end" action={formAction}>
           <input type="hidden" name="locale" value={locale} />
-          <label className="text-xs text-slate-400">
-            {messages.selectLabel}
-            <select
-              name="lookaheadDays"
-              defaultValue="30"
-              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-sm text-white focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-400"
-            >
-              {Object.entries(messages.selectOptions).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
           <SubmitButton label={messages.button} />
         </form>
       </div>
@@ -123,19 +118,24 @@ export function EventsIngestionPanel({ locale, messages, lastRun }: Props): JSX.
                 <span className="text-slate-500">({formatDuration(lastRun.durationMs)})</span>
               ) : null}
             </div>
-            <div className="text-slate-300">{lastRun.message}</div>
+            {lastRun.message ? <div className="text-slate-300">{lastRun.message}</div> : null}
             {lastRunMeta ? (
-              <>
-                <div className="flex flex-wrap gap-4 text-xs text-slate-400">
+              <div className="flex flex-wrap gap-4 text-xs text-slate-400">
+                <span>
+                  {messages.countsLabel}: {lastRunMeta.imported ?? 0} / {lastRunMeta.updated ?? 0} /{" "}
+                  {lastRunMeta.skipped ?? 0}
+                </span>
+                {typeof lastRunMeta.retentionDays === "number" ? (
                   <span>
-                    {messages.countsLabel}: {lastRunMeta.imported ?? 0} / {lastRunMeta.updated ?? 0} /{" "}
-                    {lastRunMeta.skipped ?? 0}
+                    {messages.retentionLabel}: {lastRunMeta.retentionDays}d
                   </span>
+                ) : null}
+                {typeof lastRunMeta.deletedOldEvents === "number" ? (
                   <span>
-                    {messages.windowLabel}: {formatDate(locale, lastRunMeta.from)} – {formatDate(locale, lastRunMeta.to)}
+                    {messages.deletedLabel}: {lastRunMeta.deletedOldEvents}
                   </span>
-                </div>
-              </>
+                ) : null}
+              </div>
             ) : null}
             {!lastRun.ok && lastRun.error ? (
               <div className="rounded-lg border border-rose-400/30 bg-rose-500/5 px-3 py-2 text-xs text-rose-200">
@@ -159,13 +159,13 @@ function extractMeta(meta?: LastRunMeta | null) {
     imported: typeof meta.imported === "number" ? meta.imported : undefined,
     updated: typeof meta.updated === "number" ? meta.updated : undefined,
     skipped: typeof meta.skipped === "number" ? meta.skipped : undefined,
-    from: typeof meta.from === "string" ? meta.from : undefined,
-    to: typeof meta.to === "string" ? meta.to : undefined,
+    retentionDays: typeof meta.retentionDays === "number" ? meta.retentionDays : undefined,
+    deletedOldEvents: typeof meta.deletedOldEvents === "number" ? meta.deletedOldEvents : undefined,
   };
 }
 
 function formatDate(locale: Locale, value?: string) {
-  if (!value) return "–";
+  if (!value) return "—";
   try {
     const date = new Date(value);
     return date.toLocaleString(locale === "de" ? "de-DE" : "en-US");
@@ -181,7 +181,7 @@ function formatDuration(ms: number): string {
 }
 
 function truncate(value: string, maxLength: number): string {
-  return value.length > maxLength ? `${value.slice(0, maxLength)}…` : value;
+  return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
 }
 
 function SubmitButton({ label }: { label: string }) {
@@ -192,7 +192,7 @@ function SubmitButton({ label }: { label: string }) {
       disabled={pending}
       className="inline-flex items-center justify-center rounded-lg border border-sky-500/40 bg-sky-600/20 px-4 py-2 text-sm font-semibold text-sky-100 transition hover:bg-sky-600/30 disabled:cursor-not-allowed disabled:opacity-50"
     >
-      {pending ? `${label}…` : label}
+      {pending ? `${label}...` : label}
     </button>
   );
 }

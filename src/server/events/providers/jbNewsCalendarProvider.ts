@@ -21,10 +21,9 @@ export type JbNewsCalendarProviderConfig = {
 };
 
 const BASE_URL = "https://www.jblanked.com";
-const WEEK_ENDPOINT = { key: "mql5", path: "/news/api/mql5/calendar/week/" } as const;
+const RANGE_ENDPOINT = { key: "mql5", path: "/news/api/mql5/calendar/range/" } as const;
 
-type SourceKey = (typeof WEEK_ENDPOINT)["key"];
-type SourceEndpoint = typeof WEEK_ENDPOINT;
+type SourceKey = (typeof RANGE_ENDPOINT)["key"];
 
 export class JbNewsConfigError extends Error {
   constructor(message: string) {
@@ -61,11 +60,13 @@ export class JbNewsCalendarProvider {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
-      const aggregated = await this.fetchWeekMql5(params, controller.signal);
+      const aggregated = await this.fetchRangeMql5(params, controller.signal);
       const deduped = dedupeEvents(aggregated);
       this.log.info("jb-news calendar fetch summary", {
-        mode: "week",
+        mode: "range",
         source: "mql5",
+        from: formatDateParam(params.from),
+        to: formatDateParam(params.to),
         totalEvents: deduped.length,
       });
       if (!deduped.length) {
@@ -93,8 +94,8 @@ export class JbNewsCalendarProvider {
     };
   }
 
-  private async fetchWeekMql5(params: { from: Date; to: Date }, signal: AbortSignal): Promise<JbNewsCalendarEvent[]> {
-    const url = new URL(`${BASE_URL}${WEEK_ENDPOINT.path}`);
+  private async fetchRangeMql5(params: { from: Date; to: Date }, signal: AbortSignal): Promise<JbNewsCalendarEvent[]> {
+    const url = new URL(`${BASE_URL}${RANGE_ENDPOINT.path}`);
     url.searchParams.set("from", formatDateParam(params.from));
     url.searchParams.set("to", formatDateParam(params.to));
 
@@ -116,7 +117,7 @@ export class JbNewsCalendarProvider {
     const raw = (await response.json()) as unknown;
     const parsed = parseJbNewsResponse(raw);
     return parsed
-      .map((entry) => normalizeSourceEvent(entry, WEEK_ENDPOINT.key))
+      .map((entry) => normalizeSourceEvent(entry, RANGE_ENDPOINT.key))
       .filter((event): event is JbNewsCalendarEvent => event !== null);
   }
 }

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, lt } from "drizzle-orm";
 import { logger } from "@/src/lib/logger";
 import { isMissingTableError } from "@/src/lib/utils";
 import { db } from "@/src/server/db/db";
@@ -25,13 +25,16 @@ export type IngestResult = {
   from: string;
   to: string;
   source: "jb-news";
+  retentionDays?: number;
+  deletedOldEvents?: number;
 };
 
-const DEFAULT_LOOKAHEAD_DAYS = 30;
+const DEFAULT_LOOKAHEAD_DAYS = 7;
 const DEFAULT_IMPACT: number = 2;
 const EVENT_ID_PREFIX = "evt-macro-jbnews-";
 const DEDUP_ROUND_MINUTES = 5;
 const MIN_IMPACT = resolveMinImpact();
+const RETENTION_DAYS = resolveRetentionDays();
 
 const ingestionLogger = logger.child({ module: "jb-news-calendar-ingest" });
 
@@ -45,6 +48,7 @@ export async function ingestJbNewsCalendar(params?: {
   ingestionLogger.info("Starting jb-news calendar ingestion", {
     from: from.toISOString(),
     to: to.toISOString(),
+    mode: "range",
   });
 
   let rawEvents: ReadonlyArray<JbNewsCalendarEvent>;
@@ -80,13 +84,19 @@ export async function ingestJbNewsCalendar(params?: {
       ...baseResult,
       skipped: baseResult.skipped + filteredOut + dedupedOut,
     };
+    const deletedOldEvents = await cleanupOldEvents(RETENTION_DAYS);
     ingestionLogger.info("Completed jb-news calendar ingestion", {
       ...result,
       from: result.from,
       to: result.to,
+      mode: "range",
+      retentionDays: RETENTION_DAYS,
+      deletedOldEvents,
     });
     return {
       ...result,
+      retentionDays: RETENTION_DAYS,
+      deletedOldEvents,
       source: "jb-news",
     };
   } catch (error) {
@@ -98,6 +108,8 @@ export async function ingestJbNewsCalendar(params?: {
         skipped: 0,
         from: from.toISOString(),
         to: to.toISOString(),
+        retentionDays: RETENTION_DAYS,
+        deletedOldEvents: 0,
         source: "jb-news",
       };
     }
@@ -296,7 +308,8 @@ export function buildDedupKey(parts: DedupKeyParts): string {
 
 export function normalizeTitle(title: string): string {
   const collapsed = collapseWhitespace(title);
-  const deduped = collapsed.replace(/([^\w\s])\1+/g, "$1");
+  const tightened = collapsed.replace(/\s+([!?,.;:])/g, "$1");
+  const deduped = tightened.replace(/([^\w\s])\1+/g, "$1");
   return deduped.toLowerCase();
 }
 
@@ -327,4 +340,33 @@ export function resolveMinImpact(rawValue = process.env.EVENTS_INGEST_MIN_IMPACT
 
 function collapseWhitespace(value: string): string {
   return value.replace(/\s+/g, " ").trim();
+}
+
+function resolveRetentionDays(rawValue = process.env.EVENTS_RETENTION_DAYS): number {
+  const fallback = 30;
+  if (!rawValue) {
+    return fallback;
+  }
+  const parsed = Number.parseInt(rawValue, 10);
+  if (!Number.isFinite(parsed)) {
+    ingestionLogger.warn("Invalid EVENTS_RETENTION_DAYS value, falling back to default", {
+      value: rawValue,
+    });
+    return fallback;
+  }
+  if (parsed < 7 || parsed > 180) {
+    ingestionLogger.warn("EVENTS_RETENTION_DAYS outside allowed range, clamping", {
+      value: parsed,
+    });
+  }
+  return Math.min(180, Math.max(7, parsed));
+}
+
+async function cleanupOldEvents(retentionDays: number): Promise<number> {
+  const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
+  const deleted = await db
+    .delete(events)
+    .where(and(lt(events.scheduledAt, cutoff), eq(events.source, "jb-news")))
+    .returning({ id: events.id });
+  return deleted.length;
 }

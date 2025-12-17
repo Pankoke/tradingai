@@ -2,9 +2,14 @@ import React from "react";
 import type { JSX } from "react";
 import Link from "next/link";
 import clsx from "clsx";
+import type { LucideIcon } from "lucide-react";
+import { Activity, BarChart3, Briefcase, CalendarDays, Flame, Landmark } from "lucide-react";
 import { getEventsInRange, type Event as DbEvent } from "@/src/server/repositories/eventRepository";
 import { buildDedupKey, normalizeTitle, roundScheduledAt } from "@/src/server/events/ingest/ingestJbNewsCalendar";
 import { resolveEventEnrichment } from "@/src/server/events/eventDescription";
+import { toDisplayTitle } from "@/src/server/events/eventDisplay";
+import { resolveConsensusSnapshot, type ConsensusSnapshot } from "@/src/server/events/eventConsensus";
+import { resolveEventIcon, type EventIconToken } from "@/src/server/events/eventUiHints";
 import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
 import deMessages from "@/src/messages/de.json";
 import enMessages from "@/src/messages/en.json";
@@ -31,6 +36,10 @@ type UiEvent = {
   source: string;
   symbols: string[];
   marketScope: string;
+  scheduledAt: Date;
+  icon: EventIconToken;
+  consensus?: ConsensusSnapshot | null;
+  isCluster: boolean;
   country?: string | null;
   currency?: string | null;
 };
@@ -50,6 +59,7 @@ type NextUpEvent = {
   impactKey: string;
   impactTone: BadgeTone;
   countdown: string;
+  href?: string;
 };
 
 type CategoryFilter = "all" | "macro" | "crypto" | "onchain" | "technical" | "other";
@@ -75,6 +85,15 @@ const IMPACT_OPTIONS: Array<{ value: ImpactFilter; labelKey: string }> = [
   { value: "2", labelKey: "events.severity.medium" },
   { value: "1", labelKey: "events.severity.low" },
 ];
+
+const ICON_COMPONENTS: Record<EventIconToken, LucideIcon> = {
+  inflation: Flame,
+  centralBank: Landmark,
+  employment: Briefcase,
+  growth: BarChart3,
+  pmi: Activity,
+  default: CalendarDays,
+};
 
 export default async function EventsPage({ params, searchParams }: PageProps): Promise<JSX.Element> {
   const resolvedParams = await params;
@@ -135,13 +154,26 @@ export default async function EventsPage({ params, searchParams }: PageProps): P
                 <div className="grid gap-4 lg:grid-cols-2">
                   {group.events.map((event) => (
                     <article
+                      id={`event-${event.id}`}
                       key={event.id}
-                      className="flex flex-col gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-[0_12px_35px_rgba(2,6,23,0.25)]"
+                      className="scroll-mt-24 flex flex-col gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-[0_12px_35px_rgba(2,6,23,0.25)]"
                     >
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div>
-                          <p className="text-xs text-[var(--text-secondary)]">{event.formattedTime}</p>
-                          <h3 className="text-base font-semibold text-white">{event.title}</h3>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="flex items-start gap-3">
+                          <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-main)]/60 p-2">
+                            {renderEventIcon(event.icon)}
+                          </div>
+                          <div>
+                            <p className="text-xs text-[var(--text-secondary)]">
+                              {event.formattedTime}
+                              {event.isCluster ? (
+                                <span className="ml-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-2 py-0.5 text-[0.65rem] uppercase tracking-wide text-amber-100">
+                                  {t("events.cluster.badge")}
+                                </span>
+                              ) : null}
+                            </p>
+                            <h3 className="text-base font-semibold text-white">{event.title}</h3>
+                          </div>
                         </div>
                         <div className="flex flex-wrap justify-end gap-2 text-xs">
                           <Badge tone="muted">{t(event.categoryKey)}</Badge>
@@ -150,6 +182,20 @@ export default async function EventsPage({ params, searchParams }: PageProps): P
                       </div>
                       {event.summary ? (
                         <p className="text-sm leading-snug text-[var(--text-secondary)]">{event.summary}</p>
+                      ) : null}
+                      {event.consensus ? (
+                        <div className="rounded-xl border border-slate-500/40 bg-slate-500/10 p-3 text-xs text-[var(--text-secondary)]">
+                          <p>
+                            {t("events.consensus.label")
+                              .replace("{forecast}", event.consensus.forecast)
+                              .replace("{previous}", event.consensus.previous)}
+                          </p>
+                          {event.consensus.delta ? (
+                            <p className="mt-1 text-[var(--text-tertiary)]">
+                              {t("events.consensus.delta").replace("{delta}", event.consensus.delta)}
+                            </p>
+                          ) : null}
+                        </div>
                       ) : null}
                       <ul className="text-xs text-[var(--text-secondary)]">
                         <li>
@@ -272,9 +318,14 @@ function groupByDay(events: DbEvent[], locale: Locale, t: Translator): EventGrou
       group.highImpactCount += 1;
     }
     const currency = (event as DbEvent & { currency?: string | null }).currency ?? null;
+    const consensus = resolveConsensusSnapshot({
+      forecast: event.forecastValue,
+      previous: event.previousValue,
+      intlLocale,
+    });
     group.events.push({
       id: event.id,
-      title: event.title,
+      title: toDisplayTitle(event.title),
       summary: enrichment.summary,
       categoryKey,
       severityKey,
@@ -283,13 +334,29 @@ function groupByDay(events: DbEvent[], locale: Locale, t: Translator): EventGrou
       source: event.source,
       symbols: Array.isArray(event.affectedAssets) ? event.affectedAssets.map(String) : [],
       marketScope: enrichment.marketScope,
+      scheduledAt: event.scheduledAt,
+      icon: resolveEventIcon(event.title),
+      consensus,
+      isCluster: false,
       country: event.country ?? null,
       currency,
     });
     groups.set(isoDate, group);
   }
 
-  return Array.from(groups.values()).sort((a, b) => a.isoDate.localeCompare(b.isoDate));
+  const grouped = Array.from(groups.values()).sort((a, b) => a.isoDate.localeCompare(b.isoDate));
+  for (const group of grouped) {
+    const counts = new Map<string, number>();
+    for (const event of group.events) {
+      const key = event.scheduledAt.toISOString().slice(0, 16);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    group.events = group.events.map((event) => ({
+      ...event,
+      isCluster: (counts.get(event.scheduledAt.toISOString().slice(0, 16)) ?? 0) > 1,
+    }));
+  }
+  return grouped;
 }
 
 function buildNextUpEvents(events: DbEvent[], locale: Locale, t: Translator): NextUpEvent[] {
@@ -305,17 +372,19 @@ function buildNextUpEvents(events: DbEvent[], locale: Locale, t: Translator): Ne
     .filter((event) => event.scheduledAt.getTime() >= now)
     .sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime())
     .slice(0, 3);
+  const renderedIds = new Set(events.map((event) => event.id));
   return upcoming.map((event) => {
     const severity = mapSeverity(event.impact);
     const category = mapCategory(event.category);
     return {
       id: event.id,
-      title: event.title,
+      title: toDisplayTitle(event.title),
       formattedTime: timeFormatter.format(event.scheduledAt),
       categoryKey: `events.category.${category}`,
       impactKey: `events.severity.${severity}`,
       impactTone: severity === "high" ? "danger" : severity === "medium" ? "warn" : "muted",
       countdown: formatCountdown(event.scheduledAt, t),
+      href: renderedIds.has(event.id) ? `#event-${event.id}` : undefined,
     };
   });
 }
@@ -458,26 +527,42 @@ function NextUpSection({ events, t }: NextUpSectionProps): JSX.Element {
         <p className="text-sm text-[var(--text-secondary)]">{t("events.nextUp.empty")}</p>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {events.map((event) => (
-            <article
-              key={event.id}
-              className="flex flex-col gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-main)]/40 p-3 shadow-[0_10px_30px_rgba(2,6,23,0.25)]"
-            >
-              <p className="text-sm font-semibold text-white">{event.title}</p>
-              <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-secondary)]">
-                <Badge tone="muted">{t(event.categoryKey)}</Badge>
-                <Badge tone={event.impactTone}>{t(event.impactKey)}</Badge>
-              </div>
-              <div className="flex items-center justify-between text-xs text-[var(--text-secondary)]">
-                <span>{event.formattedTime}</span>
-                <span className="text-sky-300">{event.countdown}</span>
-              </div>
-            </article>
-          ))}
+          {events.map((event) => {
+            const card = (
+              <article className="flex flex-col gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-main)]/40 p-3 shadow-[0_10px_30px_rgba(2,6,23,0.25)] transition hover:border-sky-500/40 hover:shadow-[0_12px_30px_rgba(4,58,126,0.35)]">
+                <p className="text-sm font-semibold text-white">{event.title}</p>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-secondary)]">
+                  <Badge tone="muted">{t(event.categoryKey)}</Badge>
+                  <Badge tone={event.impactTone}>{t(event.impactKey)}</Badge>
+                </div>
+                <div className="flex items-center justify-between text-xs text-[var(--text-secondary)]">
+                  <span>{event.formattedTime}</span>
+                  <span className="text-sky-300">{event.countdown}</span>
+                </div>
+              </article>
+            );
+            return event.href ? (
+              <Link
+                prefetch={false}
+                key={event.id}
+                href={event.href}
+                className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-surface)]"
+              >
+                {card}
+              </Link>
+            ) : (
+              <div key={event.id}>{card}</div>
+            );
+          })}
         </div>
       )}
     </section>
   );
+}
+
+function renderEventIcon(token: EventIconToken): JSX.Element {
+  const Icon = ICON_COMPONENTS[token] ?? ICON_COMPONENTS.default;
+  return <Icon className="h-4 w-4 text-sky-200" aria-hidden="true" />;
 }
 
 function parseFilterParams(raw: Record<string, string | string[] | undefined>): FilterParams {
