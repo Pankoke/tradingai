@@ -1,0 +1,7 @@
+ALTER TABLE events
+  ADD COLUMN IF NOT EXISTS summary TEXT,
+  ADD COLUMN IF NOT EXISTS market_scope TEXT,
+  ADD COLUMN IF NOT EXISTS expectation_label TEXT,
+  ADD COLUMN IF NOT EXISTS expectation_confidence INTEGER,
+  ADD COLUMN IF NOT EXISTS expectation_note TEXT,
+  ADD COLUMN IF NOT EXISTS enriched_at TIMESTAMP;

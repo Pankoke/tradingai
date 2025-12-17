@@ -1228,5 +1228,6 @@
   "admin.snapshots.diff.significantOnly": "Nur signifikante Änderungen",
   "admin.snapshots.diff.thresholdHint": "Qualität ≥ 5 Punkte oder Ring ≥ 10 Punkte",
   "admin.snapshots.diff.jump": "Zum Setup springen",
-  "admin.snapshots.diff.topRingDeltas": "Größte Ring-Δ"
+  "admin.snapshots.diff.topRingDeltas": "Größte Ring-Δ",
+  "events.scopeLabel": "Marktabdeckung"
 }

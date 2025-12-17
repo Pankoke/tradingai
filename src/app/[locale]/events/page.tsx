@@ -4,6 +4,7 @@ import Link from "next/link";
 import clsx from "clsx";
 import { getEventsInRange, type Event as DbEvent } from "@/src/server/repositories/eventRepository";
 import { buildDedupKey, normalizeTitle, roundScheduledAt } from "@/src/server/events/ingest/ingestJbNewsCalendar";
+import { resolveEventEnrichment } from "@/src/server/events/eventDescription";
 import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
 import deMessages from "@/src/messages/de.json";
 import enMessages from "@/src/messages/en.json";
@@ -22,13 +23,14 @@ type BadgeTone = "muted" | "warn" | "danger";
 type UiEvent = {
   id: string;
   title: string;
-  description: string;
+  summary: string;
   categoryKey: string;
   severityKey: string;
   severityTone: BadgeTone;
   formattedTime: string;
   source: string;
   symbols: string[];
+  marketScope: string;
   country?: string | null;
   currency?: string | null;
 };
@@ -146,10 +148,13 @@ export default async function EventsPage({ params, searchParams }: PageProps): P
                           <Badge tone={event.severityTone}>{t(event.severityKey)}</Badge>
                         </div>
                       </div>
-                      {event.description ? (
-                        <p className="text-sm leading-snug text-[var(--text-secondary)]">{event.description}</p>
+                      {event.summary ? (
+                        <p className="text-sm leading-snug text-[var(--text-secondary)]">{event.summary}</p>
                       ) : null}
                       <ul className="text-xs text-[var(--text-secondary)]">
+                        <li>
+                          {t("events.scopeLabel")}: {event.marketScope}
+                        </li>
                         <li>
                           {t("events.symbols.label")}: {event.symbols.length ? event.symbols.join(", ") : "Global"}
                         </li>
@@ -262,6 +267,7 @@ function groupByDay(events: DbEvent[], locale: Locale, t: Translator): EventGrou
     const severityKey = `events.severity.${severity}`;
     const category = mapCategory(event.category);
     const categoryKey = `events.category.${category}`;
+    const enrichment = resolveEventEnrichment(event);
     if (severity === "high") {
       group.highImpactCount += 1;
     }
@@ -269,13 +275,14 @@ function groupByDay(events: DbEvent[], locale: Locale, t: Translator): EventGrou
     group.events.push({
       id: event.id,
       title: event.title,
-      description: event.description ?? "",
+      summary: enrichment.summary,
       categoryKey,
       severityKey,
       severityTone: severity === "high" ? "danger" : severity === "medium" ? "warn" : "muted",
       formattedTime: `${t("events.time.start")}: ${timeFormatter.format(event.scheduledAt)}`,
       source: event.source,
       symbols: Array.isArray(event.affectedAssets) ? event.affectedAssets.map(String) : [],
+      marketScope: enrichment.marketScope,
       country: event.country ?? null,
       currency,
     });

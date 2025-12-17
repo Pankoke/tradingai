@@ -1,0 +1,17 @@
+name: Daily Events AI Enrichment
+
+on:
+  schedule:
+    - cron: "30 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call events enrichment endpoint
+        run: |
+          curl -X POST "${{ secrets.EVENTS_ENRICH_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --fail

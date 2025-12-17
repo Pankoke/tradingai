@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { and, desc, gte, lte, eq, sql } from "drizzle-orm";
+import { and, desc, gte, lte, eq, sql, or, isNull } from "drizzle-orm";
 import { db } from "../db/db";
 import { events } from "../db/schema/events";
 import { excluded } from "../db/sqlHelpers";
+import type { MarketScopeEnum } from "@/src/server/events/eventDescription";
 
 export type Event = typeof events["$inferSelect"];
 export type EventInput = typeof events["$inferInsert"];
@@ -74,6 +75,26 @@ export async function listRecentEvents(limit = 100): Promise<Event[]> {
   return db.select().from(events).orderBy(desc(events.scheduledAt)).limit(limit);
 }
 
+export async function listEventsForEnrichment(params: {
+  from: Date;
+  to: Date;
+  limit: number;
+}): Promise<Event[]> {
+  const limit = Math.min(Math.max(params.limit, 1), 50);
+  return db
+    .select()
+    .from(events)
+    .where(
+      and(
+        gte(events.scheduledAt, params.from),
+        lte(events.scheduledAt, params.to),
+        or(isNull(events.summary), isNull(events.enrichedAt)),
+      ),
+    )
+    .orderBy(events.scheduledAt)
+    .limit(limit);
+}
+
 export async function getEventById(id: string): Promise<Event | undefined> {
   const [event] = await db.select().from(events).where(eq(events.id, id)).limit(1);
   return event;
@@ -106,6 +127,30 @@ export async function updateEvent(id: string, updates: Partial<Omit<EventInput, 
 
 export async function deleteEvent(id: string): Promise<void> {
   await db.delete(events).where(eq(events.id, id));
+}
+
+type EventEnrichmentPayload = {
+  summary: string;
+  marketScope: MarketScopeEnum;
+  expectationLabel: "above" | "inline" | "below" | "unknown";
+  expectationConfidence: number | null;
+  expectationNote: string;
+  enrichedAt: Date;
+};
+
+export async function updateEventEnrichment(id: string, payload: EventEnrichmentPayload): Promise<void> {
+  await db
+    .update(events)
+    .set({
+      summary: payload.summary,
+      marketScope: payload.marketScope,
+      expectationLabel: payload.expectationLabel,
+      expectationConfidence: payload.expectationConfidence,
+      expectationNote: payload.expectationNote,
+      enrichedAt: payload.enrichedAt,
+      updatedAt: new Date(),
+    })
+    .where(eq(events.id, id));
 }
 
 export async function countAllEvents(): Promise<number> {
