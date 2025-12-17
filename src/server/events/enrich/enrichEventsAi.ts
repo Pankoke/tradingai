@@ -45,29 +45,13 @@ const SUMMARY_MAX_LENGTH = 240;
 
 const MARKET_SCOPE_VALUES = Object.values(MARKET_SCOPE_ENUM);
 
-const ENRICHMENT_SCHEMA = z
-  .object({
-    summary: z.string().min(12).max(240),
-    marketScope: z.nativeEnum(MARKET_SCOPE_ENUM),
-    expectationLabel: z.enum(["above", "inline", "below", "unknown"]),
-    expectationConfidence: z
-      .number()
-      .int()
-      .min(0)
-      .max(100)
-      .nullable()
-      .optional()
-      .transform((value) => (typeof value === "number" ? value : null)),
-    expectationNote: z
-      .string()
-      .max(160)
-      .optional()
-      .default(""),
-  })
-  .refine(
-    (value) => (value.expectationLabel === "unknown" ? value.expectationConfidence === null : true),
-    "expectationConfidence must be null when label is unknown",
-  );
+const ENRICHMENT_SCHEMA = z.object({
+  summary: z.string().min(12).max(240),
+  marketScope: z.nativeEnum(MARKET_SCOPE_ENUM),
+  expectationLabel: z.enum(["above", "inline", "below", "unknown"]),
+  expectationConfidence: z.number().int().min(0).max(100),
+  expectationNote: z.string().max(160).optional().default(""),
+});
 
 const RESPONSE_FORMAT = {
   type: "json_schema",
@@ -82,7 +66,9 @@ const RESPONSE_FORMAT = {
         marketScope: { type: "string", enum: MARKET_SCOPE_VALUES },
         expectationLabel: { type: "string", enum: ["above", "inline", "below", "unknown"] },
         expectationConfidence: {
-          oneOf: [{ type: "integer", minimum: 0, maximum: 100 }, { type: "null" }],
+          type: "integer",
+          minimum: 0,
+          maximum: 100,
         },
         expectationNote: { type: "string" },
       },
@@ -340,12 +326,17 @@ function sanitizeSummary(value: string): string {
 }
 
 function normalizeExpectations(parsed: z.infer<typeof ENRICHMENT_SCHEMA>) {
-  if (!ALLOW_EXPECTATION_DETAILS || parsed.expectationLabel === "unknown") {
-    return { label: "unknown" as const, confidence: null, note: STANDARD_EXPECTATION_NOTE };
+  if (!ALLOW_EXPECTATION_DETAILS) {
+    return { label: "unknown" as const, confidence: 0, note: STANDARD_EXPECTATION_NOTE };
   }
+  const label = parsed.expectationLabel;
+  if (label === "unknown") {
+    return { label, confidence: 0, note: STANDARD_EXPECTATION_NOTE };
+  }
+  const confidence = clampNumber(parsed.expectationConfidence, 0, 100);
   return {
-    label: parsed.expectationLabel,
-    confidence: parsed.expectationConfidence ?? null,
+    label,
+    confidence,
     note: composeExpectationNote(parsed.expectationNote),
   };
 }
