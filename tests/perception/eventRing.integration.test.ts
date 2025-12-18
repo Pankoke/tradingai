@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { resolveEventRingForSetup } from "@/src/lib/engine/perceptionEngine";
 import { mockSetups } from "@/src/lib/mockSetups";
 import type { Event as BiasEvent } from "@/src/lib/engine/eventsBiasTypes";
@@ -12,6 +12,10 @@ vi.mock("@/src/lib/engine/modules/eventRingV2", async () => {
     ...actual,
     computeEventRingV2: vi.fn(),
   };
+});
+
+afterEach(() => {
+  vi.resetAllMocks();
 });
 
 describe("resolveEventRingForSetup", () => {
@@ -58,6 +62,33 @@ describe("resolveEventRingForSetup", () => {
     expect(computeEventRingV2).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps v2 notes when no events exist in window", async () => {
+    const setup = {
+      ...mockSetups[0],
+      eventContext: null,
+    };
+    vi.mocked(computeEventRingV2).mockResolvedValue({
+      score: 45,
+      context: {
+        windowFrom: new Date("2025-01-01T09:00:00Z"),
+        windowTo: new Date("2025-01-01T18:00:00Z"),
+        windowKind: "intraday",
+        eventCountInWindow: 0,
+        notes: ["no_relevant_events"],
+        topEvents: [],
+      },
+    });
+
+    const result = await resolveEventRingForSetup({
+      setup,
+      asOf: new Date("2025-01-01T10:00:00Z"),
+      dataMode: "live",
+    });
+
+    expect(result.eventContext?.notes).toContain("no_relevant_events");
+    expect(result.eventContext?.notes).not.toContain("hash_fallback");
+  });
+
   it("falls back to hash scoring in mock mode", async () => {
     const setup = {
       ...mockSetups[0],
@@ -85,7 +116,43 @@ describe("resolveEventRingForSetup", () => {
     });
 
     expect(result.eventScore).toBeGreaterThan(0);
-    expect(result.eventContext).not.toBeUndefined();
+    expect(result.eventContext?.notes).toContain("hash_fallback");
     expect(computeEventRingV2).not.toHaveBeenCalled();
+  });
+
+  it("adds db-unavailable note when live fallback triggers", async () => {
+    const setup = {
+      ...mockSetups[0],
+      eventContext: null,
+    };
+    vi.mocked(computeEventRingV2).mockRejectedValue(new Error("connection refused"));
+
+    const result = await resolveEventRingForSetup({
+      setup,
+      asOf: new Date(),
+      dataMode: "live",
+    });
+
+    expect(result.eventContext?.notes).toContain("hash_fallback");
+    expect(result.eventContext?.notes).toContain("events_db_unavailable");
+  });
+
+  it("marks missing table when live fallback hits table error", async () => {
+    const setup = {
+      ...mockSetups[0],
+      eventContext: null,
+    };
+    const error = new Error("relation events does not exist");
+    (error as { code?: string }).code = "42P01";
+    vi.mocked(computeEventRingV2).mockRejectedValue(error);
+
+    const result = await resolveEventRingForSetup({
+      setup,
+      asOf: new Date(),
+      dataMode: "live",
+    });
+
+    expect(result.eventContext?.notes).toContain("hash_fallback");
+    expect(result.eventContext?.notes).toContain("events_table_missing");
   });
 });

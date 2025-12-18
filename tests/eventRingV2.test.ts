@@ -38,12 +38,13 @@ function buildWindow(now: Date): EventRingWindow {
 }
 
 describe("eventRingV2 analyzeEventsForWindow", () => {
-  it("returns deterministic fallback when no events exist", () => {
+  it("returns calm score when no events exist", () => {
     const now = new Date("2025-01-01T12:00:00Z");
     const window = buildWindow(now);
     const result = analyzeEventsForWindow({ events: [], now, window });
 
-    expect(result.score).toBe(45);
+    expect(result.score).toBeGreaterThanOrEqual(35);
+    expect(result.score).toBeLessThanOrEqual(40);
     expect(result.notes).toContain("no_relevant_events");
     expect(result.topEvents).toHaveLength(0);
   });
@@ -59,12 +60,13 @@ describe("eventRingV2 analyzeEventsForWindow", () => {
 
     const result = analyzeEventsForWindow({ events: [highImpactSoon], now, window });
 
-    expect(result.score).toBeGreaterThan(50);
+    expect(result.score).toBeGreaterThanOrEqual(70);
+    expect(result.score).toBeLessThanOrEqual(85);
     expect(result.notes).toContain("high_impact_soon");
     expect(result.topEvents[0]?.title).toBe("High Impact");
   });
 
-  it("flags clustered events and increases score density", () => {
+  it("flags clustered events and produces medium-high score", () => {
     const now = new Date("2025-01-02T09:00:00Z");
     const window = buildWindow(now);
     const events = [
@@ -76,7 +78,26 @@ describe("eventRingV2 analyzeEventsForWindow", () => {
     const result = analyzeEventsForWindow({ events, now, window });
 
     expect(result.notes).toContain("clustered_events");
-    expect(result.score).toBeGreaterThan(50);
+    expect(result.score).toBeGreaterThanOrEqual(60);
+    expect(result.score).toBeLessThanOrEqual(75);
     expect(result.eventCount).toBe(3);
+  });
+
+  it("keeps low-impact clusters moderate", () => {
+    const now = new Date("2025-01-03T12:00:00Z");
+    const window = buildWindow(now);
+    const events = Array.from({ length: 6 }).map((_, idx) =>
+      createEvent({
+        scheduledAt: new Date(now.getTime() + (idx + 1) * 90 * 60 * 1000),
+        impact: 1,
+        title: `Low ${idx + 1}`,
+      }),
+    );
+
+    const result = analyzeEventsForWindow({ events, now, window });
+
+    expect(result.score).toBeGreaterThanOrEqual(45);
+    expect(result.score).toBeLessThanOrEqual(60);
+    expect(result.notes).not.toContain("high_impact_soon");
   });
 });

@@ -11,6 +11,7 @@ import type { RingMeta, SetupRingMeta } from "@/src/lib/engine/types";
 import { getPerceptionDataMode } from "@/src/lib/config/perceptionDataMode";
 import { computeEventRingV2, buildSetupEventContext } from "@/src/lib/engine/modules/eventRingV2";
 import { applyEventScoring } from "@/src/lib/engine/modules/eventScoring";
+import { isMissingTableError } from "@/src/lib/utils";
 
 const ENGINE_VERSION = "0.1.0";
 const dataSource = createPerceptionDataSource();
@@ -22,6 +23,8 @@ const QUALITY_NOTES = {
   mockMode: "mock_mode",
   noBias: "no_bias_snapshot",
   hashFallback: "hash_fallback",
+  eventsTableMissing: "events_table_missing",
+  eventsDbUnavailable: "events_db_unavailable",
   noIntraday: "no_intraday_candles",
   staleSignal: "stale_signal",
   noMarketData: "no_market_data",
@@ -150,7 +153,7 @@ export async function resolveEventRingForSetup(params: {
   setup: Setup;
   asOf: Date;
   dataMode: "live" | "mock";
-  fallbackEvents: BiasEvent[];
+  fallbackEvents?: BiasEvent[];
 }): Promise<EventRingResolution> {
   if (params.dataMode === "live") {
     try {
@@ -159,21 +162,40 @@ export async function resolveEventRingForSetup(params: {
         eventScore: result.score,
         eventContext: buildSetupEventContext(result.context),
       };
-    } catch {
-      // fall through to fallback scoring
+    } catch (error) {
+      const reason = isMissingTableError(error, "events")
+        ? QUALITY_NOTES.eventsTableMissing
+        : QUALITY_NOTES.eventsDbUnavailable;
+      return buildHashFallbackResolution({
+        setup: params.setup,
+        fallbackEvents: [],
+        extraNotes: [reason],
+      });
     }
   }
-  const fallback = applyEventScoring(params.setup, params.fallbackEvents);
-  const fallbackContext: Setup["eventContext"] =
-    fallback.context && typeof fallback.context === "object"
-      ? {
-          ...fallback.context,
-          notes: mergeMetaNotes((fallback.context as { notes?: string[] }).notes, [QUALITY_NOTES.hashFallback]),
-        }
-      : {
-          topEvents: [],
-          notes: [QUALITY_NOTES.hashFallback],
-        };
+  return buildHashFallbackResolution({
+    setup: params.setup,
+    fallbackEvents: params.fallbackEvents ?? [],
+  });
+}
+
+function buildHashFallbackResolution({
+  setup,
+  fallbackEvents,
+  extraNotes = [],
+}: {
+  setup: Setup;
+  fallbackEvents: BiasEvent[];
+  extraNotes?: string[];
+}): EventRingResolution {
+  const fallback = applyEventScoring(setup, fallbackEvents);
+  const mergedNotes = mergeMetaNotes([QUALITY_NOTES.hashFallback, ...extraNotes]);
+  const fallbackTopEvents = fallback.context?.topEvents ?? [];
+  const fallbackContext: Setup["eventContext"] = {
+    topEvents: fallbackTopEvents,
+    eventCount: fallbackTopEvents.length,
+    notes: mergedNotes,
+  };
   return {
     eventScore: fallback.eventScore,
     eventContext: fallbackContext,

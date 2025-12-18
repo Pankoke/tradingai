@@ -37,14 +37,15 @@ const NOTE_HIGH_IMPACT_SOON = "high_impact_soon";
 const NOTE_CLUSTERED = "clustered_events";
 
 const IMPACT_WEIGHT: Record<number, number> = {
-  1: 0.25,
-  2: 0.6,
+  1: 0.2,
+  2: 0.55,
   3: 1,
 };
 
-const BASELINE_NO_EVENTS = 45;
+const BASELINE_NO_EVENTS = 38;
 const BASELINE_WITH_EVENTS = 40;
-const MAX_WEIGHT_TARGET = 3;
+const MAX_WEIGHT_TARGET = 2.5;
+const TIME_DECAY_MINUTES = 6 * 60;
 const IMPACT_SEVERITY: Record<number, "low" | "medium" | "high"> = {
   1: "low",
   2: "medium",
@@ -133,18 +134,22 @@ export function analyzeEventsForWindow({ events, now, window }: AnalyzeParams): 
   }
 
   const nowMs = now.getTime();
-  const forwardSpan = Math.max(window.windowTo.getTime() - nowMs, 1);
-  const backwardSpan = Math.max(nowMs - window.windowFrom.getTime(), 1);
-
   let weightSum = 0;
   let hasHighImpactSoon = false;
+  const windowLower = window.windowFrom.getTime();
+  const windowUpper = window.windowTo.getTime();
 
   const enrichedEvents = sorted.map((event) => {
     const impact = typeof event.impact === "number" ? event.impact : 1;
     const impactWeight = IMPACT_WEIGHT[impact] ?? IMPACT_WEIGHT[1];
     const diffMs = event.scheduledAt.getTime() - nowMs;
-    const span = diffMs >= 0 ? forwardSpan : backwardSpan;
-    const timeWeight = Math.max(0.1, 1 - Math.min(Math.abs(diffMs) / span, 1));
+    const minutesDiff = Math.abs(diffMs) / 60000;
+    const isFuture = diffMs >= 0;
+    const decay =
+      minutesDiff <= 60
+        ? 1
+        : Math.max(0.05, Math.exp(-minutesDiff / TIME_DECAY_MINUTES));
+    const timeWeight = isFuture ? decay : decay * 0.5;
     weightSum += impactWeight * timeWeight;
 
     const timeToEventMinutes = Math.round(diffMs / 60000);
@@ -152,29 +157,37 @@ export function analyzeEventsForWindow({ events, now, window }: AnalyzeParams): 
       hasHighImpactSoon = true;
     }
 
+    const withinCluster =
+      sorted.some((other) => {
+        if (other === event) return false;
+        const delta = Math.abs(other.scheduledAt.getTime() - event.scheduledAt.getTime());
+        return delta <= 60 * 60 * 1000;
+      }) && sorted.length >= 3;
+
     return {
       title: event.title,
       impact,
       category: event.category,
       scheduledAt: event.scheduledAt,
       timeToEventMinutes,
+      withinCluster,
       priorityScore: impactWeight * timeWeight,
     };
   });
 
   const normalized = Math.min(weightSum / MAX_WEIGHT_TARGET, 1);
-  const density = Math.min(Math.log1p(sorted.length) / Math.log(1 + 10), 1);
-
-  let score = Math.round(BASELINE_WITH_EVENTS + normalized * 45 + density * 15);
+  const density = Math.min(Math.sqrt(sorted.length) / Math.sqrt(9), 1);
+  let score = Math.round(BASELINE_WITH_EVENTS + normalized * 42 + density * 12);
   const notes: string[] = [];
 
   if (hasHighImpactSoon) {
     notes.push(NOTE_HIGH_IMPACT_SOON);
-    score += 8;
+    score += 10;
   }
-  if (sorted.length >= 3) {
+  const hasCluster = enrichedEvents.some((event) => event.withinCluster);
+  if (hasCluster) {
     notes.push(NOTE_CLUSTERED);
-    score += 5;
+    score += 6;
   }
 
   score = Math.min(100, score);
