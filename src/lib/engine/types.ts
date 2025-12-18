@@ -253,6 +253,26 @@ export const ringAiSummarySchema = z.object({
 });
 export type RingAiSummary = z.infer<typeof ringAiSummarySchema>;
 
+const eventContextItemSchema = z.object({
+  id: z.string().optional(),
+  title: z.string().optional(),
+  category: z.string().optional(),
+  severity: z.string().optional(),
+  scheduledAt: z.string().optional(),
+  source: z.string().optional(),
+  impact: z.number().optional(),
+  timeToEventMinutes: z.number().optional(),
+});
+
+const eventContextSchema = z.object({
+  windowFrom: z.string().optional(),
+  windowTo: z.string().optional(),
+  windowKind: ringTimeframeEnum.optional(),
+  eventCount: z.number().optional(),
+  notes: z.array(z.string()).optional(),
+  topEvents: z.array(eventContextItemSchema).optional().nullable(),
+});
+
 export const setupSchema = z.object({
   id: z.string(),
   assetId: z.string(),
@@ -281,20 +301,7 @@ export const setupSchema = z.object({
   validity: setupValiditySchema.optional(),
   sentiment: sentimentDetailSchema.optional(),
   orderflow: orderflowDetailSchema.optional(),
-  eventContext: z
-    .object({
-      topEvents: z.array(
-        z.object({
-          id: z.string().optional(),
-          title: z.string().optional(),
-          category: z.string().optional(),
-          severity: z.string().optional(),
-          scheduledAt: z.string().optional(),
-          source: z.string().optional(),
-        }),
-      ).optional().nullable(),
-    })
-    .optional(),
+  eventContext: eventContextSchema.optional().nullable(),
 });
 
 export type Setup = z.infer<typeof setupSchema>;

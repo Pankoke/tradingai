@@ -1,5 +1,5 @@
 import { clamp } from "@/src/lib/math";
-import type { RingMeta, SetupRingMeta } from "@/src/lib/engine/types";
+import type { RingMeta, RingTimeframe, SetupRingMeta } from "@/src/lib/engine/types";
 
 const RING_NAMES = ["trend", "event", "bias", "sentiment", "orderflow", "confidence"] as const;
 type RingName = (typeof RING_NAMES)[number];
@@ -84,7 +84,12 @@ export type RingSource = {
   timeframe?: string | null;
   setupId?: string;
   ringMeta?: RingMetaOverrides;
-  eventContext?: { topEvents?: Array<{ id?: string }> } | null;
+  eventContext?: {
+    topEvents?: Array<{ id?: string }> | null;
+    eventCount?: number;
+    notes?: string[];
+    windowKind?: RingTimeframe;
+  } | null;
   dataMode?: "live" | "mock";
 };
 
@@ -388,12 +393,21 @@ function resolveTrendScore(source: RingSource): number {
 function enhanceEventMeta(source: RingSource, meta: SetupRingMeta): SetupRingMeta {
   const eventMeta = { ...meta.event };
   if (!meta.event.quality || meta.event.quality === "unknown") {
-    const hasEvents = Boolean(source.eventContext && Array.isArray(source.eventContext.topEvents) && source.eventContext.topEvents.length > 0);
+    const eventCount =
+      (source.eventContext as { eventCount?: number } | undefined)?.eventCount ??
+      (Array.isArray(source.eventContext?.topEvents) ? source.eventContext?.topEvents.length : 0);
+    const hasEvents = Boolean(eventCount && eventCount > 0);
     eventMeta.quality = hasEvents ? "live" : "fallback";
     if (!hasEvents) {
       const existingNotes = eventMeta.notes ?? [];
       eventMeta.notes = mergeNotes([...existingNotes, "no_events"]);
     }
+  }
+  if (source.eventContext && Array.isArray((source.eventContext as { notes?: string[] }).notes)) {
+    eventMeta.notes = mergeNotes([...(eventMeta.notes ?? []), ...((source.eventContext as { notes?: string[] }).notes ?? [])]);
+  }
+  if ((source.eventContext as { windowKind?: string } | undefined)?.windowKind) {
+    eventMeta.timeframe = (source.eventContext as { windowKind?: RingTimeframe }).windowKind ?? eventMeta.timeframe;
   }
   if (source.dataMode === "mock") {
     const existing = eventMeta.notes ?? [];

@@ -1,15 +1,16 @@
-import { applyEventScoring } from "@/src/lib/engine/modules/eventScoring";
 import { applyBiasScoring } from "@/src/lib/engine/modules/biasScoring";
 import { applySentimentScoring } from "@/src/lib/engine/modules/sentimentScoring";
 import { sortSetupsForToday } from "@/src/lib/engine/modules/ranking";
 import { createPerceptionDataSource } from "@/src/lib/engine/perceptionDataSource";
 import { computeSetupBalanceScore, computeSetupConfidence, computeSetupScore } from "@/src/lib/engine/scoring";
 import { perceptionSnapshotSchema, type AccessLevel, type PerceptionSnapshot, type Setup } from "@/src/lib/engine/types";
-import type { BiasSnapshot } from "@/src/lib/engine/eventsBiasTypes";
+import type { BiasSnapshot, Event as BiasEvent } from "@/src/lib/engine/eventsBiasTypes";
 import { computeRingsForSetup, createDefaultRings } from "@/src/lib/engine/rings";
 import { buildRingAiSummaryForSetup } from "@/src/lib/engine/modules/ringAiSummary";
 import type { RingMeta, SetupRingMeta } from "@/src/lib/engine/types";
 import { getPerceptionDataMode } from "@/src/lib/config/perceptionDataMode";
+import { computeEventRingV2, buildSetupEventContext } from "@/src/lib/engine/modules/eventRingV2";
+import { applyEventScoring } from "@/src/lib/engine/modules/eventScoring";
 
 const ENGINE_VERSION = "0.1.0";
 const dataSource = createPerceptionDataSource();
@@ -63,8 +64,9 @@ function buildTrendMeta(setup: Setup): RingMeta {
 }
 
 function buildEventMeta(eventContext: Setup["eventContext"] | undefined, dataMode: "live" | "mock"): RingMeta {
-  const hasEvents = Boolean(eventContext?.topEvents?.length);
-  const notes: string[] = [];
+  const eventCount = eventContext?.eventCount ?? eventContext?.topEvents?.length ?? 0;
+  const hasEvents = eventCount > 0;
+  const notes: string[] = [...(eventContext?.notes ?? [])];
   if (!hasEvents) {
     notes.push(QUALITY_NOTES.noEvents);
   }
@@ -73,7 +75,7 @@ function buildEventMeta(eventContext: Setup["eventContext"] | undefined, dataMod
   }
   return {
     quality: hasEvents ? "live" : "fallback",
-    timeframe: "intraday",
+    timeframe: eventContext?.windowKind ?? "intraday",
     notes: notes.length ? notes : undefined,
   };
 }
@@ -139,6 +141,45 @@ function buildConfidenceMeta(meta: SetupRingMeta): RingMeta {
   };
 }
 
+export type EventRingResolution = {
+  eventScore: number;
+  eventContext: Setup["eventContext"] | null;
+};
+
+export async function resolveEventRingForSetup(params: {
+  setup: Setup;
+  asOf: Date;
+  dataMode: "live" | "mock";
+  fallbackEvents: BiasEvent[];
+}): Promise<EventRingResolution> {
+  if (params.dataMode === "live") {
+    try {
+      const result = await computeEventRingV2({ setup: params.setup, now: params.asOf });
+      return {
+        eventScore: result.score,
+        eventContext: buildSetupEventContext(result.context),
+      };
+    } catch {
+      // fall through to fallback scoring
+    }
+  }
+  const fallback = applyEventScoring(params.setup, params.fallbackEvents);
+  const fallbackContext: Setup["eventContext"] =
+    fallback.context && typeof fallback.context === "object"
+      ? {
+          ...fallback.context,
+          notes: mergeMetaNotes((fallback.context as { notes?: string[] }).notes, [QUALITY_NOTES.hashFallback]),
+        }
+      : {
+          topEvents: [],
+          notes: [QUALITY_NOTES.hashFallback],
+        };
+  return {
+    eventScore: fallback.eventScore,
+    eventContext: fallbackContext,
+  };
+}
+
 function createRingMetaOverrides(params: {
   setup: Setup;
   eventContext?: Setup["eventContext"];
@@ -166,16 +207,6 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
   const asOf = options?.asOf ?? new Date();
   const setups = await dataSource.getSetupsForToday({ asOf });
 
-  const windowFrom = new Date(asOf);
-  windowFrom.setHours(windowFrom.getHours() - 12);
-  const windowTo = new Date(asOf);
-  windowTo.setHours(windowTo.getHours() + 12);
-
-  const events = await dataSource.getEventsForWindow({
-    from: windowFrom,
-    to: windowTo,
-  });
-
   const biasSnapshot: BiasSnapshot = await dataSource.getBiasSnapshotForAssets({
     assets: setups.map((setup) => ({
       assetId: setup.assetId ?? setup.symbol,
@@ -186,7 +217,20 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
   });
 
   const dataMode = getPerceptionDataMode();
-  const enriched: Setup[] = setups.map((item) => {
+  let fallbackEvents: BiasEvent[] = [];
+  if (dataMode !== "live") {
+    const fallbackFrom = new Date(asOf);
+    fallbackFrom.setHours(fallbackFrom.getHours() - 12);
+    const fallbackTo = new Date(asOf);
+    fallbackTo.setHours(fallbackTo.getHours() + 12);
+    fallbackEvents = await dataSource.getEventsForWindow({
+      from: fallbackFrom,
+      to: fallbackTo,
+    });
+  }
+
+  const enriched: Setup[] = [];
+  for (const item of setups) {
     const base: Setup = {
       ...item,
       assetId: item.assetId ?? item.symbol,
@@ -195,7 +239,12 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
       accessLevel: "free",
     };
 
-    const eventResult = applyEventScoring(base, events);
+    const eventResult = await resolveEventRingForSetup({
+      setup: base,
+      asOf,
+      dataMode,
+      fallbackEvents,
+    });
     const biasResult = applyBiasScoring(base, biasSnapshot);
     const sentimentResult = applySentimentScoring(base);
     const sentimentScore = base.sentiment?.score ?? sentimentResult.sentimentScore;
@@ -218,7 +267,7 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
     );
     const ringMetaOverrides = createRingMetaOverrides({
       setup: base,
-      eventContext: eventResult.context,
+      eventContext: eventResult.eventContext ?? undefined,
       biasMeta: biasResult.meta,
       sentimentProvided: hasSentimentProvider,
       dataMode,
@@ -236,7 +285,7 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
       timeframe: base.timeframe,
       setupId: base.id,
       ringMeta: ringMetaOverrides,
-      eventContext: eventResult.context,
+      eventContext: eventResult.eventContext ?? undefined,
       dataMode,
     });
     const confidence = computeSetupConfidence({
@@ -278,7 +327,7 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
         }
       : undefined;
 
-    return {
+    enriched.push({
         ...base,
         eventScore: eventResult.eventScore,
         biasScore: biasResult.biasScore,
@@ -288,11 +337,11 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
         rings,
         levelDebug,
         sentiment: sentimentDetail,
-        eventContext: eventResult.context,
+        eventContext: eventResult.eventContext ?? null,
         ringAiSummary,
         orderflow: sanitizedOrderflow,
-      };
-    });
+      });
+  }
 
   const ranked = sortSetupsForToday(enriched);
 

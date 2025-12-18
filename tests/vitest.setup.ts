@@ -11,6 +11,10 @@ if (!process.env.DATABASE_URL && fs.existsSync(envPath)) {
   }
 }
 
+if (!process.env.NEXT_PUBLIC_PERCEPTION_DATA_MODE) {
+  process.env.NEXT_PUBLIC_PERCEPTION_DATA_MODE = "mock";
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();

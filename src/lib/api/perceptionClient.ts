@@ -5,6 +5,11 @@ import { z } from "zod";
 
 const eventContextSchema = z
   .object({
+    windowFrom: z.string().optional(),
+    windowTo: z.string().optional(),
+    windowKind: z.enum(["intraday", "daily", "swing", "unknown"]).optional(),
+    eventCount: z.number().optional(),
+    notes: z.array(z.string()).optional(),
     topEvents: z
       .array(
         z.object({
@@ -14,6 +19,8 @@ const eventContextSchema = z
           severity: z.string().optional(),
           scheduledAt: z.string().optional(),
           source: z.string().optional(),
+          impact: z.number().optional(),
+          timeToEventMinutes: z.number().optional(),
         }),
       )
       .optional()
