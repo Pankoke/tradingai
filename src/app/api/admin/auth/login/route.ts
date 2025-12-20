@@ -1,4 +1,5 @@
-import { NextResponse, type NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
+import { z } from "zod";
 import { AdminAuthConfigError, createAdminSessionCookie, verifyAdminPassword } from "@/src/lib/admin/auth";
 import {
   canAttemptAdminLogin,
@@ -7,6 +8,7 @@ import {
   isAdminEnabled,
   registerAdminLoginFailure,
 } from "@/src/lib/admin/security";
+import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 
 type LoginPayload = {
   password?: string;
@@ -21,9 +23,13 @@ async function delayFailure(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, jitter));
 }
 
-export async function POST(request: NextRequest) {
+const bodySchema = z.object({
+  password: z.string().min(1, "password is required"),
+});
+
+export async function POST(request: NextRequest): Promise<Response> {
   if (!isAdminEnabled()) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return respondFail("NOT_FOUND", "Admin is disabled", 404);
   }
 
   const identifier = getClientIdentifier(request);
@@ -32,41 +38,41 @@ export async function POST(request: NextRequest) {
     const retrySeconds = allowance.retryAfterMs
       ? Math.max(1, Math.ceil(allowance.retryAfterMs / 1000))
       : undefined;
-    return NextResponse.json(
-      { error: "Zu viele Login-Versuche. Bitte warte kurz." },
-      {
-        status: 429,
-        headers: retrySeconds ? { "Retry-After": retrySeconds.toString() } : undefined,
-      },
-    );
+    return respondFail("RATE_LIMITED", "Too many login attempts", 429, {
+      retryAfterSeconds: retrySeconds,
+    });
   }
 
   const body = (await request.json().catch(() => ({}))) as LoginPayload;
-  const password = body.password ?? "";
+  const parsed = bodySchema.safeParse(body);
+  if (!parsed.success) {
+    return respondFail("VALIDATION_ERROR", "Invalid credentials payload", 400, parsed.error.issues);
+  }
+  const password = parsed.data.password;
 
   try {
     if (!verifyAdminPassword(password)) {
       await delayFailure();
       registerAdminLoginFailure(identifier);
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+      return respondFail("UNAUTHORIZED", "Invalid credentials", 401);
     }
   } catch (error) {
     const message =
       process.env.NODE_ENV === "production"
         ? "Admin authentication unavailable"
         : (error as Error).message;
-    return NextResponse.json({ error: message }, { status: 500 });
+    return respondFail("INTERNAL_ERROR", message, 500);
   }
 
   clearAdminLoginAttempts(identifier);
   try {
     const cookie = createAdminSessionCookie();
-    const response = NextResponse.json({ ok: true });
+    const response = respondOk({ authenticated: true });
     response.cookies.set(cookie.name, cookie.value, cookie.options);
     return response;
   } catch (error) {
     if (error instanceof AdminAuthConfigError) {
-      return NextResponse.json({ error: "Admin authentication unavailable" }, { status: 503 });
+      return respondFail("INTERNAL_ERROR", "Admin authentication unavailable", 503);
     }
     throw error;
   }

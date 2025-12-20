@@ -1,18 +1,19 @@
-import { NextResponse, type NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import { clearAdminSessionCookie } from "@/src/lib/admin/auth";
 import { isAdminEnabled, validateAdminRequestOrigin } from "@/src/lib/admin/security";
+import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<Response> {
   if (!isAdminEnabled()) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return respondFail("NOT_FOUND", "Admin is disabled", 404);
   }
 
   if (!validateAdminRequestOrigin(request)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return respondFail("FORBIDDEN", "Forbidden", 403);
   }
 
   const cookie = clearAdminSessionCookie();
-  const response = NextResponse.json({ ok: true });
+  const response = respondOk({ authenticated: false });
   response.cookies.set(cookie.name, cookie.value, cookie.options);
   return response;
 }

@@ -22,4 +22,12 @@ describe("apiResponse helpers", () => {
       },
     });
   });
+
+  it("maps common error codes to default statuses", async () => {
+    const res = respondFail("VALIDATION_ERROR", "bad input");
+    expect(res.status).toBe(400);
+    const payload = await res.json();
+    expect(payload.ok).toBe(false);
+    expect(payload.error.code).toBe("VALIDATION_ERROR");
+  });
 });

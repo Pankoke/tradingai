@@ -1,14 +1,18 @@
-import { respondFail, respondOk } from "@/src/server/http/apiResponse";
+import { respondOk } from "@/src/server/http/apiResponse";
 
 type AuthStatusPayload = {
-  status: "ready";
+  authenticated: boolean;
+  user: null;
+  role?: null;
   version: string;
   timestamp: string;
 };
 
 export function GET(): Response {
   const payload: AuthStatusPayload = {
-    status: "ready",
+    authenticated: false,
+    user: null,
+    role: null,
     version: process.env.NEXT_PUBLIC_APP_VERSION ?? "unknown",
     timestamp: new Date().toISOString(),
   };

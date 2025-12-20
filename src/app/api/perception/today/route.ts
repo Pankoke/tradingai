@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import type { PerceptionSnapshotWithItems } from "@/src/server/repositories/perceptionSnapshotRepository";
 import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
 import {
@@ -9,15 +8,14 @@ import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
 import { isPerceptionMockMode } from "@/src/lib/config/perceptionDataMode";
 import { loadLatestSnapshotFromStore } from "@/src/features/perception/cache/snapshotStore";
 import { logger } from "@/src/lib/logger";
+import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 
-type ErrorBody = {
-  error: string;
-};
+type PerceptionTodayPayload = PerceptionSnapshotWithItems & { reused?: boolean };
 
-export async function GET(): Promise<NextResponse<PerceptionSnapshotWithItems | ErrorBody>> {
+export async function GET(): Promise<Response> {
   if (isPerceptionMockMode()) {
     const fallback = await buildEngineSnapshotResponse("mock");
-    return NextResponse.json(fallback);
+    return respondOk<PerceptionTodayPayload>(fallback);
   }
 
   const startedAt = Date.now();
@@ -31,7 +29,7 @@ export async function GET(): Promise<NextResponse<PerceptionSnapshotWithItems | 
       message: result.reused ? "reused_snapshot" : "snapshot_built",
       meta: { reused: result.reused },
     });
-    return NextResponse.json(result.snapshot);
+    return respondOk<PerceptionTodayPayload>({ ...result.snapshot, reused: result.reused });
   } catch (error) {
     if (error instanceof SnapshotBuildInProgressError) {
       await createAuditRun({
@@ -43,7 +41,7 @@ export async function GET(): Promise<NextResponse<PerceptionSnapshotWithItems | 
       });
       const latest = await loadLatestSnapshotFromStore();
       if (latest) {
-        return NextResponse.json(latest);
+        return respondOk<PerceptionTodayPayload>(latest);
       }
     }
     logger.error("Failed to persist perception snapshot, using engine fallback", {
@@ -58,7 +56,7 @@ export async function GET(): Promise<NextResponse<PerceptionSnapshotWithItems | 
       error: error instanceof Error ? error.message : "unknown error",
     });
     const fallback = await buildEngineSnapshotResponse("fallback");
-    return NextResponse.json(fallback);
+    return respondOk<PerceptionTodayPayload>(fallback);
   }
 }
 

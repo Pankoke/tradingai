@@ -1,14 +1,19 @@
-import { NextResponse, type NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import { isAdminSessionFromRequest } from "@/src/lib/admin/auth";
 import { isAdminEnabled } from "@/src/lib/admin/security";
+import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 
-export async function GET(request: NextRequest) {
+type AdminAuthStatus = {
+  authenticated: boolean;
+};
+
+export async function GET(request: NextRequest): Promise<Response> {
   if (!isAdminEnabled()) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return respondFail("NOT_FOUND", "Admin is disabled", 404);
   }
   if (!isAdminSessionFromRequest(request)) {
-    return NextResponse.json({ authenticated: false }, { status: 401 });
+    return respondFail("UNAUTHORIZED", "Admin session missing", 401);
   }
 
-  return NextResponse.json({ authenticated: true });
+  return respondOk<AdminAuthStatus>({ authenticated: true });
 }

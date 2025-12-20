@@ -1,13 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { formStateSchema, setupResponseSchema } from "@/src/features/setup-generator/types";
 import { generateSetupFromMockEngine } from "@/src/server/services/setupGeneratorService";
 import { generateSetupFromEngine } from "@/src/server/services/setupGeneratorEngine";
+import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function POST(request: NextRequest): Promise<Response> {
   const body = await request.json();
   const parsed = formStateSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.message }, { status: 400 });
+    return respondFail("VALIDATION_ERROR", "Invalid setup generator input", 400, parsed.error.issues);
   }
 
   let setup;
@@ -20,5 +21,5 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const payload = setupResponseSchema.parse({
     setup: { ...setup, validUntil: setup.validUntil.toISOString() },
   });
-  return NextResponse.json(payload);
+  return respondOk(payload, 200);
 }
