@@ -10,9 +10,16 @@ type Props = {
   generatedAtText?: string | null;
   timeframe?: string | null;
   typeLabel?: string | null;
+  variant?: "full" | "compact";
 };
 
-export function SetupCardHeaderBlock({ setup, generatedAtText, timeframe, typeLabel }: Props): JSX.Element {
+export function SetupCardHeaderBlock({
+  setup,
+  generatedAtText,
+  timeframe,
+  typeLabel,
+  variant = "full",
+}: Props): JSX.Element {
   const t = useT();
   const meta = getAssetMeta(setup.assetId, setup.symbol);
   const headline = formatAssetLabel(setup.assetId, setup.symbol);
@@ -21,9 +28,11 @@ export function SetupCardHeaderBlock({ setup, generatedAtText, timeframe, typeLa
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="space-y-1">
-        <p className="text-[0.58rem] font-semibold uppercase tracking-[0.35em] text-slate-300">
-          {t("setups.setupOfTheDay")}
-        </p>
+        {variant === "full" ? (
+          <p className="text-[0.58rem] font-semibold uppercase tracking-[0.35em] text-slate-300">
+            {t("setups.setupOfTheDay")}
+          </p>
+        ) : null}
         <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
           {timeframe ? `${headline} · ${timeframe}` : headline}
         </h2>

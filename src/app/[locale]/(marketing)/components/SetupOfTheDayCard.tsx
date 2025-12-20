@@ -303,6 +303,7 @@ function SetupOfTheDayCardInner({ setup, generatedAt }: SetupOfTheDayCardProps):
   const t = useT();
 
   const { startTour, isCompleted } = useOnboardingTour();
+  const [isHydrated, setIsHydrated] = useState(false);
 
   const vm: SetupViewModel = useMemo(
     () => toSetupViewModel(setup as unknown as Setup, { generatedAt }),
@@ -424,6 +425,10 @@ function SetupOfTheDayCardInner({ setup, generatedAt }: SetupOfTheDayCardProps):
   const [detailExpanded, setDetailExpanded] = useState(false);
 
   useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
 
     setDetailExpanded(false);
 
@@ -439,7 +444,8 @@ function SetupOfTheDayCardInner({ setup, generatedAt }: SetupOfTheDayCardProps):
 
 
 
-  const headerContent = !isCompleted ? (
+  const showOnboarding = isHydrated && !isCompleted;
+  const headerContent = showOnboarding ? (
 
     <div className="flex items-center justify-between rounded-lg border border-sky-700/60 bg-sky-900/30 px-4 py-2 text-xs text-slate-100">
 
@@ -469,16 +475,28 @@ function SetupOfTheDayCardInner({ setup, generatedAt }: SetupOfTheDayCardProps):
 
     <>
 
-      <OnboardingHint
+      {showOnboarding ? (
+        <OnboardingHint
 
-        stepId="decision"
+          stepId="decision"
 
-        title={t("perception.onboarding.decision.title")}
+          title={t("perception.onboarding.decision.title")}
 
-        description={t("perception.onboarding.decision.description")}
+          description={t("perception.onboarding.decision.description")}
 
-      >
+        >
 
+          <div className="space-y-4">
+            <SetupCardHeaderBlock
+              setup={vm}
+              generatedAtText={generatedAtText}
+              timeframe={vm.timeframe}
+              typeLabel={typeLabel}
+            />
+          </div>
+
+        </OnboardingHint>
+      ) : (
         <div className="space-y-4">
           <SetupCardHeaderBlock
             setup={vm}
@@ -487,8 +505,7 @@ function SetupOfTheDayCardInner({ setup, generatedAt }: SetupOfTheDayCardProps):
             typeLabel={typeLabel}
           />
         </div>
-
-      </OnboardingHint>
+      )}
 
 
 
