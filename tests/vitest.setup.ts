@@ -10,9 +10,3 @@ if (!process.env.DATABASE_URL && fs.existsSync(envPath)) {
     process.env.DATABASE_URL = parsed.DATABASE_URL;
   }
 }
-
-
-afterEach(() => {
-  vi.restoreAllMocks();
-  vi.unstubAllGlobals();
-});

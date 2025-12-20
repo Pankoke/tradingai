@@ -17,12 +17,16 @@ import clsx from "clsx";
 import { Copy } from "lucide-react";
 
 import type { SetupCardSetup } from "./SetupCard";
+import { toSetupViewModel } from "@/src/components/perception/setupViewModel/toSetupViewModel";
+import type { SetupViewModel } from "@/src/components/perception/setupViewModel/types";
+import { SetupCardHeaderBlock } from "@/src/components/perception/setupViewModel/SetupCardHeaderBlock";
+import { SetupCardRingsBlock } from "@/src/components/perception/setupViewModel/SetupCardRingsBlock";
+import { SetupCardExecutionBlock } from "@/src/components/perception/setupViewModel/SetupCardExecutionBlock";
+import { SetupCardEventContextBlock } from "@/src/components/perception/setupViewModel/SetupCardEventContextBlock";
 
 import { i18nConfig, type Locale } from "../../../../lib/i18n/config";
 
 import { LevelDebugBlock } from "@/src/components/perception/LevelDebugBlock";
-
-import { formatAssetLabel, getAssetMeta } from "@/src/lib/formatters/asset";
 
 import {
 
@@ -48,7 +52,6 @@ import { ImpactPlaybookCard } from "@/src/components/perception/ImpactPlaybookCa
 
 import { TraderContextOverlay } from "@/src/components/perception/TraderContextOverlay";
 
-import { EventMicroTimingStrip } from "@/src/components/perception/EventMicroTimingStrip";
 
 import { TraderImpactSummary } from "@/src/components/perception/TraderImpactSummary";
 
@@ -85,148 +88,7 @@ type SetupOfTheDayCardProps = {
 
 
 
-const RANGE_VALUE_REGEX = /-?\d+(\.\d+)?/g;
 
-
-
-type RingTileDefinition = {
-
-  id: RingTabId;
-
-  labelKey: string;
-
-  value: number;
-
-  tone: "accent" | "green" | "teal";
-
-  tooltip?: ReactNode;
-
-  badgeKey?: string | null;
-
-  badgeTooltipKey?: string | null;
-};
-
-
-
-type RingCategoryPalette = {
-
-  activeRingClass: string;
-
-  labelClass: string;
-
-  gaugeColor: string;
-
-};
-
-
-
-const RING_SCORE_LEVELS = [75, 60, 45, 30, 0];
-
-
-
-const RING_CATEGORY_THEMES: Record<
-
-  RingTabId,
-
-  {
-
-    activeRingClass: string;
-
-    labelClass: string;
-
-    colors: string[];
-
-  }
-
-> = {
-
-  trend: {
-
-    activeRingClass: "ring-teal-400/80",
-
-    labelClass: "text-teal-200",
-
-    colors: ["#14b8a6", "#2dd4bf", "#38bdf8", "#0ea5e9", "#06b6d4"],
-
-  },
-
-  event: {
-
-    activeRingClass: "ring-violet-400/80",
-
-    labelClass: "text-violet-200",
-
-    colors: ["#a855f7", "#c084fc", "#d946ef", "#e879f9", "#9333ea"],
-
-  },
-
-  bias: {
-
-    activeRingClass: "ring-emerald-400/80",
-
-    labelClass: "text-emerald-200",
-
-    colors: ["#22c55e", "#21c2a1", "#34d399", "#4ade80", "#22c55e"],
-
-  },
-
-  sentiment: {
-
-    activeRingClass: "ring-amber-400/80",
-
-    labelClass: "text-amber-200",
-
-    colors: ["#f97316", "#fbbf24", "#f59e0b", "#d97706", "#fbbf24"],
-
-  },
-
-  orderflow: {
-
-    activeRingClass: "ring-sky-400/80",
-
-    labelClass: "text-sky-200",
-
-    colors: ["#0ea5e9", "#38bdf8", "#60a5fa", "#3b82f6", "#2563eb"],
-
-  },
-
-};
-
-
-
-function getRingCategoryPalette(id: RingTabId, score: number): RingCategoryPalette {
-
-  const normalized = Number.isFinite(score) ? Math.max(0, Math.min(100, score)) : 0;
-
-  const theme = RING_CATEGORY_THEMES[id];
-
-  let index = 0;
-
-  for (let i = 0; i < RING_SCORE_LEVELS.length; i++) {
-
-    if (normalized >= RING_SCORE_LEVELS[i]) {
-
-      index = i;
-
-      break;
-
-    }
-
-  }
-
-  const color = theme.colors[Math.min(index, theme.colors.length - 1)];
-
-  return {
-
-    activeRingClass: theme.activeRingClass,
-
-    labelClass: theme.labelClass,
-
-    gaugeColor: color,
-
-  };
-
-}
 
 function localePrefix(pathname: string): string {
 
@@ -261,83 +123,53 @@ function buildNumberFormatter(locale: Locale): Intl.NumberFormat {
 
 
 type EntryDescriptor = {
-
   display: string;
-
   noteKey: "setups.entry.note.zone" | "setups.entry.note.limit" | "setups.entry.note.market" | "setups.entry.note.default";
-
   copyValue: string | null;
-
 };
 
-
-
-function formatEntryDescriptor(
-  entryZone: string | null | undefined,
-  formatter: Intl.NumberFormat,
-): EntryDescriptor {
-  if (!entryZone) {
+function formatEntryDescriptorFromVm(vm: SetupViewModel, formatter: Intl.NumberFormat): EntryDescriptor {
+  const range = vm.entry;
+  if (range.from === null && range.to === null) {
+    if (range.display) {
+      return { display: range.display, noteKey: "setups.entry.note.default", copyValue: range.display };
+    }
     return { display: "n/a", noteKey: "setups.entry.note.default", copyValue: null };
   }
-  const normalized = entryZone.toLowerCase();
-  if (normalized.includes("market")) {
-    return { display: entryZone, noteKey: "setups.entry.note.market", copyValue: entryZone };
-  }
-  const matches = entryZone.match(RANGE_VALUE_REGEX);
-  if (!matches || matches.length === 0) {
-    return { display: entryZone, noteKey: "setups.entry.note.default", copyValue: entryZone };
-  }
-  if (matches.length === 1) {
-    const raw = Number(matches[0]);
-    const display = Number.isFinite(raw) ? formatter.format(raw) : "n/a";
+  if (range.from !== null && range.to !== null && range.from !== range.to) {
     return {
-      display,
-      noteKey: "setups.entry.note.limit",
-      copyValue: Number.isFinite(raw) ? matches[0] : null,
-    };
-  }
-  const values = matches.slice(0, 2).map((match) => Number(match));
-  const [a, b] = values;
-  if (Number.isFinite(a) && Number.isFinite(b)) {
-    return {
-      display: `${formatter.format(a)} - ${formatter.format(b)}`,
+      display: `${formatter.format(range.from)} - ${formatter.format(range.to)}`,
       noteKey: "setups.entry.note.zone",
-      copyValue: `${matches[0]} - ${matches[1]}`,
+      copyValue: `${range.from} - ${range.to}`,
     };
   }
-  return { display: entryZone, noteKey: "setups.entry.note.default", copyValue: entryZone };
+  if (range.from !== null) {
+    return {
+      display: formatter.format(range.from),
+      noteKey: "setups.entry.note.limit",
+      copyValue: String(range.from),
+    };
+  }
+  if (range.display) {
+    return { display: range.display, noteKey: "setups.entry.note.default", copyValue: range.display };
+  }
+  return { display: "n/a", noteKey: "setups.entry.note.default", copyValue: null };
 }
 
-function formatPriceValue(
-
-  value: string | null | undefined,
-
+function formatPriceValueFromVm(
+  point: { value: number | null; display?: string },
   formatter: Intl.NumberFormat,
-
 ): { display: string; copyValue: string | null } {
-
-  if (value === undefined || value === null) {
-
+  if (point.value === null || Number.isNaN(point.value)) {
+    if (point.display) {
+      return { display: point.display, copyValue: point.display };
+    }
     return { display: "n/a", copyValue: null };
-
   }
-
-  const num = Number(value);
-
-  if (!Number.isFinite(num)) {
-
-    return { display: value, copyValue: value };
-
-  }
-
   return {
-
-    display: formatter.format(num),
-
-    copyValue: value,
-
+    display: formatter.format(point.value),
+    copyValue: String(point.value),
   };
-
 }
 
 
@@ -472,7 +304,12 @@ function SetupOfTheDayCardInner({ setup, generatedAt }: SetupOfTheDayCardProps):
 
   const { startTour, isCompleted } = useOnboardingTour();
 
-  const isLong = setup.direction === "Long";
+  const vm: SetupViewModel = useMemo(
+    () => toSetupViewModel(setup as unknown as Setup, { generatedAt }),
+    [setup, generatedAt],
+  );
+
+  const isLong = vm.direction === "Long";
 
   const pathname = usePathname();
 
@@ -480,149 +317,12 @@ function SetupOfTheDayCardInner({ setup, generatedAt }: SetupOfTheDayCardProps):
 
   const locale = useMemo(() => resolveLocale(pathname), [pathname]);
 
-  const meta = getAssetMeta(setup.assetId, setup.symbol);
-
-  const headline = formatAssetLabel(setup.assetId, setup.symbol);
-
   const numberFormatter = useMemo(() => buildNumberFormatter(locale), [locale]);
 
-  const rings = setup.rings;
-  const eventContext = setup.eventContext ?? null;
+  const rings = vm.rings;
+  const eventContext = vm.eventContext ?? null;
   const eventInsights = useMemo(() => analyzeEventContext(eventContext), [eventContext]);
   const primaryEventCandidate = useMemo(() => pickPrimaryEventCandidate(eventContext), [eventContext]);
-
-  const compactRings: RingTileDefinition[] = [
-
-    {
-
-      id: "trend",
-
-      labelKey: "perception.today.trendRing",
-
-      value: rings.trendScore,
-
-      tone: "teal",
-
-      tooltip: t("perception.rings.tooltip.trend"),
-
-    },
-
-    {
-
-      id: "event",
-
-      labelKey: "perception.today.eventRing",
-
-      value: rings.eventScore,
-
-      tone: "accent",
-
-      tooltip: buildEventTooltip(t("perception.rings.tooltip.event"), setup.eventContext, t),
-
-      badgeKey: eventInsights.riskKey ? `events.risk.badge.${eventInsights.riskKey}` : null,
-
-      badgeTooltipKey: eventInsights.riskKey
-
-        ? `events.risk.badgeTooltip.${eventInsights.riskKey}`
-
-        : null,
-
-    },
-
-    {
-
-      id: "bias",
-
-      labelKey: "perception.today.biasRing",
-
-      value: rings.biasScore,
-
-      tone: "green",
-
-      tooltip: t("perception.rings.tooltip.bias"),
-
-    },
-
-    {
-
-      id: "sentiment",
-
-      labelKey: "perception.today.sentimentRing",
-
-      value: rings.sentimentScore,
-
-      tone: "teal",
-
-      tooltip: t("perception.rings.tooltip.sentiment"),
-
-    },
-
-    {
-
-      id: "orderflow",
-
-      labelKey: "perception.today.orderflowRing",
-
-      value: rings.orderflowScore,
-
-      tone: "accent",
-
-      tooltip: t("perception.rings.tooltip.orderflow"),
-
-    },
-
-  ];
-
-
-
-  type CompactRing = typeof compactRings[number];
-
-
-
-function RingTile({ ring, isActive, onClick }: { ring: CompactRing; isActive: boolean; onClick: () => void }) {
-  const palette = getRingCategoryPalette(ring.id, ring.value ?? 0);
-  const badgeLabel = ring.badgeKey ? t(ring.badgeKey) : null;
-  const badgeTooltip = ring.badgeTooltipKey ? t(ring.badgeTooltipKey) : undefined;
-  return (
-    <button
-      type="button"
-        onClick={onClick}
-        aria-pressed={isActive}
-        className={clsx(
-          "group relative flex cursor-pointer flex-col items-center gap-2 rounded-2xl border px-4 py-3 text-[0.7rem] font-semibold transition duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-200/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950",
-          isActive
-            ? `border-transparent bg-slate-900/80 shadow-[0_18px_35px_rgba(2,6,23,0.65)] ring-2 ${palette.activeRingClass} ring-offset-2 ring-offset-slate-950`
-            : "border-slate-800/70 bg-slate-900/30 shadow-[0_10px_25px_rgba(2,6,23,0.45)] hover:border-slate-600/60 hover:bg-slate-900/55 hover:shadow-[0_18px_32px_rgba(2,6,23,0.55)]",
-        )}
-      >
-        {isActive ? (
-          <span className="absolute -top-2 h-1 w-8 rounded-full bg-white/60" aria-hidden="true" />
-        ) : null}
-        {badgeLabel ? (
-          <span
-            className="absolute right-3 top-2 rounded-full border border-white/20 bg-slate-900/70 px-2 py-0.5 text-[0.55rem] font-semibold uppercase tracking-[0.2em] text-slate-200"
-            title={badgeTooltip}
-          >
-            {badgeLabel}
-          </span>
-        ) : null}
-        <SmallGauge
-          value={ring.value}
-          label=""
-          tone={ring.tone}
-          tooltip={ring.tooltip}
-          fillColor={palette.gaugeColor}
-          tooltipClassName={
-            ring.tooltip
-              ? "min-w-[16rem] max-w-[22rem] whitespace-normal text-left text-sm leading-relaxed"
-              : undefined
-          }
-        />
-        <span className={clsx("text-[0.7rem] font-semibold", palette.labelClass)}>{t(ring.labelKey)}</span>
-      </button>
-    );
-  }
-
 
   const [showNarrative, setShowNarrative] = useState(false);
 
@@ -679,7 +379,7 @@ function RingTile({ ring, isActive, onClick }: { ring: CompactRing; isActive: bo
 
   const confidencePalette = getConfidenceGaugePalette(confidenceScore);
 
-  const generatedTimestamp = generatedAt ?? setup.snapshotCreatedAt ?? null;
+  const generatedTimestamp = vm.meta.generatedAt ?? vm.meta.snapshotCreatedAt ?? vm.meta.snapshotTime ?? null;
 
   const generatedAtText = useMemo(
 
@@ -689,31 +389,27 @@ function RingTile({ ring, isActive, onClick }: { ring: CompactRing; isActive: bo
 
   );
 
+  const typeLabel = useMemo(() => {
+    if (!vm.type) return null;
+    return vm.type === "Regelbasiert" ? t("setups.type.ruleBased") : t("setups.type.ai");
+  }, [vm.type, t]);
+
   const entryDescriptor = useMemo(
-
-    () => formatEntryDescriptor(setup.entryZone, numberFormatter),
-
-    [setup.entryZone, numberFormatter],
-
+    () => formatEntryDescriptorFromVm(vm, numberFormatter),
+    [vm.entry, numberFormatter],
   );
 
   const stopInfo = useMemo(
-
-    () => formatPriceValue(setup.stopLoss, numberFormatter),
-
-    [setup.stopLoss, numberFormatter],
-
+    () => formatPriceValueFromVm(vm.stop, numberFormatter),
+    [vm.stop, numberFormatter],
   );
 
   const takeProfitInfo = useMemo(
-
-    () => formatPriceValue(setup.takeProfit, numberFormatter),
-
-    [setup.takeProfit, numberFormatter],
-
+    () => formatPriceValueFromVm(vm.takeProfit, numberFormatter),
+    [vm.takeProfit, numberFormatter],
   );
 
-  const stopNoteKey = deriveStopNoteKey(setup.levelDebug);
+  const stopNoteKey = deriveStopNoteKey(vm.levelDebug ?? undefined);
 
   const copyLabels = {
 
@@ -784,43 +480,12 @@ function RingTile({ ring, isActive, onClick }: { ring: CompactRing; isActive: bo
       >
 
         <div className="space-y-4">
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-
-            <div className="space-y-2">
-
-              <p className="text-[0.58rem] font-semibold uppercase tracking-[0.35em] text-slate-300">
-
-                {t("setups.setupOfTheDay")}
-
-              </p>
-
-              <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-
-                {headline} Â· {setup.timeframe}
-
-              </h2>
-
-              <p className={`text-4xl font-bold ${isLong ? "text-emerald-400" : "text-rose-400"}`}>{setup.direction}</p>
-
-              <p className="text-sm text-slate-400">{meta.name}</p>
-
-              <span className="inline-flex w-fit rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-200">
-
-                {setup.type === "Regelbasiert" ? t("setups.type.ruleBased") : t("setups.type.ai")}
-
-              </span>
-
-            </div>
-
-            {generatedAtText ? (
-
-              <p className="text-xs text-slate-400 sm:text-right">{generatedAtText}</p>
-
-            ) : null}
-
-          </div>
-
+          <SetupCardHeaderBlock
+            setup={vm}
+            generatedAtText={generatedAtText}
+            timeframe={vm.timeframe}
+            typeLabel={typeLabel}
+          />
         </div>
 
       </OnboardingHint>
@@ -879,25 +544,7 @@ function RingTile({ ring, isActive, onClick }: { ring: CompactRing; isActive: bo
 
           </p>
 
-          <div className="mt-3 grid gap-3 text-[0.75rem] sm:grid-cols-2 lg:grid-cols-5">
-
-            {compactRings.map((ring) => (
-
-              <RingTile
-
-                key={ring.id}
-
-                ring={ring}
-
-                isActive={activeRing === ring.id}
-
-                onClick={() => setActiveRing(ring.id)}
-
-              />
-
-            ))}
-
-          </div>
+          <SetupCardRingsBlock setup={vm} activeRing={activeRing} onActiveRingChange={setActiveRing} />
 
           <div
             className={clsx(
@@ -1002,12 +649,12 @@ function RingTile({ ring, isActive, onClick }: { ring: CompactRing; isActive: bo
 
 
 
-        <RiskRewardBlock riskReward={setup.riskReward ?? null} />
+        <RiskRewardBlock riskReward={vm.riskReward ?? null} />
 
 
 
         <ExecutionPanel
-          setup={setup as unknown as Setup}
+          setup={vm}
           eventInsights={eventInsights}
           primaryEvent={primaryEventCandidate}
         />
@@ -1082,7 +729,7 @@ function RingTile({ ring, isActive, onClick }: { ring: CompactRing; isActive: bo
 
           <TraderContextOverlay setup={setup} />
 
-          <EventMicroTimingStrip eventContext={setup.eventContext ?? null} />
+          <SetupCardEventContextBlock setup={vm} />
 
         </div>
 
@@ -1448,7 +1095,7 @@ function CopyValueButton({ value, labels }: CopyButtonProps): JSX.Element | null
 
 type ExecutionPanelProps = {
 
-  setup: Setup;
+  setup: SetupViewModel;
   eventInsights?: EventContextInsights;
   primaryEvent?: PrimaryEventCandidate | null;
 
@@ -1460,15 +1107,15 @@ function ExecutionPanel({ setup, eventInsights, primaryEvent }: ExecutionPanelPr
 
   const t = useT();
 
-  const signal = classifyTradeSignal(setup);
+  const signal = classifyTradeSignal(setup as unknown as Setup);
 
   const rings = setup.rings;
 
-  const confidenceScore = rings.confidenceScore ?? setup.confidence ?? 0;
+  const confidenceScore = rings.confidenceScore ?? 0;
 
   const confidenceBucket = deriveConsistencyLevel(confidenceScore);
 
-  const eventScore = rings.eventScore ?? setup.eventScore ?? 0;
+  const eventScore = rings.eventScore ?? 0;
 
   const eventLevel = eventScore >= 75 ? "high" : eventScore >= 40 ? "medium" : "low";
 
@@ -1502,69 +1149,7 @@ function ExecutionPanel({ setup, eventInsights, primaryEvent }: ExecutionPanelPr
 
 
 
-  return (
-
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-[inset_0_0_10px_rgba(0,0,0,0.25)]">
-
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-
-        <div>
-
-          <p className="text-[0.58rem] uppercase tracking-[0.3em] text-slate-400">
-
-            {t("perception.execution.title")}
-
-          </p>
-
-          <p className="text-lg font-semibold text-white">
-
-            {t(`perception.tradeDecision.signal.${signal}.label`)}
-
-          </p>
-
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-
-          {chips.map((chip) => (
-
-            <span
-
-              key={chip}
-
-              className="rounded-full border border-slate-700 bg-slate-800/60 px-3 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-slate-200"
-
-            >
-
-              {chip}
-
-            </span>
-
-          ))}
-
-        </div>
-
-      </div>
-
-      <ul className="mt-3 grid gap-2 text-sm text-slate-200 md:grid-cols-2">
-
-        {bullets.map((line) => (
-
-          <li key={line} className="flex items-start gap-2">
-
-            <span className="mt-1 h-1.5 w-1.5 rounded-full bg-sky-400" />
-
-            <span>{line}</span>
-
-          </li>
-
-        ))}
-
-      </ul>
-
-    </div>
-
-  );
+  return <SetupCardExecutionBlock setup={setup} chips={chips} bullets={bullets} signal={signal} />;
 
 }
 
