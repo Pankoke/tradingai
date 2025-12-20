@@ -102,15 +102,7 @@ export function SetupCard({ setup, highlight = false }: SetupCardProps): JSX.Ele
         <Level label={t("setups.stopLoss")} value={formatNumberText(setup.stopLoss)} tone="danger" />
       </div>
 
-      <div className="flex justify-end">
-        <Link
-          href={`${prefix}/setups/${setup.id}`}
-          className="inline-flex items-center gap-1.5 rounded-full bg-[#0ea5e9] px-3 py-1 text-xs font-semibold text-white shadow-[0_10px_15px_rgba(14,165,233,0.25)] transition hover:brightness-105"
-        >
-          <Lock className="h-3.5 w-3.5" aria-hidden />
-          <span>{t("setups.openAnalysis")}</span>
-        </Link>
-      </div>
+      {/* CTA removed for simplified marketing card */}
     </article>
   );
 }

@@ -68,8 +68,8 @@ export function SetupCardRingsBlock({ setup, activeRing, onActiveRingChange }: P
       value: setup.rings.eventScore,
       tone: "accent",
       tooltip: buildEventTooltip(t("perception.rings.tooltip.event"), setup.eventContext, t),
-      badgeKey: setup.meta.eventLevel ? `events.risk.badge.${setup.meta.eventLevel}` : null,
-      badgeTooltipKey: setup.meta.eventLevel ? `events.risk.badgeTooltip.${setup.meta.eventLevel}` : null,
+      badgeKey: eventLevelToBadgeKey(setup.meta.eventLevel),
+      badgeTooltipKey: eventLevelToBadgeTooltipKey(setup.meta.eventLevel),
     },
     {
       id: "bias",
@@ -142,4 +142,22 @@ export function SetupCardRingsBlock({ setup, activeRing, onActiveRingChange }: P
       })}
     </div>
   );
+}
+
+function eventLevelToBadgeKey(
+  level: "high" | "medium" | "low" | null | undefined,
+): `events.risk.badge.${string}` | null {
+  if (!level) return "events.risk.badge.unknown";
+  if (level === "high") return "events.risk.badge.highSoon";
+  if (level === "medium") return "events.risk.badge.elevated";
+  return "events.risk.badge.calm";
+}
+
+function eventLevelToBadgeTooltipKey(
+  level: "high" | "medium" | "low" | null | undefined,
+): `events.risk.badgeTooltip.${string}` | null {
+  if (!level) return "events.risk.badgeTooltip.unknown";
+  if (level === "high") return "events.risk.badgeTooltip.highSoon";
+  if (level === "medium") return "events.risk.badgeTooltip.elevated";
+  return "events.risk.badgeTooltip.calm";
 }

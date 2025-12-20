@@ -22,6 +22,7 @@ type Props = {
   hideEventContext?: boolean;
   hideExecution?: boolean;
   headerTypeLabel?: string | null;
+  maxExecutionBullets?: number | null;
 };
 
 export function SetupRenderer({
@@ -30,6 +31,7 @@ export function SetupRenderer({
   hideEventContext,
   hideExecution,
   headerTypeLabel,
+  maxExecutionBullets,
 }: Props): JSX.Element {
   const t = useT();
   const [activeRing, setActiveRing] = useState<"trend" | "event" | "bias" | "sentiment" | "orderflow">("trend");
@@ -43,8 +45,16 @@ export function SetupRenderer({
   const showEventContext = !hideEventContext && Boolean(vm.eventContext);
   const showExecution = !hideExecution;
 
+  const resolvedBulletLimit =
+    typeof maxExecutionBullets === "number"
+      ? maxExecutionBullets
+      : variant === "compact"
+        ? 1
+        : null;
   const bulletsForVariant =
-    variant === "compact" && executionBullets.length > 0 ? executionBullets.slice(0, 2) : executionBullets;
+    resolvedBulletLimit && resolvedBulletLimit > 0
+      ? executionBullets.slice(0, resolvedBulletLimit)
+      : executionBullets;
 
   return (
     <div className="flex flex-col gap-6">
@@ -84,7 +94,7 @@ function buildExecutionBullets(setup: SetupViewModel, t: ReturnType<typeof useT>
   const sizingKey = mapSignalToSizing(signal);
   const mergedEventInsights = analyzeEventContext(setup.eventContext ?? null) as EventContextInsights | null;
   const mergedPrimaryEvent = pickPrimaryEventCandidate(setup.eventContext ?? null) as PrimaryEventCandidate | null;
-  const eventTimingHint = deriveEventTimingHint(mergedEventInsights, mergedPrimaryEvent, t);
+  const eventTimingHint = mergedEventInsights ? deriveEventTimingHint(mergedEventInsights, mergedPrimaryEvent, t) : null;
 
   return [
     t(`perception.execution.bullets.sizing.${sizingKey}`),

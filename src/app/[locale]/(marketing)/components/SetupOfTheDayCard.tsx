@@ -26,8 +26,6 @@ import { SetupCardEventContextBlock } from "@/src/components/perception/setupVie
 
 import { i18nConfig, type Locale } from "../../../../lib/i18n/config";
 
-import { LevelDebugBlock } from "@/src/components/perception/LevelDebugBlock";
-
 import {
 
   BigGauge,
@@ -75,6 +73,7 @@ import {
   type PrimaryEventCandidate,
 } from "@/src/components/perception/eventContextInsights";
 import { deriveEventTimingHint } from "@/src/components/perception/eventExecutionHelpers";
+import { SetupActionCards, buildActionCardData } from "@/src/components/perception/setupViewModel/SetupActionCards";
 
 
 
@@ -342,11 +341,8 @@ function SetupOfTheDayCardInner({ setup, generatedAt }: SetupOfTheDayCardProps):
   const signalQualityReasons = signalQuality.reasons.slice(0, 2);
 
   const confidenceSummaryLabel = t("perception.confidence.summaryLabel").replace(
-
     "{score}",
-
     String(Math.round(confidenceScore)),
-
   );
 
   const signalGradeLabel = t("perception.signalQuality.gradeLabel").replace("{grade}", signalQuality.grade);
@@ -412,13 +408,18 @@ function SetupOfTheDayCardInner({ setup, generatedAt }: SetupOfTheDayCardProps):
 
   const stopNoteKey = deriveStopNoteKey(vm.levelDebug ?? undefined);
 
-  const copyLabels = {
+  const copyLabels = useMemo(
+    () => ({
+      copy: t("setups.action.copy"),
+      copied: t("setups.action.copied"),
+    }),
+    [t],
+  );
 
-    copy: t("setups.action.copy"),
-
-    copied: t("setups.action.copied"),
-
-  };
+  const actionCardData = useMemo(
+    () => buildActionCardData(vm, numberFormatter, { copyLabels }),
+    [vm, numberFormatter, copyLabels],
+  );
 
   const [activeRing, setActiveRing] = useState<RingTabId>("trend");
 
@@ -612,58 +613,13 @@ function SetupOfTheDayCardInner({ setup, generatedAt }: SetupOfTheDayCardProps):
 
       <div className="space-y-4">
 
-        <div className="grid gap-3 sm:grid-cols-3">
-
-          <ActionLevelCard
-
-            label={t("setups.entry")}
-
-            value={entryDescriptor.display}
-
-            note={t(entryDescriptor.noteKey)}
-
-            tone="neutral"
-
-            copyValue={entryDescriptor.copyValue}
-
-            copyLabels={copyLabels}
-
-          />
-
-          <ActionLevelCard
-
-            label={t("setups.stopLoss")}
-
-            value={stopInfo.display}
-
-            note={t(stopNoteKey)}
-
-            tone="danger"
-
-            copyValue={stopInfo.copyValue}
-
-            copyLabels={copyLabels}
-
-          />
-
-          <ActionLevelCard
-
-            label={t("setups.takeProfit")}
-
-            value={takeProfitInfo.display}
-
-            note={t("setups.takeProfit.note.primary")}
-
-            tone="success"
-
-            copyValue={takeProfitInfo.copyValue}
-
-            copyLabels={copyLabels}
-
-          />
-
-        </div>
-
+        <SetupActionCards
+          entry={actionCardData.entry}
+          stop={actionCardData.stop}
+          takeProfit={actionCardData.takeProfit}
+          copyLabels={actionCardData.copyLabels}
+          variant="full"
+        />
 
 
         <RiskRewardBlock riskReward={vm.riskReward ?? null} />
@@ -866,59 +822,8 @@ function SetupOfTheDayCardInner({ setup, generatedAt }: SetupOfTheDayCardProps):
 
 
 
-      <div className="pt-4">
+      <div className="pt-4" />
 
-        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 shadow-[inset_0_0_10px_rgba(0,0,0,0.25)]">
-
-          <LevelDebugBlock
-
-            category={setup.category ?? setup.levelDebug?.category}
-
-            referencePrice={setup.levelDebug?.referencePrice ?? null}
-
-            bandPct={setup.levelDebug?.bandPct ?? null}
-
-            volatilityScore={setup.levelDebug?.volatilityScore ?? null}
-
-            scoreVolatility={setup.levelDebug?.scoreVolatility ?? null}
-
-            entryZone={setup.entryZone}
-
-            stopLoss={setup.stopLoss}
-
-            takeProfit={setup.takeProfit}
-
-            rings={setup.rings}
-
-            snapshotId={setup.snapshotId ?? null}
-
-            snapshotCreatedAt={setup.snapshotCreatedAt ?? null}
-
-            eventContext={setup.eventContext ?? null}
-
-          />
-
-        </div>
-
-      </div>
-
-
-
-      <div className="flex justify-end">
-
-        <Link
-
-          href={`${prefix}/setups/${setup.id}`}
-
-          className="rounded-full bg-[#0ea5e9] px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(14,165,233,0.35)] transition hover:brightness-110"
-
-        >
-
-          {t("setups.openAnalysis")}
-
-        </Link>
-
-      </div>
 
     </>
 

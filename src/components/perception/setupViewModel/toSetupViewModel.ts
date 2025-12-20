@@ -7,13 +7,14 @@ function isHomepageSetup(input: SetupSource): input is HomepageSetup {
   if ("weakSignal" in input || "eventLevel" in input) {
     return true;
   }
-  const entryZone = (input as HomepageSetup).entryZone;
-  const isRangeObject =
+  if (!("entryZone" in input)) return false;
+  const entryZone = (input as { entryZone?: unknown }).entryZone;
+  return (
     entryZone !== null &&
     typeof entryZone === "object" &&
     "from" in (entryZone as Record<string, unknown>) &&
-    "to" in (entryZone as Record<string, unknown>);
-  return isRangeObject;
+    "to" in (entryZone as Record<string, unknown>)
+  );
 }
 
 function normalizeRangeFromString(value?: string | null): PriceRange {
