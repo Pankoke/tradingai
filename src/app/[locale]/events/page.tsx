@@ -10,6 +10,7 @@ import { resolveEventEnrichment } from "@/src/server/events/eventDescription";
 import { toDisplayTitle } from "@/src/server/events/eventDisplay";
 import { resolveConsensusSnapshot, type ConsensusSnapshot } from "@/src/server/events/eventConsensus";
 import { resolveEventIcon, type EventIconToken } from "@/src/server/events/eventUiHints";
+import { getEventAnchorId } from "@/src/lib/events/eventAnchors";
 import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
 import deMessages from "@/src/messages/de.json";
 import enMessages from "@/src/messages/en.json";
@@ -154,7 +155,7 @@ export default async function EventsPage({ params, searchParams }: PageProps): P
                 <div className="grid gap-4 lg:grid-cols-2">
                   {group.events.map((event) => (
                     <article
-                      id={`event-${event.id}`}
+                    id={getEventAnchorId(event.id)}
                       key={event.id}
                       className="scroll-mt-24 flex flex-col gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-[0_12px_35px_rgba(2,6,23,0.25)]"
                     >
@@ -384,7 +385,7 @@ function buildNextUpEvents(events: DbEvent[], locale: Locale, t: Translator): Ne
       impactKey: `events.severity.${severity}`,
       impactTone: severity === "high" ? "danger" : severity === "medium" ? "warn" : "muted",
       countdown: formatCountdown(event.scheduledAt, t),
-      href: renderedIds.has(event.id) ? `#event-${event.id}` : undefined,
+      href: renderedIds.has(event.id) ? `#${getEventAnchorId(event.id)}` : undefined,
     };
   });
 }

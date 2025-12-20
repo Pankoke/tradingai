@@ -71,6 +71,7 @@ import {
   type EventContextInsights,
   type PrimaryEventCandidate,
 } from "@/src/components/perception/eventContextInsights";
+import { deriveEventTimingHint } from "@/src/components/perception/eventExecutionHelpers";
 
 
 
@@ -100,6 +101,9 @@ type RingTileDefinition = {
 
   tooltip?: ReactNode;
 
+  badgeKey?: string | null;
+
+  badgeTooltipKey?: string | null;
 };
 
 
@@ -515,6 +519,14 @@ function SetupOfTheDayCardInner({ setup, generatedAt }: SetupOfTheDayCardProps):
 
       tooltip: buildEventTooltip(t("perception.rings.tooltip.event"), setup.eventContext, t),
 
+      badgeKey: eventInsights.riskKey ? `events.risk.badge.${eventInsights.riskKey}` : null,
+
+      badgeTooltipKey: eventInsights.riskKey
+
+        ? `events.risk.badgeTooltip.${eventInsights.riskKey}`
+
+        : null,
+
     },
 
     {
@@ -567,11 +579,13 @@ function SetupOfTheDayCardInner({ setup, generatedAt }: SetupOfTheDayCardProps):
 
 
 
-  function RingTile({ ring, isActive, onClick }: { ring: CompactRing; isActive: boolean; onClick: () => void }) {
-    const palette = getRingCategoryPalette(ring.id, ring.value ?? 0);
-    return (
-      <button
-        type="button"
+function RingTile({ ring, isActive, onClick }: { ring: CompactRing; isActive: boolean; onClick: () => void }) {
+  const palette = getRingCategoryPalette(ring.id, ring.value ?? 0);
+  const badgeLabel = ring.badgeKey ? t(ring.badgeKey) : null;
+  const badgeTooltip = ring.badgeTooltipKey ? t(ring.badgeTooltipKey) : undefined;
+  return (
+    <button
+      type="button"
         onClick={onClick}
         aria-pressed={isActive}
         className={clsx(
@@ -583,6 +597,14 @@ function SetupOfTheDayCardInner({ setup, generatedAt }: SetupOfTheDayCardProps):
       >
         {isActive ? (
           <span className="absolute -top-2 h-1 w-8 rounded-full bg-white/60" aria-hidden="true" />
+        ) : null}
+        {badgeLabel ? (
+          <span
+            className="absolute right-3 top-2 rounded-full border border-white/20 bg-slate-900/70 px-2 py-0.5 text-[0.55rem] font-semibold uppercase tracking-[0.2em] text-slate-200"
+            title={badgeTooltip}
+          >
+            {badgeLabel}
+          </span>
         ) : null}
         <SmallGauge
           value={ring.value}
@@ -1600,45 +1622,7 @@ function mapSignalToSizing(signal: ExecutionSignal): "strong" | "core" | "cautio
 
 
 
-function deriveEventTimingHint(
-  insights: EventContextInsights,
-  primaryEvent: PrimaryEventCandidate | null,
-  t: (key: string) => string,
-): string | null {
-  if (insights.hasFallback || insights.riskKey === "unknown") {
-    return t("events.execution.unknown");
-  }
-  if (insights.riskKey === "highSoon") {
-    const minutes = normalizeExecutionMinutes(primaryEvent?.timeToEventMinutes ?? null);
-    const eventLabel =
-      primaryEvent?.title && primaryEvent.title.trim().length > 0
-        ? primaryEvent.title
-        : t("events.execution.defaultEvent");
-    return t("events.execution.highSoon")
-      .replace("{minutes}", String(minutes))
-      .replace("{event}", eventLabel);
-  }
-  if (insights.riskKey === "elevated") {
-    return t("events.execution.elevated");
-  }
-  if (insights.riskKey === "calm") {
-    return t("events.execution.calm");
-  }
-  return null;
-}
 
-
-
-function normalizeExecutionMinutes(minutes: number | null): number {
-  if (minutes === null || !Number.isFinite(minutes)) {
-    return 30;
-  }
-  const absMinutes = Math.abs(minutes);
-  if (absMinutes <= 15) return 15;
-  if (absMinutes <= 30) return 30;
-  if (absMinutes <= 60) return 60;
-  return 60;
-}
 
 
 

@@ -1,11 +1,14 @@
 ﻿"use client";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { JSX } from "react";
 import clsx from "clsx";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import { RingInspectorLayout } from "@/src/components/perception/RingInspectorLayout";
 import type { RingInspectorBaseProps } from "@/src/components/perception/RingInspectorTypes";
 import type { Setup } from "@/src/lib/engine/types";
+import { getEventAnchorId, getLocalePrefix } from "@/src/lib/events/eventAnchors";
 
 const bucketFromScore = (score: number): "low" | "medium" | "high" => {
   if (score >= 70) return "high";
@@ -101,6 +104,8 @@ export function EventInspector({
   className,
 }: EventInspectorProps): JSX.Element {
   const t = useT();
+  const pathname = usePathname();
+  const localePrefix = getLocalePrefix(pathname);
   const score = setup.rings?.eventScore;
   const rawEvents = setup.eventContext?.topEvents ?? [];
   const events: TopEvent[] = rawEvents.filter(
@@ -236,7 +241,7 @@ export function EventInspector({
           </ul>
         )}
         {eventContext ? (
-          <WhyBlock eventContext={eventContext} t={t} />
+          <WhyBlock eventContext={eventContext} localePrefix={localePrefix} t={t} />
         ) : null}
         {list}
       </div>
@@ -246,9 +251,11 @@ export function EventInspector({
 
 function WhyBlock({
   eventContext,
+  localePrefix,
   t,
 }: {
   eventContext: NonNullable<Setup["eventContext"]>;
+  localePrefix: string;
   t: (key: string) => string;
 }): JSX.Element {
   const notes = (eventContext.notes ?? []).filter(Boolean);
