@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import type { RingAiSummary, RiskRewardSummary, Setup } from "@/src/lib/engine/types";
 import { computeSignalQuality } from "@/src/lib/engine/signalQuality";
+import { analyzeEventContext } from "@/src/components/perception/eventContextInsights";
 
 type Props = {
   setup: Setup;
@@ -51,8 +52,9 @@ function riskPctBucket(risk?: number | null): Bucket {
   return "low";
 }
 
-export function SetupRatingBlock({ setup, ringAiSummary, riskReward }: Props): JSX.Element {
+export function SetupRatingBlock({ setup, ringAiSummary, riskReward, eventContext }: Props): JSX.Element {
   const t = useT();
+  const mergedEventContext = eventContext ?? setup.eventContext ?? null;
 
   const rings =
     setup.rings ??
@@ -100,6 +102,10 @@ export function SetupRatingBlock({ setup, ringAiSummary, riskReward }: Props): J
     .replace("{confidence}", t(`perception.setupRating.confidence.${confidenceLevel}`))
     .replace("{event}", t(`perception.setupRating.event.${eventLevel}`));
 
+  const { riskKey: eventRiskKey } = analyzeEventContext(mergedEventContext);
+  const eventRiskLine = eventRiskKey ? t(`events.risk.${eventRiskKey}`) : null;
+  const confidenceEventLine = eventRiskKey ? t(`events.confidence.${eventRiskKey}`) : null;
+
   const reasons: string[] = [];
   if (drivers.length > 0) {
     reasons.push(t("perception.setupRating.reason.drivers").replace("{items}", drivers.join(", ")));
@@ -140,6 +146,9 @@ export function SetupRatingBlock({ setup, ringAiSummary, riskReward }: Props): J
             {t("perception.setupRating.title")}
           </p>
           <p className="text-sm font-semibold text-slate-100">{metaLine}</p>
+          {eventRiskLine ? (
+            <p className="text-xs text-slate-400">{eventRiskLine}</p>
+          ) : null}
         </div>
       </div>
       <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-200">
@@ -147,6 +156,9 @@ export function SetupRatingBlock({ setup, ringAiSummary, riskReward }: Props): J
           <li key={reason}>{reason}</li>
         ))}
       </ul>
+      {confidenceEventLine ? (
+        <p className="mt-1 text-xs text-slate-400">{confidenceEventLine}</p>
+      ) : null}
     </div>
   );
 }

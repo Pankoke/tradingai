@@ -65,6 +65,12 @@ import { RingInsightTabs } from "@/src/components/perception/RingInsightTabs";
 import type { RingTabId } from "@/src/components/perception/RingInsightTabs";
 
 import { computeSignalQuality } from "@/src/lib/engine/signalQuality";
+import {
+  analyzeEventContext,
+  pickPrimaryEventCandidate,
+  type EventContextInsights,
+  type PrimaryEventCandidate,
+} from "@/src/components/perception/eventContextInsights";
 
 
 
@@ -477,6 +483,9 @@ function SetupOfTheDayCardInner({ setup, generatedAt }: SetupOfTheDayCardProps):
   const numberFormatter = useMemo(() => buildNumberFormatter(locale), [locale]);
 
   const rings = setup.rings;
+  const eventContext = setup.eventContext ?? null;
+  const eventInsights = useMemo(() => analyzeEventContext(eventContext), [eventContext]);
+  const primaryEventCandidate = useMemo(() => pickPrimaryEventCandidate(eventContext), [eventContext]);
 
   const compactRings: RingTileDefinition[] = [
 
@@ -638,6 +647,11 @@ function SetupOfTheDayCardInner({ setup, generatedAt }: SetupOfTheDayCardProps):
     t(`perception.confidence.bullets.eventRisk.${eventRiskLevel}`),
 
   ];
+
+  const confidenceAdjustmentLine = useMemo(() => {
+    if (!eventInsights.riskKey) return null;
+    return t(`events.adjustment.${eventInsights.riskKey}`);
+  }, [eventInsights.riskKey, t]);
 
   const signalPalette = getSignalQualityGaugePalette(signalQuality.score);
 
@@ -828,6 +842,7 @@ function SetupOfTheDayCardInner({ setup, generatedAt }: SetupOfTheDayCardProps):
             bullets={confidenceBullets}
 
             description={t("perception.confidence.description")}
+            footerText={confidenceAdjustmentLine}
 
           />
 
@@ -969,7 +984,11 @@ function SetupOfTheDayCardInner({ setup, generatedAt }: SetupOfTheDayCardProps):
 
 
 
-        <ExecutionPanel setup={setup as unknown as Setup} />
+        <ExecutionPanel
+          setup={setup as unknown as Setup}
+          eventInsights={eventInsights}
+          primaryEvent={primaryEventCandidate}
+        />
 
       </div>
 
@@ -1408,12 +1427,14 @@ function CopyValueButton({ value, labels }: CopyButtonProps): JSX.Element | null
 type ExecutionPanelProps = {
 
   setup: Setup;
+  eventInsights?: EventContextInsights;
+  primaryEvent?: PrimaryEventCandidate | null;
 
 };
 
 
 
-function ExecutionPanel({ setup }: ExecutionPanelProps): JSX.Element {
+function ExecutionPanel({ setup, eventInsights, primaryEvent }: ExecutionPanelProps): JSX.Element {
 
   const t = useT();
 
@@ -1428,6 +1449,12 @@ function ExecutionPanel({ setup }: ExecutionPanelProps): JSX.Element {
   const eventScore = rings.eventScore ?? setup.eventScore ?? 0;
 
   const eventLevel = eventScore >= 75 ? "high" : eventScore >= 40 ? "medium" : "low";
+
+  const mergedEventInsights = eventInsights ?? analyzeEventContext(setup.eventContext ?? null);
+
+  const mergedPrimaryEvent = primaryEvent ?? pickPrimaryEventCandidate(setup.eventContext ?? null);
+
+  const eventTimingHint = deriveEventTimingHint(mergedEventInsights, mergedPrimaryEvent, t);
 
   const sizingKey = mapSignalToSizing(signal);
 
@@ -1445,7 +1472,7 @@ function ExecutionPanel({ setup }: ExecutionPanelProps): JSX.Element {
 
     t(`perception.execution.bullets.sizing.${sizingKey}`),
 
-    t(`perception.execution.bullets.event.${eventLevel}`),
+    eventTimingHint ?? t(`perception.execution.bullets.event.${eventLevel}`),
 
     t(`perception.execution.bullets.focus.${deriveFocusKey(rings)}`),
 
@@ -1573,6 +1600,48 @@ function mapSignalToSizing(signal: ExecutionSignal): "strong" | "core" | "cautio
 
 
 
+function deriveEventTimingHint(
+  insights: EventContextInsights,
+  primaryEvent: PrimaryEventCandidate | null,
+  t: (key: string) => string,
+): string | null {
+  if (insights.hasFallback || insights.riskKey === "unknown") {
+    return t("events.execution.unknown");
+  }
+  if (insights.riskKey === "highSoon") {
+    const minutes = normalizeExecutionMinutes(primaryEvent?.timeToEventMinutes ?? null);
+    const eventLabel =
+      primaryEvent?.title && primaryEvent.title.trim().length > 0
+        ? primaryEvent.title
+        : t("events.execution.defaultEvent");
+    return t("events.execution.highSoon")
+      .replace("{minutes}", String(minutes))
+      .replace("{event}", eventLabel);
+  }
+  if (insights.riskKey === "elevated") {
+    return t("events.execution.elevated");
+  }
+  if (insights.riskKey === "calm") {
+    return t("events.execution.calm");
+  }
+  return null;
+}
+
+
+
+function normalizeExecutionMinutes(minutes: number | null): number {
+  if (minutes === null || !Number.isFinite(minutes)) {
+    return 30;
+  }
+  const absMinutes = Math.abs(minutes);
+  if (absMinutes <= 15) return 15;
+  if (absMinutes <= 30) return 30;
+  if (absMinutes <= 60) return 60;
+  return 60;
+}
+
+
+
 type SignalInsightCardProps = {
 
   title: string;
@@ -1588,6 +1657,8 @@ type SignalInsightCardProps = {
   bullets: string[];
 
   description: string;
+
+  footerText?: string | null;
 
 };
 
@@ -1608,6 +1679,8 @@ function SignalInsightCard({
   bullets,
 
   description,
+
+  footerText,
 
 }: SignalInsightCardProps): JSX.Element {
 
@@ -1650,6 +1723,8 @@ function SignalInsightCard({
       </div>
 
       <p className="text-xs text-slate-400 line-clamp-3">{description}</p>
+
+      {footerText ? <p className="text-xs text-slate-400">{footerText}</p> : null}
 
     </div>
 
