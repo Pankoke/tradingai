@@ -39,10 +39,14 @@ describe("GET /api/perception/today (mock mode)", () => {
     const response = await GET();
     expect(response.status).toBe(200);
     const payload = (await response.json()) as {
-      snapshot: { dataMode: string };
-      setups: Array<{ id: string }>;
+      ok: boolean;
+      data: {
+        snapshot: { dataMode: string };
+        setups: Array<{ id: string }>;
+      };
     };
-    expect(payload.snapshot.dataMode).toBe("mock");
-    expect(payload.setups.length).toBeGreaterThan(0);
+    expect(payload.ok).toBe(true);
+    expect(payload.data.snapshot.dataMode).toBe("mock");
+    expect(payload.data.setups.length).toBeGreaterThan(0);
   });
 });

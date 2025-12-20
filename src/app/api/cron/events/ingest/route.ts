@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { ingestJbNewsCalendar } from "@/src/server/events/ingest/ingestJbNewsCalendar";
 import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
 import { logger } from "@/src/lib/logger";
 import { revalidatePath } from "next/cache";
 import { i18nConfig } from "@/src/lib/i18n/config";
+import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 
 const cronLogger = logger.child({ route: "cron-events-ingest" });
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -11,28 +12,18 @@ const AUTH_HEADER = "authorization";
 const ALT_HEADER = "x-cron-secret";
 const MAX_LOOKAHEAD = 60;
 
-type SuccessBody = {
-  ok: true;
-  result: Awaited<ReturnType<typeof ingestJbNewsCalendar>>;
-};
-
-type ErrorBody = {
-  ok: false;
-  error: string;
-};
-
-export async function POST(request: NextRequest): Promise<NextResponse<SuccessBody | ErrorBody>> {
+export async function POST(request: NextRequest): Promise<Response> {
   if (!CRON_SECRET) {
-    return NextResponse.json({ ok: false, error: "Cron secret not configured" }, { status: 503 });
+    return respondFail("SERVICE_UNAVAILABLE", "Cron secret not configured", 503);
   }
 
   if (!isAuthorized(request)) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    return respondFail("UNAUTHORIZED", "Unauthorized", 401);
   }
 
   const parseResult = parseParams(request);
   if (parseResult.error) {
-    return NextResponse.json({ ok: false, error: parseResult.error }, { status: 400 });
+    return respondFail("VALIDATION_ERROR", parseResult.error, 400);
   }
 
   const startedAt = Date.now();
@@ -51,7 +42,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessBo
       meta: result,
     });
     revalidateEventsPages();
-    return NextResponse.json({ ok: true, result });
+    return respondOk(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     cronLogger.error("jb-news event ingestion failed", {
@@ -67,7 +58,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessBo
       error: message,
     });
     const status = message.toLowerCase().includes("jb-news") ? 502 : 500;
-    return NextResponse.json({ ok: false, error: message }, { status });
+    return respondFail("INTERNAL_ERROR", message, status);
   }
 }
 

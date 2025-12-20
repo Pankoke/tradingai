@@ -17,9 +17,10 @@ jobs:
       - name: Call perception endpoint
         env:
           CRON_ENDPOINT_URL: ${{ secrets.CRON_ENDPOINT_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           echo "Calling $CRON_ENDPOINT_URL ..."
-          curl -sS -m 360 "$CRON_ENDPOINT_URL" || {
+          curl -sS -m 360 -H "Authorization: Bearer ${CRON_SECRET}" "$CRON_ENDPOINT_URL" || {
             echo "Request failed";
             exit 1;
           }

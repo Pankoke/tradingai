@@ -1,20 +1,28 @@
-import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import type { PerceptionSnapshot, Setup } from "@/src/lib/engine/types";
 import { requestSnapshotBuild } from "@/src/server/perception/snapshotBuildService";
 import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
+import { respondFail, respondOk } from "@/src/server/http/apiResponse";
+import { logger } from "@/src/lib/logger";
+
+const cronLogger = logger.child({ route: "cron-perception" });
+const CRON_SECRET = process.env.CRON_SECRET;
+const AUTH_HEADER = "authorization";
+const ALT_HEADER = "x-cron-secret";
 
 type CronSuccessBody = {
-  ok: true;
   generatedAt: string;
   totalSetups: number;
 };
 
-type CronErrorBody = {
-  ok: false;
-  error: string;
-};
+export async function GET(request: NextRequest): Promise<Response> {
+  if (!CRON_SECRET) {
+    return respondFail("SERVICE_UNAVAILABLE", "Cron secret not configured", 503);
+  }
+  if (!isAuthorized(request)) {
+    return respondFail("UNAUTHORIZED", "Unauthorized", 401);
+  }
 
-export async function GET(): Promise<NextResponse<CronSuccessBody | CronErrorBody>> {
   const startedAt = Date.now();
   try {
     const result = await requestSnapshotBuild({ source: "cron", force: true });
@@ -31,11 +39,6 @@ export async function GET(): Promise<NextResponse<CronSuccessBody | CronErrorBod
       universe: setups.map((setup) => setup.symbol).filter(Boolean),
       setupOfTheDayId: setups[0]?.id ?? snapshotRecord.id,
     };
-    const body: CronSuccessBody = {
-      ok: true,
-      generatedAt: snapshot.generatedAt,
-      totalSetups: setups.length,
-    };
 
     await createAuditRun({
       action: "snapshot_build",
@@ -45,21 +48,37 @@ export async function GET(): Promise<NextResponse<CronSuccessBody | CronErrorBod
       message: "cron_snapshot_build",
       meta: { reused: result.reused, totalSetups: setups.length },
     });
-    return NextResponse.json(body);
+
+    return respondOk<CronSuccessBody>({
+      generatedAt: snapshot.generatedAt,
+      totalSetups: setups.length,
+    });
   } catch (error) {
-    console.error("Failed to build perception snapshot", error);
+    const message = error instanceof Error ? error.message : "unknown error";
+    cronLogger.error("Failed to build perception snapshot", { error: message });
     await createAuditRun({
       action: "snapshot_build",
       source: "cron",
       ok: false,
       durationMs: Date.now() - startedAt,
       message: "cron_snapshot_failed",
-      error: error instanceof Error ? error.message : "unknown error",
+      error: message,
     });
-    const body: CronErrorBody = {
-      ok: false,
-      error: "Failed to build perception snapshot",
-    };
-    return NextResponse.json(body, { status: 500 });
+    return respondFail("INTERNAL_ERROR", "Failed to build perception snapshot", 500, {
+      error: message,
+    });
   }
+}
+
+function isAuthorized(request: NextRequest): boolean {
+  const authHeader = request.headers.get(AUTH_HEADER);
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.slice("Bearer ".length).trim();
+    if (token === CRON_SECRET) return true;
+  }
+  const alt = request.headers.get(ALT_HEADER);
+  if (alt && alt === CRON_SECRET) {
+    return true;
+  }
+  return false;
 }

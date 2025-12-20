@@ -4,7 +4,16 @@ import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import type { PricePoint, PriceRange, SetupMeta, SetupSource, SetupViewModel } from "./types";
 
 function isHomepageSetup(input: SetupSource): input is HomepageSetup {
-  return "weakSignal" in input || "eventLevel" in input || "entryZone" in input;
+  if ("weakSignal" in input || "eventLevel" in input) {
+    return true;
+  }
+  const entryZone = (input as HomepageSetup).entryZone;
+  const isRangeObject =
+    entryZone !== null &&
+    typeof entryZone === "object" &&
+    "from" in (entryZone as Record<string, unknown>) &&
+    "to" in (entryZone as Record<string, unknown>);
+  return isRangeObject;
 }
 
 function normalizeRangeFromString(value?: string | null): PriceRange {

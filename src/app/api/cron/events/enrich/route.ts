@@ -1,11 +1,10 @@
-"use server";
-
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { revalidatePath } from "next/cache";
 import { enrichEventsAi } from "@/src/server/events/enrich/enrichEventsAi";
 import { logger } from "@/src/lib/logger";
 import { i18nConfig } from "@/src/lib/i18n/config";
 import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
+import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 
 const CRON_SECRET = process.env.CRON_SECRET;
 const AUTH_HEADER = "authorization";
@@ -15,27 +14,17 @@ const MAX_DAYS = 30;
 
 const cronLogger = logger.child({ route: "cron-events-enrich" });
 
-type SuccessResponse = {
-  ok: true;
-  result: Awaited<ReturnType<typeof enrichEventsAi>>;
-};
-
-type ErrorResponse = {
-  ok: false;
-  error: string;
-};
-
-export async function POST(request: NextRequest): Promise<NextResponse<SuccessResponse | ErrorResponse>> {
+export async function POST(request: NextRequest): Promise<Response> {
   if (!CRON_SECRET) {
-    return NextResponse.json({ ok: false, error: "Cron secret not configured" }, { status: 503 });
+    return respondFail("SERVICE_UNAVAILABLE", "Cron secret not configured", 503);
   }
   if (!isAuthorized(request)) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    return respondFail("UNAUTHORIZED", "Unauthorized", 401);
   }
 
   const { params, error } = await parseBody(request);
   if (error) {
-    return NextResponse.json({ ok: false, error }, { status: 400 });
+    return respondFail("VALIDATION_ERROR", error, 400);
   }
 
   const startedAt = Date.now();
@@ -61,7 +50,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessRe
       },
     });
     revalidateEvents();
-    return NextResponse.json({ ok: true, result });
+    return respondOk(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     cronLogger.error("events AI enrichment failed", {
@@ -76,7 +65,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessRe
       message: "cron_events_enrich_failed",
       error: message,
     });
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    return respondFail("INTERNAL_ERROR", message, 500);
   }
 }
 
@@ -97,7 +86,8 @@ function isAuthorized(request: NextRequest): boolean {
 async function parseBody(
   request: NextRequest,
 ): Promise<{ params?: Parameters<typeof enrichEventsAi>[0]; error?: string }> {
-  if (request.headers.get("content-length") === "0") {
+  const lengthHeader = request.headers.get("content-length");
+  if (lengthHeader === null || lengthHeader === "0") {
     return { params: undefined };
   }
   try {

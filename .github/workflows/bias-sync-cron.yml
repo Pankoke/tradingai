@@ -15,9 +15,13 @@ jobs:
       - name: Call bias sync endpoint
         env:
           BIAS_SYNC_URL: ${{ secrets.BIAS_SYNC_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           echo "Calling $BIAS_SYNC_URL ..."
-          curl -X POST -sS -m 30 "$BIAS_SYNC_URL" || {
-            echo "Bias sync failed";
-            exit 1;
-          }
+          curl -sS -m 360 -X POST "$BIAS_SYNC_URL" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            --fail || {
+              echo "Bias sync failed";
+              exit 1;
+            }

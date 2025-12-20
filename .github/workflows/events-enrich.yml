@@ -1,4 +1,4 @@
-name: Daily Events AI Enrichment
+name: Daily Events Ingest & Enrich
 
 on:
   schedule:
@@ -6,12 +6,18 @@ on:
   workflow_dispatch:
 
 jobs:
-  enrich:
+  events:
     runs-on: ubuntu-latest
     steps:
-      - name: Call events enrichment endpoint
+      - name: Ingest events
         run: |
-          curl -X POST "${{ secrets.EVENTS_ENRICH_URL }}" \
+          curl -sS -m 360 -X POST "${{ secrets.EVENTS_INGEST_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --fail
+      - name: Enrich events
+        run: |
+          curl -sS -m 360 -X POST "${{ secrets.EVENTS_ENRICH_URL }}" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json" \
             --fail
