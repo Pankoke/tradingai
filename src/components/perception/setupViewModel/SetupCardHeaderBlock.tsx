@@ -9,7 +9,6 @@ type Props = {
   setup: SetupViewModel;
   generatedAtText?: string | null;
   timeframe?: string | null;
-  typeLabel?: string | null;
   variant?: "full" | "compact";
 };
 
@@ -17,38 +16,72 @@ export function SetupCardHeaderBlock({
   setup,
   generatedAtText,
   timeframe,
-  typeLabel,
   variant = "full",
 }: Props): JSX.Element {
   const t = useT();
   const meta = getAssetMeta(setup.assetId, setup.symbol);
   const headline = formatAssetLabel(setup.assetId, setup.symbol);
   const isLong = setup.direction === "Long";
+  const formattedGeneratedAt = formatGeneratedAt(generatedAtText);
 
   return (
-    <div className="flex items-center justify-between gap-3">
+    <div className="flex items-start justify-between gap-3">
       <div className="space-y-1">
-        {variant === "full" ? (
-          <p className="text-[0.58rem] font-semibold uppercase tracking-[0.35em] text-slate-300">
-            {t("setups.setupOfTheDay")}
-          </p>
-        ) : null}
+        <div className="flex items-center gap-3">
+          {variant === "full" ? (
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.35em] text-slate-300">
+              {t("setups.setupOfTheDay")}
+            </p>
+          ) : null}
+          {formattedGeneratedAt ? (
+            <p className="text-xs font-semibold text-slate-300 sm:text-right">
+              {t("perception.generatedAt.label").replace("{value}", formattedGeneratedAt)}
+            </p>
+          ) : null}
+        </div>
         <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
           {timeframe ? `${headline} · ${timeframe}` : headline}
         </h2>
-        <p className={`text-4xl font-bold ${isLong ? "text-emerald-400" : "text-rose-400"}`}>
-          {setup.direction}
-        </p>
+        <p className={`text-4xl font-bold ${isLong ? "text-emerald-400" : "text-rose-400"}`}>{setup.direction}</p>
         <p className="text-sm text-slate-400">{meta.name}</p>
-        {typeLabel ? (
-          <span className="inline-flex w-fit rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-200">
-            {typeLabel}
-          </span>
-        ) : null}
       </div>
-      {generatedAtText ? (
-        <p className="text-xs text-slate-400 sm:text-right">{generatedAtText}</p>
-      ) : null}
     </div>
   );
+}
+
+function formatGeneratedAt(input?: string | null): string | null {
+  if (!input) return null;
+  const source = new Date(input);
+  if (Number.isNaN(source.getTime())) return null;
+
+  const berlinParts = new Intl.DateTimeFormat("de-DE", {
+    timeZone: "Europe/Berlin",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZoneName: "short",
+    hour12: false,
+  }).formatToParts(source);
+
+  const getPart = (type: string): string | null =>
+    berlinParts.find((p) => p.type === type)?.value ?? null;
+
+  const year = getPart("year");
+  const month = getPart("month");
+  const day = getPart("day");
+  const hourStr = getPart("hour");
+  const minuteStr = getPart("minute");
+  const tzName = getPart("timeZoneName") ?? "Europe/Berlin";
+
+  if (!year || !month || !day || !hourStr || !minuteStr) return null;
+
+  const hourNum = Number.parseInt(hourStr, 10);
+  const minuteNum = Number.parseInt(minuteStr, 10);
+  const roundedMinute = Math.floor(minuteNum / 30) * 30;
+  const paddedMinute = roundedMinute.toString().padStart(2, "0");
+  const paddedHour = hourNum.toString().padStart(2, "0");
+
+  return `${day}.${month}.${year}, ${paddedHour}:${paddedMinute} ${tzName}`;
 }

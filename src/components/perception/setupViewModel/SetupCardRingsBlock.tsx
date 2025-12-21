@@ -18,7 +18,7 @@ type RingTileDefinition = {
   id: RingTabId;
   labelKey: string;
   value: number;
-  tone: "accent" | "green" | "teal";
+  tone: "accent" | "green" | "teal" | "neutral";
   tooltip?: React.ReactNode;
   badgeKey?: string | null;
   badgeTooltipKey?: string | null;
@@ -46,6 +46,11 @@ const RING_PALETTES: Record<RingTileDefinition["tone"], RingPalette> = {
     labelClass: "text-teal-200",
     gaugeColor: "#14b8a6",
   },
+  neutral: {
+    activeRingClass: "ring-slate-400/70",
+    labelClass: "text-slate-200",
+    gaugeColor: "#94a3b8",
+  },
 };
 
 function getRingCategoryPalette(tone: RingTileDefinition["tone"]): RingPalette {
@@ -68,8 +73,6 @@ export function SetupCardRingsBlock({ setup, activeRing, onActiveRingChange }: P
       value: setup.rings.eventScore,
       tone: "accent",
       tooltip: buildEventTooltip(t("perception.rings.tooltip.event"), setup.eventContext, t),
-      badgeKey: eventLevelToBadgeKey(setup.meta.eventLevel),
-      badgeTooltipKey: eventLevelToBadgeTooltipKey(setup.meta.eventLevel),
     },
     {
       id: "bias",
@@ -82,7 +85,7 @@ export function SetupCardRingsBlock({ setup, activeRing, onActiveRingChange }: P
       id: "sentiment",
       labelKey: "perception.today.sentimentRing",
       value: setup.rings.sentimentScore,
-      tone: "teal",
+      tone: "neutral",
       tooltip: t("perception.rings.tooltip.sentiment"),
     },
     {
