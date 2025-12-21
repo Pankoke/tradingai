@@ -16,6 +16,8 @@ type ActionCardsProps = {
   takeProfit: { display: string; noteKey: string; copyValue: string | null };
   copyLabels: CopyLabels;
   variant?: "full" | "mini";
+  allowCopy?: boolean;
+  forceRangeFromPoint?: boolean;
 };
 
 const actionToneStyles: Record<"neutral" | "danger" | "success", string> = {
@@ -30,7 +32,15 @@ const actionToneValue: Record<"neutral" | "danger" | "success", string> = {
   success: "text-emerald-200",
 };
 
-export function SetupActionCards({ entry, stop, takeProfit, copyLabels, variant = "full" }: ActionCardsProps): JSX.Element {
+export function SetupActionCards({
+  entry,
+  stop,
+  takeProfit,
+  copyLabels,
+  variant = "full",
+  allowCopy = true,
+  forceRangeFromPoint = false,
+}: ActionCardsProps): JSX.Element {
   const t = useT();
   const compact = variant === "mini";
   const padding = compact ? "px-3 py-2" : "px-4 py-3";
@@ -44,7 +54,7 @@ export function SetupActionCards({ entry, stop, takeProfit, copyLabels, variant 
         value={entry.display}
         note={t(entry.noteKey)}
         tone="neutral"
-        copyValue={entry.copyValue}
+        copyValue={allowCopy ? entry.copyValue : null}
         copyLabels={copyLabels}
         padding={padding}
         valueSize={valueSize}
@@ -55,7 +65,7 @@ export function SetupActionCards({ entry, stop, takeProfit, copyLabels, variant 
         value={stop.display}
         note={t(stop.noteKey)}
         tone="danger"
-        copyValue={stop.copyValue}
+        copyValue={allowCopy ? stop.copyValue : null}
         copyLabels={copyLabels}
         padding={padding}
         valueSize={valueSize}
@@ -66,7 +76,7 @@ export function SetupActionCards({ entry, stop, takeProfit, copyLabels, variant 
         value={takeProfit.display}
         note={t(takeProfit.noteKey)}
         tone="success"
-        copyValue={takeProfit.copyValue}
+        copyValue={allowCopy ? takeProfit.copyValue : null}
         copyLabels={copyLabels}
         padding={padding}
         valueSize={valueSize}
@@ -138,7 +148,7 @@ function ActionCard({
 export function buildActionCardData(
   vm: SetupViewModel,
   formatter: Intl.NumberFormat,
-  opts: { copyLabels: CopyLabels },
+  opts: { copyLabels: CopyLabels; forceRangeFromPoint?: boolean },
 ): {
   entry: ActionCardsProps["entry"];
   stop: ActionCardsProps["stop"];
@@ -146,8 +156,8 @@ export function buildActionCardData(
   copyLabels: CopyLabels;
 } {
   const entryDescriptor = formatEntryDescriptorFromVm(vm, formatter);
-  const stopInfo = formatPriceValueFromVm(vm.stop, formatter);
-  const takeProfitInfo = formatPriceValueFromVm(vm.takeProfit, formatter);
+  const stopInfo = formatPriceValueFromVm(vm.stop, formatter, opts.forceRangeFromPoint);
+  const takeProfitInfo = formatPriceValueFromVm(vm.takeProfit, formatter, opts.forceRangeFromPoint);
   const stopNoteKey = deriveStopNoteKey(vm.levelDebug ?? undefined);
 
   return {
@@ -196,6 +206,7 @@ function formatEntryDescriptorFromVm(
 function formatPriceValueFromVm(
   point: { value: number | null; display?: string },
   formatter: Intl.NumberFormat,
+  forceRangeFromPoint = false,
 ): { display: string; copyValue: string | null } {
   if (point.value === null || Number.isNaN(point.value)) {
     if (point.display) {
@@ -203,6 +214,18 @@ function formatPriceValueFromVm(
     }
     return { display: "n/a", copyValue: null };
   }
+
+  if (forceRangeFromPoint) {
+    const mid = point.value;
+    const delta = mid * 0.0015; // ±0.15%
+    const low = mid - delta;
+    const high = mid + delta;
+    return {
+      display: `${formatter.format(low)} - ${formatter.format(high)}`,
+      copyValue: null,
+    };
+  }
+
   return {
     display: formatter.format(point.value),
     copyValue: String(point.value),

@@ -49,16 +49,6 @@ export function RingInspectorLayout({
         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
           {title}
         </p>
-        {scoreLabel && (
-          <span
-            className={clsx(
-              "rounded-full border px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.2em]",
-              toneClasses[scoreTone],
-            )}
-          >
-            {scoreLabel}
-          </span>
-        )}
       </div>
       {summary && (
         <p

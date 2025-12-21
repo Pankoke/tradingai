@@ -45,6 +45,23 @@ const classStyles: Record<RrrClass, string> = {
 type RrrBucket = "weak" | "ok" | "strong";
 type RiskBucket = "low" | "medium" | "high";
 
+type StatTileProps = { label: string; value: string; tone?: "neutral" | "positive" | "negative" };
+
+function StatTile({ label, value, tone = "neutral" }: StatTileProps): JSX.Element {
+  const toneClass =
+    tone === "positive"
+      ? "text-emerald-300"
+      : tone === "negative"
+        ? "text-rose-300"
+        : "text-slate-200";
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3 text-slate-300 shadow-[0_10px_28px_rgba(15,23,42,0.55)]">
+      <div className="text-[0.55rem] uppercase tracking-[0.3em] text-slate-500">{label}</div>
+      <div className={`mt-1 text-sm font-semibold ${toneClass}`}>{value}</div>
+    </div>
+  );
+}
+
 const bucketRrr = (rrr?: number | null): RrrBucket | null => {
   if (rrr === undefined || rrr === null || Number.isNaN(rrr)) return null;
   if (rrr < 2) return "weak";
@@ -87,13 +104,6 @@ export function RiskRewardBlock({ riskReward, className }: Props): JSX.Element {
   const confidenceScore =
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     typeof (data as any)?.confidenceScore === "number" ? (data as any).confidenceScore as number : null;
-  const maxPercent = Math.max(
-    Math.abs(data.rewardPercent ?? 0),
-    Math.abs(data.riskPercent ?? 0),
-    1,
-  );
-  const rewardWidth = ratioWidth(data.rewardPercent, maxPercent);
-  const riskWidth = ratioWidth(data.riskPercent, maxPercent);
   const chips: string[] = [];
   chips.push(`${t("perception.riskReward.volatilityLabel")}: ${volatilityDisplay}`);
   if (confidenceScore !== null) {
@@ -155,55 +165,23 @@ export function RiskRewardBlock({ riskReward, className }: Props): JSX.Element {
           ) : null}
         </div>
         <div className="grid gap-3 md:grid-cols-2">
-          <MetricCard
-            label={t("perception.riskReward.rewardLabel")}
+          <StatTile
+            label={t("perception.riskReward.rewardToTarget.label")}
             value={formatRewardPercent(data.rewardPercent)}
-            barColor="bg-emerald-400"
-            width={rewardWidth}
+            tone="positive"
           />
-          <MetricCard
-            label={t("perception.riskReward.riskLabel")}
+          <StatTile
+            label={t("perception.riskReward.riskToStop.label")}
             value={formatRiskPercent(data.riskPercent)}
-            barColor="bg-rose-500"
-            width={riskWidth}
-            note={
-              riskBucket
-                ? t(`perception.riskReward.riskNote.${riskBucket}`)
-                    .replace("{risk}", formatRiskPercent(data.riskPercent))
-                    .replace("{rrr}", formatRRR(data.rrr))
-                : null
-            }
+            tone="negative"
           />
         </div>
-      </div>
-    </div>
-  );
-}
-
-function ratioWidth(value?: number | null, max = 1): string {
-  if (value === undefined || value === null || !Number.isFinite(value)) {
-    return "10%";
-  }
-  const ratio = Math.max(0.08, Math.min(1, Math.abs(value) / max));
-  return `${Math.round(ratio * 100)}%`;
-}
-
-type MetricCardProps = {
-  label: string;
-  value: string;
-  width: string;
-  barColor: string;
-  note?: string | null;
-};
-
-function MetricCard({ label, value, width, barColor, note }: MetricCardProps): JSX.Element {
-  return (
-    <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3 text-slate-300">
-      <div className="text-[0.55rem] uppercase tracking-[0.3em] text-slate-500">{label}</div>
-      <div className="mt-1 text-sm font-semibold">{value}</div>
-      {note ? <p className="mt-1 text-[11px] text-slate-400">{note}</p> : null}
-      <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
-        <div className={clsx("h-full rounded-full", barColor)} style={{ width }} />
+        <p className="text-sm text-slate-200">
+          {t("perception.riskReward.summaryLine")
+            .replace("{reward}", formatRewardPercent(data.rewardPercent))
+            .replace("{risk}", formatRiskPercent(data.riskPercent))
+            .replace("{rrr}", formatRRR(data.rrr))}
+        </p>
       </div>
     </div>
   );

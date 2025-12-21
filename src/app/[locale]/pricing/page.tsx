@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import type { JSX } from "react";
@@ -70,11 +70,11 @@ export default function Page(): JSX.Element {
 
   const comparison: ComparisonRow[] = [
     { feature: t("setups.setupOfTheDay"), free: t("setups.freeSetups"), premium: "Alle", pro: "Alle" },
-    { feature: "Historie", free: "-", premium: "7â€“30 Tage", pro: "60â€“90 Tage" },
+    { feature: "Historie", free: "-", premium: "7–30 Tage", pro: "60–90 Tage" },
     { feature: "Alerts", free: "-", premium: "E-Mail", pro: "E-Mail + priorisiert" },
     { feature: "Trading-Journal", free: "-", premium: "Favoriten & Notes", pro: "Erweitert" },
     { feature: "Backtesting-Module", free: "-", premium: "Standard", pro: "Erweitert" },
-    { feature: "API-Zugriff", free: "-", premium: "-", pro: "âœ“" },
+    { feature: "API-Zugriff", free: "-", premium: "-", pro: "✓" },
   ];
 
   return (
@@ -109,7 +109,7 @@ export default function Page(): JSX.Element {
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex items-start gap-2">
                     <span aria-hidden="true" className="mt-0.5 text-[var(--accent)]">
-                      âœ“
+                      ✓
                     </span>
                     <span>{feature}</span>
                   </li>

@@ -10,7 +10,6 @@ import { SetupActionCards } from "@/src/components/perception/setupViewModel/Set
 import type { SetupViewModel } from "@/src/components/perception/setupViewModel/types";
 import { BigGauge, getConfidenceGaugePalette, getSignalQualityGaugePalette } from "@/src/components/perception/RingGauges";
 import { RiskRewardBlock } from "@/src/components/perception/RiskRewardBlock";
-import { classifyTradeSignal } from "@/src/components/perception/PrimaryTradeSignal";
 import { RingInsightTabs } from "@/src/components/perception/RingInsightTabs";
 import {
   analyzeEventContext,
@@ -41,15 +40,22 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
   const eventContext = vm.eventContext ?? null;
   const eventInsights = useMemo(() => analyzeEventContext(eventContext), [eventContext]);
   const primaryEventCandidate = useMemo(() => pickPrimaryEventCandidate(eventContext), [eventContext]);
-  const executionChips = useMemo(() => buildExecutionChips(vm, t), [vm, t]);
-  const executionBullets = useMemo(() => buildExecutionBullets(vm, t), [vm, t]);
-  const invalidation = useMemo(() => buildInvalidationBullet(vm, t), [vm, t]);
-  const bulletsToRender = (expanded ? executionBullets : executionBullets.slice(0, 1)).concat(invalidation ? [invalidation] : []);
+  const executionContent = useMemo(() => buildExecutionContent(vm, t), [vm, t]);
+  const bulletsToRender = expanded ? executionContent.bullets : executionContent.bullets.slice(0, 2);
   const actionCardsVariant = expanded ? "full" : "mini";
 
   const generatedAtText = vm.meta.generatedAt ?? vm.meta.snapshotCreatedAt ?? vm.meta.snapshotTime ?? null;
   const insightSetup = setupOriginal ?? (vm as unknown as Setup);
   const showInsightPanel = mode === "sotd" || expanded;
+  const numberFormatter = useMemo(() => new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2, minimumFractionDigits: 2 }), []);
+
+  const formatZone = (value: number | null, fallback?: string | null): string => {
+    if (value === null || Number.isNaN(value)) return fallback ?? "n/a";
+    const delta = Math.abs(value) * 0.0015;
+    const low = value - delta;
+    const high = value + delta;
+    return `${numberFormatter.format(low)} - ${numberFormatter.format(high)}`;
+  };
 
   return (
     <div className="space-y-6 rounded-3xl border border-slate-800 bg-slate-950/40 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
@@ -71,23 +77,35 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
         ) : null}
       </div>
 
-      {expanded && eventContext ? <SetupCardEventContextBlock setup={vm} /> : null}
+      {expanded ? (
+        eventContext ? (
+          <SetupCardEventContextBlock setup={vm} />
+        ) : (
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-sm text-slate-200">
+            {t("perception.eventContext.none")}
+          </div>
+        )
+      ) : null}
 
-      <SetupCardExecutionBlock setup={vm} chips={executionChips} bullets={bulletsToRender} signal={classifyTradeSignal(vm as any)} />
+      <SetupCardExecutionBlock setup={vm} title={executionContent.title} bullets={bulletsToRender} />
 
       <SetupActionCards
         entry={{
-          display: vm.entry.display ?? (vm.entry.from !== null && vm.entry.to !== null ? `${vm.entry.from} - ${vm.entry.to}` : "n/a"),
+          display:
+            vm.entry.display ??
+            (vm.entry.from !== null && vm.entry.to !== null
+              ? `${numberFormatter.format(vm.entry.from)} - ${numberFormatter.format(vm.entry.to)}`
+              : "n/a"),
           noteKey: "setups.entry.note.default",
           copyValue: vm.entry.display ?? (vm.entry.from !== null ? String(vm.entry.from) : null),
         }}
         stop={{
-          display: vm.stop.display ?? (vm.stop.value !== null ? String(vm.stop.value) : "n/a"),
+          display: formatZone(vm.stop.value, vm.stop.display ?? null),
           noteKey: "setups.stop.note.default",
           copyValue: vm.stop.display ?? (vm.stop.value !== null ? String(vm.stop.value) : null),
         }}
         takeProfit={{
-          display: vm.takeProfit.display ?? (vm.takeProfit.value !== null ? String(vm.takeProfit.value) : "n/a"),
+          display: formatZone(vm.takeProfit.value, vm.takeProfit.display ?? null),
           noteKey: "setups.takeProfit.note.primary",
           copyValue: vm.takeProfit.display ?? (vm.takeProfit.value !== null ? String(vm.takeProfit.value) : null),
         }}
@@ -96,23 +114,25 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
           copied: t("setups.action.copied"),
         }}
         variant={actionCardsVariant}
+        allowCopy={false}
+        forceRangeFromPoint
       />
 
       {expanded && vm.riskReward ? <RiskRewardBlock riskReward={vm.riskReward} /> : null}
 
-  {mode === "list" ? (
-    <div className="flex justify-end">
-      <button
+      {mode === "list" ? (
+        <div className="flex justify-end">
+          <button
             type="button"
             className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/70 px-3 py-1.5 text-[0.75rem] font-semibold uppercase tracking-[0.15em] text-slate-100 transition hover:border-slate-500"
             onClick={() => setExpanded((prev) => !prev)}
           >
             {expanded ? t("perception.setup.details.showLess") : t("perception.setup.details.showMore")}
-        </button>
-      </div>
-    ) : null}
-  </div>
-);
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
 
   function renderInsightContent(): JSX.Element {
     const insight = (
@@ -216,33 +236,47 @@ function ConfidenceCard({
   );
 }
 
-function buildExecutionChips(vm: SetupViewModel, t: ReturnType<typeof useT>): string[] {
-  const confidenceScore = vm.rings.confidenceScore ?? 0;
-  const eventScore = vm.rings.eventScore ?? 0;
-  const eventLevel = eventScore >= 75 ? "high" : eventScore >= 40 ? "medium" : "low";
-  const sizingKey = mapSignalToSizing(classifyTradeSignal(vm as any));
-  return [
-    t("perception.execution.chip.confidence").replace("{value}", String(Math.round(confidenceScore))),
-    t(`perception.execution.chip.event.${eventLevel}`),
-    t(`perception.execution.chip.sizing.${sizingKey}`),
-  ];
-}
-
-function buildExecutionBullets(vm: SetupViewModel, t: ReturnType<typeof useT>): string[] {
+function buildExecutionContent(vm: SetupViewModel, t: ReturnType<typeof useT>): { title: string; bullets: string[] } {
   const rings = vm.rings;
   const eventScore = rings.eventScore ?? 0;
-  const eventLevel = eventScore >= 75 ? "high" : eventScore >= 40 ? "medium" : "low";
-  const signal = classifyTradeSignal(vm as any);
-  const sizingKey = mapSignalToSizing(signal);
+  const eventLevel = eventScore >= 70 ? "highSoon" : eventScore >= 45 ? "elevated" : "calm";
+  const signalQuality = vm.signalQuality?.score ?? 0;
+  const confidence = vm.rings.confidenceScore ?? 0;
+
+  // Title selection: event-driven overrides, then strong alignment, then balanced/cautious.
+  const title =
+    eventLevel === "highSoon" || eventLevel === "elevated"
+      ? t("perception.execution.title.eventDriven")
+      : confidence >= 70 && signalQuality >= 65
+        ? t("perception.execution.title.highConviction")
+        : signalQuality >= 50
+          ? t("perception.execution.title.balanced")
+          : t("perception.execution.title.cautious");
+
   const mergedEventInsights = analyzeEventContext(vm.eventContext ?? null) as EventContextInsights | null;
   const mergedPrimaryEvent = pickPrimaryEventCandidate(vm.eventContext ?? null) as PrimaryEventCandidate | null;
   const eventTimingHint = mergedEventInsights ? deriveEventTimingHint(mergedEventInsights, mergedPrimaryEvent, t) : null;
 
-  return [
-    t(`perception.execution.bullets.sizing.${sizingKey}`),
-    eventTimingHint ?? t(`perception.execution.bullets.event.${eventLevel}`),
-    t(`perception.execution.bullets.focus.${deriveFocusKey(rings)}`),
-  ];
+  // Bullets A/B chosen from templates, C always invalidation.
+  const bullets: string[] = [];
+  if (eventLevel === "highSoon" || eventLevel === "elevated") {
+    bullets.push(t("perception.execution.bulletA.eventDriven"));
+    bullets.push(eventTimingHint ?? t("perception.execution.bulletB.eventDriven"));
+  } else if (confidence >= 70 && signalQuality >= 65) {
+    bullets.push(t("perception.execution.bulletA.highConviction"));
+    bullets.push(t("perception.execution.bulletB.highConviction"));
+  } else if (signalQuality >= 50) {
+    bullets.push(t("perception.execution.bulletA.balanced"));
+    bullets.push(t("perception.execution.bulletB.balanced"));
+  } else {
+    bullets.push(t("perception.execution.bulletA.cautious"));
+    bullets.push(t("perception.execution.bulletB.cautious"));
+  }
+
+  const invalidation = buildInvalidationBullet(vm, t);
+  if (invalidation) bullets.push(invalidation);
+
+  return { title, bullets };
 }
 
 function buildInvalidationBullet(vm: SetupViewModel, t: ReturnType<typeof useT>): string | null {
@@ -260,38 +294,4 @@ function buildInvalidationBullet(vm: SetupViewModel, t: ReturnType<typeof useT>)
   }
 
   return t("perception.execution.invalidation.ringsFallback");
-}
-
-type ExecutionSignal = ReturnType<typeof classifyTradeSignal>;
-
-function deriveFocusKey(rings: SetupViewModel["rings"]): "trendBias" | "flow" | "sentiment" | "structure" {
-  const trend = rings.trendScore ?? 0;
-  const bias = rings.biasScore ?? 0;
-  const flow = rings.orderflowScore ?? 0;
-  const sentiment = rings.sentimentScore ?? 0;
-  if (trend >= 65 && bias >= 65) return "trendBias";
-  if (flow >= 65) return "flow";
-  if (sentiment >= 65) return "sentiment";
-  return "structure";
-}
-
-function mapSignalToSizing(signal: ExecutionSignal): "strong" | "core" | "cautious" | "noEdge" {
-  if (signal === "strongLong" || signal === "strongShort") return "strong";
-  if (signal === "coreLong" || signal === "coreShort") return "core";
-  if (signal === "cautious") return "cautious";
-  return "noEdge";
-}
-
-function buildRiskRewardContext(vm: SetupViewModel, t: ReturnType<typeof useT>): string[] {
-  const lines: string[] = [];
-  const eventLevel = vm.meta.eventLevel ?? null;
-  if (eventLevel) {
-    lines.push(t(`events.risk.badge.${eventLevel === "high" ? "highSoon" : eventLevel === "medium" ? "elevated" : "calm"}`));
-  }
-  if (vm.signalQuality) {
-    lines.push(t("perception.signalQuality.gradeLabel").replace("{grade}", vm.signalQuality.grade ?? "N/A"));
-  }
-  const sizingKey = mapSignalToSizing(classifyTradeSignal(vm as any));
-  lines.push(t(`perception.execution.chip.sizing.${sizingKey}`));
-  return lines;
 }

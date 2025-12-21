@@ -25,24 +25,27 @@ export function SetupCardHeaderBlock({
   const formattedGeneratedAt = formatGeneratedAt(generatedAtText);
 
   return (
-    <div className="flex items-start justify-between gap-3">
+    <div className="space-y-2">
+      <div className="flex items-start justify-between gap-3">
+        <p
+          className={`font-semibold uppercase tracking-[0.4em] text-slate-200 ${
+            variant === "full" ? "text-sm" : "text-xs"
+          }`}
+        >
+          {t("setups.setupOfTheDay")}
+        </p>
+        {formattedGeneratedAt ? (
+          <p className="text-xs font-semibold text-slate-300 sm:text-right">
+            {t("perception.generatedAt.label").replace("{value}", formattedGeneratedAt)}
+          </p>
+        ) : null}
+      </div>
       <div className="space-y-1">
-        <div className="flex items-center gap-3">
-          {variant === "full" ? (
-            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.35em] text-slate-300">
-              {t("setups.setupOfTheDay")}
-            </p>
-          ) : null}
-          {formattedGeneratedAt ? (
-            <p className="text-xs font-semibold text-slate-300 sm:text-right">
-              {t("perception.generatedAt.label").replace("{value}", formattedGeneratedAt)}
-            </p>
-          ) : null}
-        </div>
         <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-          {timeframe ? `${headline} · ${timeframe}` : headline}
+          <span>{headline}</span>
+          {timeframe ? <span className="text-slate-300"> · {timeframe}</span> : null}
+          <span className={`text-slate-300 ${isLong ? "text-emerald-400" : "text-rose-400"}`}> · {setup.direction}</span>
         </h2>
-        <p className={`text-4xl font-bold ${isLong ? "text-emerald-400" : "text-rose-400"}`}>{setup.direction}</p>
         <p className="text-sm text-slate-400">{meta.name}</p>
       </div>
     </div>
