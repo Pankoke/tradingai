@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "postinstall": "patch-package",
     "dev:ring-summaries": "ts-node --project scripts/tsconfig.scripts.json scripts/dev/printRingSummaries.ts"
   },
   "dependencies": {
@@ -36,6 +37,7 @@
     "dotenv": "^17.2.3",
     "eslint": "^9",
     "eslint-config-next": "^16.0.7",
+    "patch-package": "^8.0.1",
     "pg": "^8.16.3",
     "tailwindcss": "^4",
     "tailwindcss-animate": "^1.0.7",

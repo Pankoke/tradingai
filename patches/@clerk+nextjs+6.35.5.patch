@@ -1,0 +1,19 @@
+diff --git a/node_modules/@clerk/nextjs/dist/esm/server/keyless-custom-headers.js b/node_modules/@clerk/nextjs/dist/esm/server/keyless-custom-headers.js
+index 11ccc7a..2191958 100644
+--- a/node_modules/@clerk/nextjs/dist/esm/server/keyless-custom-headers.js
++++ b/node_modules/@clerk/nextjs/dist/esm/server/keyless-custom-headers.js
+@@ -1,4 +1,4 @@
+-"use server";
++// patched: disable server-action enforcement for Turbopack build
+ import "../chunk-BUSYA2B4.js";
+ import { headers } from "next/headers";
+ async function collectKeylessMetadata() {
+@@ -67,7 +67,7 @@ function getNextVersion() {
+     return void 0;
+   }
+ }
+-function formatMetadataHeaders(metadata) {
++async function formatMetadataHeaders(metadata) {
+   const headers2 = new Headers();
+   if (metadata.nodeVersion) {
+     headers2.set("Clerk-Node-Version", metadata.nodeVersion);
