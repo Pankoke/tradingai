@@ -10,8 +10,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Call marketdata sync cron
+        env:
+          CRON_URL: ${{ secrets.MARKETDATA_SYNC_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          curl -sS -X POST "${{ secrets.MARKETDATA_SYNC_URL }}" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+          if [ -z "$CRON_URL" ]; then
+            echo "Missing secret MARKETDATA_SYNC_URL" >&2
+            exit 1
+          fi
+          if [ -z "$CRON_SECRET" ]; then
+            echo "Missing secret CRON_SECRET" >&2
+            exit 1
+          fi
+          curl -sS -X POST "$CRON_URL" \
+            -H "Authorization: Bearer $CRON_SECRET" \
             -m 360 \
             --fail
