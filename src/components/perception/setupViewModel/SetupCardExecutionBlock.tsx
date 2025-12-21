@@ -1,21 +1,19 @@
 "use client";
 
 import type { JSX } from "react";
-import type { SetupViewModel } from "@/src/components/perception/setupViewModel/types";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 
 type Props = {
-  setup: SetupViewModel;
   title: string;
   bullets: string[];
 };
 
-export function SetupCardExecutionBlock({ setup, title, bullets }: Props): JSX.Element {
+export function SetupCardExecutionBlock({ title, bullets }: Props): JSX.Element {
   const t = useT();
 
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-[inset_0_0_10px_rgba(0,0,0,0.25)]">
-      <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-1">
         <p className="text-[0.58rem] uppercase tracking-[0.3em] text-slate-400">
           {t("perception.execution.title")}
         </p>

@@ -176,12 +176,6 @@ export function RiskRewardBlock({ riskReward, className }: Props): JSX.Element {
             tone="negative"
           />
         </div>
-        <p className="text-sm text-slate-200">
-          {t("perception.riskReward.summaryLine")
-            .replace("{reward}", formatRewardPercent(data.rewardPercent))
-            .replace("{risk}", formatRiskPercent(data.riskPercent))
-            .replace("{rrr}", formatRRR(data.rrr))}
-        </p>
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ type Props = {
   generatedAtText?: string | null;
   timeframe?: string | null;
   variant?: "full" | "compact";
+  showEyebrow?: boolean;
 };
 
 export function SetupCardHeaderBlock({
@@ -17,23 +18,30 @@ export function SetupCardHeaderBlock({
   generatedAtText,
   timeframe,
   variant = "full",
+  showEyebrow = true,
 }: Props): JSX.Element {
   const t = useT();
   const meta = getAssetMeta(setup.assetId, setup.symbol);
   const headline = formatAssetLabel(setup.assetId, setup.symbol);
-  const isLong = setup.direction === "Long";
+  const directionLower = setup.direction?.toLowerCase();
+  const directionClass =
+    directionLower === "long" ? "text-emerald-400" : directionLower === "short" ? "text-rose-400" : "text-slate-300";
   const formattedGeneratedAt = formatGeneratedAt(generatedAtText);
 
   return (
     <div className="space-y-2">
       <div className="flex items-start justify-between gap-3">
-        <p
-          className={`font-semibold uppercase tracking-[0.4em] text-slate-200 ${
-            variant === "full" ? "text-sm" : "text-xs"
-          }`}
-        >
-          {t("setups.setupOfTheDay")}
-        </p>
+        {showEyebrow ? (
+          <p
+            className={`font-semibold uppercase tracking-[0.4em] text-slate-200 ${
+              variant === "full" ? "text-sm" : "text-xs"
+            }`}
+          >
+            {t("setups.setupOfTheDay")}
+          </p>
+        ) : (
+          <span />
+        )}
         {formattedGeneratedAt ? (
           <p className="text-xs font-semibold text-slate-300 sm:text-right">
             {t("perception.generatedAt.label").replace("{value}", formattedGeneratedAt)}
@@ -44,7 +52,7 @@ export function SetupCardHeaderBlock({
         <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
           <span>{headline}</span>
           {timeframe ? <span className="text-slate-300"> · {timeframe}</span> : null}
-          <span className={`text-slate-300 ${isLong ? "text-emerald-400" : "text-rose-400"}`}> · {setup.direction}</span>
+          <span className={directionClass}> · {setup.direction}</span>
         </h2>
         <p className="text-sm text-slate-400">{meta.name}</p>
       </div>

@@ -38,10 +38,18 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
   const signalPalette = getSignalQualityGaugePalette(signalQuality?.score ?? 0);
 
   const eventContext = vm.eventContext ?? null;
+  const compactMetrics = !expanded && mode === "list";
   const eventInsights = useMemo(() => analyzeEventContext(eventContext), [eventContext]);
   const primaryEventCandidate = useMemo(() => pickPrimaryEventCandidate(eventContext), [eventContext]);
   const executionContent = useMemo(() => buildExecutionContent(vm, t), [vm, t]);
-  const bulletsToRender = expanded ? executionContent.bullets : executionContent.bullets.slice(0, 2);
+  const collapsedBullets = useMemo(() => {
+    const first = executionContent.bullets[0] ?? null;
+    const last = executionContent.bullets[executionContent.bullets.length - 1] ?? null;
+    if (first && last && executionContent.bullets.length >= 2) return [first, last];
+    if (first) return [first];
+    return [];
+  }, [executionContent.bullets]);
+  const bulletsToRender = expanded ? executionContent.bullets : collapsedBullets;
   const actionCardsVariant = expanded ? "full" : "mini";
 
   const generatedAtText = vm.meta.generatedAt ?? vm.meta.snapshotCreatedAt ?? vm.meta.snapshotTime ?? null;
@@ -59,23 +67,36 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
 
   return (
     <div className="space-y-6 rounded-3xl border border-slate-800 bg-slate-950/40 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
-      <SetupCardHeaderBlock setup={vm} generatedAtText={generatedAtText} timeframe={vm.timeframe} />
+      <SetupCardHeaderBlock
+        setup={vm}
+        generatedAtText={generatedAtText}
+        timeframe={vm.timeframe}
+        showEyebrow={mode === "sotd"}
+        variant={mode === "list" && !expanded ? "compact" : "full"}
+      />
 
       {expanded ? (
         <div className="grid gap-3 md:grid-cols-2">
           <SignalQualityCard signalQuality={signalQuality} palette={signalPalette} />
           <ConfidenceCard confidenceScore={confidenceScore} palette={confidencePalette} rings={vm.rings} />
         </div>
+      ) : compactMetrics ? (
+        <div className="grid gap-3 md:grid-cols-2">
+          <CompactMetricCard title={t("perception.signalQuality.label")} value={signalQuality?.score ?? 0} palette={signalPalette} />
+          <CompactMetricCard title={t("perception.today.confidenceLabel")} value={confidenceScore ?? 0} palette={confidencePalette} />
+        </div>
       ) : null}
 
-      <div className="space-y-3 rounded-3xl border border-slate-800 bg-slate-900/70 p-5 shadow-[0_10px_40px_rgba(2,6,23,0.45)]">
-        <SetupCardRingsBlock setup={vm} activeRing={activeRing} onActiveRingChange={setActiveRing} />
-        {showInsightPanel ? (
-          <div className="space-y-3 border-t border-slate-800 pt-4">
-            {renderInsightContent()}
-          </div>
-        ) : null}
-      </div>
+      {expanded ? (
+        <div className="space-y-3 rounded-3xl border border-slate-800 bg-slate-900/70 p-5 shadow-[0_10px_40px_rgba(2,6,23,0.45)]">
+          <SetupCardRingsBlock setup={vm} activeRing={activeRing} onActiveRingChange={setActiveRing} />
+          {showInsightPanel ? (
+            <div className="space-y-3 border-t border-slate-800 pt-4">
+              {renderInsightContent()}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {expanded ? (
         eventContext ? (
@@ -87,7 +108,7 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
         )
       ) : null}
 
-      <SetupCardExecutionBlock setup={vm} title={executionContent.title} bullets={bulletsToRender} />
+      <SetupCardExecutionBlock title={executionContent.title} bullets={bulletsToRender} />
 
       <SetupActionCards
         entry={{
@@ -231,6 +252,28 @@ function ConfidenceCard({
       </div>
       <div className="ml-auto flex items-center justify-center">
         <BigGauge value={confidenceScore} label={t("perception.today.confidenceLabel")} palette={palette} />
+      </div>
+    </div>
+  );
+}
+
+function CompactMetricCard({
+  title,
+  value,
+  palette,
+}: {
+  title: string;
+  value: number;
+  palette: ReturnType<typeof getSignalQualityGaugePalette> | ReturnType<typeof getConfidenceGaugePalette>;
+}): JSX.Element {
+  return (
+    <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-950/60 p-3">
+      <div>
+        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-slate-200">{title}</p>
+        <p className="text-xs text-slate-400">{value.toFixed(0)}%</p>
+      </div>
+      <div className="scale-75">
+        <BigGauge value={value} label="" palette={palette} />
       </div>
     </div>
   );
