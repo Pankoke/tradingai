@@ -2,6 +2,8 @@ import { clamp } from "@/src/lib/math";
 import type { Setup } from "@/src/lib/engine/types";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import type { PricePoint, PriceRange, SetupMeta, SetupSource, SetupViewModel } from "./types";
+import { computeSignalQuality, type SignalQuality } from "@/src/lib/engine/signalQuality";
+import type { RiskRewardSummary } from "@/src/lib/engine/types";
 
 function isHomepageSetup(input: SetupSource): input is HomepageSetup {
   if ("weakSignal" in input || "eventLevel" in input) {
@@ -82,6 +84,7 @@ function mapSetup(setup: Setup, opts?: { generatedAt?: string | null }): SetupVi
   const stop = normalizePointFromString(setup.stopLoss ?? null);
   const tp = normalizePointFromString(setup.takeProfit ?? null);
   const eventLevel = deriveEventLevelFromScore(setup.rings?.eventScore);
+  const signalQuality = computeSignalQuality(setup);
   const meta: SetupMeta = {
     snapshotId: setup.snapshotId ?? null,
     snapshotCreatedAt: setup.snapshotCreatedAt ?? null,
@@ -104,6 +107,7 @@ function mapSetup(setup: Setup, opts?: { generatedAt?: string | null }): SetupVi
     ringAiSummary: setup.ringAiSummary ?? null,
     sentiment: setup.sentiment ?? null,
     levelDebug: setup.levelDebug ?? null,
+    signalQuality,
     entry,
     stop,
     takeProfit: tp,
@@ -125,7 +129,7 @@ function mapHomepageSetup(setup: HomepageSetup, opts?: { generatedAt?: string | 
     eventLevel: setup.eventLevel ?? null,
     weakSignal: setup.weakSignal ?? false,
   };
-  return {
+  const result: SetupViewModel = {
     id: setup.id,
     assetId: setup.assetId,
     symbol: setup.symbol,
@@ -137,6 +141,7 @@ function mapHomepageSetup(setup: HomepageSetup, opts?: { generatedAt?: string | 
     ringAiSummary: setup.ringAiSummary ?? null,
     sentiment: setup.sentiment ?? null,
     levelDebug: setup.levelDebug ?? null,
+    signalQuality: deriveSignalQualityFromRings(setup.rings),
     entry,
     stop,
     takeProfit: tp,
@@ -144,6 +149,89 @@ function mapHomepageSetup(setup: HomepageSetup, opts?: { generatedAt?: string | 
     orderflowMode: setup.orderflowMode ?? null,
     meta,
   };
+
+  if (!result.riskReward) {
+    result.riskReward = deriveRiskReward(entry, stop, tp);
+  }
+
+  return result;
+}
+
+function deriveRiskReward(entry: PriceRange, stop: PricePoint, tp: PricePoint): RiskRewardSummary | null {
+  const entryValues = [entry.from, entry.to].filter((v): v is number => typeof v === "number");
+  if (entryValues.length === 0 || stop.value === null || tp.value === null) {
+    return null;
+  }
+  const entryMid = entryValues.reduce((sum, v) => sum + v, 0) / entryValues.length;
+  if (entryMid === 0) return null;
+  const risk = Math.abs(entryMid - stop.value) / Math.abs(entryMid);
+  const reward = Math.abs(tp.value - entryMid) / Math.abs(entryMid);
+  if (!Number.isFinite(risk) || !Number.isFinite(reward) || risk <= 0) {
+    return null;
+  }
+  const rrr = reward / risk;
+  return {
+    riskPercent: clamp(Math.round(risk * 100), 0, 10_000),
+    rewardPercent: clamp(Math.round(reward * 100), 0, 10_000),
+    rrr: Number.isFinite(rrr) ? clamp(rrr, 0, 10_000) : null,
+    volatilityLabel: null,
+  };
+}
+
+function deriveSignalQualityFromRings(rings: Setup["rings"]): SignalQuality | null {
+  if (!rings) return null;
+  const clampScore = (v?: number | null): number | null =>
+    typeof v === "number" && Number.isFinite(v) ? clamp(Math.round(v), 0, 100) : null;
+  const trend = clampScore(rings.trendScore);
+  const bias = clampScore(rings.biasScore);
+  const sentiment = clampScore(rings.sentimentScore);
+  const orderflow = clampScore(rings.orderflowScore);
+  const confidence = clampScore(rings.confidenceScore);
+  const eventScore = clampScore(rings.eventScore);
+
+  const inputs = [trend, bias, sentiment, orderflow, confidence].filter((v): v is number => v !== null);
+  const base = inputs.length ? inputs.reduce((s, v) => s + v, 0) / inputs.length : 50;
+  const penalty = eventScore !== null ? clamp(Math.round((eventScore - 50) * 0.3), -10, 10) : 0;
+  const finalScore = clamp(Math.round(base - penalty), 0, 100);
+  let grade: SignalQuality["grade"] = "D";
+  if (finalScore >= 80) grade = "A";
+  else if (finalScore >= 60) grade = "B";
+  else if (finalScore >= 40) grade = "C";
+  const reasons: string[] = [];
+  const strongest = getStrongestRing([
+    ["trend", trend],
+    ["bias", bias],
+    ["orderflow", orderflow],
+    ["sentiment", sentiment],
+  ]);
+  const weakest = getWeakestRing([
+    ["trend", trend],
+    ["bias", bias],
+    ["orderflow", orderflow],
+    ["sentiment", sentiment],
+  ]);
+  if (strongest) reasons.push(`perception.signalQuality.reason.strong.${strongest}`);
+  if (weakest) reasons.push(`perception.signalQuality.reason.weak.${weakest}`);
+  if (reasons.length === 0) reasons.push("perception.signalQuality.reason.default");
+
+  return {
+    score: finalScore,
+    grade,
+    labelKey: `perception.signalQuality.grade.${grade}`,
+    reasons,
+  };
+}
+
+function getStrongestRing(entries: Array<[string, number | null]>): string | null {
+  const filtered = entries.filter(([, v]) => v !== null) as Array<[string, number]>;
+  if (!filtered.length) return null;
+  return filtered.sort((a, b) => b[1] - a[1])[0][0];
+}
+
+function getWeakestRing(entries: Array<[string, number | null]>): string | null {
+  const filtered = entries.filter(([, v]) => v !== null) as Array<[string, number]>;
+  if (!filtered.length) return null;
+  return filtered.sort((a, b) => a[1] - b[1])[0][0];
 }
 
 export const setupViewModelTestExports = {
@@ -151,4 +239,6 @@ export const setupViewModelTestExports = {
   normalizeRangeFromString,
   normalizePointFromString,
   deriveEventLevelFromScore,
+  deriveRiskReward,
+  deriveSignalQualityFromRings,
 };

@@ -1,0 +1,17 @@
+name: Daily Marketdata Sync
+
+on:
+  schedule:
+    - cron: "0 5 * * *" # daily at 05:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  marketdata-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call marketdata sync cron
+        run: |
+          curl -sS -X POST "${{ secrets.MARKETDATA_SYNC_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -m 360 \
+            --fail

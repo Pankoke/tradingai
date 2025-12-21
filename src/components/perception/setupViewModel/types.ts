@@ -1,5 +1,7 @@
 import type { Setup } from "@/src/lib/engine/types";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
+import type { SignalQuality } from "@/src/lib/engine/signalQuality";
+import type { RiskRewardSummary } from "@/src/lib/engine/types";
 
 export type PriceRange = {
   from: number | null;
@@ -30,10 +32,11 @@ export type SetupViewModel = {
   type?: Setup["type"] | null;
   rings: Setup["rings"];
   eventContext?: Setup["eventContext"] | null;
-  riskReward?: Setup["riskReward"] | null;
+  riskReward?: RiskRewardSummary | null;
   ringAiSummary?: Setup["ringAiSummary"] | null;
   sentiment?: Setup["sentiment"] | null;
   levelDebug?: Setup["levelDebug"] | null;
+  signalQuality?: SignalQuality | null;
   entry: PriceRange;
   stop: PricePoint;
   takeProfit: PricePoint;

@@ -4,8 +4,7 @@ import { useMemo, useState, type JSX } from "react";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import { toSetupViewModel } from "@/src/components/perception/setupViewModel/toSetupViewModel";
-import { SetupRenderer } from "@/src/components/perception/setupViewModel/SetupRenderer";
-import { SetupActionCards, buildActionCardData } from "@/src/components/perception/setupViewModel/SetupActionCards";
+import { SetupUnifiedCard } from "@/src/components/perception/setupViewModel/SetupUnifiedCard";
 
 type Props = {
   setup: HomepageSetup;
@@ -23,46 +22,10 @@ export default function HomepageSetupCard({ setup, weakLabel, labels }: Props): 
   const vm = useMemo(() => toSetupViewModel(setup), [setup]);
   const [expanded, setExpanded] = useState(false);
   const typeLabel = setup.weakSignal ? `${labels.sourceRuleBased} • ${weakLabel}` : labels.sourceRuleBased;
-  const numberFormatter = useMemo(
-    () =>
-      new Intl.NumberFormat("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 4,
-      }),
-    [],
-  );
-  const actionCardData = useMemo(
-    () =>
-      buildActionCardData(vm, numberFormatter, {
-        copyLabels: {
-          copy: t("setups.action.copy"),
-          copied: t("setups.action.copied"),
-        },
-      }),
-    [vm, numberFormatter, t],
-  );
-
-  const variant = expanded ? "full" : "compact";
 
   return (
     <div className={baseCardClass}>
-      <SetupRenderer
-        vm={vm}
-        variant={variant}
-        headerTypeLabel={typeLabel}
-        hideEventContext={!expanded}
-        hideExecution={false}
-        maxExecutionBullets={expanded ? null : 1}
-      />
-      <div className="mt-4">
-        <SetupActionCards
-          entry={actionCardData.entry}
-          stop={actionCardData.stop}
-          takeProfit={actionCardData.takeProfit}
-          copyLabels={actionCardData.copyLabels}
-          variant={expanded ? "full" : "mini"}
-        />
-      </div>
+      <SetupUnifiedCard vm={{ ...vm, type: vm.type ?? null }} mode="list" defaultExpanded={expanded} />
       <div className="mt-4 flex justify-end">
         <button
           type="button"
