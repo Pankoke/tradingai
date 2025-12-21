@@ -11,13 +11,39 @@ jobs:
     steps:
       - name: Ingest events
         run: |
-          curl -sS -m 360 -X POST "${{ secrets.EVENTS_INGEST_URL }}" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+          INGEST_URL=$(printf "%s" "${{ secrets.EVENTS_INGEST_URL }}" | tr -d '\r' | xargs)
+          SECRET=$(printf "%s" "${{ secrets.CRON_SECRET }}" | tr -d '\r' | xargs)
+          if [ -z "$INGEST_URL" ]; then
+            echo "Missing EVENTS_INGEST_URL" >&2
+            exit 1
+          fi
+          if [ -z "$SECRET" ]; then
+            echo "Missing CRON_SECRET" >&2
+            exit 1
+          fi
+          curl -sS -m 360 -X POST "$INGEST_URL" \
+            -H "Authorization: Bearer $SECRET" \
             -H "Content-Type: application/json" \
             --fail
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          EVENTS_INGEST_URL: ${{ secrets.EVENTS_INGEST_URL }}
       - name: Enrich events
         run: |
-          curl -sS -m 360 -X POST "${{ secrets.EVENTS_ENRICH_URL }}" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+          ENRICH_URL=$(printf "%s" "${{ secrets.EVENTS_ENRICH_URL }}" | tr -d '\r' | xargs)
+          SECRET=$(printf "%s" "${{ secrets.CRON_SECRET }}" | tr -d '\r' | xargs)
+          if [ -z "$ENRICH_URL" ]; then
+            echo "Missing EVENTS_ENRICH_URL" >&2
+            exit 1
+          fi
+          if [ -z "$SECRET" ]; then
+            echo "Missing CRON_SECRET" >&2
+            exit 1
+          fi
+          curl -sS -m 360 -X POST "$ENRICH_URL" \
+            -H "Authorization: Bearer $SECRET" \
             -H "Content-Type: application/json" \
             --fail
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          EVENTS_ENRICH_URL: ${{ secrets.EVENTS_ENRICH_URL }}
