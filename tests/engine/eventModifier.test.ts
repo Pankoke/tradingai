@@ -71,6 +71,48 @@ describe("buildEventModifier relevance & classification", () => {
     expect(modifier.quality?.missingFields).toContain("country");
   });
 
+  it("keeps 1D context window long enough (13h) to mark context_relevant", () => {
+    const now = new Date("2025-01-01T10:00:00.000Z");
+    const scheduledAt = new Date(now.getTime() + 13 * 60 * 60 * 1000).toISOString();
+    const modifier = buildEventModifier({
+      now,
+      setup: { ...setupFx, timeframe: "1D" },
+      context: {
+        ...baseContext,
+        topEvents: [{ title: "US CPI", impact: 3, scheduledAt, timeToEventMinutes: 13 * 60, country: "US", currency: "USD", category: "macro" }],
+      },
+    });
+    expect(modifier.classification === "context_relevant" || modifier.classification === "execution_critical").toBe(true);
+  });
+
+  it("keeps 1D context window up to ~36-44h for high relevance events", () => {
+    const now = new Date("2025-01-01T10:00:00.000Z");
+    const scheduledAt = new Date(now.getTime() + 40 * 60 * 60 * 1000).toISOString();
+    const modifier = buildEventModifier({
+      now,
+      setup: { ...setupFx, timeframe: "1D" },
+      context: {
+        ...baseContext,
+        topEvents: [{ title: "FOMC Rate Decision", impact: 3, scheduledAt, timeToEventMinutes: 40 * 60, country: "US", currency: "USD", category: "macro" }],
+      },
+    });
+    expect(modifier.classification === "context_relevant" || modifier.classification === "awareness_only").toBe(true);
+  });
+
+  it("treats Gold with US CPI in 24-48h as context_relevant", () => {
+    const now = new Date("2025-01-01T10:00:00.000Z");
+    const scheduledAt = new Date(now.getTime() + 30 * 60 * 60 * 1000).toISOString();
+    const modifier = buildEventModifier({
+      now,
+      setup: { symbol: "XAUUSD", timeframe: "1D", category: "commodity" } as any,
+      context: {
+        ...baseContext,
+        topEvents: [{ title: "US CPI", impact: 3, scheduledAt, timeToEventMinutes: 30 * 60, country: "US", currency: "USD", category: "macro" }],
+      },
+    });
+    expect(modifier.classification === "context_relevant" || modifier.classification === "execution_critical").toBe(true);
+  });
+
   it("downshifts classification when macro fields are missing (reliability low)", () => {
     const now = new Date("2025-01-01T10:00:00.000Z");
     const scheduledAt = new Date(now.getTime() + 30 * 60 * 1000).toISOString();

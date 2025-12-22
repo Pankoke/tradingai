@@ -16,8 +16,8 @@ const SOURCE_WEIGHT: Record<string, number> = {
 type WindowRule = { execution: number; context: number };
 const WINDOW_RULES: Record<"intraday" | "daily" | "swing" | "unknown", WindowRule> = {
   intraday: { execution: 60, context: 360 },
-  daily: { execution: 120, context: 720 },
-  swing: { execution: 240, context: 1440 },
+  daily: { execution: 120, context: 2880 }, // 48h context for 1D
+  swing: { execution: 240, context: 4320 }, // 72h context for swing
   unknown: { execution: 90, context: 480 },
 };
 
@@ -134,7 +134,7 @@ function deriveProximityWeight(
   if (minutesToEvent === null) return 0.3;
   const absMins = Math.abs(minutesToEvent);
   if (absMins <= windowRule.execution) return 1;
-  if (absMins <= windowRule.context) return timeframe === "intraday" ? 0.7 : 0.6;
+  if (absMins <= windowRule.context) return timeframe === "intraday" ? 0.7 : 0.65;
   return 0.35;
 }
 

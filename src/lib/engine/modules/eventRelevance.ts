@@ -11,6 +11,7 @@ type EventLike = {
   currency?: string | null;
   category?: string | null;
   marketScope?: string | null;
+  title?: string | null;
 };
 
 const INDEX_DOMICILE: Record<string, string> = {
@@ -37,6 +38,8 @@ const MARKET_SCOPE_BONUS: Record<string, number> = {
 };
 
 const CRYPTO_US_BONUS = 0.1;
+const GOLD_SYMBOL_PATTERNS = /(xau|gold|gc=|xauusd)/i;
+const GOLD_THEMES = /(cpi|inflation|pce|fed|fomc|rate decision|central bank|nfp|employment|labor)/i;
 
 export type EventRelevanceResult = {
   relevance: number;
@@ -55,6 +58,7 @@ export function computeEventRelevance(asset: AssetProfile, event: EventLike): Ev
   const currency = normalize(event.currency);
 
   let relevance = baseScope;
+  const title = (event as { title?: string }).title ?? "";
 
   switch (asset.assetClass) {
     case "fx": {
@@ -88,7 +92,12 @@ export function computeEventRelevance(asset: AssetProfile, event: EventLike): Ev
       break;
     }
     case "commodity": {
-      relevance = country === "US" ? 0.6 : 0.5;
+      const isGold = GOLD_SYMBOL_PATTERNS.test(asset.symbol);
+      if (isGold && GOLD_THEMES.test(`${event.category ?? ""} ${title}`)) {
+        relevance = country === "US" ? 0.85 : 0.7;
+      } else {
+        relevance = country === "US" ? 0.6 : 0.5;
+      }
       break;
     }
     default:
