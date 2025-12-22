@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState, type JSX } from "react";
 import { useT } from "@/src/lib/i18n/ClientProvider";
@@ -48,20 +48,26 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
     return [primaryCollapsed.text, invalidation].filter((line): line is string => Boolean(line));
   }, [primaryCollapsed.text, t, vm]);
   const bulletsToRender = expanded ? executionContent.bullets : collapsedBullets;
-  const execDebugEnabled = process.env.NEXT_PUBLIC_EXEC_DEBUG === "1" || process.env.NODE_ENV !== "production";
+  const execDebugEnabled = process.env.NEXT_PUBLIC_EXEC_DEBUG === "1";
   const executionDebugLine =
     execDebugEnabled && !expanded
-      ? `debug: primary=${primaryCollapsed.debug.branch}${
-          primaryCollapsed.debug.eventLevel ? ` (${primaryCollapsed.debug.eventLevel})` : ""
-        }${
-          primaryCollapsed.debug.eventTitle ? ` event="${primaryCollapsed.debug.eventTitle}"` : ""
-        }${
-          primaryCollapsed.debug.orderflowScore !== undefined ? ` of=${primaryCollapsed.debug.orderflowScore}` : ""
-        }${
-          primaryCollapsed.debug.trendBiasDelta !== undefined ? ` delta=${primaryCollapsed.debug.trendBiasDelta}` : ""
-        }${
-          primaryCollapsed.debug.sizingKey ? ` sizing=${primaryCollapsed.debug.sizingKey}` : ""
-        }`
+      ? [
+          `debug: branch=${primaryCollapsed.debug.branch}${
+            primaryCollapsed.debug.eventLevel ? ` execLevel=${primaryCollapsed.debug.eventLevel}` : ""
+          }${
+            primaryCollapsed.debug.metaEventLevel ? ` metaLevel=${primaryCollapsed.debug.metaEventLevel}` : ""
+          }${primaryCollapsed.debug.eventScore !== undefined ? ` eventScore=${primaryCollapsed.debug.eventScore}` : ""}${
+            primaryCollapsed.debug.branchReason ? ` reason=${primaryCollapsed.debug.branchReason}` : ""
+          }`,
+          primaryCollapsed.debug.topEventsCount !== undefined
+            ? `debug: eventCtx present=${primaryCollapsed.debug.eventContextPresent} count=${primaryCollapsed.debug.topEventsCount} raw="${primaryCollapsed.debug.topEventTitleRaw ?? ""}" sanitized="${primaryCollapsed.debug.topEventTitleSanitized ?? ""}"`
+            : null,
+          primaryCollapsed.debug.topEventTitleRawLen !== undefined
+            ? `debug: title lens raw=${primaryCollapsed.debug.topEventTitleRawLen} sanitized=${primaryCollapsed.debug.topEventTitleSanitizedLen} truncated=${primaryCollapsed.debug.topEventTitleTruncated} empty=${primaryCollapsed.debug.topEventTitleEmptyAfterSanitize} fallback=${primaryCollapsed.debug.topEventTitleUsedFallback} source=${primaryCollapsed.debug.topEventTitleSource ?? "n/a"}`
+            : null,
+          `debug: rings t=${primaryCollapsed.debug.rings.trendScore ?? "n/a"} b=${primaryCollapsed.debug.rings.biasScore ?? "n/a"} s=${primaryCollapsed.debug.rings.sentimentScore ?? "n/a"} of=${primaryCollapsed.debug.rings.orderflowScore ?? "n/a"} e=${primaryCollapsed.debug.rings.eventScore ?? "n/a"} c=${primaryCollapsed.debug.rings.confidenceScore ?? "n/a"} sq=${primaryCollapsed.debug.signalQualityScore ?? "n/a"} conf=${primaryCollapsed.debug.confidenceScore ?? "n/a"} deltaTB=${primaryCollapsed.debug.trendBiasDelta ?? "n/a"}`,
+          `debug: thresholds ofHi=${primaryCollapsed.debug.thresholds.orderflowHigh} ofLo=${primaryCollapsed.debug.thresholds.orderflowLow} dTB=${primaryCollapsed.debug.thresholds.trendBiasDelta} confHi=${primaryCollapsed.debug.thresholds.confidenceHigh} sqHi=${primaryCollapsed.debug.thresholds.signalQualityHigh} sqMed=${primaryCollapsed.debug.thresholds.signalQualityStandard}`,
+        ].filter((line): line is string => Boolean(line))
       : null;
   const actionCardsVariant = expanded ? "full" : "mini";
 
@@ -121,7 +127,7 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
         )
       ) : null}
 
-      <SetupCardExecutionBlock title={executionContent.title} bullets={bulletsToRender} debugLine={executionDebugLine} />
+      <SetupCardExecutionBlock title={executionContent.title} bullets={bulletsToRender} debugLines={executionDebugLine} />
 
       <SetupActionCards
         entry={{
@@ -353,69 +359,183 @@ type ExecutionPrimaryResult = {
       | "sizeNormalPlus"
       | "sizeStandard"
       | "sizeReduced";
+    branchReason?: string;
     eventLevel?: string;
-    eventTitle?: string;
+    execEventLevel?: string;
+    eventLevelRaw?: string | null;
+    metaEventLevel?: string | null;
+    eventScore?: number | null;
+    eventContextPresent?: boolean;
+    topEventsCount?: number;
+    topEventTitleRaw?: string | null;
+    topEventTitleSanitized?: string | null;
+    topEventTitleRawLen?: number | null;
+    topEventTitleSanitizedLen?: number | null;
+    topEventTitleTruncated?: boolean | null;
+    topEventTitleEmptyAfterSanitize?: boolean | null;
+    topEventTitleUsedFallback?: boolean | null;
+    topEventTitleSource?: string | null;
+    topEventImpactRaw?: number | null;
+    topEventWhenRaw?: string | null;
+    eventSource?: string | null;
     orderflowScore?: number;
     trendBiasDelta?: number;
     sizingKey?: string;
+    signalQualityScore?: number | null;
+    signalQualityGrade?: string | null;
+    confidenceScore?: number | null;
+    rings: {
+      trendScore?: number | null;
+      biasScore?: number | null;
+      sentimentScore?: number | null;
+      orderflowScore?: number | null;
+      eventScore?: number | null;
+      confidenceScore?: number | null;
+    };
+    thresholds: {
+      orderflowHigh: number;
+      orderflowLow: number;
+      trendBiasDelta: number;
+      confidenceHigh: number;
+      signalQualityHigh: number;
+      signalQualityStandard: number;
+    };
   };
 };
 
-const EVENT_TITLE_MAX_LENGTH = 40;
+const EVENT_TITLE_MAX_LENGTH = 60;
 
-function sanitizeEventTitle(raw: string): string {
-  const cleaned = raw.replace(/[\u0000-\u001F]+/g, "").replace(/["“”]+/g, "").trim().replace(/\s+/g, " ");
-  if (!cleaned) return "";
-  if (cleaned.length <= EVENT_TITLE_MAX_LENGTH) return cleaned;
-  return `${cleaned.slice(0, EVENT_TITLE_MAX_LENGTH - 1)}…`;
+function sanitizeEventTitle(
+  rawInput: string | null | undefined,
+): {
+  raw: string;
+  sanitized: string;
+  truncated: boolean;
+  emptyAfterSanitize: boolean;
+  usedFallback: boolean;
+  rawLen: number;
+  sanitizedLen: number;
+} {
+  const raw = (rawInput ?? "").trim();
+  const withoutControls = raw.replace(/[\u0000-\u001F\u007F\u200B-\u200D\uFEFF]+/g, "");
+  const collapsed = withoutControls.replace(/\s+/g, " ").trim();
+  const base = collapsed.length > 0 ? collapsed : raw;
+  const emptyAfterSanitize = collapsed.length === 0;
+  let sanitized = base;
+  let truncated = false;
+  if (sanitized.length > EVENT_TITLE_MAX_LENGTH) {
+    sanitized = `${sanitized.slice(0, EVENT_TITLE_MAX_LENGTH - 1)}…`;
+    truncated = true;
+  }
+  return {
+    raw,
+    sanitized,
+    truncated,
+    emptyAfterSanitize,
+    usedFallback: emptyAfterSanitize && raw.length > 0,
+    rawLen: raw.length,
+    sanitizedLen: sanitized.length,
+  };
 }
+
 
 export function pickCollapsedExecutionPrimaryBullet(vm: SetupViewModel, t: ReturnType<typeof useT>): ExecutionPrimaryResult {
   const eventLevelFromMeta = vm.meta.eventLevel;
   const eventScore = vm.rings.eventScore ?? 0;
-  const normalizedEventLevel =
-    eventLevelFromMeta === "high"
-      ? "highSoon"
-      : eventLevelFromMeta === "medium"
-        ? "elevated"
-        : eventLevelFromMeta === "low"
-          ? "calm"
-          : eventScore >= 70
-            ? "highSoon"
-            : eventScore >= 45
-              ? "elevated"
-              : "calm";
+  const execEventLevel = eventScore >= 70 ? "highSoon" : eventScore >= 45 ? "elevated" : "calm";
+  const normalizedMetaEventLevel =
+    eventLevelFromMeta === "high" ? "highSoon" : eventLevelFromMeta === "medium" ? "elevated" : eventLevelFromMeta === "low" ? "calm" : null;
 
-  if (normalizedEventLevel === "highSoon" || normalizedEventLevel === "elevated") {
-    const topEvent = vm.eventContext?.topEvents?.[0];
-    if (topEvent?.title) {
-      const name = sanitizeEventTitle(topEvent.title || "");
-      if (name) {
-        const template = t("perception.execution.collapsed.eventNamed");
-        const resolved = template.includes("{event}") ? template.replace("{event}", name) : `${template} ${name}`;
-        return {
-          text: resolved,
-          debug: { branch: "eventNamed", eventLevel: normalizedEventLevel, eventTitle: name },
-        };
-      }
+  const topEvent = vm.eventContext?.topEvents?.[0];
+  const titleSource = topEvent
+    ? "displayTitle" in topEvent && typeof (topEvent as { displayTitle?: string | null }).displayTitle === "string"
+      ? "displayTitle"
+      : "title"
+    : null;
+  const sanitized = sanitizeEventTitle(
+    titleSource === "displayTitle"
+      ? (topEvent as { displayTitle?: string | null }).displayTitle
+      : topEvent?.title ?? null,
+  );
+  const baseDebug: ExecutionPrimaryResult["debug"] = {
+    branch: "sizeStandard",
+    eventLevel: execEventLevel,
+    execEventLevel,
+    metaEventLevel: normalizedMetaEventLevel,
+    eventScore: eventScore ?? null,
+    eventLevelRaw: eventLevelFromMeta ?? null,
+    eventContextPresent: Boolean(vm.eventContext),
+    topEventsCount: vm.eventContext?.topEvents?.length ?? 0,
+    topEventTitleRaw: sanitized.raw ?? null,
+    topEventTitleSanitized: sanitized.sanitized ?? null,
+    topEventTitleRawLen: sanitized.rawLen,
+    topEventTitleSanitizedLen: sanitized.sanitizedLen,
+    topEventTitleTruncated: sanitized.truncated,
+    topEventTitleEmptyAfterSanitize: sanitized.emptyAfterSanitize,
+    topEventTitleUsedFallback: sanitized.usedFallback,
+    topEventTitleSource: titleSource,
+    topEventImpactRaw: (topEvent as { impact?: number | null })?.impact ?? null,
+    topEventWhenRaw: (topEvent as { scheduledAt?: string | null })?.scheduledAt ?? null,
+    eventSource: (topEvent as { source?: string | null })?.source ?? null,
+    orderflowScore: vm.rings.orderflowScore ?? null,
+    trendBiasDelta: Math.abs((vm.rings.trendScore ?? 0) - (vm.rings.biasScore ?? 0)),
+    sizingKey: undefined,
+    signalQualityScore: vm.signalQuality?.score ?? null,
+    signalQualityGrade: (vm.signalQuality as { grade?: string })?.grade ?? null,
+    confidenceScore: vm.rings.confidenceScore ?? null,
+    rings: {
+      trendScore: vm.rings.trendScore ?? null,
+      biasScore: vm.rings.biasScore ?? null,
+      sentimentScore: vm.rings.sentimentScore ?? null,
+      orderflowScore: vm.rings.orderflowScore ?? null,
+      eventScore: vm.rings.eventScore ?? null,
+      confidenceScore: vm.rings.confidenceScore ?? null,
+    },
+    thresholds: {
+      orderflowHigh: ORDERFLOW_HIGH_THRESHOLD,
+      orderflowLow: ORDERFLOW_LOW_THRESHOLD,
+      trendBiasDelta: TREND_BIAS_DIVERGENCE_THRESHOLD,
+      confidenceHigh: CONFIDENCE_STRONG_THRESHOLD,
+      signalQualityHigh: SIGNAL_QUALITY_STRONG_THRESHOLD,
+      signalQualityStandard: SIGNAL_QUALITY_STANDARD_THRESHOLD,
+    },
+  };
+
+  if (execEventLevel === "highSoon" || execEventLevel === "elevated") {
+    if (sanitized.sanitized) {
+      const template = t("perception.execution.collapsed.eventNamed");
+      const resolved = template.includes("{event}") ? template.replace("{event}", sanitized.sanitized) : `${template} ${sanitized.sanitized}`;
+      return {
+        text: resolved,
+        debug: {
+          ...baseDebug,
+          branch: "eventNamed",
+          branchReason: "eventLevel(exec)=high/elevated && topEvent=present",
+        },
+      };
     }
     return {
       text: t("perception.execution.collapsed.eventGeneric"),
-      debug: { branch: "eventGeneric", eventLevel: normalizedEventLevel },
+      debug: {
+        ...baseDebug,
+        branch: "eventGeneric",
+        branchReason: "eventLevel(exec)=high/elevated but no usable title",
+      },
     };
   }
+  baseDebug.branchReason = "event gate: execEventLevel is calm";
 
   const orderflowScore = vm.rings.orderflowScore ?? 0;
   if (orderflowScore >= ORDERFLOW_HIGH_THRESHOLD) {
     return {
       text: t("perception.execution.collapsed.primary.orderflowHigh"),
-      debug: { branch: "orderflowHigh", orderflowScore },
+      debug: { ...baseDebug, branch: "orderflowHigh", branchReason: "orderflow>=high", orderflowScore },
     };
   }
   if (orderflowScore <= ORDERFLOW_LOW_THRESHOLD) {
     return {
       text: t("perception.execution.collapsed.primary.orderflowLow"),
-      debug: { branch: "orderflowLow", orderflowScore },
+      debug: { ...baseDebug, branch: "orderflowLow", branchReason: "orderflow<=low", orderflowScore },
     };
   }
 
@@ -425,7 +545,7 @@ export function pickCollapsedExecutionPrimaryBullet(vm: SetupViewModel, t: Retur
     const delta = Math.abs(trendScore - biasScore);
     return {
       text: t("perception.execution.collapsed.primary.confirmation"),
-      debug: { branch: "confirmation", trendBiasDelta: delta },
+      debug: { ...baseDebug, branch: "confirmation", branchReason: "trend/bias delta >= threshold", trendBiasDelta: delta },
     };
   }
 
@@ -433,14 +553,14 @@ export function pickCollapsedExecutionPrimaryBullet(vm: SetupViewModel, t: Retur
   const confidenceScore = vm.rings.confidenceScore ?? 0;
   if (confidenceScore >= CONFIDENCE_STRONG_THRESHOLD && signalQualityScore >= SIGNAL_QUALITY_STRONG_THRESHOLD) {
     const key = "perception.execution.collapsed.primary.sizeNormalPlus";
-    return { text: t(key), debug: { branch: "sizeNormalPlus", sizingKey: key } };
+    return { text: t(key), debug: { ...baseDebug, branch: "sizeNormalPlus", branchReason: "conf>=70 && sq>=65", sizingKey: key } };
   }
   if (signalQualityScore >= SIGNAL_QUALITY_STANDARD_THRESHOLD) {
     const key = "perception.execution.collapsed.primary.sizeStandard";
-    return { text: t(key), debug: { branch: "sizeStandard", sizingKey: key } };
+    return { text: t(key), debug: { ...baseDebug, branch: "sizeStandard", branchReason: "sq>=50", sizingKey: key } };
   }
   const key = "perception.execution.collapsed.primary.sizeReduced";
-  return { text: t(key), debug: { branch: "sizeReduced", sizingKey: key } };
+  return { text: t(key), debug: { ...baseDebug, branch: "sizeReduced", branchReason: "default fallback", sizingKey: key } };
 }
 
 function buildInvalidationBullet(vm: SetupViewModel, t: ReturnType<typeof useT>): string | null {
@@ -459,3 +579,11 @@ function buildInvalidationBullet(vm: SetupViewModel, t: ReturnType<typeof useT>)
 
   return t("perception.execution.invalidation.ringsFallback");
 }
+
+
+
+
+
+
+
+

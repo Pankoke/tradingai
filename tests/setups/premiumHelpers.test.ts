@@ -65,19 +65,20 @@ describe("premiumHelpers", () => {
     expect(applyFilter(setups, "all", "b").map((s) => s.id)).toEqual(["2", "3"]);
   });
 
-  test("applySort sorts by confidence and signalQuality fallback", () => {
-    const a = baseSetup({ id: "a", confidence: 10, rings: { ...baseSetup({}).rings, trendScore: 20 } });
-    const b = baseSetup({ id: "b", confidence: 90, rings: { ...baseSetup({}).rings, trendScore: 80 } });
-    const c = baseSetup({ id: "c", confidence: 50, rings: { ...baseSetup({}).rings, trendScore: 60 } });
+  test("applySort sorts by confidence (ring) and signal quality (direct) with undefined last", () => {
+    const baseRings = baseSetup({}).rings;
+    const a = baseSetup({ id: "a", rings: { ...baseRings, confidenceScore: 10 } });
+    const b = baseSetup({ id: "b", rings: { ...baseRings, confidenceScore: 80 } });
+    const c = baseSetup({ id: "c", rings: { ...baseRings, confidenceScore: 50 } });
     const sorted = applySort([a, b, c], "confidence", "desc");
     expect(sorted.map((s) => s.id)).toEqual(["b", "c", "a"]);
 
-    const sortedSignal = applySort([a, b, c], "signalQuality", "asc");
-    expect(sortedSignal[0].id).toBe("a");
-    expect(sortedSignal[2].id).toBe("b");
+    const withSignal = baseSetup({ id: "d", signalQuality: 5 });
+    const sortedSignal = applySort([a, withSignal], "signal_quality", "asc");
+    expect(sortedSignal.map((s) => s.id)).toEqual(["d", "a"]);
   });
 
-  test("applySort sorts by rrr and generated time", () => {
+  test("applySort sorts by rrr", () => {
     const a = baseSetup({ id: "a", riskReward: { riskPercent: null, rewardPercent: null, rrr: 1.5, volatilityLabel: null } });
     const b = baseSetup({
       id: "b",
@@ -89,11 +90,8 @@ describe("premiumHelpers", () => {
       riskReward: { riskPercent: null, rewardPercent: null, rrr: 2.0, volatilityLabel: null },
       snapshotCreatedAt: "2023-12-31T00:00:00Z",
     });
-    const rrrDesc = applySort([a, b, c], "rrr", "desc");
+    const rrrDesc = applySort([a, b, c], "risk_reward", "desc");
     expect(rrrDesc.map((s) => s.id)).toEqual(["c", "a", "b"]);
-
-    const generatedAsc = applySort([a, b, c], "generated", "asc");
-    expect(generatedAsc.map((s) => s.id)).toEqual(["c", "a", "b"]);
   });
 
   test("buildAssetOptions sorts by frequency then name and uses display names", () => {

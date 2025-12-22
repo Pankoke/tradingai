@@ -63,21 +63,37 @@ function makeVm(overrides: Partial<SetupViewModel> = {}): SetupViewModel {
 }
 
 describe("pickCollapsedExecutionPrimaryBullet", () => {
-  test("prioritises event timing when event level is elevated/high", () => {
-    const vm = makeVm({ meta: { eventLevel: "high" } });
+  test("does not choose event branch when ring eventScore is low even if meta is high", () => {
+    const vm = makeVm({ meta: { eventLevel: "high" }, rings: { eventScore: 38 } as SetupViewModel["rings"] });
     const result = pickCollapsedExecutionPrimaryBullet(vm, t);
-    expect(result.text).toBe("perception.execution.collapsed.eventGeneric");
-    expect(result.debug.branch).toBe("eventGeneric");
+    expect(result.debug.branch).toBe("sizeStandard");
+    expect(result.debug.execEventLevel).toBe("calm");
+    expect(result.debug.metaEventLevel).toBe("highSoon");
   });
 
-  test("uses named event when available", () => {
+  test("uses named event when ring eventScore is high and title present", () => {
     const vm = makeVm({
-      meta: { eventLevel: "high" },
+      rings: { eventScore: 75 } as SetupViewModel["rings"],
       eventContext: { topEvents: [{ title: "CPI" }] } as unknown as SetupViewModel["eventContext"],
     });
     const result = pickCollapsedExecutionPrimaryBullet(vm, t);
     expect(result.text).toContain("CPI");
     expect(result.debug.branch).toBe("eventNamed");
+    expect(result.debug.eventLevel).toBe("highSoon");
+    expect(result.debug.execEventLevel).toBe("highSoon");
+    expect(result.debug.topEventsCount).toBe(1);
+    expect(result.debug.topEventTitleRaw).toBe("CPI");
+    expect(result.debug.topEventTitleSanitized).toBe("CPI");
+  });
+
+  test("uses event branch when eventScore is elevated and title present", () => {
+    const vm = makeVm({
+      rings: { eventScore: 55 } as SetupViewModel["rings"],
+      eventContext: { topEvents: [{ title: "GDP q/q" }] } as unknown as SetupViewModel["eventContext"],
+    });
+    const result = pickCollapsedExecutionPrimaryBullet(vm, t);
+    expect(result.debug.branch).toBe("eventNamed");
+    expect(result.debug.execEventLevel).toBe("elevated");
   });
 
   test("uses orderflow high and low thresholds", () => {
@@ -119,20 +135,44 @@ describe("pickCollapsedExecutionPrimaryBullet", () => {
   test("sanitizes and truncates long event titles", () => {
     const longTitle = "Very Important Event That Has A Super Long Name That Should Be Trimmed For UI Safety";
     const vm = makeVm({
-      meta: { eventLevel: "high" },
+      rings: { eventScore: 80 } as SetupViewModel["rings"],
       eventContext: { topEvents: [{ title: longTitle }] } as unknown as SetupViewModel["eventContext"],
     });
     const result = pickCollapsedExecutionPrimaryBullet(vm, t);
     expect(result.debug.branch).toBe("eventNamed");
-    expect(result.text.length).toBeLessThanOrEqual(90);
+    expect((result.debug.topEventTitleSanitized ?? "").length).toBeLessThanOrEqual(60);
+    expect(result.debug.topEventTitleTruncated).toBe(true);
   });
 
   test("falls back to generic when event title is empty after sanitization", () => {
     const vm = makeVm({
-      meta: { eventLevel: "high" },
+      rings: { eventScore: 70 } as SetupViewModel["rings"],
       eventContext: { topEvents: [{ title: "   " }] } as unknown as SetupViewModel["eventContext"],
     });
     const result = pickCollapsedExecutionPrimaryBullet(vm, t);
     expect(result.debug.branch).toBe("eventGeneric");
+    expect(result.debug.topEventTitleEmptyAfterSanitize).toBe(true);
+  });
+
+  test("keeps simple ascii slash titles intact", () => {
+    const vm = makeVm({
+      rings: { eventScore: 80 } as SetupViewModel["rings"],
+      eventContext: { topEvents: [{ title: "GDP q/q" }] } as unknown as SetupViewModel["eventContext"],
+    });
+    const result = pickCollapsedExecutionPrimaryBullet(vm, t);
+    expect(result.debug.branch).toBe("eventNamed");
+    expect(result.debug.topEventTitleSanitized).toBe("GDP q/q");
+    expect(result.debug.topEventTitleEmptyAfterSanitize).toBe(false);
+  });
+
+  test("removes zero-width characters", () => {
+    const vm = makeVm({
+      rings: { eventScore: 80 } as SetupViewModel["rings"],
+      eventContext: { topEvents: [{ title: "CPI\u200B\u200D (High Impact)" }] } as unknown as SetupViewModel["eventContext"],
+    });
+    const result = pickCollapsedExecutionPrimaryBullet(vm, t);
+    expect(result.debug.branch).toBe("eventNamed");
+    expect(result.debug.topEventTitleSanitized).toBe("CPI (High Impact)");
+    expect(result.debug.topEventTitleEmptyAfterSanitize).toBe(false);
   });
 });

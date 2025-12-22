@@ -52,12 +52,10 @@ export function PremiumControls({ currentSort, currentDir, currentFilter, curren
           onChange={(e) => updateParam("sort", e.target.value)}
           className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-main)] px-2 py-1 text-sm"
         >
+          <option value="signal_quality">{t("premium.sort.signalQuality")}</option>
           <option value="confidence">{t("premium.sort.confidence")}</option>
-          <option value="sentiment">{t("premium.sort.sentiment")}</option>
+          <option value="risk_reward">{t("premium.sort.rrr")}</option>
           <option value="direction">{t("premium.sort.direction")}</option>
-          <option value="signalQuality">{t("premium.sort.signalQuality")}</option>
-          <option value="rrr">{t("premium.sort.rrr")}</option>
-          <option value="generated">{t("premium.sort.generated")}</option>
         </select>
       </div>
 

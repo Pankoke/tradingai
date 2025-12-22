@@ -1,6 +1,6 @@
 import type { Setup } from "@/src/lib/engine/types";
 
-export type SortKey = "confidence" | "sentiment" | "direction" | "signalQuality" | "rrr" | "generated";
+export type SortKey = "signal_quality" | "confidence" | "risk_reward" | "direction";
 export type SortDir = "asc" | "desc";
 
 export type AssetOption = {
@@ -56,21 +56,18 @@ export function buildAssetOptions(setups: Setup[]): AssetOption[] {
     });
 }
 
-const getSignalQualityScore = (s: Setup): number => {
+const getSignalQualityScore = (s: Setup): number | undefined => {
   const direct = (s as unknown as { signalQuality?: number }).signalQuality;
   if (typeof direct === "number") return direct;
-  const ringScores = [
-    s.rings?.trendScore,
-    s.rings?.biasScore,
-    s.rings?.sentimentScore,
-    s.rings?.orderflowScore,
-    s.rings?.eventScore,
-  ].filter((n) => typeof n === "number") as number[];
-  if (ringScores.length === 0) return 0;
-  return ringScores.reduce((sum, val) => sum + val, 0) / ringScores.length;
+  return undefined;
 };
 
-const getRrr = (s: Setup): number => s.riskReward?.rrr ?? 0;
+const getConfidenceRing = (s: Setup): number | undefined => {
+  const ringVal = s.rings?.confidenceScore;
+  return typeof ringVal === "number" ? ringVal : undefined;
+};
+
+const getRrr = (s: Setup): number | undefined => (typeof s.riskReward?.rrr === "number" ? s.riskReward.rrr : undefined);
 
 const getGeneratedTime = (s: Setup): string =>
   s.snapshotCreatedAt ?? (s as unknown as { snapshotTimestamp?: string }).snapshotTimestamp ?? "";
@@ -90,12 +87,39 @@ export function applySort(setups: Setup[], sort: SortKey, dir: SortDir): Setup[]
   const cloned = [...setups];
 
   return cloned.sort((a, b) => {
-    if (sort === "confidence") return (a.confidence - b.confidence) * direction;
-    if (sort === "sentiment") return (a.sentimentScore - b.sentimentScore) * direction;
-    if (sort === "direction") return a.direction.localeCompare(b.direction) * direction;
-    if (sort === "signalQuality") return (getSignalQualityScore(a) - getSignalQualityScore(b)) * direction;
-    if (sort === "rrr") return (getRrr(a) - getRrr(b)) * direction;
-    if (sort === "generated") return getGeneratedTime(a).localeCompare(getGeneratedTime(b)) * direction;
+    if (sort === "signal_quality") {
+      const av = getSignalQualityScore(a);
+      const bv = getSignalQualityScore(b);
+      if (av === undefined && bv === undefined) return 0;
+      if (av === undefined) return 1;
+      if (bv === undefined) return -1;
+      return (av - bv) * direction;
+    }
+    if (sort === "confidence") {
+      const av = getConfidenceRing(a);
+      const bv = getConfidenceRing(b);
+      if (av === undefined && bv === undefined) return 0;
+      if (av === undefined) return 1;
+      if (bv === undefined) return -1;
+      return (av - bv) * direction;
+    }
+    if (sort === "risk_reward") {
+      const av = getRrr(a);
+      const bv = getRrr(b);
+      if (av === undefined && bv === undefined) return 0;
+      if (av === undefined) return 1;
+      if (bv === undefined) return -1;
+      return (av - bv) * direction;
+    }
+    if (sort === "direction") {
+      const aVal = a.direction === "Long" ? 0 : 1;
+      const bVal = b.direction === "Long" ? 0 : 1;
+      const dirCmp = (aVal - bVal) * direction;
+      if (dirCmp !== 0) return dirCmp;
+      const fallbackA = getConfidenceRing(a) ?? 0;
+      const fallbackB = getConfidenceRing(b) ?? 0;
+      return (fallbackB - fallbackA) * direction * -1;
+    }
     return 0;
   });
 }

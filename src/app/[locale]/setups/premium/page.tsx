@@ -125,9 +125,9 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
   const filter = resolvedSearch?.filter ?? "all";
   const assetFilter = resolvedSearch?.asset ?? "all";
 
-  const sortKey: SortKey = ["confidence", "sentiment", "direction", "signalQuality", "rrr", "generated"].includes(sort ?? "")
+  const sortKey: SortKey = ["signal_quality", "confidence", "risk_reward", "direction"].includes(sort ?? "")
     ? (sort as SortKey)
-    : "confidence";
+    : "signal_quality";
   const sortDir: SortDir = dir === "asc" ? "asc" : "desc";
 
   const filtered = applyFilter(setups, filter, assetFilter);
