@@ -43,12 +43,10 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
   const primaryEventCandidate = useMemo(() => pickPrimaryEventCandidate(eventContext), [eventContext]);
   const executionContent = useMemo(() => buildExecutionContent(vm, t), [vm, t]);
   const collapsedBullets = useMemo(() => {
-    const first = executionContent.bullets[0] ?? null;
-    const last = executionContent.bullets[executionContent.bullets.length - 1] ?? null;
-    if (first && last && executionContent.bullets.length >= 2) return [first, last];
-    if (first) return [first];
-    return [];
-  }, [executionContent.bullets]);
+    const primary = pickCollapsedExecutionPrimaryBullet(vm, t);
+    const invalidation = buildInvalidationBullet(vm, t);
+    return [primary, invalidation].filter((line): line is string => Boolean(line));
+  }, [t, vm]);
   const bulletsToRender = expanded ? executionContent.bullets : collapsedBullets;
   const actionCardsVariant = expanded ? "full" : "mini";
 
@@ -279,6 +277,13 @@ function CompactMetricCard({
   );
 }
 
+const ORDERFLOW_HIGH_THRESHOLD = 75;
+const ORDERFLOW_LOW_THRESHOLD = 35;
+const TREND_BIAS_DIVERGENCE_THRESHOLD = 25;
+const CONFIDENCE_STRONG_THRESHOLD = 70;
+const SIGNAL_QUALITY_STRONG_THRESHOLD = 65;
+const SIGNAL_QUALITY_STANDARD_THRESHOLD = 50;
+
 function buildExecutionContent(vm: SetupViewModel, t: ReturnType<typeof useT>): { title: string; bullets: string[] } {
   const rings = vm.rings;
   const eventScore = rings.eventScore ?? 0;
@@ -320,6 +325,51 @@ function buildExecutionContent(vm: SetupViewModel, t: ReturnType<typeof useT>): 
   if (invalidation) bullets.push(invalidation);
 
   return { title, bullets };
+}
+
+export function pickCollapsedExecutionPrimaryBullet(vm: SetupViewModel, t: ReturnType<typeof useT>): string {
+  const eventLevelFromMeta = vm.meta.eventLevel;
+  const eventScore = vm.rings.eventScore ?? 0;
+  const normalizedEventLevel =
+    eventLevelFromMeta === "high"
+      ? "highSoon"
+      : eventLevelFromMeta === "medium"
+        ? "elevated"
+        : eventLevelFromMeta === "low"
+          ? "calm"
+          : eventScore >= 70
+            ? "highSoon"
+            : eventScore >= 45
+              ? "elevated"
+              : "calm";
+
+  if (normalizedEventLevel === "highSoon" || normalizedEventLevel === "elevated") {
+    return t("perception.execution.collapsed.primary.eventTiming");
+  }
+
+  const orderflowScore = vm.rings.orderflowScore ?? 0;
+  if (orderflowScore >= ORDERFLOW_HIGH_THRESHOLD) {
+    return t("perception.execution.collapsed.primary.orderflowHigh");
+  }
+  if (orderflowScore <= ORDERFLOW_LOW_THRESHOLD) {
+    return t("perception.execution.collapsed.primary.orderflowLow");
+  }
+
+  const trendScore = vm.rings.trendScore ?? 0;
+  const biasScore = vm.rings.biasScore ?? 0;
+  if (Math.abs(trendScore - biasScore) >= TREND_BIAS_DIVERGENCE_THRESHOLD) {
+    return t("perception.execution.collapsed.primary.confirmation");
+  }
+
+  const signalQualityScore = vm.signalQuality?.score ?? SIGNAL_QUALITY_STANDARD_THRESHOLD;
+  const confidenceScore = vm.rings.confidenceScore ?? 0;
+  if (confidenceScore >= CONFIDENCE_STRONG_THRESHOLD && signalQualityScore >= SIGNAL_QUALITY_STRONG_THRESHOLD) {
+    return t("perception.execution.collapsed.primary.sizeNormalPlus");
+  }
+  if (signalQualityScore >= SIGNAL_QUALITY_STANDARD_THRESHOLD) {
+    return t("perception.execution.collapsed.primary.sizeStandard");
+  }
+  return t("perception.execution.collapsed.primary.sizeReduced");
 }
 
 function buildInvalidationBullet(vm: SetupViewModel, t: ReturnType<typeof useT>): string | null {
