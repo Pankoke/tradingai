@@ -6,9 +6,10 @@ import { useT } from "@/src/lib/i18n/ClientProvider";
 type Props = {
   title: string;
   bullets: string[];
+  debugLine?: string | null;
 };
 
-export function SetupCardExecutionBlock({ title, bullets }: Props): JSX.Element {
+export function SetupCardExecutionBlock({ title, bullets, debugLine }: Props): JSX.Element {
   const t = useT();
 
   return (
@@ -27,6 +28,7 @@ export function SetupCardExecutionBlock({ title, bullets }: Props): JSX.Element 
           </li>
         ))}
       </ul>
+      {debugLine ? <p className="mt-3 text-xs text-slate-500">{debugLine}</p> : null}
     </div>
   );
 }

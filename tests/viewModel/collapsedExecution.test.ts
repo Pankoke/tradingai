@@ -66,7 +66,8 @@ describe("pickCollapsedExecutionPrimaryBullet", () => {
   test("prioritises event timing when event level is elevated/high", () => {
     const vm = makeVm({ meta: { eventLevel: "high" } });
     const result = pickCollapsedExecutionPrimaryBullet(vm, t);
-    expect(result).toBe("perception.execution.collapsed.eventGeneric");
+    expect(result.text).toBe("perception.execution.collapsed.eventGeneric");
+    expect(result.debug.branch).toBe("eventGeneric");
   });
 
   test("uses named event when available", () => {
@@ -75,25 +76,24 @@ describe("pickCollapsedExecutionPrimaryBullet", () => {
       eventContext: { topEvents: [{ title: "CPI" }] } as unknown as SetupViewModel["eventContext"],
     });
     const result = pickCollapsedExecutionPrimaryBullet(vm, t);
-    expect(result).toBe("perception.execution.collapsed.eventNamed");
+    expect(result.text).toContain("CPI");
+    expect(result.debug.branch).toBe("eventNamed");
   });
 
   test("uses orderflow high and low thresholds", () => {
     const high = makeVm({ rings: { orderflowScore: 80 } as SetupViewModel["rings"] });
-    expect(pickCollapsedExecutionPrimaryBullet(high, t)).toBe(
-      "perception.execution.collapsed.primary.orderflowHigh",
-    );
+    const highResult = pickCollapsedExecutionPrimaryBullet(high, t);
+    expect(highResult.debug.branch).toBe("orderflowHigh");
 
     const low = makeVm({ rings: { orderflowScore: 30 } as SetupViewModel["rings"] });
-    expect(pickCollapsedExecutionPrimaryBullet(low, t)).toBe(
-      "perception.execution.collapsed.primary.orderflowLow",
-    );
+    const lowResult = pickCollapsedExecutionPrimaryBullet(low, t);
+    expect(lowResult.debug.branch).toBe("orderflowLow");
   });
 
   test("falls back to confirmation when trend and bias diverge", () => {
     const vm = makeVm({ rings: { trendScore: 90, biasScore: 50 } as SetupViewModel["rings"] });
     const result = pickCollapsedExecutionPrimaryBullet(vm, t);
-    expect(result).toBe("perception.execution.collapsed.primary.confirmation");
+    expect(result.debug.branch).toBe("confirmation");
   });
 
   test("defaults to sizing variants when no other rule matches", () => {
@@ -101,24 +101,38 @@ describe("pickCollapsedExecutionPrimaryBullet", () => {
       rings: { confidenceScore: 75 } as SetupViewModel["rings"],
       signalQuality: { score: 70, reasons: [] },
     });
-    expect(pickCollapsedExecutionPrimaryBullet(strong, t)).toBe(
-      "perception.execution.collapsed.primary.sizeNormalPlus",
-    );
+    expect(pickCollapsedExecutionPrimaryBullet(strong, t).debug.branch).toBe("sizeNormalPlus");
 
     const standard = makeVm({
       rings: { confidenceScore: 55 } as SetupViewModel["rings"],
       signalQuality: { score: 55, reasons: [] },
     });
-    expect(pickCollapsedExecutionPrimaryBullet(standard, t)).toBe(
-      "perception.execution.collapsed.primary.sizeStandard",
-    );
+    expect(pickCollapsedExecutionPrimaryBullet(standard, t).debug.branch).toBe("sizeStandard");
 
     const reduced = makeVm({
       rings: { confidenceScore: 40 } as SetupViewModel["rings"],
       signalQuality: { score: 30, reasons: [] },
     });
-    expect(pickCollapsedExecutionPrimaryBullet(reduced, t)).toBe(
-      "perception.execution.collapsed.primary.sizeReduced",
-    );
+    expect(pickCollapsedExecutionPrimaryBullet(reduced, t).debug.branch).toBe("sizeReduced");
+  });
+
+  test("sanitizes and truncates long event titles", () => {
+    const longTitle = "Very Important Event That Has A Super Long Name That Should Be Trimmed For UI Safety";
+    const vm = makeVm({
+      meta: { eventLevel: "high" },
+      eventContext: { topEvents: [{ title: longTitle }] } as unknown as SetupViewModel["eventContext"],
+    });
+    const result = pickCollapsedExecutionPrimaryBullet(vm, t);
+    expect(result.debug.branch).toBe("eventNamed");
+    expect(result.text.length).toBeLessThanOrEqual(90);
+  });
+
+  test("falls back to generic when event title is empty after sanitization", () => {
+    const vm = makeVm({
+      meta: { eventLevel: "high" },
+      eventContext: { topEvents: [{ title: "   " }] } as unknown as SetupViewModel["eventContext"],
+    });
+    const result = pickCollapsedExecutionPrimaryBullet(vm, t);
+    expect(result.debug.branch).toBe("eventGeneric");
   });
 });
