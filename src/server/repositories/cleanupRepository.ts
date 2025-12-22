@@ -38,7 +38,7 @@ export async function countOldCandles(cutoff: Date): Promise<number> {
     db
       .select({ value: sql<number>`count(*)` })
       .from(candles)
-      .where(sql`${candles.timestamp} < ${cutoff}`),
+      .where(sql`${candles.timestamp} < ${cutoff.toISOString()}`),
   );
 }
 
@@ -47,7 +47,7 @@ export async function countOldBiasSnapshots(cutoff: Date): Promise<number> {
     db
       .select({ value: sql<number>`count(*)` })
       .from(biasSnapshots)
-      .where(sql`${biasSnapshots.createdAt} < ${cutoff}`),
+      .where(sql`${biasSnapshots.createdAt} < ${cutoff.toISOString()}`),
   );
 }
 
@@ -56,7 +56,7 @@ export async function countOldPerceptionSnapshotItems(cutoff: Date): Promise<num
     db
       .select({ value: sql<number>`count(*)` })
       .from(perceptionSnapshotItems)
-      .where(sql`${perceptionSnapshotItems.createdAt} < ${cutoff}`),
+      .where(sql`${perceptionSnapshotItems.createdAt} < ${cutoff.toISOString()}`),
   );
 }
 
@@ -65,13 +65,13 @@ export async function countOldEvents(highImpactCutoff: Date, lowImpactCutoff: Da
     db
       .select({ value: sql<number>`count(*)` })
       .from(events)
-      .where(sql`${events.scheduledAt} < ${highImpactCutoff} AND ${events.impact} >= 3`),
+      .where(sql`${events.scheduledAt} < ${highImpactCutoff.toISOString()} AND ${events.impact} >= 3`),
   );
   const low = await safeCount(() =>
     db
       .select({ value: sql<number>`count(*)` })
       .from(events)
-      .where(sql`${events.scheduledAt} < ${lowImpactCutoff} AND ${events.impact} < 3`),
+      .where(sql`${events.scheduledAt} < ${lowImpactCutoff.toISOString()} AND ${events.impact} < 3`),
   );
   return { high, low };
 }
@@ -81,6 +81,6 @@ export async function countOldAuditRuns(cutoff: Date): Promise<number> {
     db
       .select({ value: sql<number>`count(*)` })
       .from(auditRuns)
-      .where(sql`${auditRuns.createdAt} < ${cutoff}`),
+      .where(sql`${auditRuns.createdAt} < ${cutoff.toISOString()}`),
   );
 }
