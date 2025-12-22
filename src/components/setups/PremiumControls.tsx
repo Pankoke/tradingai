@@ -53,8 +53,10 @@ export function PremiumControls({ currentSort, currentDir, currentFilter, curren
         >
           <option value="confidence">{t("premium.sort.confidence")}</option>
           <option value="sentiment">{t("premium.sort.sentiment")}</option>
-          <option value="timeframe">{t("premium.sort.timeframe")}</option>
           <option value="direction">{t("premium.sort.direction")}</option>
+          <option value="signalQuality">{t("premium.sort.signalQuality")}</option>
+          <option value="rrr">{t("premium.sort.rrr")}</option>
+          <option value="generated">{t("premium.sort.generated")}</option>
         </select>
       </div>
 
@@ -117,6 +119,23 @@ export function PremiumControls({ currentSort, currentDir, currentFilter, curren
               );
             })}
           </div>
+          {assets.length > 8 ? (
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-[var(--text-secondary)]">{t("premium.assets.more")}</label>
+              <select
+                value={assets.slice(8).includes(currentAsset ?? "") ? currentAsset ?? "" : ""}
+                onChange={(e) => toggleAsset(e.target.value || "all")}
+                className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-main)] px-2 py-1 text-xs"
+              >
+                <option value="">{t("premium.assets.selectPlaceholder")}</option>
+                {assets.slice(8).map((symbol) => (
+                  <option key={symbol} value={symbol}>
+                    {symbol}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

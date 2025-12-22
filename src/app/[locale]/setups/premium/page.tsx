@@ -33,11 +33,27 @@ function applyFilter(setups: Setup[], filter: string, asset?: string | null): Se
 function applySort(setups: Setup[], sort: string, dir: string): Setup[] {
   const direction = dir === "asc" ? 1 : -1;
   const cloned = [...setups];
+  const getSignalQualityScore = (s: Setup): number => {
+    const fromField = (s as unknown as { signalQuality?: number }).signalQuality;
+    if (typeof fromField === "number") return fromField;
+    const fromRings = (s.rings as unknown as { confidenceScore?: number })?.confidenceScore;
+    if (typeof fromRings === "number") return fromRings;
+    return 0;
+  };
+  const getRrr = (s: Setup): number => {
+    return s.riskReward?.rrr ?? 0;
+  };
+  const getGeneratedTime = (s: Setup): string => {
+    return s.snapshotCreatedAt ?? (s as unknown as { snapshotTimestamp?: string }).snapshotTimestamp ?? "";
+  };
+
   return cloned.sort((a, b) => {
     if (sort === "confidence") return (a.confidence - b.confidence) * direction;
     if (sort === "sentiment") return (a.sentimentScore - b.sentimentScore) * direction;
-    if (sort === "timeframe") return a.timeframe.localeCompare(b.timeframe) * direction;
     if (sort === "direction") return a.direction.localeCompare(b.direction) * direction;
+    if (sort === "signalQuality") return (getSignalQualityScore(a) - getSignalQualityScore(b)) * direction;
+    if (sort === "rrr") return (getRrr(a) - getRrr(b)) * direction;
+    if (sort === "generated") return getGeneratedTime(a).localeCompare(getGeneratedTime(b)) * direction;
     return (a.confidence - b.confidence) * direction;
   });
 }
@@ -149,7 +165,16 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
   const filtered = applyFilter(setups, filter, assetFilter);
   const sorted = applySort(filtered, sort, dir);
   const allSetups = sorted.map(toHomepageSetup);
-  const availableAssets = Array.from(new Set(setups.map((s) => s.symbol))).sort((a, b) => a.localeCompare(b));
+  const assetCounts = setups.reduce<Record<string, number>>((acc, setup) => {
+    acc[setup.symbol] = (acc[setup.symbol] ?? 0) + 1;
+    return acc;
+  }, {});
+  const availableAssets = Object.entries(assetCounts)
+    .sort((a, b) => {
+      if (b[1] !== a[1]) return b[1] - a[1];
+      return a[0].localeCompare(b[0]);
+    })
+    .map(([symbol]) => symbol);
 
   return (
     <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">

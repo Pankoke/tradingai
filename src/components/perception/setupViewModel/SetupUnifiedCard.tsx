@@ -344,9 +344,10 @@ export function pickCollapsedExecutionPrimaryBullet(vm: SetupViewModel, t: Retur
 
   if (normalizedEventLevel === "highSoon" || normalizedEventLevel === "elevated") {
     const topEvent = vm.eventContext?.topEvents?.[0];
-    if (topEvent?.title || topEvent?.name) {
-      const name = (topEvent.title || topEvent.name || "").trim();
-      return t("perception.execution.collapsed.eventNamed", { event: name });
+    if (topEvent?.title) {
+      const name = (topEvent.title || "").trim();
+      const template = t("perception.execution.collapsed.eventNamed");
+      return template.replace("{event}", name);
     }
     return t("perception.execution.collapsed.eventGeneric");
   }
