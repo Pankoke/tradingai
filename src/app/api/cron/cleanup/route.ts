@@ -64,6 +64,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     cronLogger.error("cleanup dry-run failed", { error: message });
+    console.error("cleanup dry-run failed", message, error);
     await createAuditRun({
       action: "cleanup.dry_run",
       source: "cron",

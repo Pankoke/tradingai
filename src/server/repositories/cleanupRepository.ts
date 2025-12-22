@@ -23,6 +23,9 @@ function isMissingTableError(error: unknown): boolean {
       return true;
     }
   }
+  if (error instanceof Error) {
+    return /relation .* does not exist/i.test(error.message) || error.message.includes("table") && error.message.includes("does not exist");
+  }
   return false;
 }
 
