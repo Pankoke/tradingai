@@ -2,7 +2,6 @@ import React, { Suspense } from "react";
 import type { JSX } from "react";
 import HomepageSetupCard from "@/src/components/homepage/HomepageSetupCard";
 import { PremiumControls } from "@/src/components/setups/PremiumControls";
-import { ProNotice } from "@/src/components/common/ProNotice";
 import { clamp } from "@/src/lib/math";
 import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
 import deMessages from "@/src/messages/de.json";
@@ -17,13 +16,18 @@ type PageProps = {
     sort?: string;
     dir?: string;
     filter?: string;
+    asset?: string;
   }>;
 };
 
-function applyFilter(setups: Setup[], filter: string): Setup[] {
-  if (filter === "long") return setups.filter((s) => s.direction === "Long");
-  if (filter === "short") return setups.filter((s) => s.direction === "Short");
-  return setups;
+function applyFilter(setups: Setup[], filter: string, asset?: string | null): Setup[] {
+  const byDirection =
+    filter === "long" ? setups.filter((s) => s.direction === "Long") : filter === "short" ? setups.filter((s) => s.direction === "Short") : setups;
+  if (asset && asset !== "all") {
+    const match = asset.toLowerCase();
+    return byDirection.filter((s) => s.symbol.toLowerCase() === match);
+  }
+  return byDirection;
 }
 
 function applySort(setups: Setup[], sort: string, dir: string): Setup[] {
@@ -140,20 +144,19 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
   const sort = resolvedSearch?.sort ?? "confidence";
   const dir = resolvedSearch?.dir ?? "desc";
   const filter = resolvedSearch?.filter ?? "all";
+  const assetFilter = resolvedSearch?.asset ?? "all";
 
-  const filtered = applyFilter(setups, filter);
+  const filtered = applyFilter(setups, filter, assetFilter);
   const sorted = applySort(filtered, sort, dir);
   const allSetups = sorted.map(toHomepageSetup);
+  const availableAssets = Array.from(new Set(setups.map((s) => s.symbol))).sort((a, b) => a.localeCompare(b));
 
   return (
     <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
       <div className="mx-auto max-w-6xl space-y-6 px-4 py-8 md:py-10">
         <div className="space-y-3">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Premium Setups</h1>
-          <p className="max-w-2xl text-sm text-[var(--text-secondary)] sm:text-base">{t("premium.info")}</p>
         </div>
-
-        <ProNotice context="setupsPremium" />
 
         <Suspense
           fallback={
@@ -162,7 +165,7 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
             </div>
           }
         >
-          <PremiumControls currentSort={sort} currentDir={dir} currentFilter={filter} />
+          <PremiumControls currentSort={sort} currentDir={dir} currentFilter={filter} currentAsset={assetFilter} assets={availableAssets} />
         </Suspense>
 
         <div className="space-y-8">

@@ -9,19 +9,37 @@ type PremiumControlsProps = {
   currentSort: string;
   currentDir: string;
   currentFilter: string;
+  currentAsset?: string | null;
+  assets: string[];
 };
 
-export function PremiumControls({ currentSort, currentDir, currentFilter }: PremiumControlsProps): JSX.Element {
+export function PremiumControls({ currentSort, currentDir, currentFilter, currentAsset = "all", assets }: PremiumControlsProps): JSX.Element {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const t = useT();
 
-  const updateParam = (key: string, value: string): void => {
+  const updateParam = (key: string, value: string | null): void => {
     const params = new URLSearchParams(searchParams?.toString() ?? "");
-    params.set(key, value);
+    if (value && value.length > 0) {
+      params.set(key, value);
+    } else {
+      params.delete(key);
+    }
     const query = params.toString();
     router.push(query ? `${pathname}?${query}` : pathname);
+  };
+
+  const toggleAsset = (symbol: string): void => {
+    if (!symbol || symbol === "all") {
+      updateParam("asset", null);
+      return;
+    }
+    if (symbol === currentAsset) {
+      updateParam("asset", null);
+      return;
+    }
+    updateParam("asset", symbol);
   };
 
   return (
@@ -64,6 +82,43 @@ export function PremiumControls({ currentSort, currentDir, currentFilter }: Prem
           <option value="short">{t("premium.filter.short")}</option>
         </select>
       </div>
+
+      {assets.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-semibold text-[var(--text-primary)]">{t("premium.assets.quickSelect")}</label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => toggleAsset("all")}
+              className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                !currentAsset || currentAsset === "all"
+                  ? "border-[var(--border-strong)] bg-[var(--bg-main)] text-[var(--text-primary)]"
+                  : "border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]"
+              }`}
+            >
+              {t("premium.assets.all")}
+            </button>
+            {assets.slice(0, 8).map((symbol) => {
+              const active = currentAsset === symbol;
+              return (
+                <button
+                  key={symbol}
+                  type="button"
+                  onClick={() => toggleAsset(symbol)}
+                  className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                    active
+                      ? "border-[var(--border-strong)] bg-[var(--bg-main)] text-[var(--text-primary)]"
+                      : "border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]"
+                  }`}
+                  aria-pressed={active}
+                >
+                  {symbol}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

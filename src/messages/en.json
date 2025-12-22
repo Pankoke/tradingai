@@ -539,6 +539,8 @@
   "premium.filter.all": "All",
   "premium.filter.long": "Long",
   "premium.filter.short": "Short",
+  "premium.assets.quickSelect": "Assets (Quick Select)",
+  "premium.assets.all": "All",
   "perception.engineMeta.title": "Perception Engine status",
   "perception.engineMeta.lastUpdated": "Last updated",
   "perception.engineMeta.version": "Version",
