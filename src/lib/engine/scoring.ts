@@ -2,6 +2,8 @@ import { clamp } from "@/src/lib/math";
 import { setupDefinitions, type SetupDefinition } from "@/src/lib/engine/setupDefinitions";
 import type { SetupRings } from "@/src/lib/engine/rings";
 
+const EVENT_MODIFIER_ENABLED = process.env.EVENT_MODIFIER_ENABLED !== "0";
+
 export type BaseScoreInput = {
   trendStrength?: number;
   biasScore?: number;
@@ -94,15 +96,17 @@ export function computeAggregatedConfidence(totalScore: number, rings: SetupRing
   const weights = {
     totalScore: 0.4,
     bias: 0.2,
-    event: 0.15,
+    event: EVENT_MODIFIER_ENABLED ? 0.05 : 0.15,
     sentiment: 0.15,
     orderflow: 0.1,
   };
 
+  const eventInput = EVENT_MODIFIER_ENABLED ? 50 : rings.event;
+
   const aggregated =
     clamp(Math.round(totalScore), 0, 100) * weights.totalScore +
     rings.bias * weights.bias +
-    rings.event * weights.event +
+    eventInput * weights.event +
     rings.sentiment * weights.sentiment +
     rings.orderflow * weights.orderflow;
 

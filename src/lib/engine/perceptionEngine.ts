@@ -11,6 +11,7 @@ import type { RingMeta, SetupRingMeta } from "@/src/lib/engine/types";
 import { getPerceptionDataMode } from "@/src/lib/config/perceptionDataMode";
 import { computeEventRingV2, buildSetupEventContext } from "@/src/lib/engine/modules/eventRingV2";
 import { applyEventScoring } from "@/src/lib/engine/modules/eventScoring";
+import { buildEventModifier } from "@/src/lib/engine/modules/eventModifier";
 import { isMissingTableError } from "@/src/lib/utils";
 
 const ENGINE_VERSION = "0.1.0";
@@ -30,6 +31,8 @@ const QUALITY_NOTES = {
   noMarketData: "no_market_data",
   aggregate: "meta_aggregate",
 } as const;
+
+const EVENT_MODIFIER_ENABLED = process.env.EVENT_MODIFIER_ENABLED !== "0";
 
 function clampRingScore(value?: number | null, fallback = 50): number {
   if (typeof value !== "number" || Number.isNaN(value)) {
@@ -267,6 +270,7 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
       dataMode,
       fallbackEvents,
     });
+    const eventModifier = buildEventModifier({ context: eventResult.eventContext, now: asOf });
     const biasResult = applyBiasScoring(base, biasSnapshot);
     const sentimentResult = applySentimentScoring(base);
     const sentimentScore = base.sentiment?.score ?? sentimentResult.sentimentScore;
@@ -277,11 +281,15 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
         label: sentimentScore >= 65 ? "bullish" : sentimentScore <= 35 ? "bearish" : "neutral",
         reasons: ["Heuristic sentiment scoring"],
       };
+    const scoringEventScore = EVENT_MODIFIER_ENABLED ? undefined : eventResult.eventScore;
+    const scoringVolatility = EVENT_MODIFIER_ENABLED
+      ? undefined
+      : Math.abs(eventResult.eventScore - biasResult.biasScore);
     const scoreBreakdown = computeSetupScore({
-      trendStrength: eventResult.eventScore,
+      trendStrength: scoringEventScore,
       biasScore: biasResult.biasScore,
       momentum: sentimentScore,
-      volatility: Math.abs(eventResult.eventScore - biasResult.biasScore),
+      volatility: scoringVolatility,
       pattern: base.balanceScore,
     });
     const effectiveOrderflowScore = clampRingScore(
@@ -316,7 +324,7 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
       rings,
     });
     const balanceScore = computeSetupBalanceScore([
-      eventResult.eventScore,
+      EVENT_MODIFIER_ENABLED ? 50 : eventResult.eventScore,
       biasResult.biasScore,
       sentimentScore,
     ]);
@@ -362,6 +370,7 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
         eventContext: eventResult.eventContext ?? null,
         ringAiSummary,
         orderflow: sanitizedOrderflow,
+        eventModifier,
       });
   }
 

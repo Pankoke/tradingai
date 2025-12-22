@@ -127,7 +127,12 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
         )
       ) : null}
 
-      <SetupCardExecutionBlock title={executionContent.title} bullets={bulletsToRender} debugLines={executionDebugLine} />
+      <SetupCardExecutionBlock
+        title={executionContent.title}
+        bullets={bulletsToRender}
+        debugLines={executionDebugLine}
+        eventModifier={vm.eventModifier ?? null}
+      />
 
       <SetupActionCards
         entry={{

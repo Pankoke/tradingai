@@ -7,9 +7,24 @@ type Props = {
   title: string;
   bullets: string[];
   debugLines?: string[] | null;
+  eventModifier?: {
+    classification: "none" | "awareness_only" | "context_relevant" | "execution_critical";
+    primaryEvent?: {
+      title?: string;
+      scheduledAt?: string;
+      impact?: number;
+      minutesToEvent?: number;
+      source?: string;
+      country?: string;
+      currency?: string;
+      category?: string;
+    };
+    rationale?: string[];
+    executionAdjustments?: string[];
+  } | null;
 };
 
-export function SetupCardExecutionBlock({ title, bullets, debugLines }: Props): JSX.Element {
+export function SetupCardExecutionBlock({ title, bullets, debugLines, eventModifier }: Props): JSX.Element {
   const t = useT();
 
   return (
@@ -20,6 +35,7 @@ export function SetupCardExecutionBlock({ title, bullets, debugLines }: Props): 
         </p>
         <p className="text-lg font-semibold text-white">{title}</p>
       </div>
+      {eventModifier ? renderEventModifier(eventModifier) : null}
       <ul className="mt-3 grid gap-2 text-sm text-slate-200 md:grid-cols-2">
         {bullets.map((line) => (
           <li key={line} className="flex items-start gap-2">
@@ -32,6 +48,70 @@ export function SetupCardExecutionBlock({ title, bullets, debugLines }: Props): 
         <div className="mt-3 space-y-1 text-[11px] text-slate-500">
           {debugLines.map((line) => (
             <p key={line}>{line}</p>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function renderEventModifier(modifier: NonNullable<Props["eventModifier"]>): JSX.Element | null {
+  const label =
+    modifier.classification === "execution_critical"
+      ? "Execution-critical"
+      : modifier.classification === "context_relevant"
+        ? "Context relevant"
+        : modifier.classification === "awareness_only"
+          ? "Awareness"
+          : "None";
+
+  const primary = modifier.primaryEvent;
+  const timeText =
+    typeof primary?.minutesToEvent === "number"
+      ? `${primary.minutesToEvent >= 0 ? "in" : ""} ${Math.abs(primary.minutesToEvent)}m`
+      : primary?.scheduledAt
+        ? new Intl.DateTimeFormat("de-DE", {
+            hour: "2-digit",
+            minute: "2-digit",
+            timeZone: "Europe/Berlin",
+          }).format(new Date(primary.scheduledAt))
+        : null;
+  const primaryText = primary
+    ? `${primary.title ?? "Event"}${timeText ? ` (${timeText})` : ""}`
+    : "No upcoming event";
+
+  const adjustments = modifier.executionAdjustments ?? [];
+  const rationale = modifier.rationale ?? [];
+
+  return (
+    <div className="mt-3 rounded-xl border border-slate-800/80 bg-slate-900/80 p-3">
+      <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.22em] text-slate-300">
+        <span className="rounded-full border border-slate-700 px-2 py-0.5 text-[0.65rem] font-semibold">
+          Event-Modifier: {label}
+        </span>
+        {primary?.impact ? (
+          <span className="rounded-full border border-amber-500/40 px-2 py-0.5 text-[0.65rem] text-amber-200">
+            Impact {primary.impact}
+          </span>
+        ) : null}
+      </div>
+      <p className="mt-2 text-sm font-semibold text-slate-100">{primaryText}</p>
+      {rationale.length ? (
+        <ul className="mt-2 space-y-1 text-sm text-slate-300">
+          {rationale.slice(0, 3).map((line) => (
+            <li key={line} className="flex items-start gap-2">
+              <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              <span>{line}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {adjustments.length ? (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {adjustments.slice(0, 2).map((token) => (
+            <span key={token} className="rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-0.5 text-[0.72rem] text-sky-100">
+              {token}
+            </span>
           ))}
         </div>
       ) : null}

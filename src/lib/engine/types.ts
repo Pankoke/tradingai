@@ -273,6 +273,39 @@ const eventContextSchema = z.object({
   topEvents: z.array(eventContextItemSchema).optional().nullable(),
 });
 
+const eventModifierClassificationEnum = z.enum([
+  "none",
+  "awareness_only",
+  "context_relevant",
+  "execution_critical",
+]);
+export type EventModifierClassification = z.infer<typeof eventModifierClassificationEnum>;
+
+const eventModifierPrimarySchema = z.object({
+  title: z.string().optional(),
+  scheduledAt: z.string().optional(),
+  impact: z.number().optional(),
+  minutesToEvent: z.number().optional(),
+  source: z.string().optional(),
+  country: z.string().optional(),
+  currency: z.string().optional(),
+  category: z.string().optional(),
+});
+
+const eventModifierSchema = z.object({
+  classification: eventModifierClassificationEnum,
+  primaryEvent: eventModifierPrimarySchema.optional(),
+  rationale: z.array(z.string()).max(3).optional(),
+  executionAdjustments: z.array(z.string()).max(4).optional(),
+  quality: z
+    .object({
+      usedGlobalFallback: z.boolean().optional(),
+      missingFields: z.array(z.string()).optional(),
+    })
+    .optional(),
+});
+export type EventModifier = z.infer<typeof eventModifierSchema>;
+
 export const setupSchema = z.object({
   id: z.string(),
   assetId: z.string(),
@@ -302,6 +335,7 @@ export const setupSchema = z.object({
   sentiment: sentimentDetailSchema.optional(),
   orderflow: orderflowDetailSchema.optional(),
   eventContext: eventContextSchema.optional().nullable(),
+  eventModifier: eventModifierSchema.optional().nullable(),
 });
 
 export type Setup = z.infer<typeof setupSchema>;

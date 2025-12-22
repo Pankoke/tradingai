@@ -32,6 +32,7 @@ export type SetupViewModel = {
   type?: Setup["type"] | null;
   rings: Setup["rings"];
   eventContext?: Setup["eventContext"] | null;
+  eventModifier?: Setup["eventModifier"] | null;
   riskReward?: RiskRewardSummary | null;
   ringAiSummary?: Setup["ringAiSummary"] | null;
   sentiment?: Setup["sentiment"] | null;
