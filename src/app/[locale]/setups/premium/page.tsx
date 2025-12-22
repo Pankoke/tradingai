@@ -2,6 +2,7 @@ import React, { Suspense } from "react";
 import type { JSX } from "react";
 import HomepageSetupCard from "@/src/components/homepage/HomepageSetupCard";
 import { PremiumControls } from "@/src/components/setups/PremiumControls";
+import { applyFilter, applySort, buildAssetOptions, type SortDir, type SortKey } from "@/src/components/setups/premiumHelpers";
 import { clamp } from "@/src/lib/math";
 import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
 import deMessages from "@/src/messages/de.json";
@@ -19,44 +20,6 @@ type PageProps = {
     asset?: string;
   }>;
 };
-
-function applyFilter(setups: Setup[], filter: string, asset?: string | null): Setup[] {
-  const byDirection =
-    filter === "long" ? setups.filter((s) => s.direction === "Long") : filter === "short" ? setups.filter((s) => s.direction === "Short") : setups;
-  if (asset && asset !== "all") {
-    const match = asset.toLowerCase();
-    return byDirection.filter((s) => s.symbol.toLowerCase() === match);
-  }
-  return byDirection;
-}
-
-function applySort(setups: Setup[], sort: string, dir: string): Setup[] {
-  const direction = dir === "asc" ? 1 : -1;
-  const cloned = [...setups];
-  const getSignalQualityScore = (s: Setup): number => {
-    const fromField = (s as unknown as { signalQuality?: number }).signalQuality;
-    if (typeof fromField === "number") return fromField;
-    const fromRings = (s.rings as unknown as { confidenceScore?: number })?.confidenceScore;
-    if (typeof fromRings === "number") return fromRings;
-    return 0;
-  };
-  const getRrr = (s: Setup): number => {
-    return s.riskReward?.rrr ?? 0;
-  };
-  const getGeneratedTime = (s: Setup): string => {
-    return s.snapshotCreatedAt ?? (s as unknown as { snapshotTimestamp?: string }).snapshotTimestamp ?? "";
-  };
-
-  return cloned.sort((a, b) => {
-    if (sort === "confidence") return (a.confidence - b.confidence) * direction;
-    if (sort === "sentiment") return (a.sentimentScore - b.sentimentScore) * direction;
-    if (sort === "direction") return a.direction.localeCompare(b.direction) * direction;
-    if (sort === "signalQuality") return (getSignalQualityScore(a) - getSignalQualityScore(b)) * direction;
-    if (sort === "rrr") return (getRrr(a) - getRrr(b)) * direction;
-    if (sort === "generated") return getGeneratedTime(a).localeCompare(getGeneratedTime(b)) * direction;
-    return (a.confidence - b.confidence) * direction;
-  });
-}
 
 function getMessages(locale: string): Record<string, string> {
   if (locale === "de") return deMessages as Record<string, string>;
@@ -162,19 +125,15 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
   const filter = resolvedSearch?.filter ?? "all";
   const assetFilter = resolvedSearch?.asset ?? "all";
 
+  const sortKey: SortKey = ["confidence", "sentiment", "direction", "signalQuality", "rrr", "generated"].includes(sort ?? "")
+    ? (sort as SortKey)
+    : "confidence";
+  const sortDir: SortDir = dir === "asc" ? "asc" : "desc";
+
   const filtered = applyFilter(setups, filter, assetFilter);
-  const sorted = applySort(filtered, sort, dir);
+  const sorted = applySort(filtered, sortKey, sortDir);
   const allSetups = sorted.map(toHomepageSetup);
-  const assetCounts = setups.reduce<Record<string, number>>((acc, setup) => {
-    acc[setup.symbol] = (acc[setup.symbol] ?? 0) + 1;
-    return acc;
-  }, {});
-  const availableAssets = Object.entries(assetCounts)
-    .sort((a, b) => {
-      if (b[1] !== a[1]) return b[1] - a[1];
-      return a[0].localeCompare(b[0]);
-    })
-    .map(([symbol]) => symbol);
+  const assetOptions = buildAssetOptions(setups);
 
   return (
     <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
@@ -190,7 +149,13 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
             </div>
           }
         >
-          <PremiumControls currentSort={sort} currentDir={dir} currentFilter={filter} currentAsset={assetFilter} assets={availableAssets} />
+          <PremiumControls
+            currentSort={sort}
+            currentDir={dir}
+            currentFilter={filter}
+            currentAsset={assetFilter}
+            assets={assetOptions}
+          />
         </Suspense>
 
         <div className="space-y-8">

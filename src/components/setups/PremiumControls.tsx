@@ -4,13 +4,14 @@ import React from "react";
 import type { JSX } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/src/lib/i18n/ClientProvider";
+import type { AssetOption } from "@/src/components/setups/premiumHelpers";
 
 type PremiumControlsProps = {
   currentSort: string;
   currentDir: string;
   currentFilter: string;
   currentAsset?: string | null;
-  assets: string[];
+  assets: AssetOption[];
 };
 
 export function PremiumControls({ currentSort, currentDir, currentFilter, currentAsset = "all", assets }: PremiumControlsProps): JSX.Element {
@@ -100,7 +101,7 @@ export function PremiumControls({ currentSort, currentDir, currentFilter, curren
             >
               {t("premium.assets.all")}
             </button>
-            {assets.slice(0, 8).map((symbol) => {
+            {assets.map(({ symbol, display }) => {
               const active = currentAsset === symbol;
               return (
                 <button
@@ -112,30 +113,14 @@ export function PremiumControls({ currentSort, currentDir, currentFilter, curren
                       ? "border-[var(--border-strong)] bg-[var(--bg-main)] text-[var(--text-primary)]"
                       : "border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]"
                   }`}
+                  title={symbol}
                   aria-pressed={active}
                 >
-                  {symbol}
+                  {display}
                 </button>
               );
             })}
           </div>
-          {assets.length > 8 ? (
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-[var(--text-secondary)]">{t("premium.assets.more")}</label>
-              <select
-                value={assets.slice(8).includes(currentAsset ?? "") ? currentAsset ?? "" : ""}
-                onChange={(e) => toggleAsset(e.target.value || "all")}
-                className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-main)] px-2 py-1 text-xs"
-              >
-                <option value="">{t("premium.assets.selectPlaceholder")}</option>
-                {assets.slice(8).map((symbol) => (
-                  <option key={symbol} value={symbol}>
-                    {symbol}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
         </div>
       ) : null}
     </div>

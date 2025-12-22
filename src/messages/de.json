@@ -538,8 +538,6 @@
   "premium.filter.short": "Short",
   "premium.assets.quickSelect": "Assets (Schnellauswahl)",
   "premium.assets.all": "Alle",
-  "premium.assets.more": "Mehr",
-  "premium.assets.selectPlaceholder": "Asset wählen",
   "perception.engineMeta.title": "Perception Engine status",
   "perception.engineMeta.lastUpdated": "Last updated",
   "perception.engineMeta.version": "Version",
