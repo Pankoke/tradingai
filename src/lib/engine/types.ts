@@ -262,6 +262,8 @@ const eventContextItemSchema = z.object({
   source: z.string().optional(),
   impact: z.number().optional(),
   timeToEventMinutes: z.number().optional(),
+  country: z.string().optional(),
+  currency: z.string().optional(),
 });
 
 const eventContextSchema = z.object({

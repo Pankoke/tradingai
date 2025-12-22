@@ -27,6 +27,9 @@ type Props = {
 export function SetupCardExecutionBlock({ title, bullets, debugLines, eventModifier }: Props): JSX.Element {
   const t = useT();
 
+  const hasModifier =
+    eventModifier && eventModifier.classification && eventModifier.classification !== "none";
+
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-[inset_0_0_10px_rgba(0,0,0,0.25)]">
       <div className="flex flex-col gap-1">
@@ -35,7 +38,7 @@ export function SetupCardExecutionBlock({ title, bullets, debugLines, eventModif
         </p>
         <p className="text-lg font-semibold text-white">{title}</p>
       </div>
-      {eventModifier ? renderEventModifier(eventModifier) : null}
+      {hasModifier ? renderEventModifier(eventModifier as NonNullable<Props["eventModifier"]>) : null}
       <ul className="mt-3 grid gap-2 text-sm text-slate-200 md:grid-cols-2">
         {bullets.map((line) => (
           <li key={line} className="flex items-start gap-2">
@@ -83,6 +86,10 @@ function renderEventModifier(modifier: NonNullable<Props["eventModifier"]>): JSX
   const adjustments = modifier.executionAdjustments ?? [];
   const rationale = modifier.rationale ?? [];
 
+  if (modifier.classification === "none") {
+    return null;
+  }
+
   return (
     <div className="mt-3 rounded-xl border border-slate-800/80 bg-slate-900/80 p-3">
       <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.22em] text-slate-300">
@@ -96,7 +103,7 @@ function renderEventModifier(modifier: NonNullable<Props["eventModifier"]>): JSX
         ) : null}
       </div>
       <p className="mt-2 text-sm font-semibold text-slate-100">{primaryText}</p>
-      {rationale.length ? (
+      {modifier.classification !== "awareness_only" && rationale.length ? (
         <ul className="mt-2 space-y-1 text-sm text-slate-300">
           {rationale.slice(0, 3).map((line) => (
             <li key={line} className="flex items-start gap-2">
@@ -106,7 +113,7 @@ function renderEventModifier(modifier: NonNullable<Props["eventModifier"]>): JSX
           ))}
         </ul>
       ) : null}
-      {adjustments.length ? (
+      {modifier.classification !== "awareness_only" && adjustments.length ? (
         <div className="mt-2 flex flex-wrap gap-2">
           {adjustments.slice(0, 2).map((token) => (
             <span key={token} className="rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-0.5 text-[0.72rem] text-sky-100">

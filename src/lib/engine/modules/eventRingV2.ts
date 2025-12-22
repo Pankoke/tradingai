@@ -228,6 +228,7 @@ export function buildSetupEventContext(context: EventRingContext): Setup["eventC
             source: "jb-news",
             impact: event.impact,
             timeToEventMinutes: event.timeToEventMinutes,
+            country: (event as { country?: string | null }).country ?? undefined,
           }))
         : [],
   };
