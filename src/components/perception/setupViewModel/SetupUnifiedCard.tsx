@@ -290,6 +290,9 @@ function buildExecutionContent(vm: SetupViewModel, t: ReturnType<typeof useT>): 
   const eventLevel = eventScore >= 70 ? "highSoon" : eventScore >= 45 ? "elevated" : "calm";
   const signalQuality = vm.signalQuality?.score ?? 0;
   const confidence = vm.rings.confidenceScore ?? 0;
+  const mergedEventInsights = analyzeEventContext(vm.eventContext ?? null) as EventContextInsights | null;
+  const mergedPrimaryEvent = pickPrimaryEventCandidate(vm.eventContext ?? null) as PrimaryEventCandidate | null;
+  const eventTimingHint = mergedEventInsights ? deriveEventTimingHint(mergedEventInsights, mergedPrimaryEvent, t) : null;
 
   // Title selection: event-driven overrides, then strong alignment, then balanced/cautious.
   const title =
@@ -300,10 +303,6 @@ function buildExecutionContent(vm: SetupViewModel, t: ReturnType<typeof useT>): 
         : signalQuality >= 50
           ? t("perception.execution.title.balanced")
           : t("perception.execution.title.cautious");
-
-  const mergedEventInsights = analyzeEventContext(vm.eventContext ?? null) as EventContextInsights | null;
-  const mergedPrimaryEvent = pickPrimaryEventCandidate(vm.eventContext ?? null) as PrimaryEventCandidate | null;
-  const eventTimingHint = mergedEventInsights ? deriveEventTimingHint(mergedEventInsights, mergedPrimaryEvent, t) : null;
 
   // Bullets A/B chosen from templates, C always invalidation.
   const bullets: string[] = [];
@@ -344,7 +343,12 @@ export function pickCollapsedExecutionPrimaryBullet(vm: SetupViewModel, t: Retur
               : "calm";
 
   if (normalizedEventLevel === "highSoon" || normalizedEventLevel === "elevated") {
-    return t("perception.execution.collapsed.primary.eventTiming");
+    const topEvent = vm.eventContext?.topEvents?.[0];
+    if (topEvent?.title || topEvent?.name) {
+      const name = (topEvent.title || topEvent.name || "").trim();
+      return t("perception.execution.collapsed.eventNamed", { event: name });
+    }
+    return t("perception.execution.collapsed.eventGeneric");
   }
 
   const orderflowScore = vm.rings.orderflowScore ?? 0;

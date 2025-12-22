@@ -958,6 +958,8 @@
   "perception.execution.bulletB.balanced": "Enter on confirmation, not blindly into the zone.",
   "perception.execution.bulletA.cautious": "Mixed signals – reduce position size.",
   "perception.execution.bulletB.cautious": "No event-driven timing needed - focus on structure and flow.",
+  "perception.execution.collapsed.eventNamed": "{event} (high impact) — wait for post-event stabilization; avoid the first impulse.",
+  "perception.execution.collapsed.eventGeneric": "High-impact macro window — wait for reaction/confirmation; avoid first impulse.",
   "perception.execution.collapsed.primary.eventTiming": "Event-driven context — wait for reaction/confirmation, avoid the first move.",
   "perception.execution.collapsed.primary.orderflowHigh": "Strong orderflow — momentum/flow can be your trigger.",
   "perception.execution.collapsed.primary.orderflowLow": "Weak orderflow — low impulse, stay conservative.",

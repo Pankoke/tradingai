@@ -66,7 +66,16 @@ describe("pickCollapsedExecutionPrimaryBullet", () => {
   test("prioritises event timing when event level is elevated/high", () => {
     const vm = makeVm({ meta: { eventLevel: "high" } });
     const result = pickCollapsedExecutionPrimaryBullet(vm, t);
-    expect(result).toBe("perception.execution.collapsed.primary.eventTiming");
+    expect(result).toBe("perception.execution.collapsed.eventGeneric");
+  });
+
+  test("uses named event when available", () => {
+    const vm = makeVm({
+      meta: { eventLevel: "high" },
+      eventContext: { topEvents: [{ title: "CPI" }] } as unknown as SetupViewModel["eventContext"],
+    });
+    const result = pickCollapsedExecutionPrimaryBullet(vm, t);
+    expect(result).toBe("perception.execution.collapsed.eventNamed");
   });
 
   test("uses orderflow high and low thresholds", () => {
