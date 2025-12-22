@@ -2,10 +2,12 @@ name: Bias Snapshot Sync
 
 on:
   schedule:
-    - cron: "0 7 * * *"
-    - cron: "0 12 * * *"
-    - cron: "0 20 * * *"
+    - cron: "45 23,5,11,17 * * *"
   workflow_dispatch:
+
+concurrency:
+  group: cron-heavy-jobs
+  cancel-in-progress: false
 
 jobs:
   call-bias-sync:

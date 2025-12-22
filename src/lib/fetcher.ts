@@ -20,7 +20,10 @@ const errorResponseSchema = z.object({
 
 export async function fetcher<T>(url: string, schema: ZodSchema<T>): Promise<T> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timeoutId = setTimeout(
+    () => controller.abort(new DOMException("Request timed out", "TimeoutError")),
+    TIMEOUT_MS,
+  );
 
   try {
     const response = await fetch(url, { signal: controller.signal });
@@ -48,6 +51,13 @@ export async function fetcher<T>(url: string, schema: ZodSchema<T>): Promise<T> 
       })
       .join("; ");
     throw new Error(`Response validation failed: ${message}`);
+  } catch (error) {
+    const isAbort =
+      (error as { name?: string })?.name === "AbortError" || (error as { code?: string })?.code === "ABORT_ERR";
+    if (isAbort) {
+      throw new Error(`Request aborted after ${TIMEOUT_MS}ms`);
+    }
+    throw error;
   } finally {
     clearTimeout(timeoutId);
   }

@@ -2,8 +2,12 @@ name: Daily Marketdata Sync
 
 on:
   schedule:
-    - cron: "0 5 * * *" # daily at 05:00 UTC
+    - cron: "15 23,5,11,17 * * *"
   workflow_dispatch: {}
+
+concurrency:
+  group: cron-heavy-jobs
+  cancel-in-progress: false
 
 jobs:
   marketdata-sync:

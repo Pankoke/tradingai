@@ -3,11 +3,13 @@ name: Perception Snapshot Cron
 on:
   # GitHub-Zeit ist immer UTC
   schedule:
-    - cron: "0 8 * * *"   # 08:00 UTC
-    - cron: "0 13 * * *"  # 13:00 UTC
-    - cron: "0 21 * * *"  # 21:00 UTC
+    - cron: "0 0,6,12,18 * * *"
   # Manuelles Auslösen zum Testen möglich
   workflow_dispatch:
+
+concurrency:
+  group: cron-heavy-jobs
+  cancel-in-progress: false
 
 jobs:
   call-perception-endpoint:
