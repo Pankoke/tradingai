@@ -1,0 +1,31 @@
+name: Cleanup Dry Run Cron
+
+on:
+  schedule:
+    - cron: "30 1 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: cron-heavy-jobs
+  cancel-in-progress: false
+
+jobs:
+  cleanup-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call cleanup cron
+        env:
+          CLEANUP_CRON_URL: ${{ secrets.CLEANUP_CRON_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CLEANUP_CRON_URL" ]; then
+            echo "Missing CLEANUP_CRON_URL" >&2
+            exit 1
+          fi
+          if [ -z "$CRON_SECRET" ]; then
+            echo "Missing CRON_SECRET" >&2
+            exit 1
+          fi
+          curl -sS -m 360 -X POST "$CLEANUP_CRON_URL" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            --fail
