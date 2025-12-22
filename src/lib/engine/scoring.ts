@@ -1,8 +1,7 @@
 import { clamp } from "@/src/lib/math";
 import { setupDefinitions, type SetupDefinition } from "@/src/lib/engine/setupDefinitions";
 import type { SetupRings } from "@/src/lib/engine/rings";
-
-const EVENT_MODIFIER_ENABLED = process.env.EVENT_MODIFIER_ENABLED !== "0";
+import { isEventModifierEnabled } from "@/src/lib/config/eventModifier";
 
 export type BaseScoreInput = {
   trendStrength?: number;
@@ -93,10 +92,11 @@ function getDefinition(setupId: string): SetupDefinition | undefined {
 }
 
 export function computeAggregatedConfidence(totalScore: number, rings: SetupRings): number {
+  const EVENT_MODIFIER_ENABLED = isEventModifierEnabled();
   const weights = {
     totalScore: 0.4,
     bias: 0.2,
-    event: EVENT_MODIFIER_ENABLED ? 0.05 : 0.15,
+    event: EVENT_MODIFIER_ENABLED ? 0 : 0.15,
     sentiment: 0.15,
     orderflow: 0.1,
   };

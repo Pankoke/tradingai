@@ -19,6 +19,7 @@ import {
 } from "@/src/components/perception/eventContextInsights";
 import { deriveEventTimingHint } from "@/src/components/perception/eventExecutionHelpers";
 import type { Setup } from "@/src/lib/engine/types";
+import { isEventModifierEnabledClient } from "@/src/lib/config/eventModifier";
 
 type Props = {
   vm: SetupViewModel;
@@ -29,6 +30,7 @@ type Props = {
 
 export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOriginal }: Props): JSX.Element {
   const t = useT();
+  const modifierEnabled = isEventModifierEnabledClient();
   const [activeRing, setActiveRing] = useState<"trend" | "event" | "bias" | "sentiment" | "orderflow">("trend");
   const [expanded, setExpanded] = useState(mode === "sotd" ? true : defaultExpanded);
 
@@ -41,8 +43,11 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
   const compactMetrics = !expanded && mode === "list";
   const eventInsights = useMemo(() => analyzeEventContext(eventContext), [eventContext]);
   const primaryEventCandidate = useMemo(() => pickPrimaryEventCandidate(eventContext), [eventContext]);
-  const executionContent = useMemo(() => buildExecutionContent(vm, t), [vm, t]);
-  const primaryCollapsed = useMemo(() => pickCollapsedExecutionPrimaryBullet(vm, t), [vm, t]);
+  const executionContent = useMemo(() => buildExecutionContent(vm, t, modifierEnabled), [vm, t, modifierEnabled]);
+  const primaryCollapsed = useMemo(
+    () => pickCollapsedExecutionPrimaryBullet(vm, t, modifierEnabled),
+    [vm, t, modifierEnabled],
+  );
   const collapsedBullets = useMemo(() => {
     const invalidation = buildInvalidationBullet(vm, t);
     return [primaryCollapsed.text, invalidation].filter((line): line is string => Boolean(line));
@@ -97,7 +102,12 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
       {expanded ? (
         <div className="grid gap-3 md:grid-cols-2">
           <SignalQualityCard signalQuality={signalQuality} palette={signalPalette} />
-          <ConfidenceCard confidenceScore={confidenceScore} palette={confidencePalette} rings={vm.rings} />
+          <ConfidenceCard
+            confidenceScore={confidenceScore}
+            palette={confidencePalette}
+            rings={vm.rings}
+            modifierEnabled={modifierEnabled}
+          />
         </div>
       ) : compactMetrics ? (
         <div className="grid gap-3 md:grid-cols-2">
@@ -108,7 +118,12 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
 
       {expanded ? (
         <div className="space-y-3 rounded-3xl border border-slate-800 bg-slate-900/70 p-5 shadow-[0_10px_40px_rgba(2,6,23,0.45)]">
-          <SetupCardRingsBlock setup={vm} activeRing={activeRing} onActiveRingChange={setActiveRing} />
+          <SetupCardRingsBlock
+            setup={vm}
+            activeRing={activeRing}
+            onActiveRingChange={setActiveRing}
+            hideEventRing={modifierEnabled}
+          />
           {showInsightPanel ? (
             <div className="space-y-3 border-t border-slate-800 pt-4">
               {renderInsightContent()}
@@ -117,15 +132,15 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
         </div>
       ) : null}
 
-      {expanded ? (
-        eventContext ? (
-          <SetupCardEventContextBlock setup={vm} />
-        ) : (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-sm text-slate-200">
-            {t("perception.eventContext.none")}
-          </div>
-        )
-      ) : null}
+      {expanded && !modifierEnabled
+        ? eventContext
+          ? <SetupCardEventContextBlock setup={vm} />
+          : (
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-sm text-slate-200">
+              {t("perception.eventContext.none")}
+            </div>
+          )
+        : null}
 
       <SetupCardExecutionBlock
         title={executionContent.title}
@@ -187,6 +202,7 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
         onActiveRingChange={setActiveRing}
         variant="full"
         showTabButtons={false}
+        hideEventTab={modifierEnabled}
         showSignalQualityInline={false}
         frameClassName={null}
       />
@@ -242,14 +258,16 @@ function ConfidenceCard({
   confidenceScore,
   palette,
   rings,
+  modifierEnabled,
 }: {
   confidenceScore: number;
   palette: ReturnType<typeof getConfidenceGaugePalette>;
   rings: SetupViewModel["rings"];
+  modifierEnabled: boolean;
 }): JSX.Element {
   const t = useT();
   const consistencyLevel = confidenceScore >= 60 ? "high" : confidenceScore >= 45 ? "medium" : "low";
-  const eventLevel = (rings.eventScore ?? 0) >= 70 ? "high" : (rings.eventScore ?? 0) >= 40 ? "medium" : "low";
+  const eventLevel = modifierEnabled ? "low" : (rings.eventScore ?? 0) >= 70 ? "high" : (rings.eventScore ?? 0) >= 40 ? "medium" : "low";
   const bullets = [
     t(`perception.confidence.bullets.consistency.${consistencyLevel}`),
     t(`perception.confidence.bullets.eventRisk.${eventLevel}`),
@@ -310,10 +328,10 @@ const CONFIDENCE_STRONG_THRESHOLD = 70;
 const SIGNAL_QUALITY_STRONG_THRESHOLD = 65;
 const SIGNAL_QUALITY_STANDARD_THRESHOLD = 50;
 
-function buildExecutionContent(vm: SetupViewModel, t: ReturnType<typeof useT>): { title: string; bullets: string[] } {
+function buildExecutionContent(vm: SetupViewModel, t: ReturnType<typeof useT>, modifierEnabled: boolean): { title: string; bullets: string[] } {
   const rings = vm.rings;
-  const eventScore = rings.eventScore ?? 0;
-  const eventLevel = eventScore >= 70 ? "highSoon" : eventScore >= 45 ? "elevated" : "calm";
+  const eventScore = modifierEnabled ? 0 : rings.eventScore ?? 0;
+  const eventLevel = modifierEnabled ? "calm" : eventScore >= 70 ? "highSoon" : eventScore >= 45 ? "elevated" : "calm";
   const signalQuality = vm.signalQuality?.score ?? 0;
   const confidence = vm.rings.confidenceScore ?? 0;
   const mergedEventInsights = analyzeEventContext(vm.eventContext ?? null) as EventContextInsights | null;
@@ -444,12 +462,24 @@ function sanitizeEventTitle(
 }
 
 
-export function pickCollapsedExecutionPrimaryBullet(vm: SetupViewModel, t: ReturnType<typeof useT>): ExecutionPrimaryResult {
+export function pickCollapsedExecutionPrimaryBullet(
+  vm: SetupViewModel,
+  t: ReturnType<typeof useT>,
+  modifierEnabled: boolean,
+): ExecutionPrimaryResult {
   const eventLevelFromMeta = vm.meta.eventLevel;
-  const eventScore = vm.rings.eventScore ?? 0;
-  const execEventLevel = eventScore >= 70 ? "highSoon" : eventScore >= 45 ? "elevated" : "calm";
+  const eventScore = modifierEnabled ? 0 : vm.rings.eventScore ?? 0;
+  const execEventLevel = modifierEnabled ? "calm" : eventScore >= 70 ? "highSoon" : eventScore >= 45 ? "elevated" : "calm";
   const normalizedMetaEventLevel =
-    eventLevelFromMeta === "high" ? "highSoon" : eventLevelFromMeta === "medium" ? "elevated" : eventLevelFromMeta === "low" ? "calm" : null;
+    modifierEnabled
+      ? null
+      : eventLevelFromMeta === "high"
+        ? "highSoon"
+        : eventLevelFromMeta === "medium"
+          ? "elevated"
+          : eventLevelFromMeta === "low"
+            ? "calm"
+            : null;
 
   const topEvent = vm.eventContext?.topEvents?.[0];
   const titleSource = topEvent

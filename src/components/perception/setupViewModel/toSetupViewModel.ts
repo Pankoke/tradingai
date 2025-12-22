@@ -4,6 +4,7 @@ import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import type { PricePoint, PriceRange, SetupMeta, SetupSource, SetupViewModel } from "./types";
 import { computeSignalQuality, type SignalQuality } from "@/src/lib/engine/signalQuality";
 import type { RiskRewardSummary } from "@/src/lib/engine/types";
+import { isEventModifierEnabledClient } from "@/src/lib/config/eventModifier";
 
 function isHomepageSetup(input: SetupSource): input is HomepageSetup {
   if ("weakSignal" in input || "eventLevel" in input) {
@@ -83,7 +84,8 @@ function mapSetup(setup: Setup, opts?: { generatedAt?: string | null }): SetupVi
   const entry = normalizeRangeFromString(setup.entryZone ?? null);
   const stop = normalizePointFromString(setup.stopLoss ?? null);
   const tp = normalizePointFromString(setup.takeProfit ?? null);
-  const eventLevel = deriveEventLevelFromScore(setup.rings?.eventScore);
+  const modifierEnabled = isEventModifierEnabledClient();
+  const eventLevel = modifierEnabled ? null : deriveEventLevelFromScore(setup.rings?.eventScore);
   const signalQuality = computeSignalQuality(setup);
   const meta: SetupMeta = {
     snapshotId: setup.snapshotId ?? null,
@@ -182,6 +184,7 @@ function deriveRiskReward(entry: PriceRange, stop: PricePoint, tp: PricePoint): 
 
 function deriveSignalQualityFromRings(rings: Setup["rings"]): SignalQuality | null {
   if (!rings) return null;
+  const modifierEnabled = isEventModifierEnabledClient();
   const clampScore = (v?: number | null): number | null =>
     typeof v === "number" && Number.isFinite(v) ? clamp(Math.round(v), 0, 100) : null;
   const trend = clampScore(rings.trendScore);
@@ -189,7 +192,7 @@ function deriveSignalQualityFromRings(rings: Setup["rings"]): SignalQuality | nu
   const sentiment = clampScore(rings.sentimentScore);
   const orderflow = clampScore(rings.orderflowScore);
   const confidence = clampScore(rings.confidenceScore);
-  const eventScore = clampScore(rings.eventScore);
+  const eventScore = modifierEnabled ? null : clampScore(rings.eventScore);
 
   const inputs = [trend, bias, sentiment, orderflow, confidence].filter((v): v is number => v !== null);
   const base = inputs.length ? inputs.reduce((s, v) => s + v, 0) / inputs.length : 50;

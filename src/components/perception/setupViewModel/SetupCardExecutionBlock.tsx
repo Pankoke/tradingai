@@ -1,6 +1,7 @@
 "use client";
 
 import type { JSX } from "react";
+import { useState } from "react";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 
 type Props = {
@@ -26,6 +27,7 @@ type Props = {
 
 export function SetupCardExecutionBlock({ title, bullets, debugLines, eventModifier }: Props): JSX.Element {
   const t = useT();
+  const [showDetails, setShowDetails] = useState(false);
 
   const hasModifier =
     eventModifier && eventModifier.classification && eventModifier.classification !== "none";
@@ -38,7 +40,9 @@ export function SetupCardExecutionBlock({ title, bullets, debugLines, eventModif
         </p>
         <p className="text-lg font-semibold text-white">{title}</p>
       </div>
-      {hasModifier ? renderEventModifier(eventModifier as NonNullable<Props["eventModifier"]>) : null}
+      {hasModifier
+        ? renderEventModifier(eventModifier as NonNullable<Props["eventModifier"]>, showDetails, () => setShowDetails((prev) => !prev))
+        : null}
       <ul className="mt-3 grid gap-2 text-sm text-slate-200 md:grid-cols-2">
         {bullets.map((line) => (
           <li key={line} className="flex items-start gap-2">
@@ -58,7 +62,11 @@ export function SetupCardExecutionBlock({ title, bullets, debugLines, eventModif
   );
 }
 
-function renderEventModifier(modifier: NonNullable<Props["eventModifier"]>): JSX.Element | null {
+function renderEventModifier(
+  modifier: NonNullable<Props["eventModifier"]>,
+  showDetails: boolean,
+  onToggleDetails: () => void,
+): JSX.Element | null {
   const label =
     modifier.classification === "execution_critical"
       ? "Execution-critical"
@@ -103,7 +111,16 @@ function renderEventModifier(modifier: NonNullable<Props["eventModifier"]>): JSX
         ) : null}
       </div>
       <p className="mt-2 text-sm font-semibold text-slate-100">{primaryText}</p>
-      {modifier.classification !== "awareness_only" && rationale.length ? (
+      {modifier.classification !== "awareness_only" ? (
+        <button
+          type="button"
+          className="mt-2 text-xs text-sky-200 underline decoration-dotted decoration-sky-400/70 underline-offset-4"
+          onClick={onToggleDetails}
+        >
+          {showDetails ? "Details verbergen" : "Details anzeigen"}
+        </button>
+      ) : null}
+      {showDetails && modifier.classification !== "awareness_only" && rationale.length ? (
         <ul className="mt-2 space-y-1 text-sm text-slate-300">
           {rationale.slice(0, 3).map((line) => (
             <li key={line} className="flex items-start gap-2">
@@ -113,7 +130,7 @@ function renderEventModifier(modifier: NonNullable<Props["eventModifier"]>): JSX
           ))}
         </ul>
       ) : null}
-      {modifier.classification !== "awareness_only" && adjustments.length ? (
+      {showDetails && modifier.classification !== "awareness_only" && adjustments.length ? (
         <div className="mt-2 flex flex-wrap gap-2">
           {adjustments.slice(0, 2).map((token) => (
             <span key={token} className="rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-0.5 text-[0.72rem] text-sky-100">

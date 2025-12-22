@@ -9,10 +9,13 @@ import { computeRingsForSetup, createDefaultRings } from "@/src/lib/engine/rings
 import { buildRingAiSummaryForSetup } from "@/src/lib/engine/modules/ringAiSummary";
 import type { RingMeta, SetupRingMeta } from "@/src/lib/engine/types";
 import { getPerceptionDataMode } from "@/src/lib/config/perceptionDataMode";
-import { computeEventRingV2, buildSetupEventContext } from "@/src/lib/engine/modules/eventRingV2";
+import { computeEventRingV2, buildSetupEventContext, resolveEventRingWindow } from "@/src/lib/engine/modules/eventRingV2";
 import { applyEventScoring } from "@/src/lib/engine/modules/eventScoring";
 import { buildEventModifier } from "@/src/lib/engine/modules/eventModifier";
 import { isMissingTableError } from "@/src/lib/utils";
+import { isEventModifierEnabled } from "@/src/lib/config/eventModifier";
+import { logger } from "@/src/lib/logger";
+import { getEventsInRange } from "@/src/server/repositories/eventRepository";
 
 const ENGINE_VERSION = "0.1.0";
 const dataSource = createPerceptionDataSource();
@@ -32,7 +35,7 @@ const QUALITY_NOTES = {
   aggregate: "meta_aggregate",
 } as const;
 
-const EVENT_MODIFIER_ENABLED = process.env.EVENT_MODIFIER_ENABLED !== "0";
+const EVENT_MODIFIER_ENABLED = isEventModifierEnabled();
 
 function clampRingScore(value?: number | null, fallback = 50): number {
   if (typeof value !== "number" || Number.isNaN(value)) {
@@ -158,6 +161,41 @@ export async function resolveEventRingForSetup(params: {
   dataMode: "live" | "mock";
   fallbackEvents?: BiasEvent[];
 }): Promise<EventRingResolution> {
+  if (EVENT_MODIFIER_ENABLED && params.dataMode === "live") {
+    const window = resolveEventRingWindow(params.setup, params.asOf);
+    const rows = await getEventsInRange({ from: window.windowFrom, to: window.windowTo });
+    const topEvents = rows
+      .map((row) => {
+        const minutesToEvent = Math.round((row.scheduledAt.getTime() - params.asOf.getTime()) / 60000);
+        return {
+          title: row.title,
+          impact: row.impact,
+          category: row.category,
+          scheduledAt: row.scheduledAt.toISOString(),
+          timeToEventMinutes: minutesToEvent,
+          source: row.source,
+          country: row.country ?? undefined,
+          currency: (row as { currency?: string | null }).currency ?? undefined,
+        };
+      })
+      .sort((a, b) => {
+        if ((b.impact ?? 0) !== (a.impact ?? 0)) return (b.impact ?? 0) - (a.impact ?? 0);
+        return (a.timeToEventMinutes ?? 0) - (b.timeToEventMinutes ?? 0);
+      })
+      .slice(0, 5);
+    return {
+      eventScore: 50,
+      eventContext: {
+        windowFrom: window.windowFrom.toISOString(),
+        windowTo: window.windowTo.toISOString(),
+        windowKind: window.windowKind,
+        eventCount: rows.length,
+        notes: rows.length === 0 ? [QUALITY_NOTES.noEvents] : undefined,
+        topEvents,
+      },
+    };
+  }
+
   if (params.dataMode === "live") {
     try {
       const result = await computeEventRingV2({ setup: params.setup, now: params.asOf });
@@ -270,7 +308,17 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
       dataMode,
       fallbackEvents,
     });
-    const eventModifier = buildEventModifier({ context: eventResult.eventContext, now: asOf });
+    const eventModifier = buildEventModifier({ context: eventResult.eventContext, now: asOf, setup: base });
+    if (EVENT_MODIFIER_ENABLED && (process.env.EVENT_MODIFIER_DEBUG === "1" || process.env.NODE_ENV !== "production")) {
+      logger.debug("event_modifier", {
+        setupId: base.id,
+        classification: eventModifier.classification,
+        primaryTitle: eventModifier.primaryEvent?.title ?? null,
+        minutesToEvent: eventModifier.primaryEvent?.minutesToEvent ?? null,
+        missingFields: eventModifier.quality?.missingFields ?? [],
+      });
+    }
+
     const biasResult = applyBiasScoring(base, biasSnapshot);
     const sentimentResult = applySentimentScoring(base);
     const sentimentScore = base.sentiment?.score ?? sentimentResult.sentimentScore;

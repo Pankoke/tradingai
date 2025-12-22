@@ -6,6 +6,7 @@ import type {
   SentimentFlag,
   SentimentLabel,
 } from "@/src/lib/engine/types";
+import { isEventModifierEnabled } from "@/src/lib/config/eventModifier";
 
 export type SentimentContributionId =
   | "bias"
@@ -170,6 +171,8 @@ const BASE_PROFILE: SentimentProfile = {
     penalty: 4,
   },
 };
+
+const EVENT_MODIFIER_ENABLED = isEventModifierEnabled();
 
 export const SENTIMENT_PROFILES: Record<SentimentProfileKey, SentimentProfile> = {
   default: BASE_PROFILE,
@@ -343,12 +346,14 @@ export function buildSentimentMetrics(params: BuildParams): SentimentMetrics {
     }
   }
 
-  const eventScore = normalizeScore(sentiment.eventScore);
-  if (typeof eventScore === "number") {
-    if (eventScore >= profile.event.elevated) {
-      registerContribution("event", -profile.event.elevatedPenalty, `Event risk elevated (${eventScore})`);
-    } else if (eventScore <= profile.event.calm) {
-      registerContribution("event", profile.event.calmBonus, `Event calendar calm (${eventScore})`);
+  if (!EVENT_MODIFIER_ENABLED) {
+    const eventScore = normalizeScore(sentiment.eventScore);
+    if (typeof eventScore === "number") {
+      if (eventScore >= profile.event.elevated) {
+        registerContribution("event", -profile.event.elevatedPenalty, `Event risk elevated (${eventScore})`);
+      } else if (eventScore <= profile.event.calm) {
+        registerContribution("event", profile.event.calmBonus, `Event calendar calm (${eventScore})`);
+      }
     }
   }
 

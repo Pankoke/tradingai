@@ -30,6 +30,7 @@ type RingInsightTabsProps = {
   onActiveRingChange?: (id: RingTabId) => void;
   showTabButtons?: boolean;
   frameClassName?: string | null;
+  hideEventTab?: boolean;
 };
 
 const hasOrderflowContent = (current: Setup): boolean => {
@@ -95,12 +96,13 @@ export function RingInsightTabs({
   onActiveRingChange,
   showTabButtons = true,
   frameClassName,
+  hideEventTab = false,
 }: RingInsightTabsProps) {
   const t = useT();
   const signalQuality = useMemo(() => computeSignalQuality(setup), [setup]);
   const availableTabs = useMemo(
-    () => ringTabs.filter((tab) => tab.isVisible(setup)),
-    [setup],
+    () => ringTabs.filter((tab) => tab.isVisible(setup) && !(hideEventTab && tab.id === "event")),
+    [setup, hideEventTab],
   );
 
   const [selectedTab, setSelectedTab] = useState<RingTabId | null>(null);

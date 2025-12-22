@@ -12,6 +12,7 @@ type Props = {
   setup: SetupViewModel;
   activeRing: RingTabId;
   onActiveRingChange: (id: RingTabId) => void;
+  hideEventRing?: boolean;
 };
 
 type RingTileDefinition = {
@@ -57,7 +58,7 @@ function getRingCategoryPalette(tone: RingTileDefinition["tone"]): RingPalette {
   return RING_PALETTES[tone] ?? RING_PALETTES.accent;
 }
 
-export function SetupCardRingsBlock({ setup, activeRing, onActiveRingChange }: Props): JSX.Element {
+export function SetupCardRingsBlock({ setup, activeRing, onActiveRingChange, hideEventRing = false }: Props): JSX.Element {
   const t = useT();
   const compactRings: RingTileDefinition[] = [
     {
@@ -66,13 +67,6 @@ export function SetupCardRingsBlock({ setup, activeRing, onActiveRingChange }: P
       value: setup.rings.trendScore,
       tone: "teal",
       tooltip: t("perception.rings.tooltip.trend"),
-    },
-    {
-      id: "event",
-      labelKey: "perception.today.eventRing",
-      value: setup.rings.eventScore,
-      tone: "accent",
-      tooltip: buildEventTooltip(t("perception.rings.tooltip.event"), setup.eventContext, t),
     },
     {
       id: "bias",
@@ -97,9 +91,11 @@ export function SetupCardRingsBlock({ setup, activeRing, onActiveRingChange }: P
     },
   ];
 
+  const ringsToShow = hideEventRing ? compactRings.filter((ring) => ring.id !== "event") : compactRings;
+
   return (
     <div className="mt-3 grid gap-3 text-[0.75rem] sm:grid-cols-2 lg:grid-cols-5">
-      {compactRings.map((ring) => {
+      {ringsToShow.map((ring) => {
         const palette = getRingCategoryPalette(ring.tone);
         const badgeLabel = ring.badgeKey ? t(ring.badgeKey) : null;
         const badgeTooltip = ring.badgeTooltipKey ? t(ring.badgeTooltipKey) : undefined;
