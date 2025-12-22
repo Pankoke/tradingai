@@ -264,6 +264,11 @@ const eventContextItemSchema = z.object({
   timeToEventMinutes: z.number().optional(),
   country: z.string().optional(),
   currency: z.string().optional(),
+  summary: z.string().optional(),
+  marketScope: z.string().optional(),
+  actualValue: z.string().optional(),
+  forecastValue: z.string().optional(),
+  previousValue: z.string().optional(),
 });
 
 const eventContextSchema = z.object({
@@ -299,10 +304,18 @@ const eventModifierSchema = z.object({
   primaryEvent: eventModifierPrimarySchema.optional(),
   rationale: z.array(z.string()).max(3).optional(),
   executionAdjustments: z.array(z.string()).max(4).optional(),
+  reliabilityWeight: z.number().min(0).max(1).optional(),
+  surprise: z
+    .object({
+      label: z.enum(["above", "below", "inline"]),
+      magnitude: z.number().optional(),
+    })
+    .optional(),
   quality: z
     .object({
       usedGlobalFallback: z.boolean().optional(),
       missingFields: z.array(z.string()).optional(),
+      reliabilityBucket: z.enum(["low", "med", "high"]).optional(),
     })
     .optional(),
 });

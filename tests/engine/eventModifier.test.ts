@@ -70,4 +70,45 @@ describe("buildEventModifier relevance & classification", () => {
     });
     expect(modifier.quality?.missingFields).toContain("country");
   });
+
+  it("downshifts classification when macro fields are missing (reliability low)", () => {
+    const now = new Date("2025-01-01T10:00:00.000Z");
+    const scheduledAt = new Date(now.getTime() + 30 * 60 * 1000).toISOString();
+    const modifier = buildEventModifier({
+      now,
+      setup: setupFx,
+      context: {
+        ...baseContext,
+        topEvents: [{ title: "US CPI", impact: 3, scheduledAt, timeToEventMinutes: 30 }], // missing country/currency
+      },
+    });
+    expect(modifier.classification === "awareness_only" || modifier.classification === "context_relevant").toBe(true);
+    expect(modifier.reliabilityWeight).toBeLessThan(1);
+  });
+
+  it("computes surprise only when actual/forecast parseable and post-release", () => {
+    const now = new Date("2025-01-01T10:00:00.000Z");
+    const scheduledAt = new Date(now.getTime() - 30 * 60 * 1000).toISOString(); // past 30m
+    const modifier = buildEventModifier({
+      now,
+      setup: setupFx,
+      context: {
+        ...baseContext,
+        topEvents: [
+          {
+            title: "US CPI",
+            impact: 3,
+            scheduledAt,
+            timeToEventMinutes: -30,
+            country: "US",
+            currency: "USD",
+            actualValue: "3.2",
+            forecastValue: "3.0",
+          },
+        ],
+      },
+    });
+    expect(modifier.surprise).not.toBeUndefined();
+    expect(modifier.rationale?.some((r) => r.toLowerCase().includes("surprise"))).toBe(true);
+  });
 });

@@ -93,6 +93,16 @@ function renderEventModifier(
 
   const adjustments = modifier.executionAdjustments ?? [];
   const rationale = modifier.rationale ?? [];
+  const reliability =
+    modifier.quality?.reliabilityBucket ??
+    (modifier.reliabilityWeight !== undefined
+      ? modifier.reliabilityWeight >= 0.75
+        ? "high"
+        : modifier.reliabilityWeight >= 0.5
+          ? "med"
+          : "low"
+      : null);
+  const surprise = modifier.surprise;
 
   if (modifier.classification === "none") {
     return null;
@@ -122,6 +132,18 @@ function renderEventModifier(
       ) : null}
       {showDetails && modifier.classification !== "awareness_only" && rationale.length ? (
         <ul className="mt-2 space-y-1 text-sm text-slate-300">
+          {reliability ? (
+            <li className="flex items-start gap-2">
+              <span className="mt-1 h-1.5 w-1.5 rounded-full bg-slate-500" />
+              <span>Reliability: {reliability}</span>
+            </li>
+          ) : null}
+          {surprise ? (
+            <li className="flex items-start gap-2">
+              <span className="mt-1 h-1.5 w-1.5 rounded-full bg-amber-400" />
+              <span>Surprise: {surprise.label}</span>
+            </li>
+          ) : null}
           {rationale.slice(0, 3).map((line) => (
             <li key={line} className="flex items-start gap-2">
               <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-400" />

@@ -176,6 +176,11 @@ export async function resolveEventRingForSetup(params: {
           source: row.source,
           country: row.country ?? undefined,
           currency: (row as { currency?: string | null }).currency ?? undefined,
+          summary: (row as { summary?: string | null }).summary ?? undefined,
+          marketScope: (row as { marketScope?: string | null }).marketScope ?? undefined,
+          actualValue: (row as { actualValue?: string | null }).actualValue ?? undefined,
+          forecastValue: (row as { forecastValue?: string | null }).forecastValue ?? undefined,
+          previousValue: (row as { previousValue?: string | null }).previousValue ?? undefined,
         };
       })
       .sort((a, b) => {

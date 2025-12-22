@@ -9,6 +9,9 @@ type BuildParams = {
 };
 
 const IMPACT_WEIGHT: Record<number, number> = { 1: 0.6, 2: 0.8, 3: 1 };
+const SOURCE_WEIGHT: Record<string, number> = {
+  "jb-news": 0.8,
+};
 
 type WindowRule = { execution: number; context: number };
 const WINDOW_RULES: Record<"intraday" | "daily" | "swing" | "unknown", WindowRule> = {
@@ -54,11 +57,12 @@ export function buildEventModifier(params: BuildParams): EventModifier {
       });
       const proximityWeight = deriveProximityWeight(minutesToEvent, windowRule, timeframeKind);
       const impactWeight = IMPACT_WEIGHT[event.impact ?? 1] ?? 0.6;
-      const reliabilityWeight = relevance.missingFields.length >= 2 ? 0.7 : 1;
+      const reliability = computeReliability(event, relevance.missingFields);
+      const reliabilityWeight = reliability.weight;
       const sessionPenalty = isOutsideSession(assetProfile.assetClass, event.scheduledAt, now) ? 0.6 : 1;
       const priority = relevance.relevance * impactWeight * proximityWeight * reliabilityWeight * sessionPenalty;
       const outsideSession = sessionPenalty < 1;
-      return { event, minutesToEvent, relevance, priority, outsideSession, proximityWeight };
+      return { event, minutesToEvent, relevance, priority, outsideSession, proximityWeight, reliabilityWeight };
     })
     .sort((a, b) => b.priority - a.priority);
 
@@ -69,8 +73,12 @@ export function buildEventModifier(params: BuildParams): EventModifier {
 
   const classification = classifyModifier(winner, windowRule, timeframeKind);
 
+  const surprise = computeSurprise(winner, now, windowRule.execution);
   const rationale = buildRationale(classification, winner, ctx);
-  const executionAdjustments = buildAdjustments(classification, winner);
+  if (surprise) {
+    rationale.push(`Surprise: ${surprise.label}`);
+  }
+  const executionAdjustments = buildAdjustments(classification, winner, surprise);
 
   return {
     classification,
@@ -86,9 +94,12 @@ export function buildEventModifier(params: BuildParams): EventModifier {
     },
     rationale: rationale.length ? rationale.slice(0, 3) : undefined,
     executionAdjustments: executionAdjustments.slice(0, 4),
+    reliabilityWeight: winner.reliabilityWeight,
+    surprise: surprise ?? undefined,
     quality: {
       usedGlobalFallback: ctx?.notes?.some((n) => n === "hash_fallback" || n === "events_db_unavailable") ?? false,
       missingFields: winner.relevance.missingFields.length ? winner.relevance.missingFields : undefined,
+      reliabilityBucket: computeReliability(winner.event, winner.relevance.missingFields).bucket,
     },
   };
 }
@@ -132,13 +143,14 @@ function classifyModifier(
     minutesToEvent: number | null;
     relevance: { relevance: number };
     event: { impact?: number | null };
+    reliabilityWeight?: number;
   },
   windowRule: WindowRule,
   timeframe: keyof typeof WINDOW_RULES,
 ): EventModifier["classification"] {
   const impact = winner.event.impact ?? 1;
   const minutes = winner.minutesToEvent ?? Infinity;
-  const rel = winner.relevance.relevance;
+  const rel = winner.relevance.relevance * (winner.reliabilityWeight ?? 1);
   const withinExec = Math.abs(minutes) <= windowRule.execution;
   const withinContext = Math.abs(minutes) <= windowRule.context;
 
@@ -196,16 +208,46 @@ function buildRationale(
 
 function buildAdjustments(
   classification: EventModifier["classification"],
-  winner: { proximityWeight?: number },
+  winner: { proximityWeight?: number; event?: { title?: string | null; category?: string | null } },
+  surprise?: EventModifier["surprise"] | null,
 ): string[] {
   if (classification === "execution_critical") {
-    return ["delay_entry", "reduce_size"];
+    return [
+      "delay_entry",
+      "reduce_size",
+      ...keywordAdjustments(winner.event),
+      ...(surprise ? ["post_release_volatility"] : []),
+    ];
   }
   if (classification === "context_relevant") {
-    return ["monitor_volatility", winner.proximityWeight && winner.proximityWeight < 1 ? "time_buffer" : "standard_risk"];
+    const base = [
+      "monitor_volatility",
+      winner.proximityWeight && winner.proximityWeight < 1 ? "time_buffer" : "standard_risk",
+      ...(surprise ? ["post_release_volatility"] : []),
+    ];
+    return [...base, ...keywordAdjustments(winner.event)];
   }
   if (classification === "awareness_only") {
     return ["monitor_volatility"];
+  }
+  return [];
+}
+
+function keywordAdjustments(
+  event?: { title?: string | null; category?: string | null },
+): string[] {
+  const text = `${event?.title ?? ""} ${event?.category ?? ""}`.toLowerCase();
+  if (/rate decision|fomc|ecb|boe|boj|snb|central bank|policy/.test(text)) {
+    return ["wait_for_statement"];
+  }
+  if (/cpi|inflation|pce|deflator/.test(text)) {
+    return ["avoid_breakout_pre_release"];
+  }
+  if (/payroll|employment|nfp|jobless/.test(text)) {
+    return ["confirmation_after_release"];
+  }
+  if (/gdp|growth/.test(text)) {
+    return ["size_down"];
   }
   return [];
 }
@@ -247,4 +289,63 @@ function isOutsideSession(assetClass: AssetClass, scheduledAt?: string | null, n
   // index/commodity simplified sessions (EU 8-22, US 14-22 Berlin)
   if (hour < 8 || hour > 22) return true;
   return false;
+}
+
+function computeReliability(
+  event: Partial<{ title: string; scheduledAt: string; impact: number; country?: string | null; currency?: string | null; category?: string | null; marketScope?: string | null; summary?: string | null; expectationLabel?: string | null; source?: string | null }>,
+  missingFields: string[],
+): { weight: number; bucket: "low" | "med" | "high" } {
+  let weight = 1;
+  if (!event.title || !event.scheduledAt) weight *= 0.6;
+  if (event.impact === undefined || event.impact === null) weight *= 0.8;
+  const isMacro = (event.category ?? "").toLowerCase() === "macro" || (event.marketScope ?? "").toUpperCase().includes("FX");
+  if (isMacro) {
+    if (!event.country) weight *= 0.8;
+    if (!event.currency) weight *= 0.85;
+  }
+  if (!event.summary && !event.expectationLabel) {
+    weight *= 0.9;
+  }
+  const sourceWeight = event.source ? SOURCE_WEIGHT[event.source] ?? 0.7 : 0.6;
+  weight *= sourceWeight;
+  if (missingFields.length >= 2) weight *= 0.8;
+  const bucket: "low" | "med" | "high" = weight >= 0.75 ? "high" : weight >= 0.5 ? "med" : "low";
+  return { weight: clamp01(weight), bucket };
+}
+
+function computeSurprise(
+  winner: {
+    minutesToEvent: number | null;
+    event: { actualValue?: string | number | null; forecastValue?: string | number | null };
+  },
+  now: Date,
+  postWindowMinutes: number,
+): { label: "above" | "below" | "inline"; magnitude?: number } | null {
+  if (winner.minutesToEvent === null || winner.minutesToEvent > 0 || Math.abs(winner.minutesToEvent) > postWindowMinutes) {
+    return null;
+  }
+  const actual = parseNumeric(winner.event.actualValue);
+  const forecast = parseNumeric(winner.event.forecastValue);
+  if (actual === null || forecast === null) return null;
+  const diff = actual - forecast;
+  const magnitude = forecast !== 0 ? Math.abs(diff / forecast) : Math.abs(diff);
+  if (Math.abs(diff) < 1e-6) {
+    return { label: "inline", magnitude };
+  }
+  return { label: diff > 0 ? "above" : "below", magnitude };
+}
+
+function parseNumeric(value: string | number | null | undefined): number | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const normalized = trimmed.replace("%", "").replace(",", ".");
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed / (trimmed.includes("%") ? 100 : 1) : null;
+}
+
+function clamp01(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(1, Math.max(0, value));
 }
