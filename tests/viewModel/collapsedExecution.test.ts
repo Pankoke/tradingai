@@ -65,7 +65,7 @@ function makeVm(overrides: Partial<SetupViewModel> = {}): SetupViewModel {
 describe("pickCollapsedExecutionPrimaryBullet", () => {
   test("does not choose event branch when ring eventScore is low even if meta is high", () => {
     const vm = makeVm({ meta: { eventLevel: "high" }, rings: { eventScore: 38 } as SetupViewModel["rings"] });
-    const result = pickCollapsedExecutionPrimaryBullet(vm, t);
+    const result = pickCollapsedExecutionPrimaryBullet(vm, t, false);
     expect(result.debug.branch).toBe("sizeStandard");
     expect(result.debug.execEventLevel).toBe("calm");
     expect(result.debug.metaEventLevel).toBe("highSoon");
@@ -76,7 +76,7 @@ describe("pickCollapsedExecutionPrimaryBullet", () => {
       rings: { eventScore: 75 } as SetupViewModel["rings"],
       eventContext: { topEvents: [{ title: "CPI" }] } as unknown as SetupViewModel["eventContext"],
     });
-    const result = pickCollapsedExecutionPrimaryBullet(vm, t);
+    const result = pickCollapsedExecutionPrimaryBullet(vm, t, false);
     expect(result.text).toContain("CPI");
     expect(result.debug.branch).toBe("eventNamed");
     expect(result.debug.eventLevel).toBe("highSoon");
@@ -91,24 +91,24 @@ describe("pickCollapsedExecutionPrimaryBullet", () => {
       rings: { eventScore: 55 } as SetupViewModel["rings"],
       eventContext: { topEvents: [{ title: "GDP q/q" }] } as unknown as SetupViewModel["eventContext"],
     });
-    const result = pickCollapsedExecutionPrimaryBullet(vm, t);
+    const result = pickCollapsedExecutionPrimaryBullet(vm, t, false);
     expect(result.debug.branch).toBe("eventNamed");
     expect(result.debug.execEventLevel).toBe("elevated");
   });
 
   test("uses orderflow high and low thresholds", () => {
     const high = makeVm({ rings: { orderflowScore: 80 } as SetupViewModel["rings"] });
-    const highResult = pickCollapsedExecutionPrimaryBullet(high, t);
+    const highResult = pickCollapsedExecutionPrimaryBullet(high, t, false);
     expect(highResult.debug.branch).toBe("orderflowHigh");
 
     const low = makeVm({ rings: { orderflowScore: 30 } as SetupViewModel["rings"] });
-    const lowResult = pickCollapsedExecutionPrimaryBullet(low, t);
+    const lowResult = pickCollapsedExecutionPrimaryBullet(low, t, false);
     expect(lowResult.debug.branch).toBe("orderflowLow");
   });
 
   test("falls back to confirmation when trend and bias diverge", () => {
     const vm = makeVm({ rings: { trendScore: 90, biasScore: 50 } as SetupViewModel["rings"] });
-    const result = pickCollapsedExecutionPrimaryBullet(vm, t);
+    const result = pickCollapsedExecutionPrimaryBullet(vm, t, false);
     expect(result.debug.branch).toBe("confirmation");
   });
 
@@ -117,19 +117,19 @@ describe("pickCollapsedExecutionPrimaryBullet", () => {
       rings: { confidenceScore: 75 } as SetupViewModel["rings"],
       signalQuality: { score: 70, reasons: [] },
     });
-    expect(pickCollapsedExecutionPrimaryBullet(strong, t).debug.branch).toBe("sizeNormalPlus");
+    expect(pickCollapsedExecutionPrimaryBullet(strong, t, false).debug.branch).toBe("sizeNormalPlus");
 
     const standard = makeVm({
       rings: { confidenceScore: 55 } as SetupViewModel["rings"],
       signalQuality: { score: 55, reasons: [] },
     });
-    expect(pickCollapsedExecutionPrimaryBullet(standard, t).debug.branch).toBe("sizeStandard");
+    expect(pickCollapsedExecutionPrimaryBullet(standard, t, false).debug.branch).toBe("sizeStandard");
 
     const reduced = makeVm({
       rings: { confidenceScore: 40 } as SetupViewModel["rings"],
       signalQuality: { score: 30, reasons: [] },
     });
-    expect(pickCollapsedExecutionPrimaryBullet(reduced, t).debug.branch).toBe("sizeReduced");
+    expect(pickCollapsedExecutionPrimaryBullet(reduced, t, false).debug.branch).toBe("sizeReduced");
   });
 
   test("sanitizes and truncates long event titles", () => {
@@ -138,7 +138,7 @@ describe("pickCollapsedExecutionPrimaryBullet", () => {
       rings: { eventScore: 80 } as SetupViewModel["rings"],
       eventContext: { topEvents: [{ title: longTitle }] } as unknown as SetupViewModel["eventContext"],
     });
-    const result = pickCollapsedExecutionPrimaryBullet(vm, t);
+    const result = pickCollapsedExecutionPrimaryBullet(vm, t, false);
     expect(result.debug.branch).toBe("eventNamed");
     expect((result.debug.topEventTitleSanitized ?? "").length).toBeLessThanOrEqual(60);
     expect(result.debug.topEventTitleTruncated).toBe(true);
@@ -149,7 +149,7 @@ describe("pickCollapsedExecutionPrimaryBullet", () => {
       rings: { eventScore: 70 } as SetupViewModel["rings"],
       eventContext: { topEvents: [{ title: "   " }] } as unknown as SetupViewModel["eventContext"],
     });
-    const result = pickCollapsedExecutionPrimaryBullet(vm, t);
+    const result = pickCollapsedExecutionPrimaryBullet(vm, t, false);
     expect(result.debug.branch).toBe("eventGeneric");
     expect(result.debug.topEventTitleEmptyAfterSanitize).toBe(true);
   });
@@ -159,7 +159,7 @@ describe("pickCollapsedExecutionPrimaryBullet", () => {
       rings: { eventScore: 80 } as SetupViewModel["rings"],
       eventContext: { topEvents: [{ title: "GDP q/q" }] } as unknown as SetupViewModel["eventContext"],
     });
-    const result = pickCollapsedExecutionPrimaryBullet(vm, t);
+    const result = pickCollapsedExecutionPrimaryBullet(vm, t, false);
     expect(result.debug.branch).toBe("eventNamed");
     expect(result.debug.topEventTitleSanitized).toBe("GDP q/q");
     expect(result.debug.topEventTitleEmptyAfterSanitize).toBe(false);
@@ -170,9 +170,19 @@ describe("pickCollapsedExecutionPrimaryBullet", () => {
       rings: { eventScore: 80 } as SetupViewModel["rings"],
       eventContext: { topEvents: [{ title: "CPI\u200B\u200D (High Impact)" }] } as unknown as SetupViewModel["eventContext"],
     });
-    const result = pickCollapsedExecutionPrimaryBullet(vm, t);
+    const result = pickCollapsedExecutionPrimaryBullet(vm, t, false);
     expect(result.debug.branch).toBe("eventNamed");
     expect(result.debug.topEventTitleSanitized).toBe("CPI (High Impact)");
     expect(result.debug.topEventTitleEmptyAfterSanitize).toBe(false);
+  });
+
+  test("ignores event branch when modifier is enabled", () => {
+    const vm = makeVm({
+      rings: { eventScore: 90 } as SetupViewModel["rings"],
+      eventContext: { topEvents: [{ title: "CPI" }] } as unknown as SetupViewModel["eventContext"],
+    });
+    const result = pickCollapsedExecutionPrimaryBullet(vm, t, true);
+    expect(result.debug.branch).not.toBe("eventNamed");
+    expect(result.debug.execEventLevel).toBe("calm");
   });
 });

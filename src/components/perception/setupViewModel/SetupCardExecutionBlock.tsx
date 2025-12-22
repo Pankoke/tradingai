@@ -41,8 +41,12 @@ export function SetupCardExecutionBlock({ title, bullets, debugLines, eventModif
         <p className="text-lg font-semibold text-white">{title}</p>
       </div>
       {hasModifier
-        ? renderEventModifier(eventModifier as NonNullable<Props["eventModifier"]>, showDetails, () => setShowDetails((prev) => !prev))
-        : null}
+        ? renderEventModifier(
+            eventModifier as NonNullable<Props["eventModifier"]>,
+            showDetails,
+            () => setShowDetails((prev) => !prev),
+          )
+        : renderNoEventFallback(eventModifier ?? null)}
       <ul className="mt-3 grid gap-2 text-sm text-slate-200 md:grid-cols-2">
         {bullets.map((line) => (
           <li key={line} className="flex items-start gap-2">
@@ -162,5 +166,28 @@ function renderEventModifier(
         </div>
       ) : null}
     </div>
+  );
+}
+
+function renderNoEventFallback(modifier: Props["eventModifier"]): JSX.Element | null {
+  const debug = process.env.EVENT_MODIFIER_DEBUG === "1" || process.env.NEXT_PUBLIC_EVENT_MODIFIER_DEBUG === "1";
+  if (debug) {
+    const label = modifier?.classification ?? "none";
+    const title = modifier?.primaryEvent?.title ?? "";
+    const mins = modifier?.primaryEvent?.minutesToEvent;
+    return (
+      <p className="mt-2 text-[11px] text-slate-500">
+        EventModifier: {label}
+        {title ? ` • ${title}` : ""}{mins !== undefined ? ` (${mins}m)` : ""}
+      </p>
+    );
+  }
+  if (!modifier || modifier.classification !== "none") {
+    return null;
+  }
+  return (
+    <p className="mt-2 text-[11px] text-slate-500">
+      {/** ultra-dezent hint */}Keine relevanten Events im aktuellen Zeitfenster.
+    </p>
   );
 }

@@ -465,7 +465,7 @@ function sanitizeEventTitle(
 export function pickCollapsedExecutionPrimaryBullet(
   vm: SetupViewModel,
   t: ReturnType<typeof useT>,
-  modifierEnabled: boolean,
+  modifierEnabled = false,
 ): ExecutionPrimaryResult {
   const eventLevelFromMeta = vm.meta.eventLevel;
   const eventScore = modifierEnabled ? 0 : vm.rings.eventScore ?? 0;

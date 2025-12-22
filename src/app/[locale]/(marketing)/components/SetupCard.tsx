@@ -9,6 +9,7 @@ import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import type { Setup } from "@/src/lib/engine/types";
 import { formatNumberText, formatRangeText } from "@/src/lib/formatters/levels";
+import { isEventModifierEnabledClient } from "@/src/lib/config/eventModifier";
 
 export type Direction = "Long" | "Short";
 
@@ -44,6 +45,7 @@ export function SetupCard({ setup, highlight = false }: SetupCardProps): JSX.Ele
   const pathname = usePathname();
   const prefix = useMemo(() => localePrefix(pathname), [pathname]);
   const t = useT();
+  const modifierEnabled = isEventModifierEnabledClient();
   const accessTone =
     setup.accessLevel === "free"
       ? "border-slate-600 text-slate-200"
@@ -90,7 +92,7 @@ export function SetupCard({ setup, highlight = false }: SetupCardProps): JSX.Ele
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <MiniGauge label={t("setups.event")} value={setup.eventScore} />
+        {!modifierEnabled ? <MiniGauge label={t("setups.event")} value={setup.eventScore} /> : null}
         <MiniGauge label={t("setups.bias")} value={setup.biasScore} />
         <MiniGauge label={t("setups.sentiment")} value={setup.sentimentScore} />
         <MiniGauge label={t("setups.balance")} value={setup.balanceScore} />
