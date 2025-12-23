@@ -22,6 +22,12 @@ type Props = {
     };
     rationale?: string[];
     executionAdjustments?: string[];
+    reliabilityWeight?: number;
+    surprise?: { label: "above" | "below" | "inline"; magnitude?: number };
+    quality?: {
+      reliabilityBucket?: "low" | "med" | "high";
+      missingFields?: string[];
+    };
   } | null;
 };
 
