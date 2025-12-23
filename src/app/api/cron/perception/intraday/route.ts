@@ -34,14 +34,14 @@ export async function POST(request: NextRequest): Promise<Response> {
       durationMs,
       message: "cron_perception_intraday_success",
       meta: {
-        setups: snapshot.snapshot.setups.length,
+        setups: snapshot.setups.length,
         snapshotId: snapshot.snapshot.id,
       },
     });
 
     return respondOk({
       snapshotId: snapshot.snapshot.id,
-      setups: snapshot.snapshot.setups.length,
+      setups: snapshot.setups.length,
       durationMs,
     });
   } catch (error) {

@@ -16,7 +16,7 @@ import { isMissingTableError } from "@/src/lib/utils";
 import { isEventModifierEnabled } from "@/src/lib/config/eventModifier";
 import { logger } from "@/src/lib/logger";
 import { getEventsInRange } from "@/src/server/repositories/eventRepository";
-import { deriveSetupProfileFromTimeframe } from "@/src/lib/config/setupProfile";
+import { deriveSetupProfileFromTimeframe, type SetupProfile } from "@/src/lib/config/setupProfile";
 
 const ENGINE_VERSION = "0.1.0";
 

@@ -80,6 +80,7 @@ export default async function AdminOpsPage({ params }: Props) {
         admin: messages["admin.ops.perception.source.admin"],
         ui: messages["admin.ops.perception.source.ui"],
         cron: messages["admin.ops.perception.source.cron"],
+        cron_intraday: messages["admin.ops.perception.source.cron"],
         unknown: messages["admin.ops.perception.source.unknown"],
       },
       forceLabel: messages["admin.ops.perception.forceLabel"],

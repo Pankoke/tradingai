@@ -77,13 +77,12 @@ export function buildRingDefinitions(modifierEnabled: boolean, t: (key: string) 
   return defs;
 }
 
-export function mapEventRisk(
-  modifierOrClassification: EventModifierLite | null | undefined | EventModifierLite["classification"],
-): "low" | "medium" | "high" {
+export function mapEventRisk(modifierOrClassification: unknown): "low" | "medium" | "high" {
   const classification =
     typeof modifierOrClassification === "string"
       ? modifierOrClassification
-      : modifierOrClassification?.classification;
+      : (modifierOrClassification as { classification?: string } | null | undefined)
+          ?.classification;
   if (classification === "execution_critical") return "high";
   if (classification === "context_relevant") return "medium";
   return "low";
