@@ -80,6 +80,7 @@ const DEFAULT_LIMITS: Record<MarketTimeframe, number> = {
   "1H": 96,
   "15m": 120,
   "1D": 120,
+  "1W": 120,
 };
 
 const clamp = (value: number, min: number, max: number): number =>
@@ -272,6 +273,7 @@ export async function buildOrderflowMetrics(params: {
   const uniqueTfs = Array.from(new Set(requestedTfs)).filter((tf) => ORDERFLOW_TIMEFRAMES.includes(tf));
   const timeframeSamples: Record<MarketTimeframe, number> = {
     "1D": 0,
+    "1W": 0,
     "4H": 0,
     "1H": 0,
     "15m": 0,
@@ -502,6 +504,7 @@ async function buildDailyOrderflowMetrics(params: {
   });
   const normalized = normalizeCandles(raw);
   const timeframeSamples: Record<MarketTimeframe, number> = {
+    "1W": 0,
     "1D": normalized.length,
     "4H": 0,
     "1H": 0,

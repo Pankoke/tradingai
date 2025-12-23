@@ -1,7 +1,7 @@
 import type { CandleDomainModel } from "@/src/server/providers/marketDataProvider";
 import type { Asset } from "@/src/server/repositories/assetRepository";
 
-export type MarketTimeframe = "1D" | "4H" | "1H" | "15m";
+export type MarketTimeframe = "1D" | "4H" | "1H" | "15m" | "1W";
 
 export type MarketDataSource = "yahoo" | "binance" | "polygon";
 

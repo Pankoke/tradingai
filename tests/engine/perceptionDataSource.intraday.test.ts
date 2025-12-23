@@ -15,9 +15,11 @@ vi.mock("@/src/server/repositories/assetRepository", () => ({
 }));
 
 vi.mock("@/src/server/repositories/candleRepository", () => ({
-  getLatestCandleForAsset: vi.fn(async ({ timeframe }: { timeframe: string }) => ({
-    close: timeframe === "1H" ? "101" : "100",
-  })),
+  getLatestCandleForAsset: vi.fn(async ({ timeframe }: { timeframe: string }) => {
+    if (timeframe === "1W") return { close: "150" };
+    if (timeframe === "1H") return { close: "101" };
+    return { close: "100" };
+  }),
 }));
 
 vi.mock("@/src/features/marketData/syncDailyCandles", () => ({
@@ -27,11 +29,12 @@ vi.mock("@/src/features/marketData/syncDailyCandles", () => ({
 vi.mock("@/src/server/marketData/timeframeConfig", () => ({
   TIMEFRAME_SYNC_WINDOWS: {
     "1D": 180,
+    "1W": 730,
     "4H": 90,
     "1H": 30,
     "15m": 7,
   },
-  getTimeframesForAsset: vi.fn(() => ["1D", "4H", "1H"]),
+  getTimeframesForAsset: vi.fn(() => ["1D", "1W", "4H", "1H"]),
 }));
 
 vi.mock("@/src/lib/engine/marketMetrics", () => ({
@@ -61,13 +64,13 @@ vi.mock("@/src/lib/engine/orderflowMetrics", () => ({
 }));
 
 vi.mock("@/src/server/providers/biasProvider", () => ({
-  DbBiasProvider: vi.fn().mockImplementation(() => ({
-    getBiasSnapshot: vi.fn(async () => ({
+  DbBiasProvider: class {
+    getBiasSnapshot = vi.fn(async () => ({
       biasScore: 10,
       confidence: 60,
       date: new Date(),
-    })),
-  })),
+    }));
+  },
 }));
 
 vi.mock("@/src/server/sentiment/providerResolver", () => ({
@@ -96,13 +99,17 @@ describe("LivePerceptionDataSource intraday generation", () => {
 
     expect(profiles).toContain("SWING");
     expect(profiles).toContain("INTRADAY");
+    expect(profiles).toContain("POSITION");
 
     const swing = setups.find((s) => s.profile === "SWING");
     const intraday = setups.find((s) => s.profile === "INTRADAY");
+    const position = setups.find((s) => s.profile === "POSITION");
 
     expect(swing?.timeframe).toBe("1D");
     expect(intraday?.timeframe).toBe("1H");
     expect(intraday?.id).not.toBe(swing?.id);
     expect((intraday?.levelDebug?.bandPct ?? 1)).toBeLessThan(swing?.levelDebug?.bandPct ?? 0);
+    expect(position?.timeframe).toBe("1W");
+    expect((position?.levelDebug?.bandPct ?? 0)).toBeGreaterThan(swing?.levelDebug?.bandPct ?? 0);
   });
 });

@@ -77,7 +77,13 @@ export function buildRingDefinitions(modifierEnabled: boolean, t: (key: string) 
   return defs;
 }
 
-export function mapEventRisk(classification: EventModifierLite["classification"]): "low" | "medium" | "high" {
+export function mapEventRisk(
+  modifierOrClassification: EventModifierLite | null | undefined | EventModifierLite["classification"],
+): "low" | "medium" | "high" {
+  const classification =
+    typeof modifierOrClassification === "string"
+      ? modifierOrClassification
+      : modifierOrClassification?.classification;
   if (classification === "execution_critical") return "high";
   if (classification === "context_relevant") return "medium";
   return "low";
@@ -442,7 +448,7 @@ export function PerceptionTodayPanel(): JSX.Element {
                 <p className="mt-2 text-[11px] text-slate-400">
                   {t("perception.today.eventNote") ?? "Events affect execution timing when relevant."}
                   {heroEventModifier?.classification && heroEventModifier.classification !== "none"
-                    ? ` · Event impact: ${mapEventRisk(heroEventModifier.classification)}`
+                    ? ` · Event impact: ${mapEventRisk(heroEventModifier)}`
                     : ""}
                 </p>
               )}
@@ -534,7 +540,7 @@ export function PerceptionTodayPanel(): JSX.Element {
                           </div>
                             {modifierEnabled && setup?.eventModifier ? (
                               <p className="mt-2 text-[11px] text-slate-400">
-                                Event impact: {mapEventRisk(setup.eventModifier.classification)}
+                                Event impact: {mapEventRisk(setup.eventModifier)}
                               </p>
                             ) : null}
                             {setup ? (

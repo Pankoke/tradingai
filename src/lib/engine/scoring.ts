@@ -2,6 +2,7 @@ import { clamp } from "@/src/lib/math";
 import { setupDefinitions, type SetupDefinition } from "@/src/lib/engine/setupDefinitions";
 import type { SetupRings } from "@/src/lib/engine/rings";
 import { isEventModifierEnabled } from "@/src/lib/config/eventModifier";
+import type { SetupProfile } from "@/src/lib/config/setupProfile";
 
 export type BaseScoreInput = {
   trendStrength?: number;
@@ -9,6 +10,7 @@ export type BaseScoreInput = {
   momentum?: number;
   volatility?: number;
   pattern?: number;
+  profile?: SetupProfile;
 };
 
 export type SetupScoreBreakdown = {
@@ -32,14 +34,37 @@ function normalizeComponent(value?: number): number | undefined {
   return clamp(value, 0, 100);
 }
 
+function resolveProfileWeights(profile?: SetupProfile): Record<keyof SetupScoreBreakdown, number> {
+  if (profile === "INTRADAY") {
+    return {
+      total: 1,
+      trend: 0.35,
+      bias: 0.18,
+      momentum: 0.2,
+      volatility: 0.15,
+      pattern: 0.12,
+    };
+  }
+  // SWING / POSITION / SCALP fall back to baseline
+  return {
+    total: 1,
+    trend: 0.4,
+    bias: 0.2,
+    momentum: 0.2,
+    volatility: 0.1,
+    pattern: 0.1,
+  };
+}
+
 export function computeSetupScore(input: BaseScoreInput): SetupScoreBreakdown {
+  const weights = resolveProfileWeights(input.profile);
   const components: Record<keyof SetupScoreBreakdown, WeightedComponent> = {
     total: { weight: 1 },
-    trend: { value: normalizeComponent(input.trendStrength), weight: 0.4 },
-    bias: { value: normalizeComponent(input.biasScore), weight: 0.2 },
-    momentum: { value: normalizeComponent(input.momentum), weight: 0.2 },
-    volatility: { value: normalizeComponent(input.volatility), weight: 0.1 },
-    pattern: { value: normalizeComponent(input.pattern), weight: 0.1 },
+    trend: { value: normalizeComponent(input.trendStrength), weight: weights.trend },
+    bias: { value: normalizeComponent(input.biasScore), weight: weights.bias },
+    momentum: { value: normalizeComponent(input.momentum), weight: weights.momentum },
+    volatility: { value: normalizeComponent(input.volatility), weight: weights.volatility },
+    pattern: { value: normalizeComponent(input.pattern), weight: weights.pattern },
   };
 
   const validComponents = Object.entries(components).filter(

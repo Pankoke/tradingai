@@ -34,6 +34,7 @@ import { deriveBaseConfidenceScore } from "@/src/lib/engine/confidence";
 import { createDefaultRings } from "@/src/lib/engine/rings";
 import { applyOrderflowConfidenceAdjustment } from "@/src/lib/engine/orderflowAdjustments";
 import { getSetupProfileConfig, type SetupProfile } from "@/src/lib/config/setupProfile";
+import { logger } from "@/src/lib/logger";
 
 export interface PerceptionDataSource {
   getSetupsForToday(params: { asOf: Date }): Promise<Setup[]>;
@@ -70,6 +71,7 @@ function resolveLevelCategory(definition?: SetupDefinition): SetupLevelCategory 
 }
 
 const MARKETDATA_SYNC_WINDOW_DAYS = 30;
+const INTRADAY_STALE_MINUTES = 180;
 
 class MockPerceptionDataSource implements PerceptionDataSource {
   async getSetupsForToday(): Promise<Setup[]> {
@@ -111,7 +113,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     const assets = await getActiveAssets();
     const evaluationDate = new Date();
     const setups: Setup[] = [];
-    const profiles: SetupProfile[] = ["SWING", "INTRADAY"];
+    const profiles: SetupProfile[] = ["SWING", "INTRADAY", "POSITION"];
 
     await Promise.all(
       assets.map(async (asset, index) => {
@@ -233,6 +235,9 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     if (upper === "15M") {
       return "15m";
     }
+    if (upper === "1W") {
+      return "1W";
+    }
     return "1D";
   }
 
@@ -246,9 +251,18 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     evaluationDate: Date;
   }): Promise<Setup | null> {
     const { asset, template, direction, normalizedDirection, profile, baseTimeframe, evaluationDate } = params;
+    const profileConfig = getSetupProfileConfig(profile);
     const levelCategory = resolveLevelCategory(template);
     const candle = await this.ensureLatestCandle(asset, baseTimeframe);
     await this.ensureSupplementalTimeframes(asset, baseTimeframe);
+    if (profile === "INTRADAY" && isIntradayCandleStale(candle, new Date(), INTRADAY_STALE_MINUTES)) {
+      logger.warn("[LivePerceptionDataSource] skipping intraday setup: stale/missing candle", {
+        symbol: asset.symbol,
+        timeframe: baseTimeframe,
+        thresholdMinutes: INTRADAY_STALE_MINUTES,
+      });
+      return null;
+    }
     const referencePrice = candle ? Number(candle.close) : 0;
 
     if (!Number.isFinite(referencePrice) || referencePrice <= 0) {
@@ -269,6 +283,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
       volatilityScore: 50,
       category: levelCategory,
       profile,
+      bandScale: profileConfig.levelsDefaults?.bandScale,
     });
 
     const biasSnapshot = await this.biasProvider.getBiasSnapshot({
@@ -537,4 +552,14 @@ export function createPerceptionDataSource(): PerceptionDataSource {
   }
 
   return new MockPerceptionDataSource();
+}
+
+export function isIntradayCandleStale(
+  candle: { timestamp?: Date | null } | null,
+  now: Date,
+  thresholdMinutes: number,
+): boolean {
+  if (!candle?.timestamp) return true;
+  const ageMinutes = Math.abs(now.getTime() - candle.timestamp.getTime()) / 60000;
+  return ageMinutes > thresholdMinutes;
 }

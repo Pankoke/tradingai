@@ -24,6 +24,8 @@ function mapTimeframeToBinanceInterval(tf: MarketTimeframe): string {
   switch (tf) {
     case "1D":
       return "1d";
+    case "1W":
+      return "1w";
     case "4H":
       return "4h";
     case "1H":

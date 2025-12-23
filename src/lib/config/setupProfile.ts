@@ -45,6 +45,7 @@ const PROFILE_CONFIG: Record<SetupProfile, SetupProfileConfig> = {
     primaryTimeframe: "1W",
     confirmTimeframe: undefined,
     eventWindows: { execMinutes: 240, contextMinutes: 4320, postMinutes: 360 },
+    levelsDefaults: { bandScale: 1.2 },
   },
 };
 

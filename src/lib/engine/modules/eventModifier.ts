@@ -136,7 +136,7 @@ function resolveMinutesToEvent(event: { timeToEventMinutes?: number | null; sche
 function deriveProximityWeight(
   minutesToEvent: number | null,
   windowRule: WindowRule,
-  timeframe: keyof typeof WINDOW_RULES,
+  timeframe: "intraday" | "daily" | "swing" | "unknown",
 ): number {
   if (minutesToEvent === null) return 0.3;
   const absMins = Math.abs(minutesToEvent);
@@ -153,7 +153,7 @@ function classifyModifier(
     reliabilityWeight?: number;
   },
   windowRule: WindowRule,
-  timeframe: keyof typeof WINDOW_RULES,
+  timeframe: "intraday" | "daily" | "swing" | "unknown",
 ): EventModifier["classification"] {
   const impact = winner.event.impact ?? 1;
   const minutes = winner.minutesToEvent ?? Infinity;
@@ -161,11 +161,14 @@ function classifyModifier(
   const withinExec = Math.abs(minutes) <= windowRule.execution;
   const withinContext = Math.abs(minutes) <= windowRule.context;
 
-  if (rel >= 0.6 && impact >= 3 && minutes >= 0 && withinExec) {
+  if (impact >= 3 && minutes >= 0 && withinExec) {
     return "execution_critical";
   }
-  if (rel >= 0.65 && impact >= 2 && withinExec) {
+  if (rel >= 0.6 && impact >= 2 && withinExec) {
     return "execution_critical";
+  }
+  if (impact >= 3 && withinContext && rel >= 0.3) {
+    return "context_relevant";
   }
   if (rel >= 0.4 && withinContext) {
     return "context_relevant";

@@ -16,6 +16,7 @@ export type MarketMetrics = {
 
 const DEFAULT_LIMITS: Record<MarketTimeframe, number> = {
   "1D": 120,
+  "1W": 120,
   "4H": 90,
   "1H": 72,
   "15m": 60,

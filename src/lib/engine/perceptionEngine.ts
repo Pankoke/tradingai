@@ -162,46 +162,6 @@ export async function resolveEventRingForSetup(params: {
   dataMode: "live" | "mock";
   fallbackEvents?: BiasEvent[];
 }): Promise<EventRingResolution> {
-  if (EVENT_MODIFIER_ENABLED && params.dataMode === "live") {
-    const window = resolveEventRingWindow(params.setup, params.asOf);
-    const rows = await getEventsInRange({ from: window.windowFrom, to: window.windowTo });
-    const topEvents = rows
-      .map((row) => {
-        const minutesToEvent = Math.round((row.scheduledAt.getTime() - params.asOf.getTime()) / 60000);
-        return {
-          title: row.title,
-          impact: row.impact,
-          category: row.category,
-          scheduledAt: row.scheduledAt.toISOString(),
-          timeToEventMinutes: minutesToEvent,
-          source: row.source,
-          country: row.country ?? undefined,
-          currency: (row as { currency?: string | null }).currency ?? undefined,
-          summary: (row as { summary?: string | null }).summary ?? undefined,
-          marketScope: (row as { marketScope?: string | null }).marketScope ?? undefined,
-          actualValue: (row as { actualValue?: string | null }).actualValue ?? undefined,
-          forecastValue: (row as { forecastValue?: string | null }).forecastValue ?? undefined,
-          previousValue: (row as { previousValue?: string | null }).previousValue ?? undefined,
-        };
-      })
-      .sort((a, b) => {
-        if ((b.impact ?? 0) !== (a.impact ?? 0)) return (b.impact ?? 0) - (a.impact ?? 0);
-        return (a.timeToEventMinutes ?? 0) - (b.timeToEventMinutes ?? 0);
-      })
-      .slice(0, 5);
-    return {
-      eventScore: 50,
-      eventContext: {
-        windowFrom: window.windowFrom.toISOString(),
-        windowTo: window.windowTo.toISOString(),
-        windowKind: window.windowKind,
-        eventCount: rows.length,
-        notes: rows.length === 0 ? [QUALITY_NOTES.noEvents] : undefined,
-        topEvents,
-      },
-    };
-  }
-
   if (params.dataMode === "live") {
     try {
       const result = await computeEventRingV2({ setup: params.setup, now: params.asOf });
@@ -341,6 +301,7 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
       ? undefined
       : Math.abs(eventResult.eventScore - biasResult.biasScore);
     const scoreBreakdown = computeSetupScore({
+      profile: base.profile as any,
       trendStrength: scoringEventScore,
       biasScore: biasResult.biasScore,
       momentum: sentimentScore,
