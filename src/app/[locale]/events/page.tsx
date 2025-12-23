@@ -124,7 +124,12 @@ export default async function EventsPage({ params, searchParams }: PageProps): P
       <div className="mx-auto max-w-6xl px-4 py-10 space-y-6">
         <header className="space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("events.title")}</h1>
-          <p className="text-sm text-[var(--text-secondary)] sm:text-base">{t("events.subtitle")}</p>
+          <p className="text-sm text-[var(--text-secondary)] sm:text-base">
+            {t("events.subtitle")}
+            <span className="ml-2 text-[var(--text-tertiary)]">
+              {t("events.modifierHint")}
+            </span>
+          </p>
         </header>
 
         <NextUpSection events={nextUpEvents} t={t} />
