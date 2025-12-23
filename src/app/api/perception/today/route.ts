@@ -1,62 +1,71 @@
 import type { PerceptionSnapshotWithItems } from "@/src/server/repositories/perceptionSnapshotRepository";
 import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
-import {
-  requestSnapshotBuild,
-  SnapshotBuildInProgressError,
-} from "@/src/server/perception/snapshotBuildService";
-import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
 import { isPerceptionMockMode } from "@/src/lib/config/perceptionDataMode";
-import { loadLatestSnapshotFromStore } from "@/src/features/perception/cache/snapshotStore";
+import { loadLatestSnapshotForProfile } from "@/src/features/perception/cache/snapshotStore";
 import { logger } from "@/src/lib/logger";
 import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 
 type PerceptionTodayPayload = PerceptionSnapshotWithItems & { reused?: boolean };
 
-export async function GET(): Promise<Response> {
+export async function GET(request: Request): Promise<Response> {
   if (isPerceptionMockMode()) {
     const fallback = await buildEngineSnapshotResponse("mock");
     return respondOk<PerceptionTodayPayload>(fallback);
   }
 
+  const profileParam = new URL(request.url).searchParams.get("profile");
   const startedAt = Date.now();
   try {
-    const result = await requestSnapshotBuild({ source: "ui" });
-    await createAuditRun({
-      action: "snapshot_build",
-      source: "ui",
-      ok: true,
-      durationMs: Date.now() - startedAt,
-      message: result.reused ? "reused_snapshot" : "snapshot_built",
-      meta: { reused: result.reused },
-    });
-    return respondOk<PerceptionTodayPayload>({ ...result.snapshot, reused: result.reused });
-  } catch (error) {
-    if (error instanceof SnapshotBuildInProgressError) {
-      await createAuditRun({
-        action: "snapshot_build",
-        source: "ui",
-        ok: false,
-        durationMs: Date.now() - startedAt,
-        message: "lock_in_progress",
+    const fromStore = await loadLatestSnapshotForProfile(profileParam);
+    if (fromStore.snapshot) {
+      const meta = buildMeta(fromStore.snapshot.snapshot.snapshotTime, {
+        requestedProfile: fromStore.requestedProfile,
+        fulfilledLabel: fromStore.fulfilledLabel,
+        requestedAvailable: fromStore.requestedAvailable,
+        fallbackUsed: fromStore.fallbackUsed,
       });
-      const latest = await loadLatestSnapshotFromStore();
-      if (latest) {
-        return respondOk<PerceptionTodayPayload>(latest);
-      }
+      return respondOk<PerceptionTodayPayload & { meta: Record<string, unknown> }>({
+        ...fromStore.snapshot,
+        meta,
+      });
     }
-    logger.error("Failed to persist perception snapshot, using engine fallback", {
+
+    const now = new Date();
+    const emptySnapshot: PerceptionSnapshotWithItems = {
+      snapshot: {
+        id: "missing",
+        snapshotTime: now,
+        label: null,
+        version: "v1.0.0",
+        dataMode: "live",
+        generatedMs: null,
+        notes: null,
+        setups: [],
+        createdAt: now,
+      },
+      items: [],
+      setups: [],
+    };
+    const meta = {
+      requestedProfile: fromStore.requestedProfile,
+      fulfilledLabel: null,
+      requestedAvailable: false,
+      fallbackUsed: false,
+      snapshotAvailable: false,
+      snapshotAgeMinutes: null,
+      isStale: true,
+    };
+    return respondOk<PerceptionTodayPayload & { meta: Record<string, unknown> }>({
+      ...emptySnapshot,
+      meta,
+    });
+  } catch (error) {
+    logger.error("Failed to load perception snapshot", {
       error: error instanceof Error ? error.message : "unknown",
     });
-    await createAuditRun({
-      action: "snapshot_build",
-      source: "ui",
-      ok: false,
+    return respondFail("INTERNAL_ERROR", "Failed to load snapshot", 500, {
       durationMs: Date.now() - startedAt,
-      message: "fallback_engine_result",
-      error: error instanceof Error ? error.message : "unknown error",
     });
-    const fallback = await buildEngineSnapshotResponse("fallback");
-    return respondOk<PerceptionTodayPayload>(fallback);
   }
 }
 
@@ -84,5 +93,27 @@ async function buildEngineSnapshotResponse(mode: "mock" | "fallback"): Promise<P
     },
     items: [],
     setups: setupsWithMetadata,
+  };
+}
+
+function buildMeta(
+  snapshotTime: Date | string | undefined,
+  base: {
+    requestedProfile: string | null;
+    fulfilledLabel: string | null;
+    requestedAvailable: boolean;
+    fallbackUsed: boolean;
+  },
+) {
+  const parsedTime = snapshotTime ? new Date(snapshotTime) : null;
+  const ageMinutes = parsedTime ? Math.round((Date.now() - parsedTime.getTime()) / 60000) : null;
+  const thresholdMinutes = base.requestedProfile === "intraday" ? 90 : 12 * 60;
+  const isStale = ageMinutes != null ? ageMinutes > thresholdMinutes : true;
+  return {
+    ...base,
+    snapshotAvailable: true,
+    snapshotAgeMinutes: ageMinutes,
+    isStale,
+    fallback: base.fallbackUsed,
   };
 }

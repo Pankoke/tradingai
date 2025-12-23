@@ -11,6 +11,7 @@ import {
   type PerceptionSnapshotItemInput,
   type PerceptionSnapshot,
 } from "@/src/server/repositories/perceptionSnapshotRepository";
+import type { SetupProfile } from "@/src/lib/config/setupProfile";
 import { db } from "@/src/server/db/db";
 import { perceptionSnapshots } from "@/src/server/db/schema/perceptionSnapshots";
 import { perceptionSnapshotItems } from "@/src/server/db/schema/perceptionSnapshotItems";
@@ -39,6 +40,53 @@ export async function loadLatestSnapshotFromStore(): Promise<PerceptionSnapshotW
   } catch (error) {
     if (isMissingTableError(error, SNAPSHOT_TABLE)) {
       return null;
+    }
+    throw error;
+  }
+}
+
+export async function loadLatestSnapshotForProfile(
+  requestedProfile?: SetupProfile | string | null,
+): Promise<{
+  snapshot: PerceptionSnapshotWithItems | null;
+  fulfilledLabel: string | null;
+  requestedProfile: string | null;
+  requestedAvailable: boolean;
+  fallbackUsed: boolean;
+}> {
+  const normalized = requestedProfile ? requestedProfile.toString().toLowerCase() : null;
+  const wantsIntraday = normalized === "intraday";
+
+  try {
+    if (wantsIntraday) {
+      const intraday = await getLatestSnapshot({ label: "intraday" });
+      if (intraday) {
+        return {
+          snapshot: intraday,
+          fulfilledLabel: intraday.snapshot.label ?? "intraday",
+          requestedProfile: normalized,
+          requestedAvailable: true,
+          fallbackUsed: false,
+        };
+      }
+    }
+    const fallback = await getLatestSnapshot({ excludeLabel: "intraday" });
+    return {
+      snapshot: fallback ?? null,
+      fulfilledLabel: fallback?.snapshot.label ?? null,
+      requestedProfile: normalized,
+      requestedAvailable: !wantsIntraday,
+      fallbackUsed: wantsIntraday && Boolean(fallback),
+    };
+  } catch (error) {
+    if (isMissingTableError(error, SNAPSHOT_TABLE)) {
+      return {
+        snapshot: null,
+        fulfilledLabel: null,
+        requestedProfile: normalized,
+        requestedAvailable: false,
+        fallbackUsed: false,
+      };
     }
     throw error;
   }

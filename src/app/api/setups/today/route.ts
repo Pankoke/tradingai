@@ -1,6 +1,5 @@
-import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
-import type { PerceptionSnapshot, Setup } from "@/src/lib/engine/types";
-import { loadLatestSnapshotFromStore } from "@/src/features/perception/cache/snapshotStore";
+import type { Setup } from "@/src/lib/engine/types";
+import { loadLatestSnapshotFromStore, loadLatestSnapshotForProfile } from "@/src/features/perception/cache/snapshotStore";
 import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 
 type TodaySetupsResponse = {
@@ -8,9 +7,11 @@ type TodaySetupsResponse = {
   setupOfTheDayId: string;
 };
 
-export async function GET(): Promise<Response> {
+export async function GET(request: Request): Promise<Response> {
   try {
-    const persisted = await loadLatestSnapshotFromStore();
+    const profileParam = new URL(request.url).searchParams.get("profile");
+    const persistedResult = await loadLatestSnapshotForProfile(profileParam);
+    const persisted = persistedResult.snapshot ?? (await loadLatestSnapshotFromStore());
     if (persisted) {
       const setups = (persisted.setups ?? []) as Setup[];
       const setupOfTheDayId =
@@ -18,14 +19,11 @@ export async function GET(): Promise<Response> {
       return respondOk<TodaySetupsResponse>({ setups, setupOfTheDayId });
     }
 
-    const snapshot: PerceptionSnapshot = await buildPerceptionSnapshot({ allowSync: false });
-
-    const body: TodaySetupsResponse = {
-      setups: snapshot.setups,
-      setupOfTheDayId: snapshot.setupOfTheDayId,
-    };
-
-    return respondOk(body);
+    return respondOk<TodaySetupsResponse & { meta: Record<string, unknown> }>({
+      setups: [],
+      setupOfTheDayId: "",
+      meta: { snapshotAvailable: false, requestedProfile: profileParam ?? null },
+    });
   } catch (error) {
     console.error("Failed to load setups for today", error);
     return respondFail(

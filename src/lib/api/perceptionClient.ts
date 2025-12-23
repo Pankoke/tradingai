@@ -65,6 +65,17 @@ const perceptionTodaySchema = z.object({
   snapshot: snapshotMetadataSchema,
   items: perceptionTodayItemSchema.array(),
   setups: setupSchema.array(),
+  meta: z
+    .object({
+      requestedProfile: z.string().nullable().optional(),
+      fulfilledLabel: z.string().nullable().optional(),
+      fallback: z.boolean().optional(),
+      requestedAvailable: z.boolean().optional(),
+      snapshotAvailable: z.boolean().optional(),
+      snapshotAgeMinutes: z.number().nullable().optional(),
+      isStale: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 export type PerceptionTodayResponse = z.infer<typeof perceptionTodaySchema>;
@@ -76,29 +87,38 @@ function resolveUrl(path: string): string {
   return new URL(path, base).toString();
 }
 
-export async function fetchPerceptionToday(): Promise<PerceptionTodayResponse> {
+export async function fetchPerceptionToday(params?: { profile?: string | null }): Promise<PerceptionTodayResponse> {
+  const url = params?.profile ? `/api/perception/today?profile=${params.profile}` : "/api/perception/today";
   try {
-    return await fetcher(resolveUrl("/api/perception/today"), perceptionTodaySchema);
+    return await fetcher(resolveUrl(url), perceptionTodaySchema);
   } catch (error) {
     if (typeof window === "undefined") {
-      const { requestSnapshotBuild, SnapshotBuildInProgressError } = await import(
-        "@/src/server/perception/snapshotBuildService"
-      );
-      const { getLatestSnapshot } = await import("@/src/server/repositories/perceptionSnapshotRepository");
-      let persistedResult;
-      try {
-        persistedResult = await requestSnapshotBuild({ source: "ui" });
-      } catch (err) {
-        if (err instanceof SnapshotBuildInProgressError) {
-          const latest = await getLatestSnapshot();
-          if (latest) {
-            return mapSnapshotToResponse(latest);
-          }
-        }
-        throw err;
+      const { loadLatestSnapshotForProfile } = await import("@/src/features/perception/cache/snapshotStore");
+      const requestedProfile = params?.profile ?? null;
+      const fromStore = await loadLatestSnapshotForProfile(requestedProfile);
+      if (fromStore.snapshot) {
+        return {
+          ...mapSnapshotToResponse(fromStore.snapshot),
+          meta: {
+            requestedProfile,
+            fulfilledLabel: fromStore.fulfilledLabel,
+            fallback: fromStore.fallbackUsed,
+            requestedAvailable: fromStore.requestedAvailable,
+            snapshotAvailable: fromStore.requestedAvailable,
+            snapshotAgeMinutes: fromStore.snapshot.snapshot.snapshotTime
+              ? Math.round((Date.now() - new Date(fromStore.snapshot.snapshot.snapshotTime).getTime()) / 60000)
+              : null,
+            isStale: requestedProfile === "intraday"
+              ? (fromStore.snapshot.snapshot.snapshotTime
+                  ? Math.round((Date.now() - new Date(fromStore.snapshot.snapshot.snapshotTime).getTime()) / 60000) > 90
+                  : true)
+              : (fromStore.snapshot.snapshot.snapshotTime
+                  ? Math.round((Date.now() - new Date(fromStore.snapshot.snapshot.snapshotTime).getTime()) / 60000) > 720
+                  : true),
+          },
+        };
       }
-      const persisted = persistedResult.snapshot;
-      return mapSnapshotToResponse(persisted);
+      throw error;
     }
     throw error;
   }
@@ -124,11 +144,12 @@ function mapSnapshotToResponse(snapshot: PerceptionSnapshotWithItems) {
   };
 }
 
-export async function fetchTodaySetups(): Promise<{ setups: Setup[]; setupOfTheDayId: string }> {
+export async function fetchTodaySetups(params?: { profile?: string | null }): Promise<{ setups: Setup[]; setupOfTheDayId: string }> {
   const schema = z.object({
     setups: setupSchema.array(),
     setupOfTheDayId: z.string(),
   });
-  const data = await fetcher(resolveUrl("/api/setups/today"), schema);
+  const url = params?.profile ? `/api/setups/today?profile=${params.profile}` : "/api/setups/today";
+  const data = await fetcher(resolveUrl(url), schema);
   return data;
 }

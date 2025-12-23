@@ -149,10 +149,21 @@ export default async function SetupsPage({ params, searchParams }: PageProps): P
   const { parseProfileFilter, filterSetupsByProfile, isProfileEmpty } = await import("@/src/lib/setups/profileFilter");
   const selectedProfile = parseProfileFilter(profileParam);
 
-  const { setups, items, snapshot } = await fetchPerceptionToday();
+  const wantsIntraday = selectedProfile === "intraday";
+  const { setups, items, snapshot, meta } = await fetchPerceptionToday(
+    wantsIntraday ? { profile: "intraday" } : undefined,
+  );
   const filteredSetups = filterSetupsByProfile(setups, selectedProfile);
   const effectiveSetups = filteredSetups.length ? filteredSetups : setups;
   const hasFilteredEmpty = isProfileEmpty(selectedProfile, filteredSetups.length);
+
+  const fulfilledLabel = (meta as { fulfilledLabel?: string } | undefined)?.fulfilledLabel ?? snapshot.label;
+  const intradayFallback = wantsIntraday && fulfilledLabel !== "intraday";
+  const snapshotTime = snapshot.snapshotTime ? new Date(snapshot.snapshotTime) : null;
+  const minutesAgo =
+    snapshotTime != null ? Math.round((Date.now() - snapshotTime.getTime()) / 60000) : null;
+  const snapshotUnavailable =
+    (meta as { snapshotAvailable?: boolean } | undefined)?.snapshotAvailable === false || setups.length === 0;
 
   const heroItem = items.find((item) => item.isSetupOfTheDay) ?? items[0] ?? null;
   const setupOfTheDayRaw =
@@ -179,26 +190,23 @@ export default async function SetupsPage({ params, searchParams }: PageProps): P
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {["all", "swing", "intraday", "position"].map((key) => {
-            const isActive = selectedProfile === key;
-            const href = key === "all" ? "/setups" : `/setups?profile=${key}`;
-            const label = t(`setups.profileFilter.${key}`);
-            return (
-              <Link
-                key={key}
-                href={href}
-                className={`rounded-full border px-3 py-1 text-sm font-semibold transition ${
-                  isActive
-                    ? "border-emerald-400/70 bg-emerald-500/10 text-emerald-100"
-                    : "border-slate-700 bg-slate-900/60 text-slate-200 hover:border-slate-500"
-                }`}
-              >
-                {label}
-              </Link>
-            );
-          })}
-        </div>
+        <ProfileFilters locale={locale} selectedProfile={selectedProfile} t={t} />
+        {wantsIntraday ? (
+          <p className="text-xs text-[var(--text-secondary)]">
+            {intradayFallback
+              ? "Intraday snapshot not available yet – showing latest daily snapshot."
+              : minutesAgo != null
+                ? `Last intraday update: ${minutesAgo} min ago`
+                : "Intraday snapshot loaded."}
+          </p>
+        ) : null}
+        {snapshotUnavailable ? (
+          <p className="text-xs text-amber-300">
+            {selectedProfile === "intraday"
+              ? "Intraday wird stündlich aktualisiert. Noch kein Snapshot verfügbar."
+              : "Keine Setups für das gewählte Profil verfügbar."}
+          </p>
+        ) : null}
 
         <EngineMetaPanel generatedAt={snapshot.snapshotTime} version={snapshot.version} />
 
@@ -235,6 +243,41 @@ export default async function SetupsPage({ params, searchParams }: PageProps): P
         </section>
         <FiveRingsExplainer t={t} />
       </div>
+    </div>
+  );
+}
+
+function ProfileFilters({
+  locale,
+  selectedProfile,
+  t,
+}: {
+  locale: string;
+  selectedProfile: string | null;
+  t: (key: string) => string;
+}): JSX.Element {
+  const base = `/${locale}/setups`;
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {["all", "swing", "intraday", "position"].map((key) => {
+        const isActive = selectedProfile === key;
+        const href = key === "all" ? base : `${base}?profile=${key}`;
+        const label = t(`setups.profileFilter.${key}`);
+        return (
+          <Link
+            key={key}
+            href={href}
+            replace={true}
+            className={`rounded-full border px-3 py-1 text-sm font-semibold transition ${
+              isActive
+                ? "border-emerald-400/70 bg-emerald-500/10 text-emerald-100"
+                : "border-slate-700 bg-slate-900/60 text-slate-200 hover:border-slate-500"
+            }`}
+          >
+            {label}
+          </Link>
+        );
+      })}
     </div>
   );
 }
