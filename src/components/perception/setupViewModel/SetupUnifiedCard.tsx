@@ -330,6 +330,13 @@ const SIGNAL_QUALITY_STRONG_THRESHOLD = 65;
 const SIGNAL_QUALITY_STANDARD_THRESHOLD = 50;
 
 function buildExecutionContent(vm: SetupViewModel, t: ReturnType<typeof useT>, modifierEnabled: boolean): { title: string; bullets: string[] } {
+  const profile = (vm.profile ?? "").toUpperCase();
+  if (profile === "INTRADAY") {
+    return buildIntradayExecutionContent(vm, modifierEnabled, t);
+  }
+  if (profile === "POSITION") {
+    return buildPositionExecutionContent(vm, modifierEnabled, t);
+  }
   const rings = vm.rings;
   const eventScore = modifierEnabled ? 0 : rings.eventScore ?? 0;
   const eventLevel = modifierEnabled ? "calm" : eventScore >= 70 ? "highSoon" : eventScore >= 45 ? "elevated" : "calm";
@@ -428,6 +435,79 @@ type ExecutionPrimaryResult = {
 };
 
 const EVENT_TITLE_MAX_LENGTH = 60;
+
+function buildIntradayExecutionContent(
+  vm: SetupViewModel,
+  modifierEnabled: boolean,
+  t: ReturnType<typeof useT>,
+): { title: string; bullets: string[] } {
+  const modifier = modifierEnabled ? vm.eventModifier : null;
+  const classification = modifier?.classification ?? "none";
+  const bullets: string[] = [];
+  let title = t("perception.execution.intraday.title");
+
+  if (classification === "execution_critical") {
+    title = t("perception.execution.intraday.titleEvent");
+    bullets.push(t("perception.execution.intraday.critical.wait"));
+    bullets.push(t("perception.execution.intraday.critical.confirm"));
+    bullets.push(t("perception.execution.intraday.critical.size"));
+  } else if (classification === "context_relevant") {
+    title = t("perception.execution.intraday.titleContext");
+    bullets.push(t("perception.execution.intraday.context.buffer"));
+    bullets.push(t("perception.execution.intraday.context.confirm"));
+    bullets.push(t("perception.execution.intraday.context.trim"));
+  } else if (classification === "awareness_only") {
+    title = t("perception.execution.intraday.titleAwareness");
+    bullets.push(t("perception.execution.intraday.awareness.monitor"));
+    bullets.push(t("perception.execution.intraday.awareness.size"));
+  } else {
+    bullets.push(t("perception.execution.intraday.base.confirm"));
+    bullets.push(t("perception.execution.intraday.base.size"));
+    bullets.push(t("perception.execution.intraday.base.skip"));
+  }
+
+  return { title, bullets: bullets.slice(0, 3) };
+}
+
+function buildPositionExecutionContent(
+  vm: SetupViewModel,
+  modifierEnabled: boolean,
+  t: ReturnType<typeof useT>,
+): { title: string; bullets: string[] } {
+  const modifier = modifierEnabled ? vm.eventModifier : null;
+  const classification = modifier?.classification ?? "none";
+  const bullets: string[] = [];
+  let title = t("perception.execution.position.title");
+
+  const baseRisk = t("perception.execution.position.baseRisk");
+  const baseConfirmation = t("perception.execution.position.baseConfirm");
+  const baseReview = t("perception.execution.position.baseReview");
+
+  if (classification === "execution_critical") {
+    title = t("perception.execution.position.titleEvent");
+    bullets.push(t("perception.execution.position.critical.delay"));
+    bullets.push(baseRisk);
+    bullets.push(baseReview);
+  } else if (classification === "context_relevant") {
+    title = t("perception.execution.position.titleContext");
+    bullets.push(t("perception.execution.position.context.volatility"));
+    bullets.push(baseConfirmation);
+    bullets.push(baseRisk);
+  } else if (classification === "awareness_only") {
+    bullets.push(baseConfirmation);
+    bullets.push(baseRisk);
+    bullets.push(baseReview);
+  } else {
+    bullets.push(baseConfirmation);
+    bullets.push(baseRisk);
+    bullets.push(baseReview);
+  }
+
+  return { title, bullets: bullets.slice(0, 3) };
+}
+
+// Exported for tests
+export const __test_buildExecutionContent = buildExecutionContent;
 
 function sanitizeEventTitle(
   rawInput: string | null | undefined,

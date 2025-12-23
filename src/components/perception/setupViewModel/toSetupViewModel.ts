@@ -41,6 +41,11 @@ function normalizeRangeFromString(value?: string | null): PriceRange {
   };
 }
 
+function normalizeProfile(profile: Setup["profile"] | null | undefined, timeframe: string | null | undefined): Setup["profile"] {
+  if (profile && typeof profile === "string") return profile;
+  return deriveSetupProfileFromTimeframe(timeframe ?? "1D");
+}
+
 function normalizePointFromString(value?: string | null): PricePoint {
   if (!value) return { value: null, display: undefined };
   const match = value.match(/-?\d+(\.\d+)?/);
@@ -117,7 +122,7 @@ function mapSetup(setup: Setup, opts?: { generatedAt?: string | null }): SetupVi
     takeProfit: tp,
     bias: undefined,
     orderflowMode: setup.orderflowMode ?? null,
-    profile: setup.profile ?? deriveSetupProfileFromTimeframe(setup.timeframe),
+    profile: normalizeProfile(setup.profile, setup.timeframe),
     meta,
   };
 }
