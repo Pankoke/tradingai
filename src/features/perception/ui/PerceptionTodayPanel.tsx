@@ -16,6 +16,7 @@ import { BigGauge, SmallGauge } from "@/src/components/perception/RingGauges";
 import { formatRelativeTime } from "@/src/lib/formatters/datetime";
 import { isPerceptionMockMode } from "@/src/lib/config/perceptionDataMode";
 import { mockSetups } from "@/src/lib/mockSetups";
+import { isEventModifierEnabledClient } from "@/src/lib/config/eventModifier";
 
 type LucideIcon = ComponentType<SVGProps<SVGSVGElement>>;
 
@@ -39,6 +40,7 @@ type RingDefinition = {
 
 type PerceptionTodayItem = PerceptionTodayResponse["items"][number];
 type EventContextLite = PerceptionTodayItem["eventContext"] | Setup["eventContext"];
+type EventModifierLite = Setup["eventModifier"];
 
 function formatScore(value: number | null): string {
   if (value === null || Number.isNaN(value)) {
@@ -60,6 +62,25 @@ function formatEventTime(value?: string | null): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+}
+
+export function buildRingDefinitions(modifierEnabled: boolean, t: (key: string) => string): RingDefinition[] {
+  const defs: RingDefinition[] = [
+    { key: "trendScore", label: t("perception.today.scoreTrend"), tone: "teal", tooltip: t("perception.rings.tooltip.trend"), metaKey: "trend" },
+    { key: "biasScore", label: t("perception.today.biasRing"), tone: "green", tooltip: t("perception.rings.tooltip.bias"), metaKey: "bias" },
+    { key: "sentimentScore", label: t("perception.today.sentimentRing"), tone: "teal", tooltip: t("perception.rings.tooltip.sentiment"), metaKey: "sentiment" },
+    { key: "orderflowScore", label: t("perception.today.orderflowRing"), tone: "accent", tooltip: t("perception.rings.tooltip.orderflow"), metaKey: "orderflow" },
+  ];
+  if (!modifierEnabled) {
+    defs.splice(1, 0, { key: "eventScore", label: t("perception.today.eventRing"), tone: "accent", tooltip: t("perception.rings.tooltip.event"), metaKey: "event" });
+  }
+  return defs;
+}
+
+export function mapEventRisk(classification: EventModifierLite["classification"]): "low" | "medium" | "high" {
+  if (classification === "execution_critical") return "high";
+  if (classification === "context_relevant") return "medium";
+  return "low";
 }
 
 function buildEventTooltip(
@@ -160,6 +181,7 @@ function createMockPerceptionTodayResponse(): PerceptionTodayResponse {
 export function PerceptionTodayPanel(): JSX.Element {
   const t = useT();
   const isMockMode = isPerceptionMockMode();
+  const modifierEnabled = isEventModifierEnabledClient();
   const [data, setData] = useState<PerceptionTodayResponse | null>(null);
   const [setups, setSetups] = useState<Setup[] | null>(null);
   const [status, setStatus] = useState<"loading" | "error" | "empty" | "ready">("loading");
@@ -226,26 +248,23 @@ export function PerceptionTodayPanel(): JSX.Element {
     return rings ?? DEFAULT_RING_VALUES;
   }, [heroSetup, heroItem]);
 
-  const heroRingDefinitions = useMemo<RingDefinition[]>(() => [
-    { key: "trendScore", label: t("perception.today.scoreTrend"), tone: "teal", tooltip: t("perception.rings.tooltip.trend"), metaKey: "trend" },
-    { key: "eventScore", label: t("perception.today.eventRing"), tone: "accent", tooltip: t("perception.rings.tooltip.event"), metaKey: "event" },
-    { key: "biasScore", label: t("perception.today.biasRing"), tone: "green", tooltip: t("perception.rings.tooltip.bias"), metaKey: "bias" },
-    { key: "sentimentScore", label: t("perception.today.sentimentRing"), tone: "teal", tooltip: t("perception.rings.tooltip.sentiment"), metaKey: "sentiment" },
-    { key: "orderflowScore", label: t("perception.today.orderflowRing"), tone: "accent", tooltip: t("perception.rings.tooltip.orderflow"), metaKey: "orderflow" },
-  ], [t]);
+  const heroRingDefinitions = useMemo<RingDefinition[]>(() => buildRingDefinitions(modifierEnabled, t), [modifierEnabled, t]);
 
   const itemRingDefinitions = useMemo<RingDefinition[]>(
-    () => [
-      ...heroRingDefinitions,
-      {
-        key: "confidenceScore",
-        label: t("perception.today.confidenceRing"),
-        tone: "green",
-        tooltip: t("perception.rings.tooltip.confidence"),
-        metaKey: "confidence",
-      },
-    ],
-    [heroRingDefinitions, t],
+    () => {
+      const base = buildRingDefinitions(modifierEnabled, t);
+      return [
+        ...base,
+        {
+          key: "confidenceScore",
+          label: t("perception.today.confidenceRing"),
+          tone: "green",
+          tooltip: t("perception.rings.tooltip.confidence"),
+          metaKey: "confidence",
+        },
+      ];
+    },
+    [modifierEnabled, t],
   );
 
   const additionalItems = useMemo(() => {
@@ -285,6 +304,7 @@ export function PerceptionTodayPanel(): JSX.Element {
     ? t("perception.today.snapshotAge").replace("{relative}", snapshotRelative)
     : null;
   const heroEventContext = heroItem?.eventContext ?? heroSetup?.eventContext ?? null;
+  const heroEventModifier = (heroSetup as { eventModifier?: EventModifierLite })?.eventModifier ?? null;
 
   useEffect(() => {
     // Nur im Browser & nur in DEV loggen
@@ -418,6 +438,14 @@ export function PerceptionTodayPanel(): JSX.Element {
                   />
                 ))}
               </div>
+              {modifierEnabled && (
+                <p className="mt-2 text-[11px] text-slate-400">
+                  {t("perception.today.eventNote") ?? "Events affect execution timing when relevant."}
+                  {heroEventModifier?.classification && heroEventModifier.classification !== "none"
+                    ? ` · Event impact: ${mapEventRisk(heroEventModifier.classification)}`
+                    : ""}
+                </p>
+              )}
 
               {heroSetup ? (
                 <>
@@ -501,9 +529,14 @@ export function PerceptionTodayPanel(): JSX.Element {
                                       : ring.tooltip
                                   }
                                   meta={ring.metaKey ? rings.meta[ring.metaKey] : undefined}
-                                />
-                              ))}
-                            </div>
+                              />
+                            ))}
+                          </div>
+                            {modifierEnabled && setup?.eventModifier ? (
+                              <p className="mt-2 text-[11px] text-slate-400">
+                                Event impact: {mapEventRisk(setup.eventModifier.classification)}
+                              </p>
+                            ) : null}
                             {setup ? (
                               <>
                               <LevelDebugBlock
