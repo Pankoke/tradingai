@@ -28,6 +28,7 @@ export type SetupViewModel = {
   assetId: string;
   symbol: string;
   timeframe: string;
+  profile?: string | null;
   direction: Setup["direction"];
   type?: Setup["type"] | null;
   rings: Setup["rings"];

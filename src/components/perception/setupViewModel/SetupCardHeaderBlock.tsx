@@ -9,6 +9,7 @@ type Props = {
   setup: SetupViewModel;
   generatedAtText?: string | null;
   timeframe?: string | null;
+  profile?: string | null;
   variant?: "full" | "compact";
   showEyebrow?: boolean;
 };
@@ -17,6 +18,7 @@ export function SetupCardHeaderBlock({
   setup,
   generatedAtText,
   timeframe,
+  profile,
   variant = "full",
   showEyebrow = true,
 }: Props): JSX.Element {
@@ -53,6 +55,11 @@ export function SetupCardHeaderBlock({
           <span>{headline}</span>
           {timeframe ? <span className="text-slate-300"> · {timeframe}</span> : null}
           <span className={directionClass}> · {setup.direction}</span>
+          {profile ? (
+            <span className="ml-2 inline-flex rounded-full border border-slate-700 px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.2em] text-slate-200">
+              {profile}
+            </span>
+          ) : null}
         </h2>
         <p className="text-sm text-slate-400">{meta.name}</p>
       </div>

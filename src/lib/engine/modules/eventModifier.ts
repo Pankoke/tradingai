@@ -1,10 +1,11 @@
 import type { EventModifier } from "@/src/lib/engine/types";
 import type { Setup } from "@/src/lib/engine/types";
 import { computeEventRelevance } from "@/src/lib/engine/modules/eventRelevance";
+import { deriveSetupProfileFromTimeframe, getSetupProfileConfig, type SetupProfile } from "@/src/lib/config/setupProfile";
 
 type BuildParams = {
   context?: Setup["eventContext"] | null;
-  setup?: Pick<Setup, "symbol" | "timeframe" | "category">;
+  setup?: Pick<Setup, "symbol" | "timeframe" | "category" | "profile">;
   now?: Date;
 };
 
@@ -14,13 +15,6 @@ const SOURCE_WEIGHT: Record<string, number> = {
 };
 
 type WindowRule = { execution: number; context: number };
-const WINDOW_RULES: Record<"intraday" | "daily" | "swing" | "unknown", WindowRule> = {
-  intraday: { execution: 60, context: 360 },
-  daily: { execution: 120, context: 2880 }, // 48h context for 1D
-  swing: { execution: 240, context: 4320 }, // 72h context for swing
-  unknown: { execution: 90, context: 480 },
-};
-
 type AssetClass = "fx" | "index" | "crypto" | "commodity" | "other";
 
 export function buildEventModifier(params: BuildParams): EventModifier {
@@ -36,12 +30,18 @@ export function buildEventModifier(params: BuildParams): EventModifier {
     };
   }
 
+  const profile = resolveProfile(params.setup);
+  const profileConfig = getSetupProfileConfig(profile);
+
   const assetProfile = {
     assetClass: resolveAssetClass(params.setup?.symbol ?? "", params.setup?.category),
     symbol: params.setup?.symbol ?? "",
   };
   const timeframeKind = classifyTimeframe(params.setup?.timeframe);
-  const windowRule = WINDOW_RULES[timeframeKind];
+  const windowRule = {
+    execution: profileConfig.eventWindows.execMinutes,
+    context: profileConfig.eventWindows.contextMinutes,
+  };
 
   const ranked = events
     .map((event) => {
@@ -73,7 +73,7 @@ export function buildEventModifier(params: BuildParams): EventModifier {
 
   const classification = classifyModifier(winner, windowRule, timeframeKind);
 
-  const surprise = computeSurprise(winner, now, windowRule.execution);
+  const surprise = computeSurprise(winner, now, profileConfig.eventWindows.postMinutes ?? windowRule.execution);
   const rationale = buildRationale(classification, winner, ctx);
   if (surprise) {
     rationale.push(`Surprise: ${surprise.label}`);
@@ -116,6 +116,13 @@ function classifyTimeframe(raw?: string): "intraday" | "daily" | "swing" | "unkn
   if (/\b(day|daily|1d|d1)\b/.test(lower) || /d$/.test(lower)) return "daily";
   if (/\b(week|wk|swing)\b/.test(lower) || /\d+\s*w\b/.test(lower)) return "swing";
   return "unknown";
+}
+
+function resolveProfile(setup?: Pick<Setup, "profile" | "timeframe">): SetupProfile {
+  if (setup?.profile && ["SCALP", "INTRADAY", "SWING", "POSITION"].includes(setup.profile)) {
+    return setup.profile as SetupProfile;
+  }
+  return deriveSetupProfileFromTimeframe(setup?.timeframe);
 }
 
 function resolveMinutesToEvent(event: { timeToEventMinutes?: number | null; scheduledAt?: string | null }, now: Date) {

@@ -95,6 +95,7 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
         setup={vm}
         generatedAtText={generatedAtText}
         timeframe={vm.timeframe}
+        profile={vm.profile ?? null}
         showEyebrow={mode === "sotd"}
         variant={mode === "list" && !expanded ? "compact" : "full"}
       />

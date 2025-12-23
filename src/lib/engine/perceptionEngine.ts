@@ -16,6 +16,7 @@ import { isMissingTableError } from "@/src/lib/utils";
 import { isEventModifierEnabled } from "@/src/lib/config/eventModifier";
 import { logger } from "@/src/lib/logger";
 import { getEventsInRange } from "@/src/server/repositories/eventRepository";
+import { deriveSetupProfileFromTimeframe } from "@/src/lib/config/setupProfile";
 
 const ENGINE_VERSION = "0.1.0";
 const dataSource = createPerceptionDataSource();
@@ -304,6 +305,7 @@ export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promis
       assetId: item.assetId ?? item.symbol,
       orderflowMode: item.orderflowMode ?? null,
       rings: item.rings ?? defaultRings,
+      profile: item.profile ?? deriveSetupProfileFromTimeframe(item.timeframe),
       accessLevel: "free",
     };
 

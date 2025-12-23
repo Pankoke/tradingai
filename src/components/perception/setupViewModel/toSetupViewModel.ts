@@ -5,6 +5,7 @@ import type { PricePoint, PriceRange, SetupMeta, SetupSource, SetupViewModel } f
 import { computeSignalQuality, type SignalQuality } from "@/src/lib/engine/signalQuality";
 import type { RiskRewardSummary } from "@/src/lib/engine/types";
 import { isEventModifierEnabledClient } from "@/src/lib/config/eventModifier";
+import { deriveSetupProfileFromTimeframe } from "@/src/lib/config/setupProfile";
 
 function isHomepageSetup(input: SetupSource): input is HomepageSetup {
   if ("weakSignal" in input || "eventLevel" in input) {
@@ -116,6 +117,7 @@ function mapSetup(setup: Setup, opts?: { generatedAt?: string | null }): SetupVi
     takeProfit: tp,
     bias: undefined,
     orderflowMode: setup.orderflowMode ?? null,
+    profile: setup.profile ?? deriveSetupProfileFromTimeframe(setup.timeframe),
     meta,
   };
 }
