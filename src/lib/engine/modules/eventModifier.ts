@@ -86,7 +86,7 @@ export function buildEventModifier(params: BuildParams): EventModifier {
       title: winner.event.title,
       scheduledAt: winner.event.scheduledAt,
       impact: winner.event.impact,
-      minutesToEvent: winner.minutesToEvent,
+      minutesToEvent: winner.minutesToEvent ?? undefined,
       source: winner.event.source,
       country: (winner.event as { country?: string }).country,
       currency: (winner.event as { currency?: string }).currency,
