@@ -33,6 +33,7 @@ import {
 import { deriveBaseConfidenceScore } from "@/src/lib/engine/confidence";
 import { createDefaultRings } from "@/src/lib/engine/rings";
 import { applyOrderflowConfidenceAdjustment } from "@/src/lib/engine/orderflowAdjustments";
+import { getSetupProfileConfig, type SetupProfile } from "@/src/lib/config/setupProfile";
 
 export interface PerceptionDataSource {
   getSetupsForToday(params: { asOf: Date }): Promise<Setup[]>;
@@ -109,149 +110,39 @@ class LivePerceptionDataSource implements PerceptionDataSource {
   async getSetupsForToday(): Promise<Setup[]> {
     const assets = await getActiveAssets();
     const evaluationDate = new Date();
-    const setups = await Promise.all(
+    const setups: Setup[] = [];
+    const profiles: SetupProfile[] = ["SWING", "INTRADAY"];
+
+    await Promise.all(
       assets.map(async (asset, index) => {
         const template = setupDefinitions[index % setupDefinitions.length];
         const direction = index % 2 === 0 ? "Long" : "Short";
         const normalizedDirection = direction.toLowerCase() as "long" | "short";
-        const timeframe = template.defaultTimeframe ?? "1D";
-        const baseTimeframe = timeframe as MarketTimeframe;
-        const candle = await this.ensureLatestCandle(asset, baseTimeframe);
-        await this.ensureSupplementalTimeframes(asset, baseTimeframe);
-        const levelCategory = resolveLevelCategory(template);
-        const referencePrice = candle ? Number(candle.close) : 0;
-        const computedLevels = computeLevelsForSetup({
-          direction: normalizedDirection,
-          referencePrice,
-          volatilityScore: 50,
-          category: levelCategory,
-        });
+        const supportedTimeframes = getTimeframesForAsset(asset);
 
-        const biasSnapshot = await this.biasProvider.getBiasSnapshot({
-          assetId: asset.id,
-          date: evaluationDate,
-          timeframe: baseTimeframe as Timeframe,
-        });
-        const normalizedBiasScore = this.normalizeBiasScore(biasSnapshot?.biasScore);
+        for (const profile of profiles) {
+          const config = getSetupProfileConfig(profile);
+          const baseTimeframe = this.normalizeTimeframe(config.primaryTimeframe);
+          if (profile === "INTRADAY" && !supportedTimeframes.includes(baseTimeframe)) {
+            continue;
+          }
 
-        const timeframes = getTimeframesForAsset(asset);
-        const metrics = await buildMarketMetrics({
-          asset,
-          referencePrice,
-          timeframes,
-        });
-        const orderflow = await buildOrderflowMetrics({
-          asset,
-          timeframes,
-          trendScore: metrics.trendScore,
-          biasScore: normalizedBiasScore,
-        });
-        const orderflowMode =
-          LivePerceptionDataSource.ORDERFLOW_MODE_MAPPING[orderflow.mode];
-        const volatilityLabel = this.mapVolatilityLabel(metrics.volatilityScore);
-        const sentimentContext: SentimentContext = {
-          biasScore: normalizedBiasScore,
-          trendScore: metrics.trendScore,
-          momentumScore: metrics.momentumScore,
-          orderflowScore: orderflow.flowScore,
-          eventScore: 50,
-          rrr: computedLevels.riskReward.rrr ?? undefined,
-          riskPercent: computedLevels.riskReward.riskPercent ?? undefined,
-          volatilityLabel,
-          driftPct: metrics.priceDriftPct,
-        };
-        const sentiment = await this.buildSentimentMetricsForAsset(asset, sentimentContext);
-
-        const enhancedRiskReward = {
-          ...computedLevels.riskReward,
-          volatilityLabel,
-        };
-
-        let confidence = deriveBaseConfidenceScore(metrics);
-        const sentimentAdjustment = this.adjustConfidenceForSentiment(confidence, sentiment);
-        confidence = sentimentAdjustment.adjusted;
-        const orderflowAdjustment = applyOrderflowConfidenceAdjustment({
-          base: confidence,
-          orderflow,
-        });
-        confidence = orderflowAdjustment.adjusted;
-        const orderflowConfidenceDelta = orderflowAdjustment.delta;
-
-        const rings = {
-          ...createDefaultRings(),
-          trendScore: metrics.trendScore,
-          orderflowScore: orderflow.flowScore,
-          sentimentScore: sentiment.score,
-          sentiment: sentiment.score,
-          biasScore: normalizedBiasScore ?? 50,
-          bias: normalizedBiasScore ?? 50,
-          confidenceScore: confidence,
-          orderflow: orderflow.flowScore,
-        };
-
-        const orderflowMeta = {
-          clv: orderflow.clv,
-          relVolume: orderflow.relVolume,
-          expansion: orderflow.expansion,
-          consistency: orderflow.consistency,
-          timeframeSamples: orderflow.meta?.timeframeSamples,
-          context: orderflow.meta?.context,
-        };
-
-        return {
-          id: `${asset.id}-${template.id}`,
-          assetId: asset.id,
-          symbol: asset.symbol,
-          timeframe,
-          direction,
-          confidence,
-          eventScore: rings.eventScore,
-          biasScore: rings.biasScore,
-          sentimentScore: sentiment.score,
-          balanceScore: rings.orderflowScore,
-          entryZone: computedLevels.entryZone,
-          stopLoss: computedLevels.stopLoss,
-          takeProfit: computedLevels.takeProfit,
-          category: levelCategory,
-          levelDebug: computedLevels.debug,
-          riskReward: enhancedRiskReward,
-          type: "Regelbasiert",
-          accessLevel: "free",
-          rings,
-          orderflowMode,
-          sentiment: {
-            score: sentiment.score,
-            label: sentiment.label,
-            reasons: sentiment.reasons,
-            raw: this.normalizeSentimentRaw(sentiment.raw),
-            contributions: sentiment.contributions,
-            flags: sentiment.flags,
-            dominantDrivers: sentiment.dominantDrivers,
-            confidenceDelta: sentimentAdjustment.delta,
-          },
-          orderflow: {
-            score: orderflow.flowScore,
-            mode: orderflow.mode,
-            clv: orderflow.clv,
-            relVolume: orderflow.relVolume,
-            expansion: orderflow.expansion,
-            consistency: orderflow.consistency,
-            reasons: orderflow.reasons,
-            reasonDetails: orderflow.reasonDetails,
-            flags: orderflow.flags,
-            meta: orderflowMeta,
-            confidenceDelta: orderflowConfidenceDelta,
-          },
-          validity: {
-            isStale: metrics.isStale,
-            reasons: metrics.reasons,
-            priceDriftPct: metrics.priceDriftPct,
-            lastPrice: metrics.lastPrice,
-            evaluatedAt: metrics.evaluatedAt,
-          },
-        } satisfies Setup;
+          const setup = await this.buildSetupForProfile({
+            asset,
+            template,
+            direction,
+            normalizedDirection,
+            profile,
+            baseTimeframe,
+            evaluationDate,
+          });
+          if (setup) {
+            setups.push(setup);
+          }
+        }
       }),
     );
+
     return setups;
   }
 
@@ -332,6 +223,179 @@ class LivePerceptionDataSource implements PerceptionDataSource {
       entries,
       version: "live",
     };
+  }
+
+  private normalizeTimeframe(timeframe: string): MarketTimeframe {
+    const upper = timeframe.toUpperCase();
+    if (upper === "4H" || upper === "1H") {
+      return upper as MarketTimeframe;
+    }
+    if (upper === "15M") {
+      return "15m";
+    }
+    return "1D";
+  }
+
+  private async buildSetupForProfile(params: {
+    asset: Asset;
+    template: SetupDefinition;
+    direction: "Long" | "Short";
+    normalizedDirection: "long" | "short";
+    profile: SetupProfile;
+    baseTimeframe: MarketTimeframe;
+    evaluationDate: Date;
+  }): Promise<Setup | null> {
+    const { asset, template, direction, normalizedDirection, profile, baseTimeframe, evaluationDate } = params;
+    const levelCategory = resolveLevelCategory(template);
+    const candle = await this.ensureLatestCandle(asset, baseTimeframe);
+    await this.ensureSupplementalTimeframes(asset, baseTimeframe);
+    const referencePrice = candle ? Number(candle.close) : 0;
+
+    if (!Number.isFinite(referencePrice) || referencePrice <= 0) {
+      if (profile !== "SWING") {
+        console.warn(
+          `[LivePerceptionDataSource] skip setup for ${asset.symbol} (${profile}) due to missing price on ${baseTimeframe}`,
+        );
+        return null;
+      }
+      console.warn(
+        `[LivePerceptionDataSource] building fallback setup for ${asset.symbol} (${profile}) with missing price on ${baseTimeframe}`,
+      );
+    }
+
+    const computedLevels = computeLevelsForSetup({
+      direction: normalizedDirection,
+      referencePrice,
+      volatilityScore: 50,
+      category: levelCategory,
+      profile,
+    });
+
+    const biasSnapshot = await this.biasProvider.getBiasSnapshot({
+      assetId: asset.id,
+      date: evaluationDate,
+      timeframe: baseTimeframe as Timeframe,
+    });
+    const normalizedBiasScore = this.normalizeBiasScore(biasSnapshot?.biasScore);
+
+    const timeframes = getTimeframesForAsset(asset);
+    const metrics = await buildMarketMetrics({
+      asset,
+      referencePrice,
+      timeframes,
+    });
+    const orderflow = await buildOrderflowMetrics({
+      asset,
+      timeframes,
+      trendScore: metrics.trendScore,
+      biasScore: normalizedBiasScore,
+    });
+    const orderflowMode =
+      LivePerceptionDataSource.ORDERFLOW_MODE_MAPPING[orderflow.mode];
+    const volatilityLabel = this.mapVolatilityLabel(metrics.volatilityScore);
+    const sentimentContext: SentimentContext = {
+      biasScore: normalizedBiasScore,
+      trendScore: metrics.trendScore,
+      momentumScore: metrics.momentumScore,
+      orderflowScore: orderflow.flowScore,
+      eventScore: 50,
+      rrr: computedLevels.riskReward.rrr ?? undefined,
+      riskPercent: computedLevels.riskReward.riskPercent ?? undefined,
+      volatilityLabel,
+      driftPct: metrics.priceDriftPct,
+    };
+    const sentiment = await this.buildSentimentMetricsForAsset(asset, sentimentContext);
+
+    const enhancedRiskReward = {
+      ...computedLevels.riskReward,
+      volatilityLabel,
+    };
+
+    let confidence = deriveBaseConfidenceScore(metrics);
+    const sentimentAdjustment = this.adjustConfidenceForSentiment(confidence, sentiment);
+    confidence = sentimentAdjustment.adjusted;
+    const orderflowAdjustment = applyOrderflowConfidenceAdjustment({
+      base: confidence,
+      orderflow,
+    });
+    confidence = orderflowAdjustment.adjusted;
+    const orderflowConfidenceDelta = orderflowAdjustment.delta;
+
+    const rings = {
+      ...createDefaultRings(),
+      trendScore: metrics.trendScore,
+      orderflowScore: orderflow.flowScore,
+      sentimentScore: sentiment.score,
+      sentiment: sentiment.score,
+      biasScore: normalizedBiasScore ?? 50,
+      bias: normalizedBiasScore ?? 50,
+      confidenceScore: confidence,
+      orderflow: orderflow.flowScore,
+    };
+
+    const orderflowMeta = {
+      clv: orderflow.clv,
+      relVolume: orderflow.relVolume,
+      expansion: orderflow.expansion,
+      consistency: orderflow.consistency,
+      timeframeSamples: orderflow.meta?.timeframeSamples,
+      context: orderflow.meta?.context,
+    };
+
+    const profileSuffix = profile === "SWING" ? "" : `-${profile.toLowerCase()}`;
+    return {
+      id: `${asset.id}-${template.id}${profileSuffix}`,
+      assetId: asset.id,
+      symbol: asset.symbol,
+      timeframe: getSetupProfileConfig(profile).primaryTimeframe,
+      profile,
+      direction,
+      confidence,
+      eventScore: rings.eventScore,
+      biasScore: rings.biasScore,
+      sentimentScore: sentiment.score,
+      balanceScore: rings.orderflowScore,
+      entryZone: computedLevels.entryZone,
+      stopLoss: computedLevels.stopLoss,
+      takeProfit: computedLevels.takeProfit,
+      category: levelCategory,
+      levelDebug: computedLevels.debug,
+      riskReward: enhancedRiskReward,
+      type: "Regelbasiert",
+      accessLevel: "free",
+      rings,
+      orderflowMode,
+      sentiment: {
+        score: sentiment.score,
+        label: sentiment.label,
+        reasons: sentiment.reasons,
+        raw: this.normalizeSentimentRaw(sentiment.raw),
+        contributions: sentiment.contributions,
+        flags: sentiment.flags,
+        dominantDrivers: sentiment.dominantDrivers,
+        confidenceDelta: sentimentAdjustment.delta,
+      },
+      orderflow: {
+        score: orderflow.flowScore,
+        mode: orderflow.mode,
+        clv: orderflow.clv,
+        relVolume: orderflow.relVolume,
+        expansion: orderflow.expansion,
+        consistency: orderflow.consistency,
+        reasons: orderflow.reasons,
+        reasonDetails: orderflow.reasonDetails,
+        flags: orderflow.flags,
+        meta: orderflowMeta,
+        confidenceDelta: orderflowConfidenceDelta,
+      },
+      validity: {
+        isStale: metrics.isStale,
+        reasons: metrics.reasons,
+        priceDriftPct: metrics.priceDriftPct,
+        lastPrice: metrics.lastPrice,
+        evaluatedAt: metrics.evaluatedAt,
+      },
+    } satisfies Setup;
   }
 
   private async ensureLatestCandle(
@@ -474,4 +538,3 @@ export function createPerceptionDataSource(): PerceptionDataSource {
 
   return new MockPerceptionDataSource();
 }
-

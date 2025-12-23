@@ -10,6 +10,7 @@ import { useT } from "@/src/lib/i18n/ClientProvider";
 import type { Setup } from "@/src/lib/engine/types";
 import { formatNumberText, formatRangeText } from "@/src/lib/formatters/levels";
 import { isEventModifierEnabledClient } from "@/src/lib/config/eventModifier";
+import { deriveSetupProfileFromTimeframe } from "@/src/lib/config/setupProfile";
 
 export type Direction = "Long" | "Short";
 
@@ -45,6 +46,7 @@ export function SetupCard({ setup, highlight = false }: SetupCardProps): JSX.Ele
   const pathname = usePathname();
   const prefix = useMemo(() => localePrefix(pathname), [pathname]);
   const t = useT();
+  const profile = setup.profile ?? deriveSetupProfileFromTimeframe(setup.timeframe);
   const modifierEnabled = isEventModifierEnabledClient();
   const accessTone =
     setup.accessLevel === "free"
@@ -77,9 +79,17 @@ export function SetupCard({ setup, highlight = false }: SetupCardProps): JSX.Ele
       </header>
 
       <div className="flex items-center justify-between gap-2">
+
         <div className="space-y-1">
-          <div className="text-base font-semibold text-slate-100">
-            {setup.symbol} · {setup.timeframe}
+          <div className="flex flex-wrap items-center gap-2 text-base font-semibold text-slate-100">
+            <span>
+              {setup.symbol} ?? {setup.timeframe}
+            </span>
+            {profile ? (
+              <span className="rounded-full border border-slate-700 bg-slate-800 px-2 py-0.5 text-[0.65rem] uppercase tracking-[0.18em] text-slate-200">
+                {profile}
+              </span>
+            ) : null}
           </div>
           <span
             className={`inline-flex w-fit rounded-full border px-2 py-0.5 text-xs font-semibold ${
@@ -141,3 +151,4 @@ function Level({ label, value, tone }: LevelProps): JSX.Element {
     </div>
   );
 }
+

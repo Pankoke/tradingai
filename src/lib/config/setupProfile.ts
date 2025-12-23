@@ -6,13 +6,17 @@ type EventWindowConfig = {
   postMinutes?: number;
 };
 
+type LevelDefaults = {
+  bandScale?: number;
+};
+
 type SetupProfileConfig = {
   profile: SetupProfile;
   primaryTimeframe: string;
   confirmTimeframe?: string;
   eventWindows: EventWindowConfig;
   ringDefaults?: Record<string, unknown>;
-  levelsDefaults?: Record<string, unknown>;
+  levelsDefaults?: LevelDefaults;
 };
 
 const PROFILE_CONFIG: Record<SetupProfile, SetupProfileConfig> = {
@@ -21,12 +25,14 @@ const PROFILE_CONFIG: Record<SetupProfile, SetupProfileConfig> = {
     primaryTimeframe: "5m",
     confirmTimeframe: "15m",
     eventWindows: { execMinutes: 45, contextMinutes: 360, postMinutes: 60 },
+    levelsDefaults: { bandScale: 0.5 },
   },
   INTRADAY: {
     profile: "INTRADAY",
-    primaryTimeframe: "1h",
-    confirmTimeframe: "4h",
+    primaryTimeframe: "1H",
+    confirmTimeframe: "4H",
     eventWindows: { execMinutes: 90, contextMinutes: 720, postMinutes: 120 },
+    levelsDefaults: { bandScale: 0.65 },
   },
   SWING: {
     profile: "SWING",

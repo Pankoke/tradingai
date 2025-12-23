@@ -5,6 +5,7 @@ import {
 } from "@/src/features/setup-generator/types";
 import { getCandlesForAsset } from "@/src/server/repositories/candleRepository";
 import { computeLevelsForSetup } from "@/src/lib/engine/levels";
+import { deriveSetupProfileFromTimeframe } from "@/src/lib/config/setupProfile";
 
 export async function generateSetupFromEngine(form: FormState): Promise<GeneratedSetup> {
   const to = new Date();
@@ -39,6 +40,7 @@ export async function generateSetupFromEngine(form: FormState): Promise<Generate
     category: "unknown",
     volatilityScore: 50,
     confidence: 50,
+    profile: deriveSetupProfileFromTimeframe(form.timeframe),
   });
 
   const entryParts = levels.entryZone

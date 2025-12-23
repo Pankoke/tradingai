@@ -1,5 +1,6 @@
 import type { Asset } from "@/src/server/repositories/assetRepository";
 import type { MarketTimeframe } from "./MarketDataProvider";
+import { filterAllowedTimeframes } from "@/src/lib/config/candleTimeframes";
 
 const BASE_TIMEFRAMES: MarketTimeframe[] = ["1D"];
 const CRYPTO_TIMEFRAMES: MarketTimeframe[] = ["1D", "4H", "1H", "15m"];
@@ -13,7 +14,7 @@ export const TIMEFRAME_SYNC_WINDOWS: Record<MarketTimeframe, number> = {
 
 export function getTimeframesForAsset(asset: Asset): MarketTimeframe[] {
   if (asset.assetClass === "crypto") {
-    return CRYPTO_TIMEFRAMES;
+    return filterAllowedTimeframes(CRYPTO_TIMEFRAMES);
   }
-  return BASE_TIMEFRAMES;
+  return filterAllowedTimeframes(BASE_TIMEFRAMES);
 }

@@ -1,4 +1,5 @@
 import { clamp } from "@/src/lib/math";
+import type { SetupProfile } from "@/src/lib/config/setupProfile";
 
 type Direction = "long" | "short" | "neutral";
 
@@ -148,6 +149,8 @@ export function computeLevelsForSetup(params: {
   volatilityScore?: number;
   confidence?: number;
   category?: SetupLevelCategory;
+  profile?: SetupProfile;
+  bandScale?: number;
 }): ComputedLevels {
   const price = Number(params.referencePrice);
   const category = params.category ?? "unknown";
@@ -189,7 +192,16 @@ export function computeLevelsForSetup(params: {
   }
 
   const baseBand = getBaseBandForCategory(category);
-  const bandPctRaw = baseBand * volFactor;
+  const profileBandScale =
+    params.bandScale ??
+    (params.profile === "INTRADAY"
+      ? 0.65
+      : params.profile === "SCALP"
+        ? 0.5
+        : params.profile === "POSITION"
+          ? 1.05
+          : 1);
+  const bandPctRaw = baseBand * profileBandScale * volFactor;
   const bandPct = clamp(bandPctRaw, 0.001, 0.05);
   const stopBand = clamp(bandPct * stopFactor, 0.001, 0.03);
   const targetBand = clamp(bandPct * targetFactor, 0.001, 0.05);
