@@ -1,0 +1,26 @@
+name: Intraday Marketdata Sync
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: cron-intraday-marketdata
+  cancel-in-progress: false
+
+jobs:
+  intraday-marketdata:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call intraday marketdata sync endpoint
+        env:
+          MARKETDATA_INTRADAY_SYNC_URL: ${{ secrets.MARKETDATA_INTRADAY_SYNC_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$MARKETDATA_INTRADAY_SYNC_URL" ]; then
+            echo "MARKETDATA_INTRADAY_SYNC_URL is not set"; exit 1;
+          fi
+          curl -X POST "$MARKETDATA_INTRADAY_SYNC_URL" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H "Content-Type: application/json"

@@ -61,7 +61,7 @@ export async function GET(): Promise<Response> {
 }
 
 async function buildEngineSnapshotResponse(mode: "mock" | "fallback"): Promise<PerceptionSnapshotWithItems> {
-  const snapshot = await buildPerceptionSnapshot();
+  const snapshot = await buildPerceptionSnapshot({ allowSync: false });
   const fallbackSnapshotTime = new Date();
   const isoCreatedAt = fallbackSnapshotTime.toISOString();
   const snapshotId = `${mode}-${Date.now()}`;

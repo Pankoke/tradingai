@@ -114,7 +114,7 @@ function scoreSetup(setup: HomepageSetup): number {
 }
 
 export async function getHomepageSetups(): Promise<HomepageSetups> {
-  const snapshot = await buildPerceptionSnapshot();
+  const snapshot = await buildPerceptionSnapshot({ allowSync: false });
   const timestamp = snapshot.generatedAt;
 
   const candidates: HomepageSetup[] = snapshot.setups.map((s) => mapSetup(s, timestamp));

@@ -18,7 +18,7 @@ export async function GET(): Promise<Response> {
       return respondOk<TodaySetupsResponse>({ setups, setupOfTheDayId });
     }
 
-    const snapshot: PerceptionSnapshot = await buildPerceptionSnapshot();
+    const snapshot: PerceptionSnapshot = await buildPerceptionSnapshot({ allowSync: false });
 
     const body: TodaySetupsResponse = {
       setups: snapshot.setups,

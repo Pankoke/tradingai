@@ -179,7 +179,8 @@ export async function requestSnapshotBuild(params: {
     reused: false,
   });
   try {
-    const snapshot = await buildAndStorePerceptionSnapshot({ source: params.source });
+    const allowSync = params.source !== "ui";
+    const snapshot = await buildAndStorePerceptionSnapshot({ source: params.source, allowSync });
     updateRunState({
       status: "succeeded",
       finishedAt: new Date().toISOString(),

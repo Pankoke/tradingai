@@ -19,7 +19,6 @@ import { getEventsInRange } from "@/src/server/repositories/eventRepository";
 import { deriveSetupProfileFromTimeframe } from "@/src/lib/config/setupProfile";
 
 const ENGINE_VERSION = "0.1.0";
-const dataSource = createPerceptionDataSource();
 
 const defaultRings = createDefaultRings();
 
@@ -232,8 +231,16 @@ function createRingMetaOverrides(params: {
   return overrides;
 }
 
-export async function buildPerceptionSnapshot(options?: { asOf?: Date }): Promise<PerceptionSnapshot> {
+export async function buildPerceptionSnapshot(options?: {
+  asOf?: Date;
+  allowSync?: boolean;
+  profiles?: SetupProfile[];
+}): Promise<PerceptionSnapshot> {
   const asOf = options?.asOf ?? new Date();
+  const dataSource = createPerceptionDataSource({
+    allowSync: options?.allowSync ?? true,
+    profiles: options?.profiles,
+  });
   const setups = await dataSource.getSetupsForToday({ asOf });
 
   const biasSnapshot: BiasSnapshot = await dataSource.getBiasSnapshotForAssets({

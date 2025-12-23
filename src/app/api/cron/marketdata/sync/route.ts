@@ -39,21 +39,19 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     for (const asset of assets) {
       try {
-        await syncDailyCandlesForAsset({
-          asset,
-          from,
-          to: now,
-        });
+        // Daily job: only daily + derived weekly candles to avoid duplicating intraday sync.
+        await syncDailyCandlesForAsset({ asset, from, to: now, timeframe: "1D" });
+        await syncDailyCandlesForAsset({ asset, from, to: now, timeframe: "1W" });
         processed += 1;
         logs.push({
           symbol: asset.symbol,
-          timeframeCount: asset.assetClass === "crypto" ? 4 : 1,
+          timeframeCount: 2,
         });
       } catch (error) {
         failed += 1;
         logs.push({
           symbol: asset.symbol,
-          timeframeCount: asset.assetClass === "crypto" ? 4 : 1,
+          timeframeCount: 2,
           error: error instanceof Error ? error.message : "unknown error",
         });
         cronLogger.warn("marketdata sync failed for asset", {

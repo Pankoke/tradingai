@@ -19,6 +19,7 @@ export type PerceptionSnapshotWithItems = {
 
 type SnapshotFilters = {
   label?: string;
+  excludeLabel?: string;
   dataMode?: string;
   from?: Date;
   to?: Date;
@@ -59,6 +60,11 @@ function buildSnapshotWhere(filters?: SnapshotFilters): SQL<unknown> | undefined
   if (filters.label) {
     conditions.push(eq(perceptionSnapshots.label, filters.label));
   }
+  if (filters.excludeLabel) {
+    conditions.push(
+      sql`(${perceptionSnapshots.label} is null or ${perceptionSnapshots.label} <> ${filters.excludeLabel})`,
+    );
+  }
   if (filters.dataMode) {
     conditions.push(eq(perceptionSnapshots.dataMode, filters.dataMode));
   }
@@ -71,10 +77,11 @@ function buildSnapshotWhere(filters?: SnapshotFilters): SQL<unknown> | undefined
   return conditions.length ? and(...conditions) : undefined;
 }
 
-export async function getLatestSnapshot(): Promise<PerceptionSnapshotWithItems | undefined> {
+export async function getLatestSnapshot(filters?: SnapshotFilters): Promise<PerceptionSnapshotWithItems | undefined> {
   const [snapshot] = await db
     .select()
     .from(perceptionSnapshots)
+    .where(buildSnapshotWhere(filters))
     .orderBy(desc(perceptionSnapshots.snapshotTime))
     .limit(1);
 

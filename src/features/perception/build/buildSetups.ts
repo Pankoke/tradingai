@@ -19,6 +19,7 @@ import { buildRingAiSummaryForSetup } from "@/src/lib/engine/modules/ringAiSumma
 import { maybeEnhanceRingAiSummaryWithLLM } from "@/src/server/ai/ringSummaryOpenAi";
 import { computeSentimentRankingAdjustment } from "@/src/lib/engine/sentimentAdjustments";
 import { clamp } from "@/src/lib/math";
+import type { SetupProfile } from "@/src/lib/config/setupProfile";
 
 export type PerceptionSnapshotEngineResult = PerceptionSnapshot;
 
@@ -26,6 +27,9 @@ type BuildParams = {
   snapshotTime?: Date;
   mode?: PerceptionDataMode;
   source?: SnapshotBuildSource;
+  allowSync?: boolean;
+  profiles?: SetupProfile[];
+  label?: string;
 };
 
 const SNAPSHOT_VERSION = "v1.0.0";
@@ -53,7 +57,7 @@ function createId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 }
 
-export type SnapshotBuildSource = "ui" | "admin" | "cron";
+export type SnapshotBuildSource = "ui" | "admin" | "cron" | "cron_intraday";
 
 export async function buildAndStorePerceptionSnapshot(
   params: BuildParams = {},
@@ -62,7 +66,11 @@ export async function buildAndStorePerceptionSnapshot(
   const mode: PerceptionDataMode = params.mode ?? getPerceptionDataMode();
 
   const start = Date.now();
-  const engineResult: PerceptionSnapshotEngineResult = await buildPerceptionSnapshot({ asOf: snapshotTime });
+  const engineResult: PerceptionSnapshotEngineResult = await buildPerceptionSnapshot({
+    asOf: snapshotTime,
+    allowSync: params.allowSync,
+    profiles: params.profiles,
+  });
   const generatedMs = Date.now() - start;
 
   const snapshotId = createId("snapshot");
@@ -201,7 +209,7 @@ export async function buildAndStorePerceptionSnapshot(
   const snapshot: PerceptionSnapshotInput = {
     id: snapshotId,
     snapshotTime,
-    label: deriveSnapshotLabel(snapshotTime),
+    label: params.label ?? deriveSnapshotLabel(snapshotTime),
     version: SNAPSHOT_VERSION,
     dataMode: mode,
     generatedMs,

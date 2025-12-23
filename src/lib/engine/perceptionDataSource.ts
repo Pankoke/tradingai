@@ -98,6 +98,11 @@ class MockPerceptionDataSource implements PerceptionDataSource {
 }
 
 class LivePerceptionDataSource implements PerceptionDataSource {
+  constructor(
+    private readonly allowSync: boolean,
+    private readonly allowedProfiles: SetupProfile[],
+  ) {}
+
   private biasProvider = new DbBiasProvider();
 
   private static ORDERFLOW_MODE_MAPPING: Record<
@@ -113,7 +118,9 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     const assets = await getActiveAssets();
     const evaluationDate = new Date();
     const setups: Setup[] = [];
-    const profiles: SetupProfile[] = ["SWING", "INTRADAY", "POSITION"];
+    const profiles: SetupProfile[] = this.allowedProfiles.length
+      ? this.allowedProfiles
+      : (["SWING", "INTRADAY", "POSITION"] satisfies SetupProfile[]);
 
     await Promise.all(
       assets.map(async (asset, index) => {
@@ -425,6 +432,14 @@ class LivePerceptionDataSource implements PerceptionDataSource {
       return candle;
     }
 
+    if (!this.allowSync) {
+      logger.warn("[LivePerceptionDataSource] skipping candle sync in read-only mode", {
+        symbol: asset.symbol,
+        timeframe,
+      });
+      return candle;
+    }
+
     await this.syncCandlesForAsset(asset, timeframe);
     candle = await getLatestCandleForAsset({
       assetId: asset.id,
@@ -439,6 +454,9 @@ class LivePerceptionDataSource implements PerceptionDataSource {
   }
 
   private async ensureSupplementalTimeframes(asset: Asset, base: MarketTimeframe) {
+    if (!this.allowSync) {
+      return;
+    }
     const configured = getTimeframesForAsset(asset);
     const extras = configured.filter((tf) => tf !== base);
     await Promise.all(extras.map((tf) => this.syncCandlesForAsset(asset, tf)));
@@ -466,6 +484,9 @@ class LivePerceptionDataSource implements PerceptionDataSource {
   }
 
   private async syncCandlesForAsset(asset: Asset, timeframe: MarketTimeframe) {
+    if (!this.allowSync) {
+      return;
+    }
     const to = new Date();
     const windowDays = TIMEFRAME_SYNC_WINDOWS[timeframe] ?? MARKETDATA_SYNC_WINDOW_DAYS;
     const from = new Date(to);
@@ -544,11 +565,16 @@ class LivePerceptionDataSource implements PerceptionDataSource {
   }
 }
 
-export function createPerceptionDataSource(): PerceptionDataSource {
+export function createPerceptionDataSource(config?: {
+  allowSync?: boolean;
+  profiles?: SetupProfile[];
+}): PerceptionDataSource {
   const mode = getPerceptionDataMode();
+  const allowSync = config?.allowSync ?? true;
+  const profiles = config?.profiles ?? (["SWING", "INTRADAY", "POSITION"] satisfies SetupProfile[]);
 
   if (mode === "live") {
-    return new LivePerceptionDataSource();
+    return new LivePerceptionDataSource(allowSync, profiles);
   }
 
   return new MockPerceptionDataSource();

@@ -65,7 +65,10 @@ describe("snapshotBuildService", () => {
 
     expect(result.snapshot).toBe(builtSnapshot);
     expect(result.reused).toBe(false);
-    expect(buildSetupsMock.buildAndStorePerceptionSnapshot).toHaveBeenCalledWith({ source: "cron" });
+    expect(buildSetupsMock.buildAndStorePerceptionSnapshot).toHaveBeenCalledWith({
+      source: "cron",
+      allowSync: true,
+    });
     expect(dbExecuteMock).toHaveBeenCalledTimes(2);
   });
 
@@ -92,6 +95,19 @@ describe("snapshotBuildService", () => {
     expect(buildSetupsMock.buildAndStorePerceptionSnapshot).toHaveBeenCalledTimes(1);
     expect(dbExecuteMock).toHaveBeenCalledTimes(2);
     expect(result.snapshot.snapshot.id).toBe("built-snapshot");
+  });
+
+  it("disables sync when source is ui to keep request path read-only", async () => {
+    const staleSnapshot = createSnapshot("stale-snapshot", "2099-01-01T05:00:00Z");
+    snapshotStoreMock.loadLatestSnapshotFromStore.mockResolvedValueOnce(staleSnapshot);
+    mockSuccessfulLockCycle();
+
+    await requestSnapshotBuild({ source: "ui" });
+
+    expect(buildSetupsMock.buildAndStorePerceptionSnapshot).toHaveBeenCalledWith({
+      source: "ui",
+      allowSync: false,
+    });
   });
 });
 

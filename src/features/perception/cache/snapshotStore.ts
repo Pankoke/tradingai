@@ -34,7 +34,7 @@ export async function saveSnapshotToStore(params: {
 
 export async function loadLatestSnapshotFromStore(): Promise<PerceptionSnapshotWithItems | null> {
   try {
-    const snapshot = await getLatestSnapshot();
+    const snapshot = await getLatestSnapshot({ excludeLabel: "intraday" });
     return snapshot ?? null;
   } catch (error) {
     if (isMissingTableError(error, SNAPSHOT_TABLE)) {

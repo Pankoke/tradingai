@@ -24,7 +24,7 @@ export default async function PremiumPerceptionPage({ params }: PageProps): Prom
     : i18nConfig.defaultLocale;
   const t = (key: string): string => getMessages(locale)[key] ?? key;
 
-  const snapshot = await buildPerceptionSnapshot();
+  const snapshot = await buildPerceptionSnapshot({ allowSync: false });
   return (
     <main className="min-h-screen bg-[var(--bg-main)] px-6 py-12">
       <div className="mx-auto max-w-3xl space-y-4 text-[var(--text-primary)]">

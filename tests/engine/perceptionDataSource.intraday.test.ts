@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createPerceptionDataSource } from "@/src/lib/engine/perceptionDataSource";
+import { getLatestCandleForAsset } from "@/src/server/repositories/candleRepository";
+import { syncDailyCandlesForAsset } from "@/src/features/marketData/syncDailyCandles";
 
 const mockActiveAssets = [
   {
@@ -111,5 +113,14 @@ describe("LivePerceptionDataSource intraday generation", () => {
     expect((intraday?.levelDebug?.bandPct ?? 1)).toBeLessThan(swing?.levelDebug?.bandPct ?? 0);
     expect(position?.timeframe).toBe("1W");
     expect((position?.levelDebug?.bandPct ?? 0)).toBeGreaterThan(swing?.levelDebug?.bandPct ?? 0);
+  });
+
+  it("does not attempt candle sync when allowSync is false", async () => {
+    vi.mocked(getLatestCandleForAsset).mockResolvedValue(null as unknown as { close: string });
+
+    const dataSource = createPerceptionDataSource({ allowSync: false });
+    await dataSource.getSetupsForToday({ asOf: new Date("2025-01-01T00:00:00Z") });
+
+    expect(syncDailyCandlesForAsset).not.toHaveBeenCalled();
   });
 });
