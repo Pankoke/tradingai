@@ -2,14 +2,23 @@ import React, { Suspense } from "react";
 import type { JSX } from "react";
 import HomepageSetupCard from "@/src/components/homepage/HomepageSetupCard";
 import { PremiumControls } from "@/src/components/setups/PremiumControls";
-import { applyFilter, applySort, buildAssetOptions, type SortDir, type SortKey } from "@/src/components/setups/premiumHelpers";
+import {
+  applyFilter,
+  applySort,
+  buildAssetOptions,
+  filterPremiumByProfile,
+  type SortDir,
+  type SortKey,
+} from "@/src/components/setups/premiumHelpers";
 import { clamp } from "@/src/lib/math";
 import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
+import { deriveSetupProfileFromTimeframe } from "@/src/lib/config/setupProfile";
 import deMessages from "@/src/messages/de.json";
 import enMessages from "@/src/messages/en.json";
 import { fetchPerceptionToday } from "@/src/lib/api/perceptionClient";
 import type { Setup } from "@/src/lib/engine/types";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
+import { ProfileFilters } from "@/src/lib/setups/profileFilters";
 
 type PageProps = {
   params: Promise<{ locale?: string }>;
@@ -18,6 +27,7 @@ type PageProps = {
     dir?: string;
     filter?: string;
     asset?: string;
+    profile?: string;
   }>;
 };
 
@@ -82,6 +92,7 @@ function toHomepageSetup(setup: Setup): HomepageSetup {
     assetId: setup.assetId,
     symbol: setup.symbol,
     timeframe: setup.timeframe,
+    profile: setup.profile ?? deriveSetupProfileFromTimeframe(setup.timeframe),
     direction: setup.direction,
     confidence: clamp(setup.confidence, 0, 100),
     weakSignal: setup.confidence < 60,
@@ -118,7 +129,12 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
   const t = (key: string): string => messages[key] ?? key;
   const labels = buildLabels(t);
 
-  const { setups } = await fetchPerceptionToday();
+  const profileParam = resolvedSearch?.profile ?? null;
+  const wantsIntraday = profileParam === "intraday";
+  const { setups, snapshot, meta } = await fetchPerceptionToday(
+    wantsIntraday ? { profile: "intraday" } : undefined,
+  );
+  const profileResult = filterPremiumByProfile(setups, profileParam);
 
   const sort = resolvedSearch?.sort ?? "confidence";
   const dir = resolvedSearch?.dir ?? "desc";
@@ -130,10 +146,23 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
     : "signal_quality";
   const sortDir: SortDir = dir === "asc" ? "asc" : "desc";
 
-  const filtered = applyFilter(setups, filter, assetFilter);
+  const filtered = applyFilter(profileResult.effective, filter, assetFilter);
   const sorted = applySort(filtered, sortKey, sortDir);
   const allSetups = sorted.map(toHomepageSetup);
-  const assetOptions = buildAssetOptions(setups);
+  const assetOptions = buildAssetOptions(profileResult.effective);
+
+  const fulfilledLabel = (meta as { fulfilledLabel?: string } | undefined)?.fulfilledLabel ?? snapshot.label;
+  const intradayFallback = wantsIntraday && fulfilledLabel !== "intraday";
+  const snapshotTime = snapshot.snapshotTime ? new Date(snapshot.snapshotTime) : null;
+  const minutesAgo = snapshotTime ? Math.round((Date.now() - snapshotTime.getTime()) / 60000) : null;
+  const snapshotUnavailable =
+    (meta as { snapshotAvailable?: boolean } | undefined)?.snapshotAvailable === false || profileResult.effective.length === 0;
+  const profileLabels = {
+    all: messages["setups.profileFilter.all"],
+    swing: messages["setups.profileFilter.swing"],
+    intraday: messages["setups.profileFilter.intraday"],
+    position: messages["setups.profileFilter.position"],
+  };
 
   return (
     <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
@@ -141,6 +170,28 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
         <div className="space-y-3">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Premium Setups</h1>
         </div>
+
+        <ProfileFilters
+          selectedProfile={profileResult.selectedProfile}
+          basePath={`/${locale}/setups/premium`}
+          labels={profileLabels}
+        />
+        {wantsIntraday ? (
+          <p className="text-xs text-[var(--text-secondary)]">
+            {intradayFallback
+              ? "Intraday snapshot not available yet – showing latest daily snapshot."
+              : minutesAgo != null
+                ? `Last intraday update: ${minutesAgo} min ago`
+                : "Intraday snapshot loaded."}
+          </p>
+        ) : null}
+        {snapshotUnavailable ? (
+          <p className="text-xs text-amber-300">
+            {profileResult.selectedProfile === "intraday"
+              ? "Intraday wird stündlich aktualisiert. Noch kein Snapshot verfügbar."
+              : "Keine Setups für das gewählte Profil verfügbar."}
+          </p>
+        ) : null}
 
         <Suspense
           fallback={

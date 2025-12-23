@@ -6,6 +6,8 @@ import { perceptionSnapshotItems } from "@/src/server/db/schema/perceptionSnapsh
 import { candles } from "@/src/server/db/schema/candles";
 import { events } from "@/src/server/db/schema/events";
 import { assets } from "@/src/server/db/schema/assets";
+import { listAuditRuns } from "@/src/server/repositories/auditRunRepository";
+import { getLatestSnapshot } from "@/src/server/repositories/perceptionSnapshotRepository";
 
 type CountResult = { value: number | string | null };
 
@@ -44,11 +46,38 @@ type SizeStats = {
   error?: string;
 };
 
+type JobHealth = {
+  label: string;
+  action: string;
+  lastRunAt?: string | null;
+  status: "ok" | "stale" | "missing";
+  durationMs?: number | null;
+  notes?: string[];
+};
+
+type JobHealthSummary = {
+  jobs: JobHealth[];
+};
+
+type SnapshotFreshness = {
+  label: string;
+  ageMinutes: number | null;
+  status: "ok" | "stale" | "missing";
+  snapshotId?: string;
+};
+
+type SnapshotFreshnessSummary = {
+  daily: SnapshotFreshness;
+  intraday: SnapshotFreshness;
+};
+
 export type SystemHealthReport = {
   appHealth: AppHealth;
   dbHealth: DbHealth;
   counts: CountStats;
   sizes: SizeStats;
+  jobs?: JobHealthSummary;
+  snapshots?: SnapshotFreshnessSummary;
   generatedAt: string;
 };
 
@@ -57,6 +86,15 @@ const TABLES_FOR_SIZE = [
   "perception_snapshot_items",
   "candles",
   "events",
+];
+
+const JOBS: Array<{ label: string; action: string; staleMinutes: number }> = [
+  { label: "Marketdata Daily", action: "marketdata_sync", staleMinutes: 24 * 60 },
+  { label: "Marketdata Intraday", action: "marketdata.intraday_sync", staleMinutes: 2 * 60 },
+  { label: "Perception Daily", action: "snapshot_build", staleMinutes: 24 * 60 },
+  { label: "Perception Intraday", action: "perception_intraday", staleMinutes: 2 * 60 },
+  { label: "Events Ingest", action: "events.ingest", staleMinutes: 24 * 60 },
+  { label: "Events Enrich", action: "events.enrich", staleMinutes: 24 * 60 },
 ];
 
 function resolveBaseUrl(): string {
@@ -182,12 +220,67 @@ async function gatherSizes(): Promise<SizeStats> {
   }
 }
 
+async function loadJobHealth(): Promise<JobHealthSummary> {
+  const jobs: JobHealth[] = [];
+  for (const job of JOBS) {
+    const runs = await listAuditRuns({ filters: { action: job.action }, limit: 1 });
+    const run = runs.runs[0];
+    let status: JobHealth["status"] = "missing";
+    let lastRunAt: string | null | undefined = run?.createdAt?.toISOString?.() ?? null;
+    if (run) {
+      const ageMinutes = lastRunAt ? (Date.now() - new Date(lastRunAt).getTime()) / 60000 : Infinity;
+      status = ageMinutes > job.staleMinutes ? "stale" : "ok";
+      if (run.error) status = "missing";
+    }
+    jobs.push({
+      label: job.label,
+      action: job.action,
+      lastRunAt,
+      status,
+      durationMs: run?.durationMs ?? null,
+      notes: run?.message ? [run.message] : undefined,
+    });
+  }
+  return { jobs };
+}
+
+async function loadSnapshotFreshness(): Promise<SnapshotFreshnessSummary> {
+  const [daily, intraday] = await Promise.all([
+    getLatestSnapshot({ excludeLabel: "intraday" }),
+    getLatestSnapshot({ label: "intraday" }),
+  ]);
+
+  const dailyAge = daily?.snapshot.snapshotTime
+    ? (Date.now() - new Date(daily.snapshot.snapshotTime).getTime()) / 60000
+    : null;
+  const intradayAge = intraday?.snapshot.snapshotTime
+    ? (Date.now() - new Date(intraday.snapshot.snapshotTime).getTime()) / 60000
+    : null;
+
+  const dailyFresh: SnapshotFreshness = {
+    label: "Daily Snapshot",
+    ageMinutes: dailyAge,
+    status: dailyAge == null ? "missing" : dailyAge > 12 * 60 ? "stale" : "ok",
+    snapshotId: daily?.snapshot.id,
+  };
+  const intradayFresh: SnapshotFreshness = {
+    label: "Intraday Snapshot",
+    ageMinutes: intradayAge,
+    status: intradayAge == null ? "missing" : intradayAge > 90 ? "stale" : "ok",
+    snapshotId: intraday?.snapshot.id,
+  };
+
+  return { daily: dailyFresh, intraday: intradayFresh };
+}
+
 export async function getSystemHealthReport(): Promise<SystemHealthReport> {
-  const [appHealth, dbHealth, counts, sizes] = await Promise.all([
+  const [appHealth, dbHealth, counts, sizes, jobs, snapshots] = await Promise.all([
     fetchAppHealth(),
     measureDbHealth(),
     gatherCounts(),
     gatherSizes(),
+    loadJobHealth(),
+    loadSnapshotFreshness(),
   ]);
 
   return {
@@ -195,6 +288,8 @@ export async function getSystemHealthReport(): Promise<SystemHealthReport> {
     dbHealth,
     counts,
     sizes,
+    jobs,
+    snapshots,
     generatedAt: new Date().toISOString(),
   };
 }

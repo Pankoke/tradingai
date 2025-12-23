@@ -1,4 +1,5 @@
 import type { Setup } from "@/src/lib/engine/types";
+import { filterSetupsByProfile, parseProfileFilter } from "@/src/lib/setups/profileFilter";
 
 export type SortKey = "signal_quality" | "confidence" | "risk_reward" | "direction";
 export type SortDir = "asc" | "desc";
@@ -122,4 +123,14 @@ export function applySort(setups: Setup[], sort: SortKey, dir: SortDir): Setup[]
     }
     return 0;
   });
+}
+
+export function filterPremiumByProfile(
+  setups: Setup[],
+  profileParam?: string | null,
+): { selectedProfile: string | null; filtered: Setup[]; effective: Setup[] } {
+  const selectedProfile = parseProfileFilter(profileParam ?? null);
+  const filtered = filterSetupsByProfile(setups, selectedProfile);
+  const effective = filtered.length ? filtered : setups;
+  return { selectedProfile, filtered, effective };
 }

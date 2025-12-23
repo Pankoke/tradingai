@@ -1,6 +1,5 @@
 import React from "react";
 import type { JSX } from "react";
-import Link from "next/link";
 import { SetupOfTheDayCard } from "@/src/app/[locale]/(marketing)/components/SetupOfTheDayCard";
 import HomepageSetupCard from "@/src/components/homepage/HomepageSetupCard";
 import { EngineMetaPanel } from "@/src/components/perception/EngineMetaPanel";
@@ -13,6 +12,8 @@ import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
 import { deriveSetupProfileFromTimeframe } from "@/src/lib/config/setupProfile";
 import deMessages from "@/src/messages/de.json";
 import enMessages from "@/src/messages/en.json";
+import { selectSwingSotd } from "@/src/lib/setups/sotd";
+import { ProfileFilters } from "@/src/lib/setups/profileFilters";
 
 type Labels = ReturnType<typeof buildLabels>;
 
@@ -150,6 +151,7 @@ export default async function SetupsPage({ params, searchParams }: PageProps): P
   const selectedProfile = parseProfileFilter(profileParam);
 
   const wantsIntraday = selectedProfile === "intraday";
+  const baseDaily = await fetchPerceptionToday();
   const { setups, items, snapshot, meta } = await fetchPerceptionToday(
     wantsIntraday ? { profile: "intraday" } : undefined,
   );
@@ -164,11 +166,14 @@ export default async function SetupsPage({ params, searchParams }: PageProps): P
     snapshotTime != null ? Math.round((Date.now() - snapshotTime.getTime()) / 60000) : null;
   const snapshotUnavailable =
     (meta as { snapshotAvailable?: boolean } | undefined)?.snapshotAvailable === false || setups.length === 0;
+  const profileLabels = {
+    all: t("setups.profileFilter.all"),
+    swing: t("setups.profileFilter.swing"),
+    intraday: t("setups.profileFilter.intraday"),
+    position: t("setups.profileFilter.position"),
+  };
 
-  const heroItem = items.find((item) => item.isSetupOfTheDay) ?? items[0] ?? null;
-  const setupOfTheDayRaw =
-    heroItem ? effectiveSetups.find((s) => s.id === heroItem.setupId) : null;
-  const primarySetup = setupOfTheDayRaw ?? effectiveSetups[0] ?? null;
+  const primarySetup = selectSwingSotd(baseDaily.setups) ?? effectiveSetups[0] ?? null;
   const listCandidates = (filteredSetups.length ? filteredSetups : setups).filter(
     (s) => s.accessLevel === "free",
   );
@@ -190,7 +195,11 @@ export default async function SetupsPage({ params, searchParams }: PageProps): P
           </p>
         </div>
 
-        <ProfileFilters locale={locale} selectedProfile={selectedProfile} t={t} />
+        <ProfileFilters
+          basePath={`/${locale}/setups`}
+          selectedProfile={selectedProfile}
+          labels={profileLabels}
+        />
         {wantsIntraday ? (
           <p className="text-xs text-[var(--text-secondary)]">
             {intradayFallback
@@ -212,8 +221,8 @@ export default async function SetupsPage({ params, searchParams }: PageProps): P
 
         <section className="space-y-4">
           <h2 className="text-lg font-semibold tracking-tight sm:text-xl">Setup des Tages</h2>
-          {setupOfTheDayRaw ? (
-            <SetupOfTheDayCard setup={setupOfTheDayRaw} generatedAt={snapshot.snapshotTime} />
+          {primarySetup ? (
+            <SetupOfTheDayCard setup={{ ...primarySetup, profile: "SWING" }} generatedAt={baseDaily.snapshot.snapshotTime} />
           ) : (
             <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 text-sm text-[var(--text-secondary)]">
               Aktuell kein Setup des Tages verfügbar.
@@ -243,41 +252,6 @@ export default async function SetupsPage({ params, searchParams }: PageProps): P
         </section>
         <FiveRingsExplainer t={t} />
       </div>
-    </div>
-  );
-}
-
-function ProfileFilters({
-  locale,
-  selectedProfile,
-  t,
-}: {
-  locale: string;
-  selectedProfile: string | null;
-  t: (key: string) => string;
-}): JSX.Element {
-  const base = `/${locale}/setups`;
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      {["all", "swing", "intraday", "position"].map((key) => {
-        const isActive = selectedProfile === key;
-        const href = key === "all" ? base : `${base}?profile=${key}`;
-        const label = t(`setups.profileFilter.${key}`);
-        return (
-          <Link
-            key={key}
-            href={href}
-            replace={true}
-            className={`rounded-full border px-3 py-1 text-sm font-semibold transition ${
-              isActive
-                ? "border-emerald-400/70 bg-emerald-500/10 text-emerald-100"
-                : "border-slate-700 bg-slate-900/60 text-slate-200 hover:border-slate-500"
-            }`}
-          >
-            {label}
-          </Link>
-        );
-      })}
     </div>
   );
 }

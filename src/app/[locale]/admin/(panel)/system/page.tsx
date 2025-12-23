@@ -36,8 +36,12 @@ function formatBytes(value?: number): string {
 
 const ACTION_LABEL_KEYS = [
   { value: "snapshot_build", key: "admin.audit.actions.snapshot_build" },
+  { value: "marketdata.intraday_sync", key: "admin.audit.actions.marketdata_intraday" },
+  { value: "perception_intraday", key: "admin.audit.actions.perception_intraday" },
   { value: "marketdata_sync", key: "admin.audit.actions.marketdata_sync" },
   { value: "bias_sync", key: "admin.audit.actions.bias_sync" },
+  { value: "events.ingest", key: "admin.audit.actions.events_ingest" },
+  { value: "events.enrich", key: "admin.audit.actions.events_enrich" },
 ];
 
 const SOURCE_LABEL_KEYS = [
@@ -54,6 +58,17 @@ function getActionLabel(action: string, messages: typeof enMessages): string {
 function getSourceLabel(source: string, messages: typeof enMessages): string {
   const entry = SOURCE_LABEL_KEYS.find((item) => item.value === source);
   return entry ? (messages[entry.key as keyof typeof enMessages] ?? source) : source;
+}
+
+function formatAgo(value?: string | null, locale?: Locale): string {
+  if (!value) return "–";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "–";
+  const diffMinutes = Math.round((Date.now() - date.getTime()) / 60000);
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 48) return `${diffHours}h ago`;
+  return date.toLocaleString(locale === "de" ? "de-DE" : "en-US");
 }
 
 export default async function AdminSystemHealthPage({ params }: Props) {
@@ -218,6 +233,67 @@ export default async function AdminSystemHealthPage({ params }: Props) {
           ))}
         </div>
       </section>
+
+      {health.jobs ? (
+        <section className="rounded-2xl border border-slate-800 bg-slate-950/40 p-5 shadow-lg shadow-black/40">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Jobs & Snapshots</p>
+              <p className="text-sm text-slate-400">Intraday stündlich, Daily 24h – OK/Stale/Missing</p>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {health.jobs.jobs.map((job) => (
+              <div
+                key={job.action}
+                className={clsx(
+                  "rounded-xl border px-3 py-3",
+                  job.status === "ok"
+                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-100"
+                    : job.status === "stale"
+                      ? "border-amber-500/30 bg-amber-500/10 text-amber-100"
+                      : "border-rose-500/30 bg-rose-500/10 text-rose-100",
+                )}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm font-semibold">{job.label}</div>
+                  <div className="text-xs uppercase tracking-[0.3em]">{job.status.toUpperCase()}</div>
+                </div>
+                <div className="mt-1 text-xs text-slate-200">
+                  Last run: {formatAgo(job.lastRunAt, locale)}
+                  {job.durationMs ? ` · ${Math.round(job.durationMs)}ms` : ""}
+                </div>
+              </div>
+            ))}
+          </div>
+          {health.snapshots ? (
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {[health.snapshots.daily, health.snapshots.intraday].map((snap) => (
+                <div
+                  key={snap.label}
+                  className={clsx(
+                    "rounded-xl border px-3 py-3",
+                    snap.status === "ok"
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-100"
+                      : snap.status === "stale"
+                        ? "border-amber-500/30 bg-amber-500/10 text-amber-100"
+                        : "border-rose-500/30 bg-rose-500/10 text-rose-100",
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-sm font-semibold">{snap.label}</div>
+                    <div className="text-xs uppercase tracking-[0.3em]">{snap.status.toUpperCase()}</div>
+                  </div>
+                  <div className="mt-1 text-xs text-slate-200">
+                    Age: {snap.ageMinutes == null ? "–" : `${Math.round(snap.ageMinutes)} min`}
+                    {snap.snapshotId ? ` · id ${snap.snapshotId}` : ""}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="rounded-2xl border border-slate-800 bg-slate-950/40 p-5 shadow-lg shadow-black/40">
         <div className="flex items-center justify-between">
