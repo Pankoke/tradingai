@@ -45,6 +45,8 @@
   "setups.profileFilter.swing": "Swing",
   "setups.profileFilter.intraday": "Intraday",
   "setups.profileFilter.position": "Position",
+  "setups.subtitle": "Choose a profile to see relevant setups. Open Analysis for details.",
+  "setups.profileFilter.heading": "Which setups are you looking for?",
   "setups.profileFilter.intradayHint": "Intraday setups are currently available only for assets with 1H/4H candle support (e.g. crypto via Binance).",
   "setups.profileFilter.positionHint": "Position setups are rolling out gradually. Check back soon.",
   "homepage.hero.headline": "Setup of the Day",

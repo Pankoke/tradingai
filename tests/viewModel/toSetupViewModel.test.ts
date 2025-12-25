@@ -119,4 +119,26 @@ describe("toSetupViewModel", () => {
     expect(vm.signalQuality?.score).toBeGreaterThan(0);
     expect(vm.signalQuality?.reasons.length).toBeGreaterThan(0);
   });
+
+  test("keeps sentiment and orderflow data for homepage setups", () => {
+    const homepageSetup = {
+      id: "h-3",
+      assetId: "BTC",
+      symbol: "BTC",
+      timeframe: "1H",
+      direction: "Long",
+      rings: { eventScore: 35, confidenceScore: 55, trendScore: 60, biasScore: 58, sentimentScore: 62, orderflowScore: 52 },
+      entryZone: { from: 100, to: 110 },
+      stopLoss: 95,
+      takeProfit: 130,
+      sentiment: { score: 62, label: "bullish", reasons: ["supports_trend"], flags: [] },
+      orderflow: { score: 52, mode: "balanced", reasons: ["flow ok"], flags: [] },
+    } as unknown as HomepageSetup;
+
+    const vm = toSetupViewModel(homepageSetup);
+
+    expect(vm.sentiment?.score).toBe(62);
+    expect(vm.orderflow?.score).toBe(52);
+    expect(vm.profile).toBe("INTRADAY");
+  });
 });

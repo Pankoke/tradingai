@@ -29,6 +29,10 @@ export function SetupCardHeaderBlock({
   const directionClass =
     directionLower === "long" ? "text-emerald-400" : directionLower === "short" ? "text-rose-400" : "text-slate-300";
   const formattedGeneratedAt = formatGeneratedAt(generatedAtText);
+  const chipParts: string[] = [];
+  if (profile) chipParts.push(profile);
+  if (timeframe) chipParts.push(timeframe.toUpperCase());
+  const profileChipLabel = chipParts.length ? chipParts.join(" · ") : null;
 
   return (
     <div className="space-y-2">
@@ -53,14 +57,15 @@ export function SetupCardHeaderBlock({
       <div className="space-y-1">
         <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
           <span>{headline}</span>
-          {timeframe ? <span className="text-slate-300"> · {timeframe}</span> : null}
           <span className={directionClass}> · {setup.direction}</span>
-          {profile ? (
-            <span className="ml-2 inline-flex rounded-full border border-slate-700 px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.2em] text-slate-200">
-              {profile}
-            </span>
-          ) : null}
         </h2>
+        {profileChipLabel ? (
+          <div className="flex flex-wrap gap-2">
+            <span className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/80 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-slate-200">
+              {profileChipLabel}
+            </span>
+          </div>
+        ) : null}
         <p className="text-sm text-slate-400">{meta.name}</p>
       </div>
     </div>

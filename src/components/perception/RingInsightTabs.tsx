@@ -69,7 +69,7 @@ const ringTabs: RingTabConfig[] = [
   {
     id: "sentiment",
     labelKey: "perception.ringTabs.sentiment",
-    isVisible: (setup) => setup.sentiment?.score !== undefined,
+    isVisible: (setup) => typeof setup.rings?.sentimentScore === "number",
     render: ({ setup, variant }) => (
       <SentimentInspector
         sentiment={setup.sentiment ?? null}
@@ -80,7 +80,8 @@ const ringTabs: RingTabConfig[] = [
   {
     id: "orderflow",
     labelKey: "perception.ringTabs.orderflow",
-    isVisible: hasOrderflowContent,
+    isVisible: (setup) =>
+      hasOrderflowContent(setup) || typeof setup.rings?.orderflowScore === "number",
     render: ({ setup, variant }) => <OrderflowInspector setup={setup} variant={variant} />,
   },
 ];

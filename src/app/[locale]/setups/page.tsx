@@ -14,6 +14,7 @@ import deMessages from "@/src/messages/de.json";
 import enMessages from "@/src/messages/en.json";
 import { selectSwingSotd } from "@/src/lib/setups/sotd";
 import { ProfileFilters } from "@/src/lib/setups/profileFilters";
+import type { ProfileFilter } from "@/src/lib/setups/profileFilter";
 
 type Labels = ReturnType<typeof buildLabels>;
 
@@ -121,6 +122,8 @@ function toHomepageSetup(setup: Setup): HomepageSetup {
     rings: setup.rings,
     riskReward: setup.riskReward,
     eventContext: setup.eventContext ?? null,
+    sentiment: setup.sentiment ?? null,
+    orderflow: setup.orderflow ?? null,
     ringAiSummary: setup.ringAiSummary ?? null,
   };
 }
@@ -166,12 +169,13 @@ export default async function SetupsPage({ params, searchParams }: PageProps): P
     snapshotTime != null ? Math.round((Date.now() - snapshotTime.getTime()) / 60000) : null;
   const snapshotUnavailable =
     (meta as { snapshotAvailable?: boolean } | undefined)?.snapshotAvailable === false || setups.length === 0;
-  const profileLabels = {
+  const profileLabels: Record<ProfileFilter, string> = {
     all: t("setups.profileFilter.all"),
     swing: t("setups.profileFilter.swing"),
     intraday: t("setups.profileFilter.intraday"),
     position: t("setups.profileFilter.position"),
   };
+  const profileFilterKeys: ProfileFilter[] = ["swing", "intraday", "position"];
 
   const primarySetup = selectSwingSotd(baseDaily.setups) ?? effectiveSetups[0] ?? null;
   const listCandidates = (filteredSetups.length ? filteredSetups : setups).filter(
@@ -191,15 +195,21 @@ export default async function SetupsPage({ params, searchParams }: PageProps): P
         <div className="space-y-3 pb-2">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Setups</h1>
           <p className="max-w-2xl text-sm text-[var(--text-secondary)] sm:text-base">
-            Setup des Tages und freie Setups als Vorschau. Mehr Details per Analyse-Button.
+            {t("setups.subtitle")}
           </p>
         </div>
 
-        <ProfileFilters
-          basePath={`/${locale}/setups`}
-          selectedProfile={selectedProfile}
-          labels={profileLabels}
-        />
+        <div className="space-y-2">
+          <p className="text-sm text-[var(--text-secondary)]">
+            {t("setups.profileFilter.heading")}
+          </p>
+          <ProfileFilters
+            basePath={`/${locale}/setups`}
+            selectedProfile={selectedProfile}
+            labels={profileLabels}
+            keys={profileFilterKeys}
+          />
+        </div>
         {wantsIntraday ? (
           <p className="text-xs text-[var(--text-secondary)]">
             {intradayFallback
@@ -216,8 +226,6 @@ export default async function SetupsPage({ params, searchParams }: PageProps): P
               : "Keine Setups für das gewählte Profil verfügbar."}
           </p>
         ) : null}
-
-        <EngineMetaPanel generatedAt={snapshot.snapshotTime} version={snapshot.version} />
 
         <section className="space-y-4">
           <h2 className="text-lg font-semibold tracking-tight sm:text-xl">Setup des Tages</h2>
@@ -251,6 +259,9 @@ export default async function SetupsPage({ params, searchParams }: PageProps): P
           )}
         </section>
         <FiveRingsExplainer t={t} />
+        <div className="pt-2">
+          <EngineMetaPanel generatedAt={snapshot.snapshotTime} version={snapshot.version} />
+        </div>
       </div>
     </div>
   );

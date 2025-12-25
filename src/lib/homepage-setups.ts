@@ -31,6 +31,7 @@ export type HomepageSetup = {
   eventModifier?: Setup["eventModifier"] | null;
   ringAiSummary?: Setup["ringAiSummary"] | null;
   sentiment?: Setup["sentiment"] | null;
+  orderflow?: Setup["orderflow"] | null;
   profile?: Setup["profile"] | null;
 };
 
@@ -102,6 +103,7 @@ function mapSetup(setup: Setup, timestamp: string): HomepageSetup {
     eventModifier: setup.eventModifier ?? null,
     ringAiSummary: setup.ringAiSummary ?? null,
     sentiment: setup.sentiment ?? null,
+    orderflow: setup.orderflow ?? null,
     profile: setup.profile ?? null,
   };
 }

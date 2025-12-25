@@ -2,21 +2,30 @@
 
 import Link from "next/link";
 import type { JSX } from "react";
+import type { ProfileFilter } from "@/src/lib/setups/profileFilter";
+
+const DEFAULT_PROFILE_KEYS: ProfileFilter[] = ["all", "swing", "intraday", "position"];
 
 export function ProfileFilters({
   basePath,
   selectedProfile,
   labels,
+  keys,
 }: {
   basePath: string;
-  selectedProfile: string | null;
-  labels: Record<"all" | "swing" | "intraday" | "position", string>;
+  selectedProfile: ProfileFilter | null;
+  labels: Record<ProfileFilter, string>;
+  keys?: ProfileFilter[];
 }): JSX.Element {
+  const profileKeys = keys ?? DEFAULT_PROFILE_KEYS;
+  const activeProfile = selectedProfile === "all" ? "swing" : selectedProfile ?? "swing";
+
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {(["all", "swing", "intraday", "position"] as const).map((key) => {
-        const isActive = selectedProfile === key;
-        const href = key === "all" ? basePath : `${basePath}?profile=${key}`;
+      {profileKeys.map((key) => {
+        const isActive = activeProfile === key;
+        const needsQueryParam = key !== "all" && key !== "swing";
+        const href = needsQueryParam ? `${basePath}?profile=${key}` : basePath;
         const label = labels[key];
         return (
           <Link

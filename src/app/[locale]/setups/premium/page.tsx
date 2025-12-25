@@ -19,6 +19,8 @@ import { fetchPerceptionToday } from "@/src/lib/api/perceptionClient";
 import type { Setup } from "@/src/lib/engine/types";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import { ProfileFilters } from "@/src/lib/setups/profileFilters";
+import type { ProfileFilter } from "@/src/lib/setups/profileFilter";
+import { EngineMetaPanel } from "@/src/components/perception/EngineMetaPanel";
 
 type PageProps = {
   params: Promise<{ locale?: string }>;
@@ -114,6 +116,8 @@ function toHomepageSetup(setup: Setup): HomepageSetup {
     rings: setup.rings,
     riskReward: setup.riskReward,
     eventContext: setup.eventContext ?? null,
+    sentiment: setup.sentiment ?? null,
+    orderflow: setup.orderflow ?? null,
     ringAiSummary: setup.ringAiSummary ?? null,
   };
 }
@@ -135,6 +139,7 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
     wantsIntraday ? { profile: "intraday" } : undefined,
   );
   const profileResult = filterPremiumByProfile(setups, profileParam);
+  const selectedProfile = profileResult.selectedProfile as ProfileFilter | null;
 
   const sort = resolvedSearch?.sort ?? "confidence";
   const dir = resolvedSearch?.dir ?? "desc";
@@ -157,25 +162,35 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
   const minutesAgo = snapshotTime ? Math.round((Date.now() - snapshotTime.getTime()) / 60000) : null;
   const snapshotUnavailable =
     (meta as { snapshotAvailable?: boolean } | undefined)?.snapshotAvailable === false || profileResult.effective.length === 0;
-  const profileLabels = {
+  const profileLabels: Record<ProfileFilter, string> = {
     all: messages["setups.profileFilter.all"],
     swing: messages["setups.profileFilter.swing"],
     intraday: messages["setups.profileFilter.intraday"],
     position: messages["setups.profileFilter.position"],
   };
+  const profileFilterKeys: ProfileFilter[] = ["swing", "intraday", "position"];
 
   return (
     <div className="bg-[var(--bg-main)] text-[var(--text-primary)]">
       <div className="mx-auto max-w-6xl space-y-6 px-4 py-8 md:py-10">
         <div className="space-y-3">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Premium Setups</h1>
+          <p className="max-w-2xl text-sm text-[var(--text-secondary)] sm:text-base">
+            {t("setups.subtitle")}
+          </p>
         </div>
 
-        <ProfileFilters
-          selectedProfile={profileResult.selectedProfile}
-          basePath={`/${locale}/setups/premium`}
-          labels={profileLabels}
-        />
+        <div className="space-y-2">
+          <p className="text-sm text-[var(--text-secondary)]">
+            {t("setups.profileFilter.heading")}
+          </p>
+          <ProfileFilters
+            selectedProfile={selectedProfile}
+            basePath={`/${locale}/setups/premium`}
+            labels={profileLabels}
+            keys={profileFilterKeys}
+          />
+        </div>
         {wantsIntraday ? (
           <p className="text-xs text-[var(--text-secondary)]">
             {intradayFallback
@@ -224,6 +239,9 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
               </div>
             )}
           </section>
+        </div>
+        <div className="pt-2">
+          <EngineMetaPanel generatedAt={snapshot.snapshotTime} version={snapshot.version} />
         </div>
       </div>
     </div>

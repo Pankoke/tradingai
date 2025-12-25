@@ -37,6 +37,7 @@ export type SetupViewModel = {
   riskReward?: RiskRewardSummary | null;
   ringAiSummary?: Setup["ringAiSummary"] | null;
   sentiment?: Setup["sentiment"] | null;
+  orderflow?: Setup["orderflow"] | null;
   levelDebug?: Setup["levelDebug"] | null;
   signalQuality?: SignalQuality | null;
   entry: PriceRange;

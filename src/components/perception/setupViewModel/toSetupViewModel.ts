@@ -115,6 +115,7 @@ function mapSetup(setup: Setup, opts?: { generatedAt?: string | null }): SetupVi
     riskReward: setup.riskReward ?? null,
     ringAiSummary: setup.ringAiSummary ?? null,
     sentiment: setup.sentiment ?? null,
+    orderflow: (setup as { orderflow?: Setup["orderflow"] | null }).orderflow ?? null,
     levelDebug: setup.levelDebug ?? null,
     signalQuality,
     entry,
@@ -151,6 +152,7 @@ function mapHomepageSetup(setup: HomepageSetup, opts?: { generatedAt?: string | 
     riskReward: setup.riskReward ?? null,
     ringAiSummary: setup.ringAiSummary ?? null,
     sentiment: setup.sentiment ?? null,
+    orderflow: setup.orderflow ?? null,
     levelDebug: setup.levelDebug ?? null,
     signalQuality: deriveSignalQualityFromRings(setup.rings),
     entry,
@@ -158,6 +160,7 @@ function mapHomepageSetup(setup: HomepageSetup, opts?: { generatedAt?: string | 
     takeProfit: tp,
     bias: setup.bias ?? null,
     orderflowMode: setup.orderflowMode ?? null,
+    profile: normalizeProfile(setup.profile, setup.timeframe),
     meta,
   };
 
