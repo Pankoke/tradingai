@@ -9,7 +9,7 @@ import { syncDailyCandlesForAsset } from "@/src/features/marketData/syncDailyCan
 import { getActiveAssets, type Asset } from "@/src/server/repositories/assetRepository";
 import { getEventsInRange } from "@/src/server/repositories/eventRepository";
 import { DbBiasProvider, type BiasDomainModel } from "@/src/server/providers/biasProvider";
-import { getLatestCandleForAsset } from "@/src/server/repositories/candleRepository";
+import { getLatestCandleForAsset, type Candle } from "@/src/server/repositories/candleRepository";
 import type { Timeframe } from "@/src/server/providers/marketDataProvider";
 import type { MarketTimeframe } from "@/src/server/marketData/MarketDataProvider";
 import { getTimeframesForAsset, TIMEFRAME_SYNC_WINDOWS } from "@/src/server/marketData/timeframeConfig";
@@ -510,7 +510,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     }
   }
 
-  private isCandleValid(candle?: { close?: string | number | null } | null) {
+  private isCandleValid(candle?: Candle | null): candle is Candle {
     if (!candle) {
       return false;
     }
