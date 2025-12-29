@@ -6,6 +6,12 @@ export type Direction = z.infer<typeof directionEnum>;
 export const setupTypeEnum = z.enum(["Regelbasiert", "KI"]);
 export type SetupType = z.infer<typeof setupTypeEnum>;
 
+export const setupGradeEnum = z.enum(["A", "B", "NO_TRADE"]);
+export type SetupGrade = z.infer<typeof setupGradeEnum>;
+
+export const setupPlaybookTypeEnum = z.enum(["pullback_continuation", "range_bias", "unknown"]);
+export type SetupPlaybookType = z.infer<typeof setupPlaybookTypeEnum>;
+
 export const accessLevelSchema = z.enum(["free", "premium", "pro"]);
 export type AccessLevel = z.infer<typeof accessLevelSchema>;
 
@@ -352,6 +358,11 @@ export const setupSchema = z.object({
   orderflow: orderflowDetailSchema.optional(),
   eventContext: eventContextSchema.optional().nullable(),
   eventModifier: eventModifierSchema.optional().nullable(),
+  setupGrade: setupGradeEnum.optional(),
+  setupType: setupPlaybookTypeEnum.optional(),
+  gradeRationale: z.array(z.string()).max(3).optional(),
+  noTradeReason: z.string().optional().nullable(),
+  gradeDebugReason: z.string().optional(),
 });
 
 export type Setup = z.infer<typeof setupSchema>;

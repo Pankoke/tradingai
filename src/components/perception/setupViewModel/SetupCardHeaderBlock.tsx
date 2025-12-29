@@ -4,6 +4,8 @@ import type { JSX } from "react";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import { formatAssetLabel, getAssetMeta } from "@/src/lib/formatters/asset";
 import type { SetupViewModel } from "@/src/components/perception/setupViewModel/types";
+import { Tooltip } from "@/src/components/ui/tooltip";
+import { resolvePlaybookWithReason } from "@/src/lib/engine/playbooks";
 
 type Props = {
   setup: SetupViewModel;
@@ -29,10 +31,8 @@ export function SetupCardHeaderBlock({
   const directionClass =
     directionLower === "long" ? "text-emerald-400" : directionLower === "short" ? "text-rose-400" : "text-slate-300";
   const formattedGeneratedAt = formatGeneratedAt(generatedAtText);
-  const chipParts: string[] = [];
-  if (profile) chipParts.push(profile);
-  if (timeframe) chipParts.push(timeframe.toUpperCase());
-  const profileChipLabel = chipParts.length ? chipParts.join(" · ") : null;
+  const profileChipLabel = buildProfileChipLabel(profile, timeframe);
+  const gradeChip = buildGradeChip(setup);
 
   return (
     <div className="space-y-2">
@@ -59,13 +59,17 @@ export function SetupCardHeaderBlock({
           <span>{headline}</span>
           <span className={directionClass}> · {setup.direction}</span>
         </h2>
-        {profileChipLabel ? (
+        {profileChipLabel || gradeChip ? (
           <div className="flex flex-wrap gap-2">
-            <span className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/80 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-slate-200">
-              {profileChipLabel}
-            </span>
+            {profileChipLabel ? (
+              <span className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/80 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-slate-200">
+                {profileChipLabel}
+              </span>
+            ) : null}
+            {gradeChip}
           </div>
         ) : null}
+        {renderDebugLine(setup)}
         <p className="text-sm text-slate-400">{meta.name}</p>
       </div>
     </div>
@@ -107,4 +111,65 @@ function formatGeneratedAt(input?: string | null): string | null {
   const paddedHour = hourNum.toString().padStart(2, "0");
 
   return `${day}.${month}.${year}, ${paddedHour}:${paddedMinute} ${tzName}`;
+}
+
+function buildGradeChip(setup: SetupViewModel): JSX.Element | null {
+  const grade = setup.setupGrade;
+  if (!grade) return null;
+  const tone =
+    grade === "A"
+      ? "border-emerald-500/60 bg-emerald-500/15 text-emerald-200"
+      : grade === "B"
+        ? "border-amber-500/60 bg-amber-500/15 text-amber-100"
+        : "border-slate-600 bg-slate-800/80 text-slate-200";
+
+  const rationaleLines = setup.gradeRationale?.filter(Boolean) ?? [];
+  const noTrade = setup.noTradeReason;
+  const tooltipContent =
+    rationaleLines.length || noTrade ? (
+      <div className="space-y-2">
+        {rationaleLines.length ? (
+          <ul className="list-disc space-y-1 pl-4">
+            {rationaleLines.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        ) : null}
+        {noTrade ? <p className="text-amber-200">No-trade Grund: {noTrade}</p> : null}
+      </div>
+    ) : (
+      "Setup-Grade"
+    );
+
+  const label = grade === "NO_TRADE" ? "NO TRADE" : grade;
+  const chip = (
+    <span
+      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.12em] ${tone}`}
+    >
+      {label}
+    </span>
+  );
+
+  return <Tooltip content={tooltipContent}>{chip}</Tooltip>;
+}
+
+export function buildProfileChipLabel(profile?: string | null, timeframe?: string | null): string | null {
+  const parts: string[] = [];
+  if (profile) parts.push(profile);
+  if (timeframe) parts.push(timeframe.toUpperCase());
+  return parts.length ? parts.join(" · ") : null;
+}
+
+function renderDebugLine(setup: SetupViewModel): JSX.Element | null {
+  if (process.env.NEXT_PUBLIC_PLAYBOOK_DEBUG !== "1") return null;
+  const resolved = resolvePlaybookWithReason(
+    { id: setup.assetId, symbol: setup.symbol, name: null },
+    setup.profile ?? null,
+  );
+  const grade = setup.setupGrade ?? "none";
+  return (
+    <p className="text-[11px] font-mono text-slate-400">
+      Playbook: {resolved.playbook.id} Grade: {grade} ({resolved.reason})
+    </p>
+  );
 }

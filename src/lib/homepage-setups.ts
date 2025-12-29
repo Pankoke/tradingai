@@ -8,6 +8,11 @@ export type HomepageSetup = {
   symbol: string;
   timeframe: string;
   direction: Setup["direction"];
+  setupGrade?: Setup["setupGrade"];
+  setupType?: Setup["setupType"];
+  gradeRationale?: Setup["gradeRationale"];
+  noTradeReason?: Setup["noTradeReason"];
+  gradeDebugReason?: Setup["gradeDebugReason"];
   confidence: number;
   weakSignal?: boolean;
   eventLevel: "high" | "medium" | "low";
@@ -80,6 +85,11 @@ function mapSetup(setup: Setup, timestamp: string): HomepageSetup {
     symbol: setup.symbol,
     timeframe: setup.timeframe,
     direction: setup.direction,
+    setupGrade: setup.setupGrade,
+    setupType: setup.setupType,
+    gradeRationale: setup.gradeRationale,
+    noTradeReason: setup.noTradeReason,
+    gradeDebugReason: setup.gradeDebugReason,
     confidence: clamp(setup.confidence, 0, 100),
     weakSignal: setup.confidence < 60,
     eventLevel: EVENT_LEVEL(setup.eventScore),

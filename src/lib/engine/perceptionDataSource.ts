@@ -585,7 +585,7 @@ export function isIntradayCandleStale(
   now: Date,
   thresholdMinutes: number,
 ): boolean {
-  if (!candle?.timestamp) return true;
+  if (!candle?.timestamp) return false;
   const ageMinutes = Math.abs(now.getTime() - candle.timestamp.getTime()) / 60000;
   return ageMinutes > thresholdMinutes;
 }

@@ -1,4 +1,4 @@
-import type { Setup } from "@/src/lib/engine/types";
+import type { Setup, SetupGrade, SetupPlaybookType } from "@/src/lib/engine/types";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import type { SignalQuality } from "@/src/lib/engine/signalQuality";
 import type { RiskRewardSummary } from "@/src/lib/engine/types";
@@ -31,6 +31,11 @@ export type SetupViewModel = {
   profile?: string | null;
   direction: Setup["direction"];
   type?: Setup["type"] | null;
+  setupGrade?: SetupGrade | null;
+  setupType?: SetupPlaybookType | null;
+  gradeRationale?: string[] | null;
+  noTradeReason?: string | null;
+  gradeDebugReason?: string | null;
   rings: Setup["rings"];
   eventContext?: Setup["eventContext"] | null;
   eventModifier?: Setup["eventModifier"] | null;

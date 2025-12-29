@@ -20,6 +20,9 @@ import { maybeEnhanceRingAiSummaryWithLLM } from "@/src/server/ai/ringSummaryOpe
 import { computeSentimentRankingAdjustment } from "@/src/lib/engine/sentimentAdjustments";
 import { clamp } from "@/src/lib/math";
 import type { SetupProfile } from "@/src/lib/config/setupProfile";
+import { computeSignalQuality } from "@/src/lib/engine/signalQuality";
+import { resolvePlaybookWithReason } from "@/src/lib/engine/playbooks";
+import { deriveSetupProfileFromTimeframe } from "@/src/lib/config/setupProfile";
 
 export type PerceptionSnapshotEngineResult = PerceptionSnapshot;
 
@@ -87,11 +90,14 @@ export async function buildAndStorePerceptionSnapshot(
 
   const activeAssets = await getActiveAssets();
   const symbolToAssetId = new Map(activeAssets.map((asset) => [asset.symbol, asset.id]));
+  const symbolToAsset = new Map(activeAssets.map((asset) => [asset.symbol, asset]));
   const itemRankCounters = new Map<string, number>();
   const items: PerceptionSnapshotItemInput[] = [];
   const updatedSetups: Setup[] = [];
   let overallRank = 0;
-  for (const setup of engineResult.setups) {
+  const engineSetups = Array.isArray(engineResult.setups) ? engineResult.setups : [];
+
+  for (const setup of engineSetups) {
     // Resolve assetId before any usage (rings / logs) to avoid TDZ issues.
     const assetId = setup.assetId ?? symbolToAssetId.get(setup.symbol);
     if (!assetId) {
@@ -149,6 +155,29 @@ export async function buildAndStorePerceptionSnapshot(
           })
         : ringAiSummary;
 
+    const profile = setup.profile ?? deriveSetupProfileFromTimeframe(setup.timeframe);
+    const { playbook, reason: playbookReason } = resolvePlaybookWithReason(
+      {
+        id: assetId,
+        symbol: setup.symbol,
+        name: symbolToAsset.get(setup.symbol)?.name,
+      },
+      profile,
+    );
+    const signalQuality = computeSignalQuality({ ...setup, rings, profile });
+    const evaluation = playbook.evaluateSetup({
+      asset: { id: assetId, symbol: setup.symbol, name: symbolToAsset.get(setup.symbol)?.name },
+      profile: profile ?? null,
+      rings: {
+        trendScore: rings.trendScore,
+        biasScore: rings.biasScore,
+        sentimentScore: rings.sentimentScore,
+        orderflowScore: rings.orderflowScore,
+      },
+      eventModifier: setup.eventModifier ?? null,
+      signalQuality,
+    });
+
     const assetRank = (itemRankCounters.get(setup.symbol) ?? 0) + 1;
     itemRankCounters.set(setup.symbol, assetRank);
     overallRank += 1;
@@ -190,6 +219,12 @@ export async function buildAndStorePerceptionSnapshot(
       confidence,
       ringAiSummary: enhancedRingAiSummary,
       sentiment: sentimentWithRanking ?? undefined,
+      setupGrade: evaluation.setupGrade,
+      setupType: evaluation.setupType,
+      gradeRationale: evaluation.gradeRationale,
+      noTradeReason: evaluation.noTradeReason,
+      profile,
+      gradeDebugReason: playbookReason,
     });
   }
 
