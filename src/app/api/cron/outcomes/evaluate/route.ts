@@ -1,13 +1,13 @@
 import { NextRequest } from "next/server";
 import { respondFail, respondOk } from "@/src/server/http/apiResponse";
-import { buildAndStorePerceptionSnapshot } from "@/src/features/perception/build/buildSetups";
+import { runOutcomeEvaluationBatch } from "@/src/server/services/outcomeEvaluationRunner";
 import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
 import { logger } from "@/src/lib/logger";
 
-const cronLogger = logger.child({ route: "cron-perception-intraday" });
 const CRON_SECRET = process.env.CRON_SECRET;
 const AUTH_HEADER = "authorization";
 const ALT_HEADER = "x-cron-secret";
+const routeLogger = logger.child({ route: "cron-outcomes-evaluate" });
 
 export async function POST(request: NextRequest): Promise<Response> {
   if (!CRON_SECRET) {
@@ -17,49 +17,36 @@ export async function POST(request: NextRequest): Promise<Response> {
     return respondFail("UNAUTHORIZED", "Unauthorized", 401);
   }
 
+  const params = request.nextUrl.searchParams;
+  const body = await readBody(request);
+
+  const daysBack = parseInt(String(body.daysBack ?? params.get("daysBack") ?? "30"), 10);
+  const limit = parseInt(String(body.limit ?? params.get("limit") ?? "200"), 10);
+  const dryRun = parseBool(body.dryRun ?? params.get("dryRun") ?? params.get("dry_run") ?? "false");
+
   const startedAt = Date.now();
   try {
-    const snapshot = await buildAndStorePerceptionSnapshot({
-      source: "cron_intraday",
-      allowSync: false,
-      profiles: ["INTRADAY"],
-      label: "intraday",
-    });
-    const setupsArr =
-      Array.isArray((snapshot as { setups?: unknown }).setups)
-        ? (snapshot as { setups: unknown[] }).setups
-        : Array.isArray((snapshot as { snapshot?: { setups?: unknown } })?.snapshot?.setups)
-          ? ((snapshot as { snapshot: { setups: unknown[] } }).snapshot.setups)
-          : [];
-
+    const result = await runOutcomeEvaluationBatch({ daysBack, limit, dryRun });
     const durationMs = Date.now() - startedAt;
     await createAuditRun({
-      action: "perception_intraday",
+      action: "outcomes.evaluate",
       source: "cron",
       ok: true,
       durationMs,
-      message: "cron_perception_intraday_success",
-      meta: {
-        setups: setupsArr.length,
-        snapshotId: snapshot.snapshot.id,
-      },
+      message: "outcomes_evaluated",
+      meta: { ...result.metrics, processed: result.processed, dryRun },
     });
-
-    return respondOk({
-      snapshotId: snapshot.snapshot.id,
-      setups: setupsArr.length,
-      durationMs,
-    });
+    return respondOk({ metrics: result.metrics, processed: result.processed, durationMs, dryRun });
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown error";
     const durationMs = Date.now() - startedAt;
-    cronLogger.error("failed to build intraday perception snapshot", { error: message });
+    routeLogger.error("failed to evaluate outcomes", { error: message });
     await createAuditRun({
-      action: "perception_intraday",
+      action: "outcomes.evaluate",
       source: "cron",
       ok: false,
       durationMs,
-      message: "cron_perception_intraday_failed",
+      message: "outcomes_evaluated_failed",
       error: message,
     });
     return respondFail("INTERNAL_ERROR", message, 500);
@@ -76,5 +63,21 @@ function isAuthorized(request: NextRequest): boolean {
   if (alt && alt === CRON_SECRET) {
     return true;
   }
+  return false;
+}
+
+async function readBody(request: NextRequest): Promise<Record<string, unknown>> {
+  const contentType = request.headers.get("content-type");
+  if (!contentType || !contentType.includes("application/json")) return {};
+  try {
+    return await request.json();
+  } catch {
+    return {};
+  }
+}
+
+function parseBool(value: unknown): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") return value.toLowerCase() === "true";
   return false;
 }

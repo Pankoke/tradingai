@@ -176,6 +176,7 @@ export async function buildAndStorePerceptionSnapshot(
       },
       eventModifier: setup.eventModifier ?? null,
       signalQuality,
+      orderflow: setup.orderflow ?? null,
     });
 
     const assetRank = (itemRankCounters.get(setup.symbol) ?? 0) + 1;

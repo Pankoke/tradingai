@@ -66,7 +66,7 @@ describe("gold swing playbook v0.2", () => {
       signalQuality: { grade: "A", score: 90, labelKey: "ok", reasons: [] },
     });
     expect(result.setupGrade).toBe("NO_TRADE");
-    expect(result.noTradeReason).toContain("48h");
+    expect(result.noTradeReason?.toLowerCase()).toContain("execution-critical");
   });
 
   it("forces NO_TRADE when trend or bias too weak", () => {

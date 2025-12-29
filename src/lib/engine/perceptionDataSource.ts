@@ -429,6 +429,9 @@ class LivePerceptionDataSource implements PerceptionDataSource {
       timeframe,
     });
     if (this.isCandleValid(candle)) {
+      if (candle && !("timestamp" in candle) && candle.close !== undefined) {
+        (candle as { timestamp?: Date }).timestamp = new Date();
+      }
       return candle;
     }
 
@@ -585,7 +588,8 @@ export function isIntradayCandleStale(
   now: Date,
   thresholdMinutes: number,
 ): boolean {
-  if (!candle?.timestamp) return false;
+  if (!candle) return true;
+  if (!candle.timestamp) return true;
   const ageMinutes = Math.abs(now.getTime() - candle.timestamp.getTime()) / 60000;
   return ageMinutes > thresholdMinutes;
 }

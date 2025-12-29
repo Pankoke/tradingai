@@ -1,0 +1,52 @@
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
+import { NextRequest } from "next/server";
+
+const mockRun = vi.fn();
+const mockAudit = vi.fn();
+
+vi.mock("@/src/server/services/outcomeEvaluationRunner", () => ({
+  runOutcomeEvaluationBatch: (...args: unknown[]) => mockRun(...args),
+}));
+
+vi.mock("@/src/server/repositories/auditRunRepository", () => ({
+  createAuditRun: (...args: unknown[]) => mockAudit(...args),
+}));
+
+describe("POST /api/cron/outcomes/evaluate", () => {
+  const originalSecret = process.env.CRON_SECRET;
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    process.env.CRON_SECRET = "cron-secret";
+  });
+
+  afterEach(() => {
+    process.env.CRON_SECRET = originalSecret;
+  });
+
+  it("requires auth", async () => {
+    const { POST } = await import("@/src/app/api/cron/outcomes/evaluate/route");
+    const req = new NextRequest("http://localhost/api/cron/outcomes/evaluate", { method: "POST" });
+    const res = await POST(req);
+    expect(res.status).toBe(401);
+  });
+
+  it("runs evaluation and returns metrics", async () => {
+    mockRun.mockResolvedValue({
+      metrics: { evaluated: 1, hit_tp: 1, hit_sl: 0, expired: 0, ambiguous: 0, still_open: 0, errors: 0, skippedClosed: 0 },
+      processed: 1,
+    });
+    const { POST } = await import("@/src/app/api/cron/outcomes/evaluate/route");
+    const req = new NextRequest("http://localhost/api/cron/outcomes/evaluate?daysBack=7&limit=5&dryRun=true", {
+      method: "POST",
+      headers: { authorization: "Bearer cron-secret" },
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    const payload = await res.json();
+    expect(payload.ok).toBe(true);
+    expect(payload.data.metrics.evaluated).toBe(1);
+    expect(mockRun).toHaveBeenCalledWith(expect.objectContaining({ daysBack: 7, limit: 5, dryRun: true }));
+    expect(mockAudit).toHaveBeenCalled();
+  });
+});

@@ -13,7 +13,7 @@ describe("Playbook resolver matching for gold swing", () => {
   it("matches gold asset variants and returns gold playbook", () => {
     for (const asset of goldAssets) {
       const { playbook } = resolvePlaybookWithReason(asset, "swing");
-      expect(playbook.id).toBe("gold-swing-v0.1");
+      expect(playbook.id).toBe("gold-swing-v0.2");
     }
   });
 

@@ -96,7 +96,7 @@ function evaluateGoldSwing(context: PlaybookContext): PlaybookEvaluation {
     (signalQuality && signalQuality.score < 40)
   ) {
     const reason = withinCriticalWindow
-      ? "Execution-critical event"
+      ? "Execution-critical event within 48h"
       : orderflowNegative
         ? "Orderflow negative"
         : rings.trendScore < 45

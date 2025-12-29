@@ -158,26 +158,25 @@ function classifyModifier(
   const impact = winner.event.impact ?? 1;
   const minutes = winner.minutesToEvent ?? Infinity;
   const rel = winner.relevance.relevance * (winner.reliabilityWeight ?? 1);
-  const reliabilityWeight = winner.reliabilityWeight ?? 1;
   const withinExec = Math.abs(minutes) <= windowRule.execution;
   const withinContext = Math.abs(minutes) <= windowRule.context;
 
-  if (impact >= 3 && minutes >= 0 && withinExec && rel >= 0.2 && reliabilityWeight >= 0.8) {
+  if (impact >= 3 && minutes >= 0 && withinExec && rel >= 0.5) {
     return "execution_critical";
   }
   if (rel >= 0.6 && impact >= 2 && withinExec) {
     return "execution_critical";
   }
-  if (impact >= 3 && withinContext && rel >= 0.3) {
-    return "context_relevant";
-  }
-  if (rel >= 0.4 && withinContext) {
-    return "context_relevant";
-  }
   if (impact >= 3 && withinContext) {
-    return "awareness_only";
+    return "context_relevant";
   }
-  if (rel > 0.1) {
+  if (withinExec && impact >= 3) {
+    return "context_relevant";
+  }
+  if (rel >= 0.3 && withinContext) {
+    return "context_relevant";
+  }
+  if (rel > 0.05) {
     return "awareness_only";
   }
   return "none";
