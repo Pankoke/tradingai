@@ -109,6 +109,7 @@ Einmaliger oder wiederholbarer Backfill fĂĽr alle aktiven Assets (nur 1D + 1W 
 
 ```
 npm run backfill:1d -- --days=730 --chunkDays=90 --assetId=OPTIONAL --dry-run
+npm run backfill:swing -- --days=90 --chunkDays=7 --dry-run
 ```
 
 - Zeitraum: standardmĂ¤Ăźig 730 Tage ab heutigem UTC-Tagesbeginn.

@@ -62,6 +62,13 @@ const CRYPTO_PLAYBOOK_ID = "crypto-swing-v0.1";
 const FX_PLAYBOOK_ID = "fx-swing-v0.1";
 const GENERIC_PLAYBOOK_ID = "generic-swing-v0.1";
 
+export const goldPlaybookThresholds = {
+  biasMin: BIAS_MIN,
+  trendMin: TREND_MIN,
+  signalQualityMin: SIGNAL_QUALITY_BASE,
+  orderflowMin: ORDERFLOW_NEGATIVE_THRESHOLD,
+};
+
 type MatchResult = { matched: boolean; reason: string };
 
 function matchGoldAsset(asset: PlaybookContext["asset"]): MatchResult {

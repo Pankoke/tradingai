@@ -22,7 +22,7 @@ export default async function PlaybookCalibrationPage({ params, searchParams }: 
   const playbook = query.playbook ?? "gold-swing-v0.2";
   const profile = query.profile ?? "swing";
   const days = ALLOWED_DAYS.includes(query.days ?? "") ? Number(query.days) : 30;
-  const assetId = query.assetId ?? "gold";
+  const assetId = query.assetId;
 
   const stats = await loadCalibrationStats({ playbook, profile, days, assetId });
 
@@ -37,7 +37,9 @@ export default async function PlaybookCalibrationPage({ params, searchParams }: 
           {ALLOWED_DAYS.map((value) => (
             <Link
               key={value}
-              href={`/${locale}/admin/playbooks/calibration?playbook=${playbook}&profile=${profile}&days=${value}&assetId=${assetId}`}
+              href={`/${locale}/admin/playbooks/calibration?playbook=${playbook}&profile=${profile}&days=${value}${
+                assetId ? `&assetId=${assetId}` : ""
+              }`}
               className={`rounded-full px-3 py-1 font-semibold ${
                 Number(value) === days ? "bg-slate-200 text-slate-900" : "bg-slate-800 text-slate-200"
               }`}
@@ -50,7 +52,9 @@ export default async function PlaybookCalibrationPage({ params, searchParams }: 
           {PLAYBOOK_OPTIONS.map((pb) => (
             <Link
               key={pb.id}
-              href={`/${locale}/admin/playbooks/calibration?playbook=${pb.id}&profile=${profile}&days=${days}&assetId=${assetId}`}
+              href={`/${locale}/admin/playbooks/calibration?playbook=${pb.id}&profile=${profile}&days=${days}${
+                assetId ? `&assetId=${assetId}` : ""
+              }`}
               className={`rounded-full px-3 py-1 font-semibold ${
                 pb.id === playbook ? "bg-slate-200 text-slate-900" : "bg-slate-800 text-slate-200"
               }`}
@@ -62,13 +66,17 @@ export default async function PlaybookCalibrationPage({ params, searchParams }: 
         <div className="flex gap-3 text-xs">
           <a
             className="rounded-full bg-slate-800 px-3 py-1 font-semibold text-slate-200 hover:bg-slate-700"
-            href={`/api/admin/playbooks/calibration/export?playbook=${playbook}&profile=${profile}&days=${days}&assetId=${assetId}&format=csv`}
+            href={`/api/admin/playbooks/calibration/export?playbook=${playbook}&profile=${profile}&days=${days}${
+              assetId ? `&assetId=${assetId}` : ""
+            }&format=csv`}
           >
             Export CSV
           </a>
           <a
             className="rounded-full bg-slate-800 px-3 py-1 font-semibold text-slate-200 hover:bg-slate-700"
-            href={`/api/admin/playbooks/calibration/export?playbook=${playbook}&profile=${profile}&days=${days}&assetId=${assetId}&format=json`}
+            href={`/api/admin/playbooks/calibration/export?playbook=${playbook}&profile=${profile}&days=${days}${
+              assetId ? `&assetId=${assetId}` : ""
+            }&format=json`}
           >
             Export JSON
           </a>
@@ -109,6 +117,11 @@ export default async function PlaybookCalibrationPage({ params, searchParams }: 
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-white">Recent graded setups</h2>
+        {stats.recent.length === 0 ? (
+          <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-200">
+            Keine Daten für die aktuellen Filter. Tipp: assetId leer lassen oder assetId=GC=F nutzen.
+          </div>
+        ) : (
         <div className="overflow-x-auto rounded-lg border border-slate-800">
           <table className="min-w-full divide-y divide-slate-800 text-sm text-slate-200">
             <thead className="bg-slate-900/60">
@@ -138,6 +151,7 @@ export default async function PlaybookCalibrationPage({ params, searchParams }: 
             </tbody>
           </table>
         </div>
+        )}
       </section>
     </div>
   );

@@ -48,12 +48,19 @@ export async function loadCalibrationStats(filters: CalibrationFilters): Promise
   });
 
   const setups: Setup[] = [];
+  const assetFilter = resolveAssetFilter(filters.assetId);
+  const strictPlaybook = filters.playbook && filters.playbook !== "all";
+
   for (const snap of page.snapshots) {
     const snapSetups = (snap.setups ?? []) as Setup[];
     for (const setup of snapSetups) {
       if (filters.profile && (setup.profile ?? "").toLowerCase() !== filters.profile.toLowerCase()) continue;
-      if (filters.assetId && setup.assetId !== filters.assetId) continue;
-      if (filters.playbook && (setup as { setupPlaybookId?: string | null }).setupPlaybookId !== filters.playbook)
+      if (assetFilter && !assetFilter.includes(setup.assetId)) continue;
+      const setupPlaybookId = (setup as { setupPlaybookId?: string | null }).setupPlaybookId ?? null;
+      if (strictPlaybook && setupPlaybookId !== filters.playbook) continue;
+      if (!strictPlaybook && filters.playbook === "all" && setupPlaybookId === null) {
+        // legacy allowed
+      } else if (!strictPlaybook && filters.playbook && filters.playbook !== "all" && setupPlaybookId !== filters.playbook)
         continue;
       setups.push({
         ...setup,
@@ -139,6 +146,16 @@ export async function loadCalibrationStats(filters: CalibrationFilters): Promise
 function resolveDays(days?: number): number {
   if (days === 7 || days === 30 || days === 90) return days;
   return DEFAULT_DAYS;
+}
+
+function resolveAssetFilter(assetId?: string | null): string[] | undefined {
+  if (!assetId) return undefined;
+  const trimmed = assetId.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.toLowerCase() === "gold") {
+    return ["GC=F", "XAUUSD", "XAUUSD=X", "GOLD", "gold"];
+  }
+  return [trimmed];
 }
 
 function pushIfNumber(list: number[], value?: number | null) {

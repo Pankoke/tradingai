@@ -11,7 +11,7 @@ vi.mock("@/src/server/repositories/perceptionSnapshotRepository", () => ({
         setups: [
           {
             id: "s1",
-            assetId: "gold",
+            assetId: "GC=F",
             symbol: "XAUUSD",
             timeframe: "1D",
             profile: "SWING",
@@ -27,7 +27,7 @@ vi.mock("@/src/server/repositories/perceptionSnapshotRepository", () => ({
           } satisfies Partial<Setup>,
           {
             id: "s2",
-            assetId: "gold",
+            assetId: "GC=F",
             symbol: "XAUUSD",
             timeframe: "1D",
             profile: "SWING",
@@ -37,6 +37,20 @@ vi.mock("@/src/server/repositories/perceptionSnapshotRepository", () => ({
             setupType: "range_bias",
             rings: { trendScore: 50, biasScore: 75, orderflowScore: 55, sentimentScore: null },
             confidence: 70,
+            eventModifier: { classification: "none" },
+          } satisfies Partial<Setup>,
+          {
+            id: "s3",
+            assetId: "XAUUSD",
+            symbol: "XAUUSD",
+            timeframe: "1D",
+            profile: "SWING",
+            setupPlaybookId: null,
+            direction: "Long",
+            setupGrade: "B",
+            setupType: "range_bias",
+            rings: { trendScore: 55, biasScore: 80, orderflowScore: 50, sentimentScore: 60 },
+            confidence: 60,
             eventModifier: { classification: "none" },
           } satisfies Partial<Setup>,
         ],
@@ -72,5 +86,26 @@ describe("calibrationService aggregation", () => {
     expect(stats.gradeCounts["B"]).toBe(1);
     expect(stats.gradeCounts["A"] ?? 0).toBe(0);
     expect(stats.recent.length).toBe(1);
+  });
+
+  it("does not filter by asset when assetId empty", async () => {
+    const stats = await loadCalibrationStats({
+      playbook: "gold-swing-v0.2",
+      profile: "swing",
+      days: 30,
+      assetId: "",
+    });
+    expect(stats.recent.length).toBe(1);
+  });
+
+  it("includes legacy setups without playbook when playbook is all", async () => {
+    const stats = await loadCalibrationStats({
+      playbook: "all",
+      profile: "swing",
+      days: 30,
+      assetId: "gold",
+    });
+    expect(stats.gradeCounts["B"]).toBeGreaterThan(0);
+    expect(stats.recent.length).toBeGreaterThanOrEqual(1);
   });
 });
