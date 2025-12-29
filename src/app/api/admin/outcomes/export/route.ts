@@ -22,9 +22,10 @@ export async function GET(request: NextRequest | Request): Promise<Response> {
       : new URL(request.url).searchParams;
   const days = parseInt(params.get("days") ?? "30", 10);
   const assetId = params.get("assetId") ?? undefined;
+  const playbookId = params.get("playbookId") ?? undefined;
   const format = (params.get("format") ?? "csv").toLowerCase();
 
-  const rows = await loadOutcomeExportRows({ days, assetId });
+  const rows = await loadOutcomeExportRows({ days, assetId, playbookId });
   const data = rows.map(({ outcome, setup }) => ({
     evaluatedAt: outcome.evaluatedAt?.toISOString() ?? null,
     snapshotId: outcome.snapshotId,

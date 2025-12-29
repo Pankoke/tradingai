@@ -38,6 +38,7 @@ export type HomepageSetup = {
   sentiment?: Setup["sentiment"] | null;
   orderflow?: Setup["orderflow"] | null;
   profile?: Setup["profile"] | null;
+  setupPlaybookId?: string | null;
 };
 
 export type HomepageSetups = {
@@ -85,6 +86,7 @@ function mapSetup(setup: Setup, timestamp: string): HomepageSetup {
     symbol: setup.symbol,
     timeframe: setup.timeframe,
     direction: setup.direction,
+    setupPlaybookId: (setup as { setupPlaybookId?: string | null }).setupPlaybookId ?? null,
     setupGrade: setup.setupGrade,
     setupType: setup.setupType,
     gradeRationale: setup.gradeRationale,

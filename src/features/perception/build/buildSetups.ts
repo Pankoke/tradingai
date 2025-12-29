@@ -225,6 +225,7 @@ export async function buildAndStorePerceptionSnapshot(
       gradeRationale: evaluation.gradeRationale,
       noTradeReason: evaluation.noTradeReason,
       profile,
+      setupPlaybookId: playbook.id,
       gradeDebugReason: playbookReason,
     });
   }

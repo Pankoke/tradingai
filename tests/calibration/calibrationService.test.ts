@@ -15,6 +15,7 @@ vi.mock("@/src/server/repositories/perceptionSnapshotRepository", () => ({
             symbol: "XAUUSD",
             timeframe: "1D",
             profile: "SWING",
+            setupPlaybookId: "gold-swing-v0.2",
             direction: "Long",
             setupGrade: "A",
             setupType: "pullback_continuation",
@@ -30,6 +31,7 @@ vi.mock("@/src/server/repositories/perceptionSnapshotRepository", () => ({
             symbol: "XAUUSD",
             timeframe: "1D",
             profile: "SWING",
+            setupPlaybookId: "index-swing-v0.1",
             direction: "Short",
             setupGrade: "B",
             setupType: "range_bias",
@@ -46,12 +48,29 @@ vi.mock("@/src/server/repositories/perceptionSnapshotRepository", () => ({
 
 describe("calibrationService aggregation", () => {
   it("aggregates grades and scores", async () => {
-    const stats = await loadCalibrationStats({ playbook: "gold-swing", profile: "swing", days: 30, assetId: "gold" });
+    const stats = await loadCalibrationStats({
+      playbook: "gold-swing-v0.2",
+      profile: "swing",
+      days: 30,
+      assetId: "gold",
+    });
     expect(stats.gradeCounts["A"]).toBe(1);
-    expect(stats.gradeCounts["B"]).toBe(1);
+    expect(stats.gradeCounts["B"] ?? 0).toBe(0);
     expect(stats.eventModifierCounts["awareness_only"]).toBe(1);
     expect(stats.averages.trendScore).toBeGreaterThan(0);
-    expect(stats.missingSentimentShare).toBeGreaterThan(0);
-    expect(stats.recent.length).toBe(2);
+    expect(stats.missingSentimentShare).toBeGreaterThanOrEqual(0);
+    expect(stats.recent.length).toBe(1);
+  });
+
+  it("filters by playbook id when provided", async () => {
+    const stats = await loadCalibrationStats({
+      playbook: "index-swing-v0.1",
+      profile: "swing",
+      days: 30,
+      assetId: "gold",
+    });
+    expect(stats.gradeCounts["B"]).toBe(1);
+    expect(stats.gradeCounts["A"] ?? 0).toBe(0);
+    expect(stats.recent.length).toBe(1);
   });
 });

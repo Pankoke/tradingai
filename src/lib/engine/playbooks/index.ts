@@ -30,8 +30,10 @@ type PlaybookContext = {
   } | null;
 };
 
-type Playbook = {
+export type Playbook = {
   id: string;
+  label: string;
+  shortLabel: string;
   evaluateSetup: (context: PlaybookContext) => PlaybookEvaluation;
 };
 
@@ -44,8 +46,14 @@ const SWING_EVENT_WINDOW_MINUTES = 48 * 60;
 const ORDERFLOW_NEGATIVE_THRESHOLD = 30;
 const SIGNAL_QUALITY_FLOOR = 40;
 const GOLD_PLAYBOOK_ID = "gold-swing-v0.2";
+const INDEX_PLAYBOOK_ID = "index-swing-v0.1";
+const CRYPTO_PLAYBOOK_ID = "crypto-swing-v0.1";
+const FX_PLAYBOOK_ID = "fx-swing-v0.1";
+const GENERIC_PLAYBOOK_ID = "generic-swing-v0.1";
 
-function matchGoldAsset(asset: PlaybookContext["asset"]): { matched: boolean; reason: string } {
+type MatchResult = { matched: boolean; reason: string };
+
+function matchGoldAsset(asset: PlaybookContext["asset"]): MatchResult {
   const id = (asset.id ?? "").toUpperCase();
   const symbol = (asset.symbol ?? "").toUpperCase();
   const name = (asset.name ?? "").toUpperCase();
@@ -55,6 +63,53 @@ function matchGoldAsset(asset: PlaybookContext["asset"]): { matched: boolean; re
   if (symbol === "GOLD") return { matched: true, reason: "gold symbol" };
   if (name.includes("GOLD")) return { matched: true, reason: "gold name" };
   return { matched: false, reason: "no gold match" };
+}
+
+function matchIndexAsset(asset: PlaybookContext["asset"]): MatchResult {
+  const symbol = (asset.symbol ?? "").toUpperCase();
+  const name = (asset.name ?? "").toUpperCase();
+  if (symbol.startsWith("^")) return { matched: true, reason: "index caret symbol" };
+  const known = ["GSPC", "NDX", "DJI", "GDAXI", "FTSE", "STOXX", "HSI", "NIKKEI", "IBEX"];
+  if (known.some((k) => symbol.includes(k))) return { matched: true, reason: "index keyword symbol" };
+  if (name.includes("INDEX")) return { matched: true, reason: "index name" };
+  return { matched: false, reason: "no index match" };
+}
+
+function matchFxAsset(asset: PlaybookContext["asset"]): MatchResult {
+  const symbol = (asset.symbol ?? "").toUpperCase();
+  if (symbol.endsWith("=X")) return { matched: true, reason: "fx yahoo =X" };
+  const fxRegex = /^[A-Z]{6}$/;
+  if (fxRegex.test(symbol) && symbol.includes("USD")) return { matched: true, reason: "fx 6-letter with USD" };
+  return { matched: false, reason: "no fx match" };
+}
+
+function matchCryptoAsset(asset: PlaybookContext["asset"]): MatchResult {
+  const symbol = (asset.symbol ?? "").toUpperCase();
+  if (symbol.includes("=X")) return { matched: false, reason: "yahoo fx - skip crypto" };
+  if (symbol.includes("-USD")) return { matched: true, reason: "crypto hyphen USD" };
+  if (symbol.endsWith("USDT") || symbol.endsWith("USD")) return { matched: true, reason: "crypto USD/USDT tail" };
+  return { matched: false, reason: "no crypto match" };
+}
+
+function resolvePlaybookIdForAsset(asset: PlaybookContext["asset"], profile?: string | null): PlaybookResolution {
+  const profileKey = (profile ?? "").toLowerCase();
+  if (!profileKey.includes("swing")) {
+    return { playbook: genericSwingPlaybook, reason: "non-swing profile" };
+  }
+
+  const gold = matchGoldAsset(asset);
+  if (gold.matched) return { playbook: goldSwingPlaybook, reason: gold.reason };
+
+  const index = matchIndexAsset(asset);
+  if (index.matched) return { playbook: indexSwingPlaybook, reason: index.reason };
+
+  const crypto = matchCryptoAsset(asset);
+  if (crypto.matched) return { playbook: cryptoSwingPlaybook, reason: crypto.reason };
+
+  const fx = matchFxAsset(asset);
+  if (fx.matched) return { playbook: fxSwingPlaybook, reason: fx.reason };
+
+  return { playbook: genericSwingPlaybook, reason: "fallback generic" };
 }
 
 function deriveSetupType(rings: PlaybookContext["rings"]): SetupPlaybookType {
@@ -163,7 +218,7 @@ function evaluateGoldSwing(context: PlaybookContext): PlaybookEvaluation {
       rationale.push(`Event context: ${eventModifier.classification}`);
     }
     if (rings.trendScore <= 64) rationale.push("Trend only moderate");
-    if (orderflowScore <= 54) rationale.push("Orderflow neutral – watch structure");
+    if (orderflowScore <= 54) rationale.push("Orderflow neutral - watch structure");
     if (sentimentMissing) rationale.push("Sentiment missing");
     if (strengthTrigger.length === 0) rationale.push("Strength trigger missing");
     return {
@@ -212,12 +267,45 @@ function evaluateDefault(context: PlaybookContext): PlaybookEvaluation {
 
 const goldSwingPlaybook: Playbook = {
   id: GOLD_PLAYBOOK_ID,
+  label: "Gold Swing",
+  shortLabel: "Gold",
   evaluateSetup: evaluateGoldSwing,
 };
 
-const defaultPlaybook: Playbook = {
-  id: "default",
+const indexSwingPlaybook: Playbook = {
+  id: INDEX_PLAYBOOK_ID,
+  label: "Index Swing",
+  shortLabel: "Index",
   evaluateSetup: evaluateDefault,
+};
+
+const cryptoSwingPlaybook: Playbook = {
+  id: CRYPTO_PLAYBOOK_ID,
+  label: "Crypto Swing",
+  shortLabel: "Crypto",
+  evaluateSetup: evaluateDefault,
+};
+
+const fxSwingPlaybook: Playbook = {
+  id: FX_PLAYBOOK_ID,
+  label: "FX Swing",
+  shortLabel: "FX",
+  evaluateSetup: evaluateDefault,
+};
+
+const genericSwingPlaybook: Playbook = {
+  id: GENERIC_PLAYBOOK_ID,
+  label: "Generic Swing",
+  shortLabel: "Generic",
+  evaluateSetup: evaluateDefault,
+};
+
+const PLAYBOOK_LABELS: Record<string, { label: string; short: string }> = {
+  [GOLD_PLAYBOOK_ID]: { label: "Gold Swing", short: "Gold Swing" },
+  [INDEX_PLAYBOOK_ID]: { label: "Index Swing", short: "Index Swing" },
+  [CRYPTO_PLAYBOOK_ID]: { label: "Crypto Swing", short: "Crypto Swing" },
+  [FX_PLAYBOOK_ID]: { label: "FX Swing", short: "FX Swing" },
+  [GENERIC_PLAYBOOK_ID]: { label: "Generic Swing", short: "Generic Swing" },
 };
 
 export const playbookTestExports = {
@@ -225,20 +313,33 @@ export const playbookTestExports = {
   evaluateDefault,
   deriveSetupType,
   matchGoldAsset,
+  matchIndexAsset,
+  matchCryptoAsset,
+  matchFxAsset,
+  resolvePlaybookIdForAsset,
 };
 
 export function resolvePlaybookWithReason(
   asset: PlaybookContext["asset"],
   profile?: string | null,
 ): PlaybookResolution {
-  const profileKey = (profile ?? "").toLowerCase();
-  const goldMatch = matchGoldAsset(asset);
-  if (goldMatch.matched && profileKey.includes("swing")) {
-    return { playbook: goldSwingPlaybook, reason: goldMatch.reason };
-  }
-  return { playbook: defaultPlaybook, reason: goldMatch.reason };
+  return resolvePlaybookIdForAsset(asset, profile);
 }
 
 export function resolvePlaybook(asset: PlaybookContext["asset"], profile?: string | null): Playbook {
   return resolvePlaybookWithReason(asset, profile).playbook;
+}
+
+export function getPlaybookLabel(playbookId?: string | null, locale: "en" | "de" = "en"): string | null {
+  if (!playbookId) return null;
+  const meta = PLAYBOOK_LABELS[playbookId];
+  if (!meta) return null;
+  if (locale === "de") {
+    if (playbookId === GOLD_PLAYBOOK_ID) return "Gold Swing";
+    if (playbookId === INDEX_PLAYBOOK_ID) return "Index Swing";
+    if (playbookId === CRYPTO_PLAYBOOK_ID) return "Krypto Swing";
+    if (playbookId === FX_PLAYBOOK_ID) return "FX Swing";
+    if (playbookId === GENERIC_PLAYBOOK_ID) return "Generic Swing";
+  }
+  return meta.label;
 }

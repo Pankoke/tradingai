@@ -29,6 +29,7 @@ export type SetupViewModel = {
   symbol: string;
   timeframe: string;
   profile?: string | null;
+  setupPlaybookId?: string | null;
   direction: Setup["direction"];
   type?: Setup["type"] | null;
   setupGrade?: SetupGrade | null;

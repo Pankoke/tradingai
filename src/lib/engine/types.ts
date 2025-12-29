@@ -333,6 +333,7 @@ export const setupSchema = z.object({
   symbol: z.string(),
   timeframe: z.string(),
   profile: z.string().optional(),
+  setupPlaybookId: z.string().optional().nullable(),
   direction: directionEnum,
   confidence: z.number().min(0).max(100),
   snapshotId: z.string().nullable().optional(),

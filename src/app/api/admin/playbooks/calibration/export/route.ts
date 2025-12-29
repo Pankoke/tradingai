@@ -20,7 +20,7 @@ export async function GET(request: NextRequest | Request): Promise<Response> {
     "nextUrl" in request && (request as NextRequest).nextUrl
       ? (request as NextRequest).nextUrl.searchParams
       : new URL(request.url).searchParams;
-  const playbook = params.get("playbook") ?? "gold-swing";
+  const playbook = params.get("playbook") ?? "gold-swing-v0.2";
   const profile = params.get("profile") ?? "swing";
   const days = parseInt(params.get("days") ?? "30", 10);
   const assetId = params.get("assetId");

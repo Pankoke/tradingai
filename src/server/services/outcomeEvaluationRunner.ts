@@ -119,7 +119,9 @@ export async function runOutcomeEvaluationBatch(params: {
         profile: (candidate.profile ?? "SWING").toUpperCase(),
         timeframe: candidate.timeframe,
         direction: candidate.direction,
-        playbookId: (candidate as { playbookId?: string }).playbookId ?? null,
+        playbookId: (candidate as { playbookId?: string; setupPlaybookId?: string }).playbookId ??
+          (candidate as { setupPlaybookId?: string }).setupPlaybookId ??
+          null,
         setupGrade: candidate.setupGrade ?? null,
         setupType: candidate.setupType ?? null,
         gradeRationale: candidate.gradeRationale ?? null,

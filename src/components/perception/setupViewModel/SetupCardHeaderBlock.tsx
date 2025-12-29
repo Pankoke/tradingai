@@ -5,7 +5,7 @@ import { useT } from "@/src/lib/i18n/ClientProvider";
 import { formatAssetLabel, getAssetMeta } from "@/src/lib/formatters/asset";
 import type { SetupViewModel } from "@/src/components/perception/setupViewModel/types";
 import { Tooltip } from "@/src/components/ui/tooltip";
-import { resolvePlaybookWithReason } from "@/src/lib/engine/playbooks";
+import { getPlaybookLabel, resolvePlaybookWithReason } from "@/src/lib/engine/playbooks";
 
 type Props = {
   setup: SetupViewModel;
@@ -32,6 +32,7 @@ export function SetupCardHeaderBlock({
     directionLower === "long" ? "text-emerald-400" : directionLower === "short" ? "text-rose-400" : "text-slate-300";
   const formattedGeneratedAt = formatGeneratedAt(generatedAtText);
   const profileChipLabel = buildProfileChipLabel(profile, timeframe);
+  const playbookLabel = buildPlaybookLabel(setup);
   const gradeChip = buildGradeChip(setup);
 
   return (
@@ -59,11 +60,16 @@ export function SetupCardHeaderBlock({
           <span>{headline}</span>
           <span className={directionClass}> · {setup.direction}</span>
         </h2>
-        {profileChipLabel || gradeChip ? (
+        {profileChipLabel || gradeChip || playbookLabel ? (
           <div className="flex flex-wrap gap-2">
             {profileChipLabel ? (
               <span className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/80 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-slate-200">
                 {profileChipLabel}
+              </span>
+            ) : null}
+            {playbookLabel ? (
+              <span className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/80 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-slate-200">
+                {playbookLabel}
               </span>
             ) : null}
             {gradeChip}
@@ -151,6 +157,13 @@ function buildGradeChip(setup: SetupViewModel): JSX.Element | null {
   );
 
   return <Tooltip content={tooltipContent}>{chip}</Tooltip>;
+}
+
+function buildPlaybookLabel(setup: SetupViewModel): string | null {
+  const profile = (setup.profile ?? "").toUpperCase();
+  if (!profile.includes("SWING")) return null;
+  const label = getPlaybookLabel(setup.setupPlaybookId ?? undefined, "de");
+  return label;
 }
 
 export function buildProfileChipLabel(profile?: string | null, timeframe?: string | null): string | null {

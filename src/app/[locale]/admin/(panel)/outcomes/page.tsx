@@ -4,7 +4,7 @@ import { loadOutcomeStats } from "@/src/server/admin/outcomeService";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
-  searchParams?: Promise<{ days?: string; assetId?: string }>;
+  searchParams?: Promise<{ days?: string; assetId?: string; playbookId?: string }>;
 };
 
 const ALLOWED_DAYS = ["7", "30", "90"];
@@ -14,8 +14,9 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
   const query = (await searchParams) ?? {};
   const days = ALLOWED_DAYS.includes(query.days ?? "") ? Number(query.days) : 30;
   const assetId = query.assetId;
+  const playbookId = query.playbookId;
 
-  const stats = await loadOutcomeStats({ days, assetId });
+  const stats = await loadOutcomeStats({ days, assetId, playbookId });
 
   return (
     <div className="space-y-6">
@@ -28,7 +29,9 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
           {ALLOWED_DAYS.map((value) => (
             <Link
               key={value}
-              href={`/${locale}/admin/outcomes?days=${value}${assetId ? `&assetId=${assetId}` : ""}`}
+              href={`/${locale}/admin/outcomes?days=${value}${assetId ? `&assetId=${assetId}` : ""}${
+                playbookId ? `&playbookId=${playbookId}` : ""
+              }`}
               className={`rounded-full px-3 py-1 font-semibold ${
                 Number(value) === days ? "bg-slate-200 text-slate-900" : "bg-slate-800 text-slate-200"
               }`}
@@ -37,16 +40,37 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
             </Link>
           ))}
         </div>
+        <div className="flex flex-wrap gap-2 text-xs">
+          {["", "gold-swing-v0.2", "index-swing-v0.1", "crypto-swing-v0.1", "fx-swing-v0.1", "generic-swing-v0.1"].map(
+            (pb) => (
+              <Link
+                key={pb || "all"}
+                href={`/${locale}/admin/outcomes?days=${days}${assetId ? `&assetId=${assetId}` : ""}${
+                  pb ? `&playbookId=${pb}` : ""
+                }`}
+                className={`rounded-full px-3 py-1 font-semibold ${
+                  pb === (playbookId ?? "") ? "bg-slate-200 text-slate-900" : "bg-slate-800 text-slate-200"
+                }`}
+              >
+                {pb || "Alle Playbooks"}
+              </Link>
+            ),
+          )}
+        </div>
         <div className="flex gap-3 text-xs">
           <a
             className="rounded-full bg-slate-800 px-3 py-1 font-semibold text-slate-200 hover:bg-slate-700"
-            href={`/api/admin/outcomes/export?days=${days}${assetId ? `&assetId=${assetId}` : ""}&format=csv`}
+            href={`/api/admin/outcomes/export?days=${days}${assetId ? `&assetId=${assetId}` : ""}${
+              playbookId ? `&playbookId=${playbookId}` : ""
+            }&format=csv`}
           >
             Export CSV
           </a>
           <a
             className="rounded-full bg-slate-800 px-3 py-1 font-semibold text-slate-200 hover:bg-slate-700"
-            href={`/api/admin/outcomes/export?days=${days}${assetId ? `&assetId=${assetId}` : ""}&format=json`}
+            href={`/api/admin/outcomes/export?days=${days}${assetId ? `&assetId=${assetId}` : ""}${
+              playbookId ? `&playbookId=${playbookId}` : ""
+            }&format=json`}
           >
             Export JSON
           </a>

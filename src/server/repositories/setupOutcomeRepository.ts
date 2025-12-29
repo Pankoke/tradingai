@@ -112,6 +112,7 @@ export async function listOutcomesForWindow(params: {
   assetId?: string;
   timeframe?: string;
   limit?: number;
+  playbookId?: string;
 }): Promise<SetupOutcomeRow[]> {
   const conditions = [];
   if (params.from) {
@@ -128,6 +129,9 @@ export async function listOutcomesForWindow(params: {
   }
   if (params.timeframe) {
     conditions.push(eq(setupOutcomes.timeframe, params.timeframe));
+  }
+  if (params.playbookId) {
+    conditions.push(eq(setupOutcomes.playbookId, params.playbookId));
   }
   const whereClause = conditions.length ? and(...conditions) : undefined;
   try {

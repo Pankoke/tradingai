@@ -17,8 +17,17 @@ describe("Playbook resolver matching for gold swing", () => {
     }
   });
 
-  it("keeps default playbook for non-gold assets", () => {
-    const { playbook } = resolvePlaybookWithReason({ id: "spx", symbol: "^GSPC", name: "S&P 500" }, "swing");
-    expect(playbook.id).toBe("default");
+  it("resolves index, crypto, fx and fallback playbooks", () => {
+    const index = resolvePlaybookWithReason({ id: "spx", symbol: "^GSPC", name: "S&P 500" }, "swing");
+    expect(index.playbook.id).toBe("index-swing-v0.1");
+
+    const crypto = resolvePlaybookWithReason({ id: "btc", symbol: "BTCUSDT", name: "Bitcoin" }, "swing");
+    expect(crypto.playbook.id).toBe("crypto-swing-v0.1");
+
+    const fx = resolvePlaybookWithReason({ id: "eurusd", symbol: "EURUSD=X", name: "EUR/USD" }, "swing");
+    expect(fx.playbook.id).toBe("fx-swing-v0.1");
+
+    const fallback = resolvePlaybookWithReason({ id: "custom", symbol: "ABC", name: "Unknown Asset" }, "swing");
+    expect(fallback.playbook.id).toBe("generic-swing-v0.1");
   });
 });

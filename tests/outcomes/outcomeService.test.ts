@@ -1,0 +1,78 @@
+import { describe, expect, it, vi } from "vitest";
+
+const mockList = vi.fn();
+const mockGet = vi.fn();
+
+vi.mock("@/src/server/repositories/setupOutcomeRepository", () => ({
+  listOutcomesForWindow: (...args: unknown[]) => mockList(...args),
+}));
+
+vi.mock("@/src/server/repositories/assetRepository", () => ({
+  getAssetById: (...args: unknown[]) => mockGet(...args),
+}));
+
+vi.mock("@/src/server/repositories/perceptionSnapshotRepository", () => ({
+  getSnapshotById: async () => ({
+    setups: [
+      { id: "s1", setupGrade: "A", setupType: "pullback_continuation", rings: {}, eventModifier: null },
+    ],
+  }),
+}));
+
+describe("outcomeService filters by playbook", () => {
+  it("passes playbookId to repository", async () => {
+    mockList.mockResolvedValueOnce([
+      {
+        id: "o1",
+        setupId: "s1",
+        snapshotId: "snap1",
+        assetId: "gold",
+        profile: "SWING",
+        timeframe: "1D",
+        direction: "Long",
+        playbookId: "gold-swing-v0.2",
+        setupGrade: "A",
+        setupType: "pullback_continuation",
+        gradeRationale: ["Bias strong"],
+        noTradeReason: null,
+        gradeDebugReason: null,
+        evaluatedAt: new Date("2025-01-01T00:00:00Z"),
+        windowBars: 10,
+        outcomeStatus: "hit_tp",
+        outcomeAt: new Date("2025-01-02T00:00:00Z"),
+        barsToOutcome: 1,
+        reason: null,
+      },
+    ]);
+
+    const { loadOutcomeStats, loadOutcomeExportRows } = await import("@/src/server/admin/outcomeService");
+    await loadOutcomeStats({ playbookId: "gold-swing-v0.2" });
+    expect(mockList).toHaveBeenCalledWith(expect.objectContaining({ playbookId: "gold-swing-v0.2" }));
+
+    mockList.mockResolvedValueOnce([
+      {
+        id: "o1",
+        setupId: "s1",
+        snapshotId: "snap1",
+        assetId: "gold",
+        profile: "SWING",
+        timeframe: "1D",
+        direction: "Long",
+        playbookId: "gold-swing-v0.2",
+        setupGrade: "A",
+        setupType: "pullback_continuation",
+        gradeRationale: ["Bias strong"],
+        noTradeReason: null,
+        gradeDebugReason: null,
+        evaluatedAt: new Date("2025-01-01T00:00:00Z"),
+        windowBars: 10,
+        outcomeStatus: "hit_tp",
+        outcomeAt: new Date("2025-01-02T00:00:00Z"),
+        barsToOutcome: 1,
+        reason: null,
+      },
+    ]);
+    await loadOutcomeExportRows({ playbookId: "gold-swing-v0.2" });
+    expect(mockList).toHaveBeenCalledWith(expect.objectContaining({ playbookId: "gold-swing-v0.2" }));
+  });
+});

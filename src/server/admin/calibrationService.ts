@@ -53,6 +53,8 @@ export async function loadCalibrationStats(filters: CalibrationFilters): Promise
     for (const setup of snapSetups) {
       if (filters.profile && (setup.profile ?? "").toLowerCase() !== filters.profile.toLowerCase()) continue;
       if (filters.assetId && setup.assetId !== filters.assetId) continue;
+      if (filters.playbook && (setup as { setupPlaybookId?: string | null }).setupPlaybookId !== filters.playbook)
+        continue;
       setups.push({
         ...setup,
         snapshotId: snap.id,

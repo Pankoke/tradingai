@@ -27,7 +27,7 @@ export type OutcomeExportRow = {
   setup?: Setup;
 };
 
-export async function loadOutcomeStats(params: { days?: number; assetId?: string }): Promise<OutcomeStats> {
+export async function loadOutcomeStats(params: { days?: number; assetId?: string; playbookId?: string }): Promise<OutcomeStats> {
   const days = params.days ?? 30;
   const from = new Date(Date.now() - days * DAY_MS);
   const rows = await listOutcomesForWindow({
@@ -36,6 +36,7 @@ export async function loadOutcomeStats(params: { days?: number; assetId?: string
     profile: "SWING",
     timeframe: "1D",
     limit: 300,
+    playbookId: params.playbookId,
   });
 
   const initBucket = (): Record<OutcomeStatus, number> => ({
@@ -91,6 +92,7 @@ export async function loadOutcomeStats(params: { days?: number; assetId?: string
 export async function loadOutcomeExportRows(params: {
   days?: number;
   assetId?: string;
+  playbookId?: string;
 }): Promise<OutcomeExportRow[]> {
   const days = params.days ?? 30;
   const from = new Date(Date.now() - days * DAY_MS);
@@ -100,6 +102,7 @@ export async function loadOutcomeExportRows(params: {
     profile: "SWING",
     timeframe: "1D",
     limit: 500,
+    playbookId: params.playbookId,
   });
 
   const snapshotCache = new Map<string, Setup[]>();

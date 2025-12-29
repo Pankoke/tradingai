@@ -8,11 +8,18 @@ type PageProps = {
 };
 
 const ALLOWED_DAYS = ["7", "30", "90"];
+const PLAYBOOK_OPTIONS = [
+  { id: "gold-swing-v0.2", label: "Gold Swing" },
+  { id: "index-swing-v0.1", label: "Index Swing" },
+  { id: "crypto-swing-v0.1", label: "Crypto Swing" },
+  { id: "fx-swing-v0.1", label: "FX Swing" },
+  { id: "generic-swing-v0.1", label: "Generic Swing" },
+];
 
 export default async function PlaybookCalibrationPage({ params, searchParams }: PageProps) {
   const locale = (await params).locale as Locale;
   const query = (await searchParams) ?? {};
-  const playbook = query.playbook ?? "gold-swing";
+  const playbook = query.playbook ?? "gold-swing-v0.2";
   const profile = query.profile ?? "swing";
   const days = ALLOWED_DAYS.includes(query.days ?? "") ? Number(query.days) : 30;
   const assetId = query.assetId ?? "gold";
@@ -36,6 +43,19 @@ export default async function PlaybookCalibrationPage({ params, searchParams }: 
               }`}
             >
               {value} Tage
+            </Link>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2 text-xs">
+          {PLAYBOOK_OPTIONS.map((pb) => (
+            <Link
+              key={pb.id}
+              href={`/${locale}/admin/playbooks/calibration?playbook=${pb.id}&profile=${profile}&days=${days}&assetId=${assetId}`}
+              className={`rounded-full px-3 py-1 font-semibold ${
+                pb.id === playbook ? "bg-slate-200 text-slate-900" : "bg-slate-800 text-slate-200"
+              }`}
+            >
+              {pb.label}
             </Link>
           ))}
         </div>
