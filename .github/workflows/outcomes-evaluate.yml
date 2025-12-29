@@ -1,0 +1,41 @@
+name: "Daily Outcome Evaluation (Swing 1D)"
+
+on:
+  schedule:
+    - cron: "0 5 * * *" # daily at 05:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  trigger-outcome-evaluation:
+    runs-on: ubuntu-latest
+    env:
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      OUTCOME_CRON_BASE_URL: ${{ vars.OUTCOME_CRON_BASE_URL }}
+    steps:
+      - name: Ensure config present
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET not set in repository secrets"
+            exit 1
+          fi
+          if [ -z "$OUTCOME_CRON_BASE_URL" ]; then
+            echo "::error::OUTCOME_CRON_BASE_URL not set in repository variables"
+            exit 1
+          fi
+      - name: Trigger outcome evaluation (SWING 1D)
+        run: |
+          URL="${OUTCOME_CRON_BASE_URL%/}/api/cron/outcomes/evaluate?daysBack=90&limit=500"
+          echo "Calling: $URL"
+          status=$(curl -s -o /tmp/outcome_res.txt -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "$URL")
+
+          if [[ "$status" =~ ^2 ]]; then
+            echo "Outcome evaluation triggered successfully (status $status)"
+            cat /tmp/outcome_res.txt
+            exit 0
+          else
+            echo "::error::Outcome evaluation failed (status $status)"
+            cat /tmp/outcome_res.txt
+            exit 1
+          fi
