@@ -51,15 +51,11 @@ export async function loadOutcomeStats(params: { days?: number; assetId?: string
 
   for (const row of rows) {
     const grade = row.setupGrade ?? "unknown";
-    if (!byGrade[grade]) {
-      byGrade[grade] = initBucket();
-    }
-    if (byGrade[grade][row.outcomeStatus] !== undefined) {
-      byGrade[grade][row.outcomeStatus] += 1;
-    }
-    if (totals[row.outcomeStatus] !== undefined) {
-      totals[row.outcomeStatus] += 1;
-    }
+    const status = row.outcomeStatus as OutcomeStatus;
+    const bucket = byGrade[grade] ?? initBucket();
+    byGrade[grade] = bucket;
+    bucket[status] = (bucket[status] ?? 0) + 1;
+    totals[status] = (totals[status] ?? 0) + 1;
   }
 
   const closed = totals.hit_tp + totals.hit_sl;

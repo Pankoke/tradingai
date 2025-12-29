@@ -71,6 +71,9 @@ export function computeSwingOutcome(params: {
     };
   }
 
+  const tpValue = tpThreshold;
+  const slValue = slThreshold;
+
   const ordered = [...params.candles].sort(
     (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
   );
@@ -87,14 +90,19 @@ export function computeSwingOutcome(params: {
 
   for (let i = 0; i < window.length; i++) {
     const candle = window[i];
+    const high = Number(candle.high);
+    const low = Number(candle.low);
+    if (!Number.isFinite(high) || !Number.isFinite(low)) {
+      continue;
+    }
     const tpHit =
       params.setup.direction === "Long"
-        ? candle.high >= tpThreshold
-        : candle.low <= tpThreshold;
+        ? high >= tpValue
+        : low <= tpValue;
     const slHit =
       params.setup.direction === "Long"
-        ? candle.low <= slThreshold
-        : candle.high >= slThreshold;
+        ? low <= slValue
+        : high >= slValue;
 
     if (tpHit && slHit) {
       return {

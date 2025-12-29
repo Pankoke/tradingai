@@ -429,10 +429,10 @@ class LivePerceptionDataSource implements PerceptionDataSource {
       timeframe,
     });
     if (this.isCandleValid(candle)) {
-      if (candle && !("timestamp" in candle) && candle.close !== undefined) {
-        (candle as { timestamp?: Date }).timestamp = new Date();
+      if (!(candle.timestamp instanceof Date)) {
+        candle = { ...candle, timestamp: new Date(candle.timestamp ?? Date.now()) };
       }
-      return candle;
+      return candle as Candle;
     }
 
     if (!this.allowSync) {
