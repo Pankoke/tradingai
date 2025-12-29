@@ -73,6 +73,7 @@ export async function buildAndStorePerceptionSnapshot(
     asOf: snapshotTime,
     allowSync: params.allowSync,
     profiles: params.profiles,
+    assetFilter: params.assetFilter,
   });
   const generatedMs = Date.now() - start;
 

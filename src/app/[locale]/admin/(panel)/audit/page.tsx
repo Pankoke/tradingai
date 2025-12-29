@@ -19,7 +19,17 @@ type ParsedSearch = {
   pageSize: number;
 };
 
-const ACTION_OPTIONS = ["snapshot_build", "marketdata_sync", "bias_sync"] as const;
+export const ACTION_OPTIONS = [
+  "snapshot_build",
+  "snapshot_build_swing_backfill",
+  "perception_intraday",
+  "marketdata_sync",
+  "marketdata.intraday_sync",
+  "bias_sync",
+  "events.ingest",
+  "events.enrich",
+  "outcomes.evaluate",
+] as const;
 const SOURCE_OPTIONS = ["admin", "cron", "ui"] as const;
 
 const STATUS_TONES = {

@@ -571,13 +571,19 @@ class LivePerceptionDataSource implements PerceptionDataSource {
 export function createPerceptionDataSource(config?: {
   allowSync?: boolean;
   profiles?: SetupProfile[];
+  assetFilter?: string[];
 }): PerceptionDataSource {
   const mode = getPerceptionDataMode();
   const allowSync = config?.allowSync ?? true;
   const profiles = config?.profiles ?? (["SWING", "INTRADAY", "POSITION"] satisfies SetupProfile[]);
 
   if (mode === "live") {
-    return new LivePerceptionDataSource(allowSync, profiles);
+    const ds = new LivePerceptionDataSource(allowSync, profiles);
+    if (config?.assetFilter && config.assetFilter.length) {
+      // narrow asset universe if provided
+      (ds as unknown as { assetFilter?: string[] }).assetFilter = config.assetFilter;
+    }
+    return ds;
   }
 
   return new MockPerceptionDataSource();

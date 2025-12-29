@@ -54,7 +54,7 @@ async function backfill() {
   );
 
   if (opts.assetId) {
-    console.warn("[backfill-swing] assetId filter not enforced in engine; running full universe (informational only).");
+    console.warn("[backfill-swing] assetId filter currently informational only; engine runs full universe.");
   }
 
   const chunks = buildDateChunks(opts.days, opts.chunkDays);
@@ -81,6 +81,7 @@ async function backfill() {
           allowSync: false,
           profiles: ["SWING"],
           source: "cron",
+          assetFilter: opts.assetId ? [opts.assetId] : undefined,
         });
         built += 1;
         console.log(`[backfill-swing] built snapshot ${asOf.toISOString()}`);

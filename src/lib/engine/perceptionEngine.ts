@@ -235,11 +235,13 @@ export async function buildPerceptionSnapshot(options?: {
   asOf?: Date;
   allowSync?: boolean;
   profiles?: SetupProfile[];
+  assetFilter?: string[];
 }): Promise<PerceptionSnapshot> {
   const asOf = options?.asOf ?? new Date();
   const dataSource = createPerceptionDataSource({
     allowSync: options?.allowSync ?? true,
     profiles: options?.profiles,
+    assetFilter: options?.assetFilter,
   });
   const setups = await dataSource.getSetupsForToday({ asOf });
 

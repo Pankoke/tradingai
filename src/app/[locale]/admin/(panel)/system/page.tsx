@@ -36,12 +36,14 @@ function formatBytes(value?: number): string {
 
 const ACTION_LABEL_KEYS = [
   { value: "snapshot_build", key: "admin.audit.actions.snapshot_build" },
-  { value: "marketdata.intraday_sync", key: "admin.audit.actions.marketdata_intraday" },
+  { value: "snapshot_build_swing_backfill", key: "admin.audit.actions.snapshot_build_swing_backfill" },
   { value: "perception_intraday", key: "admin.audit.actions.perception_intraday" },
+  { value: "marketdata.intraday_sync", key: "admin.audit.actions.marketdata_intraday" },
   { value: "marketdata_sync", key: "admin.audit.actions.marketdata_sync" },
   { value: "bias_sync", key: "admin.audit.actions.bias_sync" },
   { value: "events.ingest", key: "admin.audit.actions.events_ingest" },
   { value: "events.enrich", key: "admin.audit.actions.events_enrich" },
+  { value: "outcomes.evaluate", key: "admin.audit.actions.outcomes_evaluate" },
 ];
 
 const SOURCE_LABEL_KEYS = [
