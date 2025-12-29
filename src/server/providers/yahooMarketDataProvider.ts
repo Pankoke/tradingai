@@ -50,7 +50,7 @@ export class YahooMarketDataProvider implements MarketDataProvider {
     url.searchParams.set("period1", String(fromEpoch));
     url.searchParams.set("period2", String(toEpoch));
 
-    const response = await fetch(url, { next: { revalidate: 60 } });
+    const response = await fetch(url, {});
     if (!response.ok) {
       return [];
     }

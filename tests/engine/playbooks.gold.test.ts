@@ -7,6 +7,15 @@ const { evaluateGoldSwing } = playbookTestExports;
 const goldAsset = { id: "gold", symbol: "XAUUSD", name: "Gold Futures" };
 const nonGoldAsset = { id: "fx-eur", symbol: "EURUSD", name: "Euro Dollar" };
 
+const baseLevels = {
+  entryZone: "100",
+  stopLoss: "95",
+  takeProfit: "110",
+  riskReward: { riskPercent: 5, rewardPercent: 10, rrr: 2, volatilityLabel: "medium" },
+};
+
+const baseSignalQuality = { grade: "A", score: 80, labelKey: "ok", reasons: [] };
+
 function makeModifier(minutesToEvent: number): EventModifier {
   return {
     classification: "execution_critical",
@@ -17,68 +26,47 @@ function makeModifier(minutesToEvent: number): EventModifier {
 }
 
 describe("gold swing playbook v0.2", () => {
-  it("does not give A when orderflow is negative even if bias strong", () => {
+  it("gives A when all bases are strong and neutral orderflow", () => {
     const result = evaluateGoldSwing({
       asset: goldAsset,
       profile: "swing",
-      rings: { biasScore: 95, trendScore: 70, sentimentScore: 70, orderflowScore: 35 },
-      orderflow: { flags: ["risk", "sell pressure"] },
-      eventModifier: null,
-      signalQuality: { grade: "A", score: 90, labelKey: "ok", reasons: [] },
-    });
-    expect(result.setupGrade).toBe("NO_TRADE");
-    expect(result.noTradeReason?.toLowerCase()).toContain("orderflow");
-  });
-
-  it("grants A with neutral orderflow when bias/trend strong and no execution critical", () => {
-    const result = evaluateGoldSwing({
-      asset: goldAsset,
-      profile: "swing",
-      rings: { biasScore: 92, trendScore: 68, sentimentScore: 65, orderflowScore: 48 },
+      rings: { biasScore: 90, trendScore: 82, sentimentScore: 70, orderflowScore: 55 },
       orderflow: { flags: ["neutral"] },
       eventModifier: null,
-      signalQuality: { grade: "A", score: 80, labelKey: "ok", reasons: [] },
+      signalQuality: baseSignalQuality,
+      levels: baseLevels,
     });
     expect(result.setupGrade).toBe("A");
-    expect(result.setupType).toBe("pullback_continuation");
     expect(result.noTradeReason).toBeUndefined();
   });
 
-  it("gives A- for moderate trend and neutral orderflow with awareness event", () => {
+  it("downgrades to B when orderflow is negative without hard knockout", () => {
     const result = evaluateGoldSwing({
       asset: goldAsset,
       profile: "swing",
-      rings: { biasScore: 90, trendScore: 58, sentimentScore: 60, orderflowScore: 45 },
-      orderflow: { flags: ["neutral"] },
-      eventModifier: { classification: "awareness_only" } as EventModifier,
-      signalQuality: { grade: "B", score: 65, labelKey: "ok", reasons: [] },
-    });
-    expect(result.setupGrade).toBe("A");
-    expect(result.gradeRationale).toBeTruthy();
-  });
-
-  it("forces NO_TRADE when execution-critical event within 48h", () => {
-    const result = evaluateGoldSwing({
-      asset: goldAsset,
-      profile: "swing",
-      rings: { biasScore: 90, trendScore: 70, sentimentScore: 70, orderflowScore: 60 },
-      eventModifier: makeModifier(60),
-      signalQuality: { grade: "A", score: 90, labelKey: "ok", reasons: [] },
-    });
-    expect(result.setupGrade).toBe("NO_TRADE");
-    expect(result.noTradeReason?.toLowerCase()).toContain("execution-critical");
-  });
-
-  it("forces NO_TRADE when trend or bias too weak", () => {
-    const result = evaluateGoldSwing({
-      asset: goldAsset,
-      profile: "swing",
-      rings: { biasScore: 60, trendScore: 35, sentimentScore: 55, orderflowScore: 55 },
+      rings: { biasScore: 95, trendScore: 70, sentimentScore: 70, orderflowScore: 25 },
+      orderflow: { flags: ["risk", "sell pressure"] },
       eventModifier: null,
-      signalQuality: { grade: "C", score: 50, labelKey: "ok", reasons: [] },
+      signalQuality: baseSignalQuality,
+      levels: baseLevels,
     });
-    expect(result.setupGrade).toBe("NO_TRADE");
-    expect(result.noTradeReason?.toLowerCase()).toContain("trend");
+    expect(result.setupGrade).toBe("B");
+    expect(result.gradeRationale?.join(" ").toLowerCase()).toContain("downgraded");
+    expect(result.debugReason).toContain("soft:orderflow_negative");
+  });
+
+  it("downgrades to B on soft trend/bias divergence", () => {
+    const result = evaluateGoldSwing({
+      asset: goldAsset,
+      profile: "swing",
+      rings: { biasScore: 95, trendScore: 70, sentimentScore: 70, orderflowScore: 60 },
+      orderflow: { flags: ["neutral"] },
+      eventModifier: null,
+      signalQuality: { grade: "A", score: 56, labelKey: "ok", reasons: [] },
+      levels: baseLevels,
+    });
+    expect(result.setupGrade).toBe("B");
+    expect(result.debugReason).toContain("trend_bias_divergence");
   });
 
   it("falls back to default playbook for non-gold assets", () => {
@@ -92,5 +80,47 @@ describe("gold swing playbook v0.2", () => {
       signalQuality: { grade: "B", score: 70, labelKey: "ok", reasons: [] },
     });
     expect(["B", "NO_TRADE"]).toContain(result.setupGrade);
+  });
+
+  it("returns NO_TRADE when basis fails (trend too weak)", () => {
+    const result = evaluateGoldSwing({
+      asset: goldAsset,
+      profile: "swing",
+      rings: { biasScore: 90, trendScore: 40, sentimentScore: 70, orderflowScore: 60 },
+      eventModifier: null,
+      signalQuality: baseSignalQuality,
+      levels: baseLevels,
+    });
+    expect(result.setupGrade).toBe("NO_TRADE");
+    expect(result.noTradeReason?.toLowerCase()).toContain("trend");
+    expect(result.debugReason).toContain("base:trend");
+  });
+
+  it("forces NO_TRADE on hard conflict plus orderflow negative", () => {
+    const result = evaluateGoldSwing({
+      asset: goldAsset,
+      profile: "swing",
+      rings: { biasScore: 90, trendScore: 70, sentimentScore: 70, orderflowScore: 20 },
+      orderflow: { flags: ["orderflow_trend_conflict"] },
+      eventModifier: null,
+      signalQuality: { grade: "B", score: 60, labelKey: "ok", reasons: [] },
+      levels: baseLevels,
+    });
+    expect(result.setupGrade).toBe("NO_TRADE");
+    expect(result.debugReason).toContain("hard:tb_conflict+of_negative");
+  });
+
+  it("returns NO_TRADE when levels are missing", () => {
+    const result = evaluateGoldSwing({
+      asset: goldAsset,
+      profile: "swing",
+      rings: { biasScore: 90, trendScore: 70, sentimentScore: 70, orderflowScore: 60 },
+      orderflow: { flags: ["neutral"] },
+      eventModifier: null,
+      signalQuality: baseSignalQuality,
+      levels: { ...baseLevels, takeProfit: null },
+    });
+    expect(result.setupGrade).toBe("NO_TRADE");
+    expect(result.noTradeReason?.toLowerCase()).toContain("levels");
   });
 });

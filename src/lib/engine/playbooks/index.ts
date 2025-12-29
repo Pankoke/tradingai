@@ -1,4 +1,4 @@
-import type { EventModifier } from "@/src/lib/engine/types";
+import type { EventModifier, RiskRewardSummary } from "@/src/lib/engine/types";
 import type { SignalQuality } from "@/src/lib/engine/signalQuality";
 
 export type SetupGrade = "A" | "B" | "NO_TRADE";
@@ -9,6 +9,7 @@ export type PlaybookEvaluation = {
   setupType: SetupPlaybookType;
   gradeRationale: string[];
   noTradeReason?: string;
+  debugReason?: string;
 };
 
 type PlaybookContext = {
@@ -28,6 +29,12 @@ type PlaybookContext = {
     reasons?: string[] | null;
     reasonDetails?: Array<{ text?: string; category?: string }> | null;
   } | null;
+  levels?: {
+    entryZone?: string | null;
+    stopLoss?: string | null;
+    takeProfit?: string | null;
+    riskReward?: RiskRewardSummary | null;
+  };
 };
 
 export type Playbook = {
@@ -45,6 +52,10 @@ type PlaybookResolution = {
 const SWING_EVENT_WINDOW_MINUTES = 48 * 60;
 const ORDERFLOW_NEGATIVE_THRESHOLD = 30;
 const SIGNAL_QUALITY_FLOOR = 40;
+const SIGNAL_QUALITY_BASE = 55;
+const BIAS_MIN = 80;
+const TREND_MIN = 50;
+const SOFT_TREND_BIAS_DELTA = 20;
 const GOLD_PLAYBOOK_ID = "gold-swing-v0.2";
 const INDEX_PLAYBOOK_ID = "index-swing-v0.1";
 const CRYPTO_PLAYBOOK_ID = "crypto-swing-v0.1";
@@ -127,124 +138,132 @@ function hasNegativeOrderflowFlags(orderflow?: PlaybookContext["orderflow"]): bo
   return textBlocks.some((text) => negativePatterns.some((pat) => text.includes(pat)));
 }
 
-function evaluateGoldSwing(context: PlaybookContext): PlaybookEvaluation {
-  const { rings, eventModifier, signalQuality, orderflow } = context;
-  const rationale: string[] = [];
-  const sentimentScore = typeof rings.sentimentScore === "number" ? rings.sentimentScore : null;
-  const sentimentMissing = sentimentScore === null || Number.isNaN(sentimentScore);
+function isOrderflowNegative(context: PlaybookContext): boolean {
+  const score = typeof context.rings.orderflowScore === "number" ? context.rings.orderflowScore : 50;
+  return score < ORDERFLOW_NEGATIVE_THRESHOLD || hasNegativeOrderflowFlags(context.orderflow);
+}
 
-  const orderflowScore = typeof rings.orderflowScore === "number" ? rings.orderflowScore : 50;
-  const orderflowNegative = orderflowScore < ORDERFLOW_NEGATIVE_THRESHOLD || hasNegativeOrderflowFlags(orderflow);
+function hasTrendBiasConflict(context: PlaybookContext): boolean {
+  const flags = (context.orderflow?.flags ?? []).map((f) => f.toLowerCase());
+  return flags.includes("orderflow_trend_conflict") || flags.includes("orderflow_bias_conflict");
+}
 
-  const withinCriticalWindow =
+type GoldSwingFlags = {
+  biasOk: boolean;
+  trendOk: boolean;
+  signalQualityOk: boolean;
+  sentimentWeak: boolean;
+  orderflowNegative: boolean;
+  tbSoftDivergence: boolean;
+  tbConflictHard: boolean;
+  executionCritical: boolean;
+  levelsOk: boolean;
+  rrrUnattractive: boolean;
+};
+
+function evaluateGoldSwingConditions(context: PlaybookContext): GoldSwingFlags {
+  const { rings, eventModifier, signalQuality, levels } = context;
+  const biasOk = rings.biasScore >= BIAS_MIN;
+  const trendOk = rings.trendScore >= TREND_MIN;
+  const signalQualityOk = typeof signalQuality?.score === "number" ? signalQuality.score >= SIGNAL_QUALITY_BASE : false;
+  const sentimentWeak = typeof rings.sentimentScore === "number" ? rings.sentimentScore < 55 : false;
+  const orderflowNegative = isOrderflowNegative(context);
+  const tbSoftDivergence = Math.abs(rings.biasScore - rings.trendScore) >= SOFT_TREND_BIAS_DELTA;
+  const tbConflictHard = hasTrendBiasConflict(context);
+  const executionCritical =
     eventModifier?.classification === "execution_critical" &&
     typeof eventModifier.primaryEvent?.minutesToEvent === "number" &&
     eventModifier.primaryEvent.minutesToEvent >= 0 &&
     eventModifier.primaryEvent.minutesToEvent <= SWING_EVENT_WINDOW_MINUTES;
+  const levelsOk =
+    Boolean(levels?.entryZone) && Boolean(levels?.stopLoss) && Boolean(levels?.takeProfit) && levels?.riskReward !== null;
+  const rrrUnattractive = typeof levels?.riskReward?.rrr === "number" ? levels.riskReward.rrr < 1 : false;
 
-  // Hard exclusions for A / overall NO_TRADE gates
-  if (
-    withinCriticalWindow ||
-    rings.biasScore < 70 ||
-    rings.trendScore < 45 ||
-    orderflowNegative ||
-    (signalQuality && signalQuality.score < 40)
-  ) {
-    const reason = withinCriticalWindow
-      ? "Execution-critical event within 48h"
-      : orderflowNegative
-        ? "Orderflow negative"
-        : rings.trendScore < 45
-          ? "Trend too weak"
-          : rings.biasScore < 70
-            ? "Bias too weak"
-            : "Signal quality too low";
+  return {
+    biasOk,
+    trendOk,
+    signalQualityOk,
+    sentimentWeak,
+    orderflowNegative,
+    tbSoftDivergence,
+    tbConflictHard,
+    executionCritical,
+    levelsOk,
+    rrrUnattractive,
+  };
+}
+
+function evaluateGoldSwing(context: PlaybookContext): PlaybookEvaluation {
+  const flags = evaluateGoldSwingConditions(context);
+  const rationale: string[] = [];
+  const debugReasons: string[] = [];
+  const { rings, signalQuality } = context;
+
+  const baseFailures: Array<{ key: string; reason: string }> = [];
+  if (!flags.biasOk) baseFailures.push({ key: "bias", reason: "Bias too weak (<80)" });
+  if (!flags.trendOk) baseFailures.push({ key: "trend", reason: "Trend too weak (<50)" });
+  if (!flags.signalQualityOk) baseFailures.push({ key: "signalQuality", reason: "Signal quality too low (<55)" });
+  if (!flags.levelsOk) baseFailures.push({ key: "levels", reason: "Levels missing/invalid" });
+  if (flags.executionCritical) baseFailures.push({ key: "event", reason: "Execution-critical event within 48h" });
+
+  if (baseFailures.length > 0) {
+    const reason = baseFailures[0].reason;
+    debugReasons.push(`base:${baseFailures.map((f) => f.key).join("+")}`);
     return {
       setupGrade: "NO_TRADE",
       setupType: deriveSetupType(rings),
       gradeRationale: [],
       noTradeReason: reason,
+      debugReason: debugReasons.join(";"),
     };
   }
 
-  const baseRationale = () => {
-    rationale.push("Bias strong (>=80)");
-    rationale.push("Trend supportive (>=55)");
-    rationale.push("Orderflow not negative");
-    rationale.push("No execution-critical events");
-  };
+  const hardKnockouts: string[] = [];
+  if (flags.tbConflictHard && flags.orderflowNegative) hardKnockouts.push("tb_conflict+of_negative");
+  if (!flags.signalQualityOk && typeof signalQuality?.score === "number" && signalQuality.score < SIGNAL_QUALITY_BASE)
+    hardKnockouts.push("signal_quality_low");
+  if (flags.rrrUnattractive) hardKnockouts.push("rrr_unattractive");
 
-  const strengthTrigger = [
-    rings.biasScore >= 90 ? "Bias >=90" : null,
-    rings.trendScore >= 65 ? "Trend >=65" : null,
-    orderflowScore >= 55 ? "Orderflow >=55" : null,
-    signalQuality && signalQuality.score >= 70 ? "SignalQuality >=70" : null,
-  ].filter(Boolean) as string[];
+  if (hardKnockouts.length > 0) {
+    return {
+      setupGrade: "NO_TRADE",
+      setupType: deriveSetupType(rings),
+      gradeRationale: [],
+      noTradeReason: `Hard knockout: ${hardKnockouts.join(", ")}`,
+      debugReason: `hard:${hardKnockouts.join("+")}`,
+    };
+  }
 
-  const sentimentOk = sentimentMissing || sentimentScore >= 55;
+  const softNegatives: string[] = [];
+  if (flags.orderflowNegative) softNegatives.push("orderflow_negative");
+  if (flags.tbSoftDivergence && !flags.tbConflictHard) softNegatives.push("trend_bias_divergence");
+  if (flags.sentimentWeak) softNegatives.push("sentiment_weak");
 
-  const qualifiesForA =
-    rings.biasScore >= 80 &&
-    rings.trendScore >= 55 &&
-    sentimentOk &&
-    !orderflowNegative &&
-    eventModifier?.classification !== "execution_critical";
-
-  if (qualifiesForA && strengthTrigger.length > 0) {
-    baseRationale();
-    rationale.push(`Strength trigger: ${strengthTrigger[0]}`);
-    if (sentimentMissing) rationale.push("Sentiment missing");
+  rationale.push("Bias strong (>=80)");
+  rationale.push("Trend supportive (>=50)");
+  rationale.push("Signal quality ok (>=55)");
+  rationale.push("Levels present");
+  if (softNegatives.length === 0) {
     return {
       setupGrade: "A",
       setupType: deriveSetupType(rings),
       gradeRationale: rationale.slice(0, 3),
+      debugReason: "grade:A",
     };
   }
 
-  const qualifiesForAMinus =
-    qualifiesForA ||
-    (rings.biasScore >= 80 &&
-      rings.trendScore >= 55 &&
-      !orderflowNegative &&
-      (eventModifier?.classification === "context_relevant" ||
-        eventModifier?.classification === "awareness_only" ||
-        (rings.trendScore >= 55 && rings.trendScore <= 64) ||
-        (orderflowScore >= 40 && orderflowScore <= 54) ||
-        sentimentMissing));
-
-  if (qualifiesForAMinus) {
-    baseRationale();
-    if (eventModifier?.classification === "context_relevant" || eventModifier?.classification === "awareness_only") {
-      rationale.push(`Event context: ${eventModifier.classification}`);
-    }
-    if (rings.trendScore <= 64) rationale.push("Trend only moderate");
-    if (orderflowScore <= 54) rationale.push("Orderflow neutral - watch structure");
-    if (sentimentMissing) rationale.push("Sentiment missing");
-    if (strengthTrigger.length === 0) rationale.push("Strength trigger missing");
-    return {
-      setupGrade: "A",
-      setupType: deriveSetupType(rings),
-      gradeRationale: rationale.slice(0, 3),
-    };
-  }
-
-  const qualifiesForB = rings.biasScore >= 70 && rings.trendScore >= 45 && !orderflowNegative;
-  if (qualifiesForB) {
-    rationale.push("Bias constructive (>=70)");
-    rationale.push("Trend adequate (>=45)");
-    rationale.push("Orderflow not negative");
-    return {
-      setupGrade: "B",
-      setupType: deriveSetupType(rings),
-      gradeRationale: rationale.slice(0, 3),
-    };
-  }
-
+  const downgradeReasons = softNegatives.map((r) =>
+    r === "orderflow_negative"
+      ? "Orderflow negative"
+      : r === "trend_bias_divergence"
+        ? "Trend/Bias divergence"
+        : "Sentiment weak",
+  );
   return {
-    setupGrade: "NO_TRADE",
+    setupGrade: "B",
     setupType: deriveSetupType(rings),
-    gradeRationale: [],
-    noTradeReason: "No qualifying alignment",
+    gradeRationale: [`Downgraded: ${downgradeReasons.join(", ")}`].slice(0, 3),
+    debugReason: `soft:${softNegatives.join("+")}`,
   };
 }
 

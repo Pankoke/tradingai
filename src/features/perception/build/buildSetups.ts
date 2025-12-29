@@ -177,6 +177,12 @@ export async function buildAndStorePerceptionSnapshot(
       eventModifier: setup.eventModifier ?? null,
       signalQuality,
       orderflow: setup.orderflow ?? null,
+      levels: {
+        entryZone: setup.entryZone,
+        stopLoss: setup.stopLoss,
+        takeProfit: setup.takeProfit,
+        riskReward: setup.riskReward ?? null,
+      },
     });
 
     const assetRank = (itemRankCounters.get(setup.symbol) ?? 0) + 1;
@@ -226,7 +232,7 @@ export async function buildAndStorePerceptionSnapshot(
       noTradeReason: evaluation.noTradeReason,
       profile,
       setupPlaybookId: playbook.id,
-      gradeDebugReason: playbookReason,
+      gradeDebugReason: evaluation.debugReason ?? playbookReason,
     });
   }
 

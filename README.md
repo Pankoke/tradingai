@@ -102,6 +102,21 @@ Tests
 
 npm test
 
+Backfill Daily/Weekly Candles
+-----------------------------
+
+Einmaliger oder wiederholbarer Backfill fĂĽr alle aktiven Assets (nur 1D + 1W Aggregation):
+
+```
+npm run backfill:1d -- --days=730 --chunkDays=90 --assetId=OPTIONAL --dry-run
+```
+
+- Zeitraum: standardmĂ¤Ăźig 730 Tage ab heutigem UTC-Tagesbeginn.
+- Timeframes: 1D via Provider, danach 1W via `aggregateWeeklyFromDaily`.
+- Flags: `--dry-run` (kein Upsert), `--assetId=...` (Filter), `--days=...`, `--chunkDays=...`.
+- Throttling 300â800ms zwischen Provider-Calls, sequentiell pro Asset.
+- BenĂśtigte ENV: `DATABASE_URL` (pg), Provider-ENV wie im regulĂ¤ren Marktdaten-Setup.
+
 Env-Variablen (geplant)
 
 REDIS_URL
