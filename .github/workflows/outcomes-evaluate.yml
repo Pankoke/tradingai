@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CRON_SECRET: ${{ secrets.CRON_SECRET }}
-      OUTCOME_CRON_BASE_URL: ${{ vars.OUTCOME_CRON_BASE_URL }}
+      OUTCOME_CRON_BASE_URL: ${{ secrets.OUTCOME_CRON_BASE_URL != '' && secrets.OUTCOME_CRON_BASE_URL || vars.OUTCOME_CRON_BASE_URL }}
       OUTCOME_CRON_BASE_URL_SECRET_FALLBACK: ${{ secrets.OUTCOME_CRON_BASE_URL }}
     steps:
       - name: Ensure config present
