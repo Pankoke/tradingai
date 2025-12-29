@@ -30,6 +30,7 @@ jobs:
           fi
       - name: Trigger outcome evaluation (SWING 1D)
         run: |
+          OUTCOME_CRON_BASE_URL="$(printf "%s" "$OUTCOME_CRON_BASE_URL" | tr -d '\r\n')"
           if echo "$OUTCOME_CRON_BASE_URL" | grep -q "/api/cron/outcomes/evaluate"; then
             URL="$OUTCOME_CRON_BASE_URL"
           else
