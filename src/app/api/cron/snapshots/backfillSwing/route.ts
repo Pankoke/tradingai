@@ -27,14 +27,17 @@ export async function POST(request: NextRequest | Request): Promise<Response> {
   const dryRun = params.get("dryRun") === "1" || params.get("dry_run") === "1";
   const assetParam = params.get("assetId") ?? undefined;
   const assetFilter = resolveAssetIds(assetParam);
+  const recentFirst = params.get("recentFirst") === "1";
   const today = new Date();
   let built = 0;
   let skipped = 0;
   const startedAt = Date.now();
-  for (let i = days; i >= 0; i -= 1) {
+  const offsets = Array.from({ length: days + 1 }, (_, idx) => idx);
+  const orderedOffsets = recentFirst ? offsets : offsets.reverse();
+  for (const offset of orderedOffsets) {
     if (built >= limit) break;
     const date = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-    date.setUTCDate(date.getUTCDate() - i);
+    date.setUTCDate(date.getUTCDate() - offset);
     const existing = await getSnapshotByTime({ snapshotTime: date });
     if (existing) {
       skipped += 1;
@@ -60,7 +63,7 @@ export async function POST(request: NextRequest | Request): Promise<Response> {
     ok: true,
     durationMs: Date.now() - startedAt,
     message: "swing_backfill",
-    meta: { built, skipped, days, limit, dryRun, assetId: assetParam },
+    meta: { built, skipped, days, limit, dryRun, assetId: assetParam, recentFirst },
   });
 
   return respondOk({ built, skipped });

@@ -3,6 +3,7 @@ import type { Setup } from "@/src/lib/engine/types";
 import { listSnapshotsPaged } from "@/src/server/repositories/perceptionSnapshotRepository";
 import { getOutcomesBySetupIds, upsertOutcome, type SetupOutcomeInsert } from "@/src/server/repositories/setupOutcomeRepository";
 import { evaluateSwingSetupOutcome, type OutcomeStatus } from "@/src/server/services/outcomeEvaluator";
+import { resolvePlaybook } from "@/src/lib/engine/playbooks";
 
 const runnerLogger = logger.child({ scope: "outcome-runner" });
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -23,10 +24,16 @@ export type OutcomeMetrics = {
 export async function loadRecentSwingCandidates(params: {
   daysBack?: number;
   limit?: number;
+  assetId?: string;
+  playbookId?: string;
+  reasons?: Record<string, number>;
+  stats?: { snapshotsSeen: number; rawSetups: number; eligible: number };
 }): Promise<SwingSetupCandidate[]> {
   const daysBack = params.daysBack ?? 30;
   const limit = Math.min(500, Math.max(1, params.limit ?? 200));
   const from = new Date(Date.now() - daysBack * DAY_MS);
+  const assetFilter = resolveAssetIds(params.assetId);
+  const playbookFilter = params.playbookId ?? null;
   const pageSize = 50;
   let page = 1;
   let total = Infinity;
@@ -40,15 +47,31 @@ export async function loadRecentSwingCandidates(params: {
       pageSize,
     });
     total = fetchedTotal;
+    params.stats && (params.stats.snapshotsSeen += snapshots.length);
     if (!snapshots.length) break;
     for (const snapshot of snapshots) {
       if (!snapshot.setups || !Array.isArray(snapshot.setups)) continue;
       const snapshotTime = snapshot.snapshotTime instanceof Date ? snapshot.snapshotTime : new Date(snapshot.snapshotTime);
       for (const raw of snapshot.setups as Setup[]) {
+        params.stats && (params.stats.rawSetups += 1);
         if (seen.has(raw.id)) continue;
         if ((raw.profile ?? "").toUpperCase() !== "SWING") continue;
         if ((raw.timeframe ?? "").toUpperCase() !== "1D") continue;
+        if (assetFilter && !assetFilter.includes(raw.assetId)) {
+          params.reasons && incrementReason(params.reasons, "asset_mismatch");
+          continue;
+        }
+        const playbookId = (raw as { setupPlaybookId?: string | null }).setupPlaybookId ?? null;
+        if (playbookFilter && playbookId !== playbookFilter) {
+          params.reasons && incrementReason(params.reasons, "playbook_mismatch");
+          continue;
+        }
+        if (!raw.entryZone || !raw.stopLoss || !raw.takeProfit) {
+          params.reasons && incrementReason(params.reasons, "missing_levels");
+          continue;
+        }
         seen.add(raw.id);
+        params.stats && (params.stats.eligible += 1);
         candidates.push({
           ...raw,
           snapshotId: snapshot.id,
@@ -69,10 +92,19 @@ export async function runOutcomeEvaluationBatch(params: {
   limit?: number;
   dryRun?: boolean;
   windowBars?: number;
-}): Promise<{ metrics: OutcomeMetrics; processed: number }> {
+  assetId?: string;
+  playbookId?: string;
+  loggerInfo?: boolean;
+}): Promise<{ metrics: OutcomeMetrics; processed: number; reasons: Record<string, number> }> {
+  const reasonCounts: Record<string, number> = {};
+  const stats = { snapshotsSeen: 0, rawSetups: 0, eligible: 0 };
   const candidates = await loadRecentSwingCandidates({
     daysBack: params.daysBack,
     limit: params.limit,
+    assetId: params.assetId,
+    playbookId: params.playbookId,
+    reasons: reasonCounts,
+    stats,
   });
 
   const existing = await getOutcomesBySetupIds(candidates.map((c) => c.id));
@@ -111,6 +143,10 @@ export async function runOutcomeEvaluationBatch(params: {
         continue;
       }
 
+      const fallbackPlaybook = resolvePlaybook(
+        { id: candidate.assetId, symbol: candidate.symbol, name: candidate.symbol },
+        candidate.profile ?? "SWING",
+      );
       const payload: SetupOutcomeInsert = {
         id: prior?.id,
         setupId: candidate.id,
@@ -121,6 +157,7 @@ export async function runOutcomeEvaluationBatch(params: {
         direction: candidate.direction,
         playbookId: (candidate as { playbookId?: string; setupPlaybookId?: string }).playbookId ??
           (candidate as { setupPlaybookId?: string }).setupPlaybookId ??
+          fallbackPlaybook.id ??
           null,
         setupGrade: candidate.setupGrade ?? null,
         setupType: candidate.setupType ?? null,
@@ -142,5 +179,40 @@ export async function runOutcomeEvaluationBatch(params: {
     }
   }
 
-  return { metrics, processed: candidates.length };
+  if (params.loggerInfo) {
+    runnerLogger.info("outcome evaluation run", {
+      daysBack: params.daysBack ?? 30,
+      limit: params.limit,
+      processed: candidates.length,
+      metrics,
+      reasons: topReasons(reasonCounts),
+      stats: {
+        snapshots: stats.snapshotsSeen,
+        extractedSetups: stats.rawSetups,
+        eligible: stats.eligible,
+        skippedClosed: metrics.skippedClosed,
+      },
+    });
+  }
+
+  return { metrics, processed: candidates.length, reasons: reasonCounts };
+}
+
+function resolveAssetIds(assetId?: string | null): string[] | undefined {
+  if (!assetId) return undefined;
+  const trimmed = assetId.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.toLowerCase() === "gold") return ["GC=F", "XAUUSD", "XAUUSD=X", "GOLD", "gold"];
+  return [trimmed];
+}
+
+function incrementReason(map: Record<string, number>, key: string) {
+  map[key] = (map[key] ?? 0) + 1;
+}
+
+function topReasons(map: Record<string, number>): Array<{ reason: string; count: number }> {
+  return Object.entries(map)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([reason, count]) => ({ reason, count }));
 }

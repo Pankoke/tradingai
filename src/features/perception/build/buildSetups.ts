@@ -33,6 +33,7 @@ type BuildParams = {
   allowSync?: boolean;
   profiles?: SetupProfile[];
   label?: string;
+  assetFilter?: string[];
 };
 
 const SNAPSHOT_VERSION = "v1.0.0";
