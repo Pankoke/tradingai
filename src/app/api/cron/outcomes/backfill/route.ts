@@ -71,6 +71,7 @@ export async function POST(request: NextRequest): Promise<Response> {
             topMismatchedAssets: topEntries(result.mismatchedAssets, 10),
             assetMatchField: "assetId_or_symbol",
             playbookMatchStats: result.playbookMatchStats,
+            effectivePlaybookSample: result.effectivePlaybookSamples,
           }
         : {}),
     });

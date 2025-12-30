@@ -30,6 +30,13 @@ export async function loadRecentSwingCandidates(params: {
   stats?: { snapshotsSeen: number; rawSetups: number; eligible: number };
   mismatchedAssets?: Record<string, number>;
   playbookMatchStats?: { stored: number; resolved: number; incompatible: number };
+  playbookSamples?: Array<{
+    setupId: string;
+    storedPlaybookId: string | null;
+    resolvedPlaybookId: string | null;
+    effectivePlaybookId: string | null;
+    compatible: boolean;
+  }>;
 }): Promise<SwingSetupCandidate[]> {
   const daysBack = params.daysBack ?? 30;
   const limit = Math.min(500, Math.max(1, params.limit ?? 200));
@@ -62,27 +69,43 @@ export async function loadRecentSwingCandidates(params: {
         const matchesAsset =
           !assetFilter || assetFilter.includes(raw.assetId) || assetFilter.includes((raw as { symbol?: string }).symbol ?? "");
         const playbookId = (raw as { setupPlaybookId?: string | null }).setupPlaybookId ?? null;
-        let playbookMatch = playbookFilter ? playbookId === playbookFilter : false;
+        let effectivePlaybookId = playbookId;
+        let resolvedPlaybookId: string | null = null;
 
-        if (playbookFilter && !playbookMatch && !playbookId) {
-          const resolved = resolvePlaybook(
-            { id: raw.assetId, symbol: (raw as { symbol?: string }).symbol, name: (raw as { name?: string }).name },
+        if (!effectivePlaybookId) {
+          resolvedPlaybookId = resolvePlaybook(
+            {
+              id: raw.assetId ?? "",
+              symbol: (raw as { symbol?: string }).symbol ?? raw.assetId ?? "",
+              name: (raw as { name?: string }).name ?? null,
+            },
             raw.profile ?? "SWING",
           ).id;
-          const compatible = isCompatiblePlaybook(playbookFilter, resolved);
-          playbookMatch = compatible;
-          if (compatible) {
-            params.playbookMatchStats && (params.playbookMatchStats.resolved += 1);
-          } else {
-            params.playbookMatchStats && (params.playbookMatchStats.incompatible += 1);
-          }
-        } else if (playbookFilter && playbookMatch) {
-          params.playbookMatchStats && (params.playbookMatchStats.stored += 1);
-        } else if (playbookFilter && !playbookMatch) {
-          params.playbookMatchStats && (params.playbookMatchStats.incompatible += 1);
+          effectivePlaybookId = resolvedPlaybookId;
         }
 
-        if (!matchesAsset && !playbookMatch) {
+        const playbookMatch = playbookFilter ? isCompatiblePlaybook(playbookFilter, effectivePlaybookId) : true;
+
+        if (playbookFilter) {
+          if (playbookId && playbookMatch) {
+            params.playbookMatchStats && (params.playbookMatchStats.stored += 1);
+          } else if (!playbookId && playbookMatch) {
+            params.playbookMatchStats && (params.playbookMatchStats.resolved += 1);
+          } else if (!playbookMatch) {
+            params.playbookMatchStats && (params.playbookMatchStats.incompatible += 1);
+          }
+          if (params.playbookSamples && params.playbookSamples.length < 5) {
+            params.playbookSamples.push({
+              setupId: raw.id,
+              storedPlaybookId: playbookId,
+              resolvedPlaybookId,
+              effectivePlaybookId,
+              compatible: playbookMatch,
+            });
+          }
+        }
+
+        if (assetFilter && !matchesAsset) {
           params.reasons && incrementReason(params.reasons, "asset_mismatch");
           if (params.mismatchedAssets) {
             const key = raw.assetId || (raw as { symbol?: string }).symbol || "unknown";
@@ -132,11 +155,25 @@ export async function runOutcomeEvaluationBatch(params: {
   sampleSetupIds: string[];
   mismatchedAssets: Record<string, number>;
   playbookMatchStats: { stored: number; resolved: number; incompatible: number };
+  effectivePlaybookSamples: Array<{
+    setupId: string;
+    storedPlaybookId: string | null;
+    resolvedPlaybookId: string | null;
+    effectivePlaybookId: string | null;
+    compatible: boolean;
+  }>;
 }> {
   const reasonCounts: Record<string, number> = {};
   const stats = { snapshotsSeen: 0, rawSetups: 0, eligible: 0 };
   const mismatchedAssets: Record<string, number> = {};
   const playbookMatchStats = { stored: 0, resolved: 0, incompatible: 0 };
+  const playbookSamples: Array<{
+    setupId: string;
+    storedPlaybookId: string | null;
+    resolvedPlaybookId: string | null;
+    effectivePlaybookId: string | null;
+    compatible: boolean;
+  }> = [];
   const candidates = await loadRecentSwingCandidates({
     daysBack: params.daysBack,
     limit: params.limit,
@@ -146,6 +183,7 @@ export async function runOutcomeEvaluationBatch(params: {
     stats,
     mismatchedAssets,
     playbookMatchStats,
+    playbookSamples,
   });
 
   const existing = await getOutcomesBySetupIds(candidates.map((c) => c.id));
@@ -251,6 +289,7 @@ export async function runOutcomeEvaluationBatch(params: {
     sampleSetupIds: candidates.slice(0, 5).map((c) => c.id),
     mismatchedAssets,
     playbookMatchStats,
+    effectivePlaybookSamples: playbookSamples,
   };
 }
 
