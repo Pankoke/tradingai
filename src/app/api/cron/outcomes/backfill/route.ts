@@ -20,6 +20,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   const assetId = params.get("assetId") ?? undefined;
   const playbookId = params.get("playbookId") ?? undefined;
   const debug = parseBool(params.get("debug") ?? "false");
+  const appliedAssetFilter = resolveAssetIds(assetId);
 
   const started = Date.now();
   try {
@@ -66,6 +67,9 @@ export async function POST(request: NextRequest): Promise<Response> {
             eligible: result.stats.eligible,
             topNotEligibleReasons: topReasons,
             sampleSetupIds: result.sampleSetupIds,
+            appliedAssetFilter: appliedAssetFilter ?? null,
+            topMismatchedAssets: topEntries(result.mismatchedAssets, 10),
+            assetMatchField: "assetId_or_symbol",
           }
         : {}),
     });
@@ -88,4 +92,19 @@ function parseBool(value: unknown): boolean {
   if (typeof value === "boolean") return value;
   if (typeof value === "string") return value.toLowerCase() === "true" || value === "1";
   return false;
+}
+
+function resolveAssetIds(assetId?: string | null): string[] | undefined {
+  if (!assetId) return undefined;
+  const trimmed = assetId.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.toLowerCase() === "gold") return ["GC=F", "XAUUSD", "XAUUSD=X", "GOLD", "gold"];
+  return [trimmed];
+}
+
+function topEntries(map: Record<string, number>, limit: number): Array<{ key: string; count: number }> {
+  return Object.entries(map)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([key, count]) => ({ key, count }));
 }

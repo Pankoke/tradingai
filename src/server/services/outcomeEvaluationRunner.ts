@@ -28,6 +28,7 @@ export async function loadRecentSwingCandidates(params: {
   playbookId?: string;
   reasons?: Record<string, number>;
   stats?: { snapshotsSeen: number; rawSetups: number; eligible: number };
+  mismatchedAssets?: Record<string, number>;
 }): Promise<SwingSetupCandidate[]> {
   const daysBack = params.daysBack ?? 30;
   const limit = Math.min(500, Math.max(1, params.limit ?? 200));
@@ -57,12 +58,21 @@ export async function loadRecentSwingCandidates(params: {
         if (seen.has(raw.id)) continue;
         if ((raw.profile ?? "").toUpperCase() !== "SWING") continue;
         if ((raw.timeframe ?? "").toUpperCase() !== "1D") continue;
-        if (assetFilter && !assetFilter.includes(raw.assetId)) {
+        const matchesAsset =
+          !assetFilter || assetFilter.includes(raw.assetId) || assetFilter.includes((raw as { symbol?: string }).symbol ?? "");
+        const playbookId = (raw as { setupPlaybookId?: string | null }).setupPlaybookId ?? null;
+        const playbookMatch = playbookFilter ? playbookId === playbookFilter : false;
+
+        if (!matchesAsset && !playbookMatch) {
           params.reasons && incrementReason(params.reasons, "asset_mismatch");
+          if (params.mismatchedAssets) {
+            const key = raw.assetId || (raw as { symbol?: string }).symbol || "unknown";
+            params.mismatchedAssets[key] = (params.mismatchedAssets[key] ?? 0) + 1;
+          }
           continue;
         }
-        const playbookId = (raw as { setupPlaybookId?: string | null }).setupPlaybookId ?? null;
-        if (playbookFilter && playbookId !== playbookFilter) {
+
+        if (playbookFilter && !playbookMatch) {
           params.reasons && incrementReason(params.reasons, "playbook_mismatch");
           continue;
         }
@@ -101,9 +111,11 @@ export async function runOutcomeEvaluationBatch(params: {
   reasons: Record<string, number>;
   stats: { snapshots: number; extractedSetups: number; eligible: number; skippedClosed: number };
   sampleSetupIds: string[];
+  mismatchedAssets: Record<string, number>;
 }> {
   const reasonCounts: Record<string, number> = {};
   const stats = { snapshotsSeen: 0, rawSetups: 0, eligible: 0 };
+  const mismatchedAssets: Record<string, number> = {};
   const candidates = await loadRecentSwingCandidates({
     daysBack: params.daysBack,
     limit: params.limit,
@@ -111,6 +123,7 @@ export async function runOutcomeEvaluationBatch(params: {
     playbookId: params.playbookId,
     reasons: reasonCounts,
     stats,
+    mismatchedAssets,
   });
 
   const existing = await getOutcomesBySetupIds(candidates.map((c) => c.id));
@@ -214,6 +227,7 @@ export async function runOutcomeEvaluationBatch(params: {
     reasons: reasonCounts,
     stats: statsResult,
     sampleSetupIds: candidates.slice(0, 5).map((c) => c.id),
+    mismatchedAssets,
   };
 }
 
