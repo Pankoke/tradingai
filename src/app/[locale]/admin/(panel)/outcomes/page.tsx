@@ -7,7 +7,7 @@ type PageProps = {
   searchParams?: Promise<{ days?: string; assetId?: string; playbookId?: string }>;
 };
 
-const ALLOWED_DAYS = ["7", "30", "90"];
+const ALLOWED_DAYS = ["7", "30", "90", "180", "365", "730"];
 
 export default async function OutcomesPage({ params, searchParams }: PageProps) {
   const locale = (await params).locale as Locale;

@@ -29,6 +29,7 @@ export async function loadRecentSwingCandidates(params: {
   reasons?: Record<string, number>;
   stats?: { snapshotsSeen: number; rawSetups: number; eligible: number };
   mismatchedAssets?: Record<string, number>;
+  playbookMatchStats?: { stored: number; resolved: number; incompatible: number };
 }): Promise<SwingSetupCandidate[]> {
   const daysBack = params.daysBack ?? 30;
   const limit = Math.min(500, Math.max(1, params.limit ?? 200));
@@ -61,7 +62,25 @@ export async function loadRecentSwingCandidates(params: {
         const matchesAsset =
           !assetFilter || assetFilter.includes(raw.assetId) || assetFilter.includes((raw as { symbol?: string }).symbol ?? "");
         const playbookId = (raw as { setupPlaybookId?: string | null }).setupPlaybookId ?? null;
-        const playbookMatch = playbookFilter ? playbookId === playbookFilter : false;
+        let playbookMatch = playbookFilter ? playbookId === playbookFilter : false;
+
+        if (playbookFilter && !playbookMatch && !playbookId) {
+          const resolved = resolvePlaybook(
+            { id: raw.assetId, symbol: (raw as { symbol?: string }).symbol, name: (raw as { name?: string }).name },
+            raw.profile ?? "SWING",
+          ).id;
+          const compatible = isCompatiblePlaybook(playbookFilter, resolved);
+          playbookMatch = compatible;
+          if (compatible) {
+            params.playbookMatchStats && (params.playbookMatchStats.resolved += 1);
+          } else {
+            params.playbookMatchStats && (params.playbookMatchStats.incompatible += 1);
+          }
+        } else if (playbookFilter && playbookMatch) {
+          params.playbookMatchStats && (params.playbookMatchStats.stored += 1);
+        } else if (playbookFilter && !playbookMatch) {
+          params.playbookMatchStats && (params.playbookMatchStats.incompatible += 1);
+        }
 
         if (!matchesAsset && !playbookMatch) {
           params.reasons && incrementReason(params.reasons, "asset_mismatch");
@@ -112,10 +131,12 @@ export async function runOutcomeEvaluationBatch(params: {
   stats: { snapshots: number; extractedSetups: number; eligible: number; skippedClosed: number };
   sampleSetupIds: string[];
   mismatchedAssets: Record<string, number>;
+  playbookMatchStats: { stored: number; resolved: number; incompatible: number };
 }> {
   const reasonCounts: Record<string, number> = {};
   const stats = { snapshotsSeen: 0, rawSetups: 0, eligible: 0 };
   const mismatchedAssets: Record<string, number> = {};
+  const playbookMatchStats = { stored: 0, resolved: 0, incompatible: 0 };
   const candidates = await loadRecentSwingCandidates({
     daysBack: params.daysBack,
     limit: params.limit,
@@ -124,6 +145,7 @@ export async function runOutcomeEvaluationBatch(params: {
     reasons: reasonCounts,
     stats,
     mismatchedAssets,
+    playbookMatchStats,
   });
 
   const existing = await getOutcomesBySetupIds(candidates.map((c) => c.id));
@@ -228,6 +250,7 @@ export async function runOutcomeEvaluationBatch(params: {
     stats: statsResult,
     sampleSetupIds: candidates.slice(0, 5).map((c) => c.id),
     mismatchedAssets,
+    playbookMatchStats,
   };
 }
 
@@ -248,4 +271,11 @@ function topReasons(map: Record<string, number>): Array<{ reason: string; count:
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
     .map(([reason, count]) => ({ reason, count }));
+}
+
+function isCompatiblePlaybook(filter: string, resolved: string | null): boolean {
+  if (!resolved) return false;
+  if (filter === resolved) return true;
+  if (filter.startsWith("gold-swing") && resolved.startsWith("gold-swing")) return true;
+  return false;
 }

@@ -70,6 +70,7 @@ export async function POST(request: NextRequest): Promise<Response> {
             appliedAssetFilter: appliedAssetFilter ?? null,
             topMismatchedAssets: topEntries(result.mismatchedAssets, 10),
             assetMatchField: "assetId_or_symbol",
+            playbookMatchStats: result.playbookMatchStats,
           }
         : {}),
     });
