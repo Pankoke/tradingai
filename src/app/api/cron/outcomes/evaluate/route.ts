@@ -23,6 +23,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   const daysBack = parseInt(String(body.daysBack ?? params.get("daysBack") ?? "30"), 10);
   const limit = parseInt(String(body.limit ?? params.get("limit") ?? "200"), 10);
   const dryRun = parseBool(body.dryRun ?? params.get("dryRun") ?? params.get("dry_run") ?? "false");
+  const debug = parseBool(body.debug ?? params.get("debug") ?? "false");
 
   const startedAt = Date.now();
   try {
@@ -36,7 +37,23 @@ export async function POST(request: NextRequest): Promise<Response> {
       message: "outcomes_evaluated",
       meta: { ...result.metrics, processed: result.processed, dryRun },
     });
-    return respondOk({ metrics: result.metrics, processed: result.processed, durationMs, dryRun });
+    const topReasons = Object.entries(result.reasons)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([reason, count]) => ({ reason, count }));
+    return respondOk({
+      metrics: result.metrics,
+      processed: result.processed,
+      durationMs,
+      dryRun,
+      ...(debug
+        ? {
+            stats: result.stats,
+            topNotEligibleReasons: topReasons,
+            sampleSetupIds: result.sampleSetupIds,
+          }
+        : {}),
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown error";
     const durationMs = Date.now() - startedAt;

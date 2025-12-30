@@ -1,0 +1,91 @@
+import { NextRequest } from "next/server";
+import { respondFail, respondOk } from "@/src/server/http/apiResponse";
+import { runOutcomeEvaluationBatch } from "@/src/server/services/outcomeEvaluationRunner";
+import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
+
+const CRON_SECRET = process.env.CRON_SECRET;
+
+export async function POST(request: NextRequest): Promise<Response> {
+  if (!CRON_SECRET) {
+    return respondFail("SERVICE_UNAVAILABLE", "Cron secret not configured", 503);
+  }
+  if (!isAuthorized(request)) {
+    return respondFail("UNAUTHORIZED", "Unauthorized", 401);
+  }
+
+  const params = request.nextUrl.searchParams;
+  const daysBack = parseInt(params.get("daysBack") ?? "730", 10);
+  const limitSetups = Math.min(2000, Math.max(1, parseInt(params.get("limitSetups") ?? "200", 10)));
+  const dryRun = parseBool(params.get("dryRun") ?? params.get("dry_run") ?? "false");
+  const assetId = params.get("assetId") ?? undefined;
+  const playbookId = params.get("playbookId") ?? undefined;
+  const debug = parseBool(params.get("debug") ?? "false");
+
+  const started = Date.now();
+  try {
+    const result = await runOutcomeEvaluationBatch({
+      daysBack,
+      limit: limitSetups,
+      dryRun,
+      assetId,
+      playbookId,
+      loggerInfo: debug,
+    });
+    const durationMs = Date.now() - started;
+    const topReasons = Object.entries(result.reasons)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([reason, count]) => ({ reason, count }));
+    await createAuditRun({
+      action: "outcomes.backfill",
+      source: "cron",
+      ok: true,
+      durationMs,
+      message: "outcomes_backfill",
+      meta: {
+        daysBack,
+        limitSetups,
+        dryRun,
+        processed: result.processed,
+        metrics: result.metrics,
+      },
+    });
+
+    return respondOk({
+      processed: result.processed,
+      evaluated: result.metrics.evaluated,
+      written: dryRun ? 0 : result.metrics.evaluated - result.metrics.still_open,
+      skippedClosed: result.metrics.skippedClosed,
+      errors: result.metrics.errors,
+      durationMs,
+      nextCursor: null,
+      ...(debug
+        ? {
+            snapshotsLoaded: result.stats.snapshots,
+            setupsExtracted: result.stats.extractedSetups,
+            eligible: result.stats.eligible,
+            topNotEligibleReasons: topReasons,
+            sampleSetupIds: result.sampleSetupIds,
+          }
+        : {}),
+    });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "unknown error";
+    return respondFail("INTERNAL_ERROR", msg, 500);
+  }
+}
+
+function isAuthorized(request: NextRequest): boolean {
+  const header = request.headers.get("authorization");
+  if (header && header.startsWith("Bearer ")) {
+    const token = header.slice("Bearer ".length).trim();
+    if (token === CRON_SECRET) return true;
+  }
+  return false;
+}
+
+function parseBool(value: unknown): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") return value.toLowerCase() === "true" || value === "1";
+  return false;
+}

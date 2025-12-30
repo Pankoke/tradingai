@@ -3,12 +3,17 @@ import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 import { loadGoldThresholdRecommendations } from "@/src/server/admin/playbookThresholdService";
 
 function isAuthorized(request: Request): boolean {
-  const token = process.env.ADMIN_API_TOKEN;
-  if (!token) return true;
+  const adminToken = process.env.ADMIN_API_TOKEN;
+  const cronToken = process.env.CRON_SECRET;
   const header = request.headers.get("authorization");
-  if (!header) return false;
-  const value = header.replace("Bearer", "").trim();
-  return value === token;
+  const bearer = header?.replace("Bearer", "").trim();
+  if (adminToken) {
+    return bearer === adminToken || (!!cronToken && bearer === cronToken);
+  }
+  const env = process.env.NODE_ENV;
+  const isLocal = env === "development" || env === "test";
+  if (isLocal && !adminToken) return true;
+  return !!cronToken && bearer === cronToken;
 }
 
 export async function GET(request: NextRequest | Request): Promise<Response> {

@@ -95,7 +95,13 @@ export async function runOutcomeEvaluationBatch(params: {
   assetId?: string;
   playbookId?: string;
   loggerInfo?: boolean;
-}): Promise<{ metrics: OutcomeMetrics; processed: number; reasons: Record<string, number> }> {
+}): Promise<{
+  metrics: OutcomeMetrics;
+  processed: number;
+  reasons: Record<string, number>;
+  stats: { snapshots: number; extractedSetups: number; eligible: number; skippedClosed: number };
+  sampleSetupIds: string[];
+}> {
   const reasonCounts: Record<string, number> = {};
   const stats = { snapshotsSeen: 0, rawSetups: 0, eligible: 0 };
   const candidates = await loadRecentSwingCandidates({
@@ -195,7 +201,20 @@ export async function runOutcomeEvaluationBatch(params: {
     });
   }
 
-  return { metrics, processed: candidates.length, reasons: reasonCounts };
+  const statsResult = {
+    snapshots: stats.snapshotsSeen,
+    extractedSetups: stats.rawSetups,
+    eligible: stats.eligible,
+    skippedClosed: metrics.skippedClosed,
+  };
+
+  return {
+    metrics,
+    processed: candidates.length,
+    reasons: reasonCounts,
+    stats: statsResult,
+    sampleSetupIds: candidates.slice(0, 5).map((c) => c.id),
+  };
 }
 
 function resolveAssetIds(assetId?: string | null): string[] | undefined {
