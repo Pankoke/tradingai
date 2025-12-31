@@ -34,6 +34,7 @@ type BuildParams = {
   profiles?: SetupProfile[];
   label?: string;
   assetFilter?: string[];
+  snapshotId?: string;
 };
 
 const SNAPSHOT_VERSION = "v1.0.0";
@@ -78,7 +79,7 @@ export async function buildAndStorePerceptionSnapshot(
   });
   const generatedMs = Date.now() - start;
 
-  const snapshotId = createId("snapshot");
+  const snapshotId = params.snapshotId ?? createId("snapshot");
 
   // Limit LLM usage to top-N setups per snapshot; always include setup of the day.
   const llmTargetIds = new Set<string>(

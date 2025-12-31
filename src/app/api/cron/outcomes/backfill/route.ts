@@ -49,13 +49,22 @@ export async function POST(request: NextRequest): Promise<Response> {
         dryRun,
         processed: result.processed,
         metrics: result.metrics,
+        inserted: result.inserted,
+        updated: result.updated,
+        unchanged: result.unchanged,
       },
     });
+
+    const goldReasonTop = topEntries(result.goldReasonCounts ?? {}, 10);
+    const goldSampleSetups = [...(result.goldSampleIneligible ?? []), ...(result.goldSampleEligible ?? [])].slice(0, 10);
 
     return respondOk({
       processed: result.processed,
       evaluated: result.metrics.evaluated,
-      written: dryRun ? 0 : result.metrics.evaluated - result.metrics.still_open,
+      written: dryRun ? 0 : result.inserted + result.updated,
+      inserted: dryRun ? 0 : result.inserted,
+      updated: dryRun ? 0 : result.updated,
+      unchanged: result.unchanged,
       skippedClosed: result.metrics.skippedClosed,
       errors: result.metrics.errors,
       durationMs,
@@ -65,13 +74,32 @@ export async function POST(request: NextRequest): Promise<Response> {
             snapshotsLoaded: result.stats.snapshots,
             setupsExtracted: result.stats.extractedSetups,
             eligible: result.stats.eligible,
+            eligibleTotal: result.stats.eligible,
+            closedCounts: {
+              hit_tp: result.metrics.hit_tp,
+              hit_sl: result.metrics.hit_sl,
+              expired: result.metrics.expired,
+              ambiguous: result.metrics.ambiguous,
+              open: result.metrics.still_open,
+            },
             topNotEligibleReasons: topReasons,
+            reasonSamples: result.reasonSamples,
             sampleSetupIds: result.sampleSetupIds,
             appliedAssetFilter: appliedAssetFilter ?? null,
             topMismatchedAssets: topEntries(result.mismatchedAssets, 10),
+            topMismatchedPlaybooks: topEntries(result.mismatchedPlaybooks, 10),
             assetMatchField: "assetId_or_symbol",
             playbookMatchStats: result.playbookMatchStats,
             effectivePlaybookSample: result.effectivePlaybookSamples,
+            goldStats: result.goldStats,
+            goldEligibilityDebug: {
+              extracted: result.goldStats.extracted,
+              eligible: result.goldStats.eligible,
+              ineligible: Math.max(0, result.goldStats.extracted - result.goldStats.eligible),
+              topNotEligibleReasons: goldReasonTop,
+              reasonSamples: result.goldReasonSamples ?? {},
+              sampleSetups: goldSampleSetups,
+            },
           }
         : {}),
     });

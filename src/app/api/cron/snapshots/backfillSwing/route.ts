@@ -25,13 +25,17 @@ export async function POST(request: NextRequest | Request): Promise<Response> {
   const days = parseInt(params.get("days") ?? "30", 10);
   const limit = Math.min(200, Math.max(1, parseInt(params.get("limit") ?? "500", 10)));
   const dryRun = params.get("dryRun") === "1" || params.get("dry_run") === "1";
+  const force = params.get("force") === "1" || params.get("rebuild") === "1";
   const assetParam = params.get("assetId") ?? undefined;
   const assetFilter = resolveAssetIds(assetParam);
   const recentFirst = params.get("recentFirst") === "1";
+  const debug = params.get("debug") === "1";
   const today = new Date();
   let built = 0;
   let skipped = 0;
+  let rebuilt = 0;
   const startedAt = Date.now();
+  let goldSetupsTotal = 0;
   const offsets = Array.from({ length: days + 1 }, (_, idx) => idx);
   const orderedOffsets = recentFirst ? offsets : offsets.reverse();
   for (const offset of orderedOffsets) {
@@ -39,22 +43,49 @@ export async function POST(request: NextRequest | Request): Promise<Response> {
     const date = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
     date.setUTCDate(date.getUTCDate() - offset);
     const existing = await getSnapshotByTime({ snapshotTime: date });
-    if (existing) {
+    if (existing && !force) {
       skipped += 1;
       continue;
     }
     if (dryRun) {
       built += 1;
+      if (existing) {
+        rebuilt += 1;
+      }
       continue;
     }
-    await buildAndStorePerceptionSnapshot({
+    const result = await buildAndStorePerceptionSnapshot({
       snapshotTime: date,
       allowSync: false,
       profiles: ["SWING"],
       source: "cron",
       assetFilter,
+      snapshotId: existing?.snapshot.id,
     });
     built += 1;
+    if (existing) {
+      rebuilt += 1;
+    }
+    if (debug) {
+      const goldIds = new Set(["GC=F", "XAUUSD", "XAUUSD=X", "GOLD", "gold"]);
+      const setups = result.setups ?? [];
+      const byAsset = setups.reduce<Record<string, number>>((acc, s) => {
+        const key = s.assetId ?? s.symbol ?? "unknown";
+        acc[key] = (acc[key] ?? 0) + 1;
+        return acc;
+      }, {});
+      const goldCount = setups.filter((s) => goldIds.has((s.assetId ?? s.symbol ?? "").toUpperCase())).length;
+      goldSetupsTotal += goldCount;
+      console.log("[backfill-swing-debug]", {
+        snapshot: date.toISOString(),
+        assetsUsed: Array.from(new Set(setups.map((s) => s.assetId ?? s.symbol))).slice(0, 20),
+        setupsBuiltTotal: setups.length,
+        setupsBuiltByAsset: Object.entries(byAsset)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10),
+        goldSetups: goldCount,
+      });
+    }
   }
 
   await createAuditRun({
@@ -63,10 +94,21 @@ export async function POST(request: NextRequest | Request): Promise<Response> {
     ok: true,
     durationMs: Date.now() - startedAt,
     message: "swing_backfill",
-    meta: { built, skipped, days, limit, dryRun, assetId: assetParam, recentFirst },
+    meta: {
+      built,
+      skipped,
+      rebuiltCount: rebuilt,
+      updatedCount: rebuilt,
+      forced: force,
+      days,
+      limit,
+      dryRun,
+      assetId: assetParam,
+      recentFirst,
+    },
   });
 
-  return respondOk({ built, skipped });
+  return respondOk({ built, skipped, rebuilt, ...(debug ? { goldSetupsTotal } : {}) });
 }
 
 function resolveAssetIds(assetId?: string | null): string[] | undefined {

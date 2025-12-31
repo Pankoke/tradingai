@@ -101,6 +101,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
   constructor(
     private readonly allowSync: boolean,
     private readonly allowedProfiles: SetupProfile[],
+    private readonly assetFilter?: string[],
   ) {}
 
   private biasProvider = new DbBiasProvider();
@@ -115,7 +116,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
   };
 
   async getSetupsForToday(): Promise<Setup[]> {
-    const assets = await getActiveAssets();
+    const assets = await this.getFilteredAssets();
     const evaluationDate = new Date();
     const setups: Setup[] = [];
     const profiles: SetupProfile[] = this.allowedProfiles.length
@@ -153,6 +154,13 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     );
 
     return setups;
+  }
+
+  private async getFilteredAssets(): Promise<Asset[]> {
+    const assets = await getActiveAssets();
+    if (!this.assetFilter || !this.assetFilter.length) return assets;
+    const set = new Set(this.assetFilter.map((v) => v.toUpperCase()));
+    return assets.filter((asset) => set.has(asset.id.toUpperCase()) || set.has(asset.symbol.toUpperCase()));
   }
 
   async getEventsForWindow(params: { from: Date; to: Date }): Promise<Event[]> {
@@ -315,21 +323,27 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     const orderflowMode =
       LivePerceptionDataSource.ORDERFLOW_MODE_MAPPING[orderflow.mode];
     const volatilityLabel = this.mapVolatilityLabel(metrics.volatilityScore);
+    const safeRiskReward = computedLevels.riskReward ?? {
+      riskPercent: null,
+      rewardPercent: null,
+      rrr: null,
+      volatilityLabel,
+    };
     const sentimentContext: SentimentContext = {
       biasScore: normalizedBiasScore,
       trendScore: metrics.trendScore,
       momentumScore: metrics.momentumScore,
       orderflowScore: orderflow.flowScore,
       eventScore: 50,
-      rrr: computedLevels.riskReward.rrr ?? undefined,
-      riskPercent: computedLevels.riskReward.riskPercent ?? undefined,
+      rrr: safeRiskReward.rrr ?? undefined,
+      riskPercent: safeRiskReward.riskPercent ?? undefined,
       volatilityLabel,
       driftPct: metrics.priceDriftPct,
     };
     const sentiment = await this.buildSentimentMetricsForAsset(asset, sentimentContext);
 
     const enhancedRiskReward = {
-      ...computedLevels.riskReward,
+      ...safeRiskReward,
       volatilityLabel,
     };
 
@@ -578,12 +592,7 @@ export function createPerceptionDataSource(config?: {
   const profiles = config?.profiles ?? (["SWING", "INTRADAY", "POSITION"] satisfies SetupProfile[]);
 
   if (mode === "live") {
-    const ds = new LivePerceptionDataSource(allowSync, profiles);
-    if (config?.assetFilter && config.assetFilter.length) {
-      // narrow asset universe if provided
-      (ds as unknown as { assetFilter?: string[] }).assetFilter = config.assetFilter;
-    }
-    return ds;
+    return new LivePerceptionDataSource(allowSync, profiles, config?.assetFilter);
   }
 
   return new MockPerceptionDataSource();
