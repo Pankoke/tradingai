@@ -93,6 +93,7 @@ export async function loadOutcomeExportRows(params: {
   days?: number;
   assetId?: string;
   playbookId?: string;
+  mode?: "all" | "latest";
 }): Promise<OutcomeExportRow[]> {
   const days = params.days ?? 30;
   const from = new Date(Date.now() - days * DAY_MS);
@@ -101,8 +102,9 @@ export async function loadOutcomeExportRows(params: {
     assetId: params.assetId,
     profile: "SWING",
     timeframe: "1D",
-    limit: 500,
+    limit: params.mode === "latest" ? 500 : 5000,
     playbookId: params.playbookId,
+    mode: params.mode ?? "all",
   });
 
   const snapshotCache = new Map<string, Setup[]>();

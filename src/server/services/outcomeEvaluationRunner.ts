@@ -1,14 +1,24 @@
 import { logger } from "@/src/lib/logger";
 import type { Setup } from "@/src/lib/engine/types";
 import { listSnapshotsPaged } from "@/src/server/repositories/perceptionSnapshotRepository";
-import { getOutcomesBySetupIds, upsertOutcome, type SetupOutcomeInsert } from "@/src/server/repositories/setupOutcomeRepository";
+import {
+  getOutcomesBySnapshotAndSetupIds,
+  upsertOutcome,
+  type SetupOutcomeInsert,
+} from "@/src/server/repositories/setupOutcomeRepository";
 import { evaluateSwingSetupOutcome, type OutcomeStatus } from "@/src/server/services/outcomeEvaluator";
 import { resolvePlaybook } from "@/src/lib/engine/playbooks";
 
 const runnerLogger = logger.child({ scope: "outcome-runner" });
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export type SwingSetupCandidate = Setup & { snapshotId: string; snapshotTime: Date };
+export type SwingSetupCandidate = Setup & {
+  snapshotId: string;
+  snapshotTime: Date;
+  effectivePlaybookId?: string | null;
+  resolvedPlaybookId?: string | null;
+  storedPlaybookId?: string | null;
+};
 
 export type OutcomeMetrics = {
   evaluated: number;
@@ -106,9 +116,20 @@ export async function loadRecentSwingCandidates(params: {
           params.goldCounters && (params.goldCounters.extracted += 1);
         }
         params.stats && (params.stats.rawSetups += 1);
-        if (seen.has(raw.id)) continue;
-        if ((raw.profile ?? "").toUpperCase() !== "SWING") continue;
-        if ((raw.timeframe ?? "").toUpperCase() !== "1D") continue;
+        const seenKey = `${snapshot.id}|${raw.id}`;
+        if (seen.has(seenKey)) continue;
+        if ((raw.profile ?? "").toUpperCase() !== "SWING") {
+          if (isGold) {
+            recordGoldReason("non_swing_or_non_1d", params, raw, snapshot.id, null, null, null);
+          }
+          continue;
+        }
+        if ((raw.timeframe ?? "").toUpperCase() !== "1D") {
+          if (isGold) {
+            recordGoldReason("non_swing_or_non_1d", params, raw, snapshot.id, null, null, null);
+          }
+          continue;
+        }
         const matchesAsset =
           !assetFilterUpper ||
           assetFilterUpper.includes(assetUpper) ||
@@ -118,10 +139,12 @@ export async function loadRecentSwingCandidates(params: {
         let resolvedPlaybookId: string | null = null;
 
         if (!effectivePlaybookId) {
+          const resolverAssetId = assetUpper === "GOLD" ? "GC=F" : assetId || symbol || "";
+          const resolverSymbol = symbolUpper || resolverAssetId;
           resolvedPlaybookId = resolvePlaybook(
             {
-              id: assetId || symbol || "",
-              symbol: symbol || assetId || "",
+              id: resolverAssetId,
+              symbol: resolverSymbol,
               name,
             },
             raw.profile ?? "SWING",
@@ -189,7 +212,7 @@ export async function loadRecentSwingCandidates(params: {
           }
           continue;
         }
-        seen.add(raw.id);
+        seen.add(seenKey);
         params.stats && (params.stats.eligible += 1);
         if (isGold) {
           params.goldCounters && (params.goldCounters.eligible += 1);
@@ -203,6 +226,9 @@ export async function loadRecentSwingCandidates(params: {
           ...raw,
           snapshotId: snapshot.id,
           snapshotTime,
+          effectivePlaybookId,
+          resolvedPlaybookId,
+          storedPlaybookId: playbookId,
         });
         if (candidates.length >= limit) break;
       }
@@ -285,7 +311,9 @@ export async function runOutcomeEvaluationBatch(params: {
     goldSamplesEligible: goldSampleEligible,
   });
 
-  const existing = await getOutcomesBySetupIds(candidates.map((c) => c.id));
+  const existing = await getOutcomesBySnapshotAndSetupIds(
+    candidates.map((c) => ({ snapshotId: c.snapshotId, setupId: c.id })),
+  );
   let inserted = 0;
   let updated = 0;
   let unchanged = 0;
@@ -301,7 +329,18 @@ export async function runOutcomeEvaluationBatch(params: {
   };
 
   for (const candidate of candidates) {
-    const prior = existing[candidate.id];
+    const anchorTime =
+      (candidate as { generatedAt?: Date | string | null }).generatedAt != null
+        ? new Date((candidate as { generatedAt?: Date | string | null }).generatedAt as string)
+        : candidate.snapshotTime ?? null;
+    if (!anchorTime) {
+      incrementReason(reasonCounts, "missing_anchor_time");
+      recordGoldReason("missing_anchor_time", { goldReasonCounts, goldReasonSamples, goldSamplesIneligible: goldSampleIneligible }, candidate, candidate.snapshotId, (candidate as { setupPlaybookId?: string | null }).setupPlaybookId ?? null, null, null);
+      continue;
+    }
+
+    const priorKey = `${candidate.snapshotId}|${candidate.id}`;
+    const prior = existing[priorKey];
     if (prior && prior.outcomeStatus !== "open") {
       metrics.skippedClosed += 1;
       continue;
@@ -310,7 +349,7 @@ export async function runOutcomeEvaluationBatch(params: {
     try {
       const result = await evaluateSwingSetupOutcome({
         setup: candidate,
-        snapshotTime: candidate.snapshotTime,
+        snapshotTime: anchorTime,
         windowBars: params.windowBars,
       });
       metrics.evaluated += 1;
@@ -328,6 +367,11 @@ export async function runOutcomeEvaluationBatch(params: {
         { id: candidate.assetId, symbol: candidate.symbol, name: candidate.symbol },
         candidate.profile ?? "SWING",
       );
+      const effectivePlaybookId =
+        candidate.effectivePlaybookId ??
+        (candidate as { setupPlaybookId?: string | null }).setupPlaybookId ??
+        fallbackPlaybook.id ??
+        null;
       const payload: SetupOutcomeInsert = {
         id: prior?.id,
         setupId: candidate.id,
@@ -336,10 +380,7 @@ export async function runOutcomeEvaluationBatch(params: {
         profile: (candidate.profile ?? "SWING").toUpperCase(),
         timeframe: candidate.timeframe,
         direction: candidate.direction,
-        playbookId: (candidate as { playbookId?: string; setupPlaybookId?: string }).playbookId ??
-          (candidate as { setupPlaybookId?: string }).setupPlaybookId ??
-          fallbackPlaybook.id ??
-          null,
+        playbookId: effectivePlaybookId,
         setupGrade: candidate.setupGrade ?? null,
         setupType: candidate.setupType ?? null,
         gradeRationale: candidate.gradeRationale ?? null,
@@ -364,6 +405,32 @@ export async function runOutcomeEvaluationBatch(params: {
     } catch (error) {
       metrics.errors += 1;
       runnerLogger.error("failed to evaluate outcome", { error });
+      const isGold =
+        (candidate.assetId ?? "").toUpperCase() === "GC=F" ||
+        (candidate.assetId ?? "").toUpperCase() === "XAUUSD" ||
+        (candidate.assetId ?? "").toUpperCase() === "XAUUSD=X" ||
+        (candidate.assetId ?? "").toUpperCase() === "GOLD" ||
+        ((candidate as { symbol?: string }).symbol ?? "").toUpperCase() === "GC=F" ||
+        ((candidate as { symbol?: string }).symbol ?? "").toUpperCase() === "XAUUSD" ||
+        ((candidate as { symbol?: string }).symbol ?? "").toUpperCase() === "XAUUSD=X" ||
+        ((candidate as { symbol?: string }).symbol ?? "").toUpperCase() === "GOLD";
+      const errMsg = error instanceof Error ? error.message : "error";
+      const reasonKey = errMsg.toLowerCase().includes("candle") ? "insufficient_forward_candles" : "evaluation_error";
+      incrementReason(reasonCounts, reasonKey);
+      if (reasonSamples[reasonKey]?.length ?? 0 < 10) {
+        reasonSamples[reasonKey] = [...(reasonSamples[reasonKey] ?? []), candidate.id];
+      }
+      if (isGold) {
+        recordGoldReason(
+          reasonKey === "insufficient_forward_candles" ? "insufficient_forward_candles" : "other",
+          { goldReasonCounts, goldReasonSamples, goldSamplesIneligible: goldSampleIneligible },
+          candidate,
+          candidate.snapshotId,
+          (candidate as { setupPlaybookId?: string | null }).setupPlaybookId ?? null,
+          null,
+          null,
+        );
+      }
     }
   }
 

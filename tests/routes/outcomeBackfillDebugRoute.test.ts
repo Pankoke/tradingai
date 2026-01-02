@@ -89,6 +89,7 @@ describe("POST /api/cron/outcomes/backfill debug gold eligibility", () => {
     expect(debugBlock).toBeTruthy();
     expect(typeof debugBlock.extracted).toBe("number");
     expect(Array.isArray(debugBlock.topNotEligibleReasons)).toBe(true);
+    expect(debugBlock.topNotEligibleReasons.length).toBeGreaterThan(0);
     expect(typeof debugBlock.reasonSamples).toBe("object");
     expect(Array.isArray(debugBlock.sampleSetups)).toBe(true);
     expect(debugBlock.sampleSetups.length).toBeGreaterThan(0);

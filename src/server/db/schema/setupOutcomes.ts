@@ -24,7 +24,7 @@ export const setupOutcomes = pgTable(
     reason: text("reason"),
   },
   (table) => ({
-    setupIdUnique: uniqueIndex("setup_outcomes_setup_id_idx").on(table.setupId),
+    setupSnapshotUnique: uniqueIndex("setup_outcomes_snapshot_setup_idx").on(table.snapshotId, table.setupId),
     assetEvaluatedIdx: index("setup_outcomes_asset_eval_idx").on(table.assetId, table.evaluatedAt),
     gradeOutcomeIdx: index("setup_outcomes_grade_outcome_idx").on(table.setupGrade, table.outcomeStatus),
   }),

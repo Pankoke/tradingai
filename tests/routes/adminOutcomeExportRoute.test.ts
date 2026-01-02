@@ -69,4 +69,15 @@ describe("admin outcomes export route", () => {
     expect(text.split("\n").length).toBeGreaterThan(1);
     expect(text).toContain("setupId");
   });
+
+  it("returns countsByPlaybookId in debug json", async () => {
+    const res = await GET(buildRequest("http://localhost/api/admin/outcomes/export?format=json&debug=1"));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.data.countsByPlaybookId_returned).toBeDefined();
+    expect(body.data.countsByPlaybookId_returned["gold-swing-v0.2"]).toBe(1);
+    expect(body.data.totalRowsReturned).toBe(1);
+    expect(body.data.totalRowsInDb).toBe(1);
+  });
 });

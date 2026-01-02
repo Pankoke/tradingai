@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte, sql, or, ilike } from "drizzle-orm";
 import { db } from "@/src/server/db/db";
 import { setupOutcomes } from "@/src/server/db/schema/setupOutcomes";
 import { excluded } from "@/src/server/db/sqlHelpers";
@@ -20,14 +20,16 @@ function isMissingTableError(error: unknown): boolean {
 }
 
 export async function upsertOutcome(payload: SetupOutcomeInsert): Promise<void> {
-  const id = payload.id ?? payload.setupId ?? randomUUID();
+  const compositeId =
+    payload.snapshotId && payload.setupId ? `${payload.snapshotId}__${payload.setupId}` : undefined;
+  const id = payload.id ?? compositeId ?? randomUUID();
   const row = { ...payload, id };
   try {
     await db
       .insert(setupOutcomes)
       .values(row)
       .onConflictDoUpdate({
-        target: setupOutcomes.setupId,
+        target: [setupOutcomes.snapshotId, setupOutcomes.setupId],
         set: {
           snapshotId: excluded(setupOutcomes.snapshotId.name),
           assetId: excluded(setupOutcomes.assetId.name),
@@ -79,6 +81,28 @@ export async function getOutcomesBySetupIds(setupIds: string[]): Promise<Record<
   }
 }
 
+export async function getOutcomesBySnapshotAndSetupIds(
+  pairs: Array<{ snapshotId: string; setupId: string }>,
+): Promise<Record<string, SetupOutcomeRow>> {
+  if (!pairs.length) return {};
+  try {
+    const snapshotIds = Array.from(new Set(pairs.map((p) => p.snapshotId)));
+    const setupIds = Array.from(new Set(pairs.map((p) => p.setupId)));
+    const rows = await db
+      .select()
+      .from(setupOutcomes)
+      .where(and(inArray(setupOutcomes.snapshotId, snapshotIds), inArray(setupOutcomes.setupId, setupIds)));
+    return rows.reduce<Record<string, SetupOutcomeRow>>((acc, row) => {
+      const key = `${row.snapshotId}|${row.setupId}`;
+      acc[key] = row;
+      return acc;
+    }, {});
+  } catch (error) {
+    if (isMissingTableError(error)) return {};
+    throw error;
+  }
+}
+
 export async function listRecentOutcomes(params?: {
   limit?: number;
   days?: number;
@@ -113,6 +137,7 @@ export async function listOutcomesForWindow(params: {
   timeframe?: string;
   limit?: number;
   playbookId?: string;
+  mode?: "all" | "latest";
 }): Promise<SetupOutcomeRow[]> {
   const conditions = [];
   if (params.from) {
@@ -131,11 +156,34 @@ export async function listOutcomesForWindow(params: {
     conditions.push(eq(setupOutcomes.timeframe, params.timeframe));
   }
   if (params.playbookId) {
-    conditions.push(eq(setupOutcomes.playbookId, params.playbookId));
+    const playbook = params.playbookId;
+    if (playbook.startsWith("gold-swing")) {
+      conditions.push(or(eq(setupOutcomes.playbookId, playbook), ilike(setupOutcomes.playbookId, "gold-swing%")));
+    } else {
+      conditions.push(eq(setupOutcomes.playbookId, playbook));
+    }
   }
   const whereClause = conditions.length ? and(...conditions) : undefined;
   try {
     const limit = Math.min(500, Math.max(1, params.limit ?? 200));
+    if (params.mode === "latest") {
+      // latest per setupId (keep for optional mode)
+      const rows = await db
+        .select()
+        .from(setupOutcomes)
+        .where(whereClause ?? sql`true`)
+        .orderBy(desc(setupOutcomes.evaluatedAt))
+        .limit(limit);
+      const seen = new Set<string>();
+      const deduped: SetupOutcomeRow[] = [];
+      for (const row of rows) {
+        if (seen.has(row.setupId)) continue;
+        seen.add(row.setupId);
+        deduped.push(row);
+      }
+      return deduped;
+    }
+
     const query = whereClause
       ? db.select().from(setupOutcomes).where(whereClause)
       : db.select().from(setupOutcomes);
