@@ -52,6 +52,10 @@ export async function GET(request: NextRequest | Request): Promise<Response> {
           .filter((v) => Number.isFinite(v))
       : undefined;
     const debug = params.get("debug") === "1";
+    const limitParam = params.get("limit");
+    const limit = Number.isFinite(Number(limitParam)) ? Number(limitParam) : undefined;
+    const closedOnly = params.get("closedOnly") === "1";
+    const includeNoTrade = params.get("includeNoTrade") === "1";
 
     const data = await loadThresholdRelaxationSimulation({
       playbookId,
@@ -59,6 +63,9 @@ export async function GET(request: NextRequest | Request): Promise<Response> {
       biasCandidates,
       sqCandidates,
       debug,
+      limit,
+      closedOnly,
+      includeNoTrade,
     });
     if (!data) {
       return respondFail("EMPTY_DATA", "No data returned from simulation", 500);

@@ -13,6 +13,9 @@ type SimulationParams = {
   biasCandidates: number[];
   sqCandidates?: number[];
   debug?: boolean;
+  limit?: number;
+  closedOnly?: boolean;
+  includeNoTrade?: boolean;
 };
 
 type GridRow = {
@@ -35,7 +38,10 @@ type DebugStats = {
     signalQuality?: number;
     passedBaseline: boolean;
     reason?: string;
+    setupGrade?: string | null;
+    noTradeReason?: string | null;
   }>;
+  excludedSamples?: Array<{ id: string; setupGrade?: string | null; noTradeReason?: string | null }>;
   summary?: DebugSummary;
 };
 
@@ -58,6 +64,8 @@ type DebugSummary = {
     biasScore: "0..1" | "0..100" | "unknown";
     signalQuality: "0..1" | "0..100" | "unknown";
   };
+  biasGateEnabled: boolean;
+  note?: string;
   primaryExclusionReason: "missing_bias" | "missing_sq" | "bias_below" | "sq_below" | "other" | "none";
   suggestedQueryAdjustments?: {
     biasMinSuggested?: number;
@@ -70,17 +78,33 @@ export async function loadThresholdRelaxationSimulation(params: SimulationParams
   const playbookId = params.playbookId ?? "gold-swing-v0.2";
   const days = params.days ?? 730;
   const from = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const requestedLimit = Math.max(1, params.limit ?? 200);
+  const effectiveLimit = Math.min(500, requestedLimit);
+  const includeNoTrade = params.includeNoTrade === true;
 
-  const outcomes = await listOutcomesForWindow({
+  const outcomesRaw = await listOutcomesForWindow({
     from,
     profile: "SWING",
     timeframe: "1D",
     mode: "all",
     playbookId,
+    limit: Math.min(500, effectiveLimit + 1), // fetch one extra to detect capping
   });
+  const closedStatuses: OutcomeStatus[] = ["hit_tp", "hit_sl", "expired", "ambiguous"];
+  const filtered = params.closedOnly
+    ? outcomesRaw.filter((o) => closedStatuses.includes(o.outcomeStatus as OutcomeStatus))
+    : outcomesRaw;
+  const isCapped = filtered.length > effectiveLimit;
+  const capped = filtered.slice(0, effectiveLimit);
+  const beforeGradeFilter = capped.length;
+  const evaluated = includeNoTrade
+    ? capped
+    : capped.filter((o) => (o.setupGrade ?? "").toUpperCase() !== "NO_TRADE");
+  const excludedNoTrade = beforeGradeFilter - evaluated.length;
+  const includedNoTrade = evaluated.filter((o) => (o.setupGrade ?? "").toUpperCase() === "NO_TRADE").length;
 
-  const setupCache = await buildSetupCache(outcomes);
-  const enriched = outcomes.map((row) => {
+  const setupCache = await buildSetupCache(evaluated);
+  const enriched = evaluated.map((row) => {
     const setup = setupCache.get(row.snapshotId)?.find((s) => s.id === row.setupId);
     const { bias, sq } = extractScores(row, setup);
     return { row, bias, sq };
@@ -107,6 +131,7 @@ export async function loadThresholdRelaxationSimulation(params: SimulationParams
           other: 0,
         },
         samples: [],
+        excludedSamples: [],
       }
     : undefined;
 
@@ -114,13 +139,25 @@ export async function loadThresholdRelaxationSimulation(params: SimulationParams
   const baselineCounts = buildStatusCounts(baselineRows);
 
   if (debug && debugEnabled) {
+    if (!includeNoTrade) {
+      const excluded = capped
+        .filter((o) => (o.setupGrade ?? "").toUpperCase() === "NO_TRADE")
+        .slice(0, 3)
+        .map((o) => ({
+          id: `${o.snapshotId ?? "snap"}|${o.setupId ?? "setup"}`,
+          setupGrade: o.setupGrade ?? null,
+          noTradeReason: (o as { noTradeReason?: string }).noTradeReason ?? null,
+        }));
+      debug.excludedSamples = excluded;
+    }
     debug.summary = buildDebugSummary({
       baselineBias,
       baselineSq,
-      totalOutcomes: outcomes.length,
+      totalOutcomes: evaluated.length,
       eligibleBaseline: baselineRows.length,
       metrics: debug.metrics,
       exclusions: debug.exclusions,
+      biasGateEnabled: false,
     });
   }
 
@@ -153,7 +190,19 @@ export async function loadThresholdRelaxationSimulation(params: SimulationParams
       playbookId,
       days,
       baseline: { biasMin: baselineBias, sqMin: baselineSq },
-      totalOutcomes: outcomes.length,
+      totalOutcomes: evaluated.length,
+      biasGateEnabled: false,
+      limitUsed: effectiveLimit,
+      isCapped,
+      totalOutcomesMatching: filtered.length,
+      population: {
+        totalFetched: outcomesRaw.length,
+        afterClosedOnly: filtered.length,
+        excludedNoTrade,
+        includedNoTrade,
+        gradeCounts: buildGradeCounts(evaluated),
+        outcomeStatusCounts: buildStatusCounts(evaluated),
+      },
     },
     baseline: {
       count: baselineRows.length,
@@ -176,13 +225,14 @@ function filterEligible(
   for (const item of rows) {
     const { row, bias, sq } = item;
     let reason: keyof DebugStats["exclusions"] | undefined;
+    // Bias gate disabled in Phase 5.2: track missing/below for observability only, do not gate
     if (typeof bias !== "number") {
       debug && (debug.exclusions.missing_bias += 1);
-      reason = "missing_bias";
     } else if (bias < biasMin) {
       debug && (debug.exclusions.bias_below += 1);
-      reason = "bias_below";
-    } else if (typeof sqMin === "number") {
+    }
+
+    if (typeof sqMin === "number") {
       if (typeof sq !== "number") {
         debug && (debug.exclusions.missing_sq += 1);
         reason = "missing_sq";
@@ -200,6 +250,8 @@ function filterEligible(
         signalQuality: sq ?? undefined,
         passedBaseline: !reason,
         reason: reason ?? undefined,
+        setupGrade: row.setupGrade ?? null,
+        noTradeReason: (row as { noTradeReason?: string }).noTradeReason ?? null,
       });
     }
 
@@ -263,6 +315,14 @@ function buildStatusCounts(rows: SetupOutcomeRow[]): StatusCounts {
   return counts;
 }
 
+function buildGradeCounts(rows: SetupOutcomeRow[]): Record<string, number> {
+  return rows.reduce<Record<string, number>>((acc, row) => {
+    const key = (row.setupGrade ?? "unknown").toString();
+    acc[key] = (acc[key] ?? 0) + 1;
+    return acc;
+  }, {});
+}
+
 function buildValueStats(values: Array<number | null | undefined>): ValueStats {
   const numeric = values.filter((v): v is number => typeof v === "number" && Number.isFinite(v));
   if (!numeric.length) {
@@ -324,6 +384,7 @@ function buildDebugSummary(input: {
   eligibleBaseline: number;
   metrics: DebugStats["metrics"];
   exclusions: Record<string, number>;
+  biasGateEnabled: boolean;
 }): DebugSummary {
   const missingRates = {
     bias: ratePct(input.metrics.biasScore.countMissing, input.metrics.biasScore.countTotal),
@@ -352,6 +413,8 @@ function buildDebugSummary(input: {
   return {
     baseline: { biasMin: input.baselineBias, sqMin: input.baselineSq },
     totals: { totalOutcomes: input.totalOutcomes, eligibleBaseline: input.eligibleBaseline },
+    biasGateEnabled: input.biasGateEnabled,
+    note: input.biasGateEnabled ? undefined : "Bias-Gate deaktiviert (Phase 5.2, SQ-only Gating).",
     missingRates,
     scaleGuess,
     primaryExclusionReason,
