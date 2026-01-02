@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { loadThresholdRelaxationSimulation } from "@/src/server/admin/playbookThresholdSimulation";
+import { pickRecommendation, recommendThresholdV2 } from "@/src/lib/admin/thresholdSimulate";
 
 vi.mock("@/src/server/repositories/setupOutcomeRepository", () => {
   const base = {
@@ -40,9 +41,9 @@ describe("threshold relaxation simulation", () => {
     });
 
     expect(res.baseline.count).toBe(1); // only s1 passes 80/55
-    const row75 = res.grid.find((r) => r.biasMin === 75 && r.sqMin === 55);
-    expect(row75).toBeDefined();
-    expect(row75?.eligibleCount).toBe(1); // sqMin=55: nur s1
+    const row = res.grid.find((r) => r.sqMin === 55);
+    expect(row).toBeDefined();
+    expect(row?.eligibleCount).toBe(1); // sqMin=55: nur s1
   });
 
   it("computes percentiles correctly", async () => {
@@ -67,11 +68,10 @@ describe("threshold relaxation simulation", () => {
       debug: true,
     });
 
-    const row90 = res.grid.find((r) => r.biasMin === 90 && r.sqMin === 50);
-    const row50 = res.grid.find((r) => r.biasMin === 50 && r.sqMin === 50);
-    expect(row90?.eligibleCount).toBe(row50?.eligibleCount);
-    expect(row90?.eligibleCount).toBe(2); // s1,s2 pass SQ >=50 (NO_TRADE excluded)
+    const rowSq = res.grid.find((r) => r.sqMin === 50);
+    expect(rowSq?.eligibleCount).toBe(2); // s1,s2 pass SQ >=50 (NO_TRADE excluded)
     expect(res.meta.biasGateEnabled).toBe(false);
+    expect(rowSq?.kpis.closedTotal).toBeGreaterThan(0);
   });
 
   it("respects limit param and reports capping", async () => {
@@ -116,5 +116,80 @@ describe("threshold relaxation simulation", () => {
     expect(withNoTrade.meta.totalOutcomes).toBeGreaterThan(without.meta.totalOutcomes);
     expect(withNoTrade.meta.population?.includedNoTrade).toBe(1);
     expect(without.meta.population?.excludedNoTrade).toBe(1);
+  });
+
+  it("generates default SQ grid and kpis when sq missing", async () => {
+    const res = await loadThresholdRelaxationSimulation({
+      days: 30,
+      playbookId: "gold-swing-v0.2",
+      biasCandidates: [80],
+      debug: true,
+    });
+    const rowsSq = res.grid.filter((r) => r.sqMin !== undefined);
+    expect(rowsSq.length).toBeGreaterThan(1);
+    const first = rowsSq[0];
+    expect(first.kpis).toBeDefined();
+    expect(first.kpis.utilityScore).toBeTypeOf("number");
+  });
+
+  it("applies confidence gate only when useConf=1 and exposes confMin", async () => {
+    const withConf = await loadThresholdRelaxationSimulation({
+      days: 30,
+      playbookId: "gold-swing-v0.2",
+      biasCandidates: [80],
+      sqCandidates: [50],
+      confCandidates: [65],
+      useConf: true,
+      debug: true,
+    });
+    const rowConf = withConf.grid.find((r) => r.confMin === 65 && r.sqMin === 50);
+    expect(rowConf).toBeDefined();
+    expect(rowConf?.eligibleCount).toBe(2); // confidence 70/65 pass 65
+    expect(withConf.debug?.metrics.confidenceScore?.countMissing).toBe(0);
+
+    const withoutConf = await loadThresholdRelaxationSimulation({
+      days: 30,
+      playbookId: "gold-swing-v0.2",
+      biasCandidates: [80],
+      sqCandidates: [50],
+      confCandidates: [65],
+      useConf: false,
+    });
+    const rowSqOnly = withoutConf.grid.find((r) => r.sqMin === 50 && r.confMin === undefined);
+    expect(rowSqOnly?.eligibleCount).toBe(2); // confidence not gating
+  });
+
+  it("pickRecommendation respects guardrails", () => {
+    const rows: any = [
+      { kpis: { utilityScore: 80, closedTotal: 5 }, closedCounts: { hit_tp: 0 }, biasMin: 0 },
+      { kpis: { utilityScore: 50, closedTotal: 30 }, closedCounts: { hit_tp: 2 }, biasMin: 0 },
+    ];
+    const rec = pickRecommendation(rows, { minClosedTotal: 20, minHits: 1 });
+    expect(rec.row).toBe(rows[1]);
+    expect(rec.label).toBe("Recommended");
+  });
+
+  it("recommendThresholdV2 selects valid candidate and alternatives", () => {
+    const rows: any = [
+      {
+        sqMin: 50,
+        closedCounts: { hit_tp: 5, hit_sl: 5, expired: 0, ambiguous: 0, open: 0 },
+        kpis: { utilityScore: 40, closedTotal: 10, hitRate: 0.5, expiryRate: 0, winLoss: 1 },
+      },
+      {
+        sqMin: 55,
+        closedCounts: { hit_tp: 2, hit_sl: 1, expired: 0, ambiguous: 0, open: 0 },
+        kpis: { utilityScore: 60, closedTotal: 3, hitRate: 0.66, expiryRate: 0, winLoss: 2 },
+      },
+      {
+        sqMin: 60,
+        closedCounts: { hit_tp: 1, hit_sl: 0, expired: 0, ambiguous: 0, open: 0 },
+        kpis: { utilityScore: 80, closedTotal: 1, hitRate: 1, expiryRate: 0, winLoss: 1 },
+      },
+    ];
+    const baselineCounts = { hit_tp: 0, hit_sl: 0, expired: 0, ambiguous: 0, open: 0 };
+    const rec = recommendThresholdV2(rows, baselineCounts, { minClosedTotal: 2, minHits: 1 });
+    expect(rec.primary?.row.sqMin).toBe(50); // best balance by adjusted utility with samples
+    expect(rec.alternatives.length).toBeGreaterThan(0);
   });
 });
