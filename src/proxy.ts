@@ -19,7 +19,8 @@ function isProtectedAdminRoute(pathname: string): boolean {
     // allow exports via token in dev/test without Clerk
     if (
       pathname.startsWith("/api/admin/outcomes/export") ||
-      pathname.startsWith("/api/admin/playbooks/thresholds/export")
+      pathname.startsWith("/api/admin/playbooks/thresholds/export") ||
+      pathname.startsWith("/api/admin/playbooks/thresholds/simulate")
     ) {
       return false;
     }
