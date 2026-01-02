@@ -116,6 +116,7 @@ describe("threshold relaxation simulation", () => {
     expect(withNoTrade.meta.totalOutcomes).toBeGreaterThan(without.meta.totalOutcomes);
     expect(withNoTrade.meta.population?.includedNoTrade).toBe(1);
     expect(without.meta.population?.excludedNoTrade).toBe(1);
+    expect(withNoTrade.meta.population?.noTradeReasonCounts?.["Bias too weak (<80)"]).toBe(1);
   });
 
   it("generates default SQ grid and kpis when sq missing", async () => {

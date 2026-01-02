@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { Locale } from "@/i18n";
 import { loadGoldThresholdRecommendations } from "@/src/server/admin/playbookThresholdService";
-import { loadGoldThresholdSuggestions } from "@/src/server/admin/playbookThresholdSuggestions";
 import { loadThresholdRelaxationSimulation } from "@/src/server/admin/playbookThresholdSimulation";
 import {
   buildMatrix,
@@ -9,9 +8,12 @@ import {
   pickRecommendation,
   type RecommendationGuardrails,
   type SimulationGridRow,
-  type SimulationPopulation,
   utilityClass,
 } from "@/src/lib/admin/thresholdSimulate";
+import { InfoTooltip } from "@/src/components/admin/InfoTooltip";
+import { IntroCallout } from "@/src/components/admin/IntroCallout";
+import { helpText } from "@/src/components/admin/thresholdsHelpText";
+import { ThresholdControls } from "@/src/components/admin/ThresholdControls";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -37,7 +39,6 @@ export default async function ThresholdsPage({ params, searchParams }: PageProps
   const guardrails: RecommendationGuardrails = { minClosedTotal, minHits };
 
   const rec = await loadGoldThresholdRecommendations({ days, includeOpen });
-  const suggestions = await loadGoldThresholdSuggestions({ days, percentile: 0.7 });
   const simulation = await getSimulationMemoized({
     days,
     playbookId,
@@ -75,8 +76,9 @@ export default async function ThresholdsPage({ params, searchParams }: PageProps
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight text-white">Playbook Thresholds (Gold Swing)</h1>
         <p className="text-sm text-slate-300">
-          Read-only Vorschläge aus Outcomes & Snapshots (letzte {days} Tage). Aktive Playbook-Logik bleibt unverändert.
+          Read-only Vorschlaege aus Outcomes & Snapshots (letzte {days} Tage). Aktive Playbook-Logik bleibt unveraendert.
         </p>
+        <IntroCallout />
         <div className="flex flex-wrap gap-2 text-xs">
           {ALLOWED_DAYS.map((value) => (
             <Link
@@ -91,11 +93,15 @@ export default async function ThresholdsPage({ params, searchParams }: PageProps
           ))}
         </div>
         <div className="flex flex-wrap gap-3 text-xs text-slate-300">
-          <span>Mode: {closedOnly ? "Closed-only" : "Alle"}</span>
-          <span>includeNoTrade: {includeNoTrade ? "on" : "off"}</span>
-          <span>useConf: {useConf ? "on" : "off"}</span>
-          {limit ? <span>limit={limit}</span> : null}
-          <span>Guardrails: n≥{minClosedTotal}, TP≥{minHits}</span>
+          <ThresholdControls
+            closedOnly={closedOnly}
+            includeNoTrade={includeNoTrade}
+            useConf={useConf}
+            limit={limit}
+            minClosedTotal={minClosedTotal}
+            minHits={minHits}
+            lastRun={{ timestamp: Date.now(), durationMs: timings?.totalMs }}
+          />
         </div>
         <ExportLinks
           playbookId={playbookId}
@@ -111,60 +117,13 @@ export default async function ThresholdsPage({ params, searchParams }: PageProps
         />
       </header>
 
-      {rec.insufficientData ? (
-        <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-200">
-          Keine ausreichenden Daten (benötigt mind. 30 abgeschlossene Outcomes). Tipp: Beobachtungszeitraum erweitern.
-        </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card title="Aktuelle Schwellen">
-            <ThresholdList thresholds={rec.current} />
-          </Card>
-          <Card title="Empfohlene Schwellen">
-            <ThresholdList thresholds={rec.recommended ?? rec.current} deltas={rec.deltas} />
-          </Card>
-        </div>
-      )}
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card title="Outcome Split (WinRate)">
-          <div className="space-y-2 text-sm text-slate-200">
-            {Object.entries(rec.byGrade).map(([grade, bucket]) => (
-              <div key={grade} className="rounded bg-slate-900/60 px-3 py-2">
-                <div className="flex justify-between">
-                  <span className="font-semibold">Grade {grade}</span>
-                  <span>{bucket.winRate !== null ? `${Math.round(bucket.winRate * 100)}%` : "-"}</span>
-                </div>
-                <div className="text-xs text-slate-400">
-                  TP {bucket.hit_tp} | SL {bucket.hit_sl} | Exp {bucket.expired} | Amb {bucket.ambiguous} | Open{" "}
-                  {bucket.open}
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        <Card title="Sensitivität SQ-Min">
-          <div className="space-y-2 text-sm text-slate-200">
-            {rec.sensitivity.map((p) => (
-              <div key={p.sqMin} className="flex justify-between rounded bg-slate-900/60 px-3 py-2">
-                <span>SQ ≥ {p.sqMin}</span>
-                <span>
-                  {p.winRate !== null ? `${Math.round(p.winRate * 100)}%` : "-"} (n={p.samples})
-                </span>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
-
-      <Card title="Population / Opportunity">
+      <Card title="Datenbasis (nach Filtern)">
         {population ? (
           <div className="grid gap-3 md:grid-cols-3 text-sm text-slate-200">
             <div className="space-y-1 rounded bg-slate-900/60 p-3">
-              <div className="text-xs text-slate-400">After closedOnly</div>
+              <div className="text-xs text-slate-400">Abgeschlossene Faelle (closedOnly)</div>
               <div className="text-lg font-semibold">{population.afterClosedOnly}</div>
-              <div className="text-xs text-slate-400">Tradeable: {population.tradeableCount}</div>
+              <div className="text-xs text-slate-400">Qualifiziert: {population.tradeableCount}</div>
               <div className="text-xs text-slate-400">
                 NO_TRADE: {population.noTradeCount} ({(population.noTradeRate * 100).toFixed(1)}%)
               </div>
@@ -176,56 +135,103 @@ export default async function ThresholdsPage({ params, searchParams }: PageProps
           <div className="text-xs text-slate-400">Keine Population-Daten.</div>
         )}
         <p className="mt-2 text-xs text-slate-400">
-          Calibration KPIs default tradeable-only (NO_TRADE excluded). includeNoTrade zeigt Opportunity-Mix.
+          Closed-only filtert auf abgeschlossene Outcomes. NO_TRADE stammt aus dem Grading (kein Trade erlaubt). Von{" "}
+          {population?.afterClosedOnly ?? 0} betrachteten Faellen sind {population?.tradeableCount ?? 0} fuer das Grading
+          qualifiziert.
+          {population && population.noTradeRate > 0.6
+            ? " Hinweis: hoher NO_TRADE-Anteil - Regeln ggf. sehr restriktiv."
+            : ""}
         </p>
       </Card>
 
-      {timings ? (
-        <Card title="Timings (debug/profile)">
-          <div className="grid gap-2 text-xs text-slate-200 md:grid-cols-3">
-            <Metric label="Total" value={`${Math.round(timings.totalMs)} ms`} />
-            <Metric label="Fetch" value={`${Math.round(timings.fetchOutcomesMs)} ms`} />
-            <Metric label="Normalize" value={`${Math.round(timings.normalizeMs)} ms`} />
-            <Metric label="Grid" value={`${Math.round(timings.gridEvalMs)} ms`} />
-            <Metric label="Recommendation" value={`${Math.round(timings.recommendationMs)} ms`} />
-          </div>
-        </Card>
-      ) : null}
-
-      <Card title="Recommended Threshold (heuristic)">
-        {recommendation.row ? (
-          <div className="space-y-2 text-sm text-slate-200">
-            <div className="flex items-center gap-2">
-              <span className="rounded-full bg-slate-800 px-2 py-1 text-xs">{recommendation.label}</span>
-              {recommendation.note ? <span className="text-xs text-slate-400">{recommendation.note}</span> : null}
+      <Card title="NO_TRADE Gruende">
+        {includeNoTrade ? (
+          population?.noTradeReasonCounts && Object.keys(population.noTradeReasonCounts).length ? (
+            <div className="space-y-2 text-sm text-slate-200">
+              <p className="text-xs text-slate-400">
+                Zeigt, warum Faelle als NO_TRADE markiert wurden (Grading-Entscheidung).
+              </p>
+              <div className="space-y-2">
+                {Object.entries(population.noTradeReasonCounts)
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([reason, count]) => {
+                    const pct =
+                      population.noTradeCount > 0 ? ((count / population.noTradeCount) * 100).toFixed(1) : null;
+                    const examples = population.noTradeReasonExamples?.[reason];
+                    return (
+                      <div key={reason} className="rounded bg-slate-900/60 px-3 py-2">
+                        <div className="flex justify-between">
+                          <span className="font-semibold text-slate-100">{reason}</span>
+                          <span className="text-slate-200">
+                            {count}
+                            {pct ? ` (${pct}%)` : ""}
+                          </span>
+                        </div>
+                        {examples && examples.length ? (
+                          <div className="text-[11px] text-slate-400">Beispiele: {examples.join(", ")}</div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+              </div>
             </div>
-            <div className="grid gap-2 md:grid-cols-3">
-              <Metric label="SQ Min" value={recommendation.row.sqMin ?? "-"} />
-              {recommendation.row.confMin !== undefined ? (
-                <Metric label="Conf Min" value={recommendation.row.confMin ?? "-"} />
-              ) : null}
-              <Metric label="Eligible" value={recommendation.row.eligibleCount} />
-            </div>
-            <div className="grid gap-2 md:grid-cols-5">
-              <Metric label="Closed" value={recommendation.row.kpis.closedTotal} />
-              <Metric label="HitRate" value={formatPercent(recommendation.row.kpis.hitRate)} />
-              <Metric label="Expiry" value={formatPercent(recommendation.row.kpis.expiryRate)} />
-              <Metric label="Win/Loss" value={recommendation.row.kpis.winLoss.toFixed(2)} />
-              <Metric label="Utility" value={recommendation.row.kpis.utilityScore.toFixed(1)} />
-            </div>
-          </div>
+          ) : (
+            <div className="text-xs text-slate-400">Keine NO_TRADE Daten vorhanden.</div>
+          )
         ) : (
-          <div className="text-xs text-slate-400">Keine Empfehlung (zu wenige Daten).</div>
+          <div className="text-xs text-slate-400">
+            Aktiviere &quot;include NO_TRADE&quot;, um Gruende anzuzeigen.
+          </div>
         )}
-        <div className="mt-2 text-xs text-slate-400">
-          UtilityScore = hitRate*100 − expiryRate*20. Small samples (&lt;{minClosedTotal}) gelten als Low Confidence.
-        </div>
       </Card>
 
-      <Card title="Simulation (SQ / Confidence)">
-        <div className="text-xs text-slate-300 mb-3">
-          Bias-Gate aus; SQ/Conf steuern Gating. UtilityScore = hitRate*100 − expiryRate*20. Open werden bei closedOnly
-          ausgefiltert.
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card title="Outcome-Verteilung">
+          <p className="text-xs text-slate-400 mb-2">
+            Zeigt, wie haeufig TP/SL/Expired in den betrachteten Faellen vorkamen (historisch, keine Handelsfreigabe).
+          </p>
+          <div className="space-y-2 text-sm text-slate-200">
+            {Object.entries(rec.byGrade).map(([grade, bucket]) => (
+              <div key={grade} className="rounded bg-slate-900/60 px-3 py-2">
+                <div className="flex justify-between">
+                  <span className="font-semibold">Grade {grade}</span>
+                  <span>{bucket.winRate !== null ? `${Math.round(bucket.winRate * 100)}%` : "-"}</span>
+                </div>
+                <div className="text-xs text-slate-400">
+                  TP {bucket.hit_tp} | SL {bucket.hit_sl} | Exp {bucket.expired} | Amb {bucket.ambiguous} | Open {bucket.open}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card title="Sensitivitaet SQ-Min">
+          <p className="text-xs text-slate-400 mb-2">
+            Wie aendert sich die Trefferquote, wenn die Signal-Qualitaet angehoben wird? (Nur zur Orientierung.)
+          </p>
+          <div className="space-y-2 text-sm text-slate-200">
+            {rec.sensitivity.map((p) => (
+              <div key={p.sqMin} className="flex justify-between rounded bg-slate-900/60 px-3 py-2">
+                <span>SQ &gt;= {p.sqMin}</span>
+                <span>
+                  {p.winRate !== null ? `${Math.round(p.winRate * 100)}%` : "-"} (n={p.samples})
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      <Card title="Schwellen-Simulation (SQ / Confidence)">
+        <div className="text-xs text-slate-300 mb-3 space-y-1">
+          <div className="flex items-center gap-1">
+            <span>So liest du das:</span>
+            <InfoTooltip text="Jede Zeile/Zelle = Mindest-SQ (und ggf. Confidence). Qualifiziert = fuer Grading beruecksichtigte Faelle." />
+          </div>
+          <div>
+            Hoehere Schwellen reduzieren qualifizierte Faelle; Trefferquote/Expiry aendert sich. Vergleichswert ist relativ, kein
+            Trading-Signal.
+          </div>
         </div>
         {hasConf && matrix ? <Heatmap matrix={matrix} /> : <SqTable rows={simulation.grid} />}
         <ExportLinks
@@ -241,6 +247,72 @@ export default async function ThresholdsPage({ params, searchParams }: PageProps
           minHits={minHits}
         />
       </Card>
+
+      <Card title="Empfohlene Schwelle (Vorschlag)">
+        {recommendation.row ? (
+          <div className="space-y-2 text-sm text-slate-200">
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-slate-800 px-2 py-1 text-xs">
+                {recommendation.label === "Low confidence recommendation" ? "Unsicher" : "Solide Datenbasis"}
+              </span>
+              {recommendation.note ? <span className="text-xs text-slate-400">{recommendation.note}</span> : null}
+            </div>
+            <div className="text-xs text-slate-300 space-y-1">
+              <div className="flex items-center gap-1">
+                <span>Warum dieser Vorschlag?</span>
+                <InfoTooltip text="Vergleichswert balanciert Trefferquote und Anzahl qualifizierter Faelle. Kein Trading-Signal." />
+              </div>
+              <ul className="list-disc space-y-1 pl-4">
+                <li>Vergleichswert ist relativ und dient nur zur Kalibrierung des Gradings.</li>
+                <li>Guardrails schuetzen vor Mini-Stichproben.</li>
+              </ul>
+            </div>
+            <div className="grid gap-2 md:grid-cols-3">
+              <Metric label="SQ Min" value={recommendation.row.sqMin ?? "-"} />
+              {recommendation.row.confMin !== undefined ? (
+                <Metric label="Conf Min" value={recommendation.row.confMin ?? "-"} />
+              ) : null}
+              <Metric label="Qualifiziert" value={recommendation.row.eligibleCount} />
+            </div>
+            <div className="grid gap-2 md:grid-cols-5">
+              <Metric label="Closed" value={recommendation.row.kpis.closedTotal} />
+              <Metric label="Trefferquote (TP)" value={formatPercent(recommendation.row.kpis.hitRate)} />
+              <Metric label="Ausgelaufen (Expiry)" value={formatPercent(recommendation.row.kpis.expiryRate)} />
+              <Metric label="TP/SL Verhaeltnis" value={recommendation.row.kpis.winLoss.toFixed(2)} />
+              <Metric label="Vergleichswert" value={recommendation.row.kpis.utilityScore.toFixed(1)} />
+            </div>
+          </div>
+        ) : (
+          <div className="text-xs text-slate-400">Keine Empfehlung (zu wenige Daten).</div>
+        )}
+        <div className="mt-2 text-xs text-slate-400">
+          Vergleichswert = Trefferquote*100 minus Auslaufen*20. Nur zum Vergleichen, keine Handelsfreigabe. Kleine Samples (&lt;
+          {minClosedTotal}) gelten als unsicher.
+        </div>
+      </Card>
+
+      {rec.insufficientData ? null : (
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card title="Aktuelle Schwellen">
+            <ThresholdList thresholds={rec.current} />
+          </Card>
+          <Card title="Empfohlene Schwellen">
+            <ThresholdList thresholds={rec.recommended ?? rec.current} deltas={rec.deltas} />
+          </Card>
+        </div>
+      )}
+
+      {timings ? (
+        <Card title="Server-Zeiten (Diagnose)">
+          <div className="grid gap-2 text-xs text-slate-200 md:grid-cols-3">
+            <Metric label="Total" value={`${Math.round(timings.totalMs)} ms`} />
+            <Metric label="Fetch" value={`${Math.round(timings.fetchOutcomesMs)} ms`} />
+            <Metric label="Normalize" value={`${Math.round(timings.normalizeMs)} ms`} />
+            <Metric label="Grid" value={`${Math.round(timings.gridEvalMs)} ms`} />
+            <Metric label="Recommendation" value={`${Math.round(timings.recommendationMs)} ms`} />
+          </div>
+        </Card>
+      ) : null}
     </div>
   );
 }
@@ -291,8 +363,8 @@ function buildExportUrl({
   closedOnly: boolean;
   includeNoTrade: boolean;
   useConf: boolean;
-  sqCandidates?: number[] | null;
-  confCandidates?: number[] | null;
+  sqCandidates?: number[];
+  confCandidates?: number[];
   limit?: number;
   minClosedTotal?: number;
   minHits?: number;
@@ -318,8 +390,8 @@ function ExportLinks(props: {
   closedOnly: boolean;
   includeNoTrade: boolean;
   useConf: boolean;
-  sqCandidates?: number[] | null;
-  confCandidates?: number[] | null;
+  sqCandidates?: number[];
+  confCandidates?: number[];
   limit?: number;
   minClosedTotal?: number;
   minHits?: number;
@@ -366,8 +438,8 @@ function CountsList({ title, entries }: { title: string; entries: Record<string,
   );
 }
 
-function sortNumbers(values?: number[] | null): number[] | null {
-  if (!values) return null;
+function sortNumbers(values?: number[] | null): number[] | undefined {
+  if (!values) return undefined;
   return [...values].sort((a, b) => a - b);
 }
 
@@ -376,8 +448,8 @@ const simulationCache = new Map<string, Promise<Awaited<ReturnType<typeof loadTh
 function buildSimKey(params: {
   playbookId: string;
   days: number;
-  sqCandidates?: number[] | null;
-  confCandidates?: number[] | null;
+  sqCandidates?: number[];
+  confCandidates?: number[];
   includeNoTrade: boolean;
   closedOnly: boolean;
   limit?: number;
@@ -421,12 +493,28 @@ function SqTable({ rows }: { rows: SimulationGridRow[] }) {
         <thead>
           <tr className="bg-slate-900/60">
             <th className="px-2 py-1 text-left">SQMin</th>
-            <th className="px-2 py-1 text-left">Eligible</th>
+            <th className="px-2 py-1 text-left">
+              <div className="flex items-center gap-1">
+                Qualifiziert <InfoTooltip text={helpText.eligible} />
+              </div>
+            </th>
             <th className="px-2 py-1 text-left">TP</th>
             <th className="px-2 py-1 text-left">SL</th>
-            <th className="px-2 py-1 text-left">Exp</th>
-            <th className="px-2 py-1 text-left">HitRate</th>
-            <th className="px-2 py-1 text-left">Utility</th>
+            <th className="px-2 py-1 text-left">
+              <div className="flex items-center gap-1">
+                Exp <InfoTooltip text={helpText.expiry} />
+              </div>
+            </th>
+            <th className="px-2 py-1 text-left">
+              <div className="flex items-center gap-1">
+                Trefferquote <InfoTooltip text={helpText.hitRate} />
+              </div>
+            </th>
+            <th className="px-2 py-1 text-left">
+              <div className="flex items-center gap-1">
+                Score <InfoTooltip text={helpText.utility} />
+              </div>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -498,3 +586,20 @@ function parseCsvNumbers(value?: string): number[] | undefined {
     .filter((v) => Number.isFinite(v));
   return parsed.length ? parsed : undefined;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

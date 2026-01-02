@@ -8,6 +8,9 @@ export type SimulationPopulation = {
   noTradeRate: number;
   gradeCounts: Record<string, number>;
   outcomeStatusCounts: Record<string, number>;
+  noTradeReasonCounts?: Record<string, number>;
+  noTradeReasonExamples?: Record<string, string[]>;
+  excludedNoTradeReasons?: Record<string, number>;
 };
 
 export type SimulationKpis = {
@@ -195,7 +198,7 @@ export function recommendThresholdV2(
         belowMinHits: evaluated.filter((e) => e.row.closedCounts.hit_tp < guardrails.minHits).length,
         aboveMaxExpiry:
           guardrails.maxExpiryRate !== undefined
-            ? evaluated.filter((e) => e.row.kpis.expiryRate > guardrails.maxExpiryRate).length
+            ? evaluated.filter((e) => e.row.kpis.expiryRate > (guardrails.maxExpiryRate ?? 0)).length
             : 0,
       },
     },
@@ -224,10 +227,10 @@ function buildAltRationale(
   if (c.expiryRate < p.expiryRate && c.closedTotal >= p.closedTotal * 0.7) {
     return { label: "Safer", reason: "Lower expiry rate with comparable volume" };
   }
-  if (c.adjustedUtility > primary.adjustedUtility && c.closedTotal >= p.closedTotal * 0.5) {
+  if (candidate.adjustedUtility > primary.adjustedUtility && c.closedTotal >= p.closedTotal * 0.5) {
     return { label: "Higher quality", reason: "Higher adjusted utility / hit rate" };
   }
-  if (c.closedTotal >= p.closedTotal * 1.3 && c.adjustedUtility >= primary.adjustedUtility - 5) {
+  if (c.closedTotal >= p.closedTotal * 1.3 && candidate.adjustedUtility >= primary.adjustedUtility - 5) {
     return { label: "More volume", reason: "Significantly more closed samples with similar utility" };
   }
   return null;

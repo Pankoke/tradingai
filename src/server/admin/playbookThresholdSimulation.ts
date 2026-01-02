@@ -202,6 +202,25 @@ export async function loadThresholdRelaxationSimulation(params: SimulationParams
   const excludedNoTrade = beforeGradeFilter - evaluated.length;
   const includedNoTrade = evaluated.filter((o) => (o.setupGrade ?? "").toUpperCase() === "NO_TRADE").length;
   const noTradeCount = capped.filter((o) => (o.setupGrade ?? "").toUpperCase() === "NO_TRADE").length;
+  const noTradeReasonCounts: Record<string, number> = {};
+  const noTradeReasonExamples: Record<string, string[]> = {};
+  const excludedNoTradeReasons: Record<string, number> = {};
+  const addReason = (target: Record<string, number>, examples: Record<string, string[]>, reason: string, id: string) => {
+    target[reason] = (target[reason] ?? 0) + 1;
+    if (!examples[reason]) examples[reason] = [];
+    if (examples[reason].length < 3) examples[reason].push(id);
+  };
+  for (const row of capped) {
+    const isNoTrade = (row.setupGrade ?? "").toUpperCase() === "NO_TRADE";
+    if (!isNoTrade) continue;
+    const reason = row.noTradeReason?.trim() || "Unknown reason";
+    const id = `${row.snapshotId}:${row.setupId}`;
+    if (includeNoTrade) {
+      addReason(noTradeReasonCounts, noTradeReasonExamples, reason, id);
+    } else {
+      excludedNoTradeReasons[reason] = (excludedNoTradeReasons[reason] ?? 0) + 1;
+    }
+  }
 
   const tExtractStart = profileEnabled ? performance.now() : 0;
   const setupCache = await buildSetupCache(evaluated);
@@ -250,7 +269,7 @@ export async function loadThresholdRelaxationSimulation(params: SimulationParams
     : undefined;
 
   const tGridStart = profileEnabled ? performance.now() : 0;
-  const baselineRows = filterEligible(enriched, baselineBias, baselineSq, baselineConf, debug, useConf, biasGateEnabled);
+  const baselineRows = filterEligible(enriched, baselineBias, baselineSq, baselineConf, debug, useConf);
   const baselineCounts = buildStatusCounts(baselineRows);
   if (debug && debugEnabled) {
     collectOutcomeExclusions(enriched, baselineBias, baselineSq, baselineConf, debug, useConf, biasGateEnabled);
@@ -286,7 +305,7 @@ export async function loadThresholdRelaxationSimulation(params: SimulationParams
       for (const sqMin of effectiveSqCandidates) {
         if (useConf && effectiveConfCandidates.length) {
           for (const confMin of effectiveConfCandidates) {
-            const rows = filterEligible(enriched, biasMin, sqMin, confMin, debug, useConf, biasGateEnabled);
+            const rows = filterEligible(enriched, biasMin, sqMin, confMin, debug, useConf);
             const closedCounts = buildStatusCounts(rows);
             grid.push({
               biasMin,
@@ -299,7 +318,7 @@ export async function loadThresholdRelaxationSimulation(params: SimulationParams
             });
           }
         } else {
-          const rows = filterEligible(enriched, biasMin, sqMin, undefined, debug, useConf, biasGateEnabled);
+          const rows = filterEligible(enriched, biasMin, sqMin, undefined, debug, useConf);
           const closedCounts = buildStatusCounts(rows);
           grid.push({
             biasMin,
@@ -312,7 +331,7 @@ export async function loadThresholdRelaxationSimulation(params: SimulationParams
         }
       }
     } else {
-      const rows = filterEligible(enriched, biasMin, undefined, undefined, debug, useConf, biasGateEnabled);
+      const rows = filterEligible(enriched, biasMin, undefined, undefined, debug, useConf);
       const closedCounts = buildStatusCounts(rows);
       grid.push({
         biasMin,
@@ -350,6 +369,9 @@ export async function loadThresholdRelaxationSimulation(params: SimulationParams
         noTradeRate: filtered.length ? noTradeCount / filtered.length : 0,
         gradeCounts: buildGradeCounts(evaluated),
         outcomeStatusCounts: buildStatusCounts(evaluated),
+        noTradeReasonCounts: includeNoTrade ? noTradeReasonCounts : undefined,
+        noTradeReasonExamples: includeNoTrade ? noTradeReasonExamples : undefined,
+        excludedNoTradeReasons: !includeNoTrade ? excludedNoTradeReasons : undefined,
       },
       ...(profileEnabled
         ? {
