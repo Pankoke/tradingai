@@ -51,6 +51,14 @@ type Suggestion = {
   riskHint: Record<OutcomeStatus, number> | null;
 };
 
+type ReasonBucket = {
+  count: number;
+  threshold: number | null;
+  examples: string[];
+  scores: number[];
+  statuses: OutcomeStatus[];
+};
+
 export async function loadGoldThresholdSuggestions(params: { days?: number; percentile?: number }) {
   const days = params.days ?? 730;
   const percentile = clampPercentile(params.percentile ?? 0.7);
@@ -67,10 +75,7 @@ export async function loadGoldThresholdSuggestions(params: { days?: number; perc
   const noTradeRows = rows.filter((r) => (r.setupGrade ?? "").toUpperCase() === "NO_TRADE");
   const tradeLike = totalOutcomes - noTradeRows.length;
 
-  const reasonBuckets: Record<
-    ReasonKey,
-    { count: number; threshold: number | null; examples: string[]; scores: number[]; statuses: OutcomeStatus[] }
-  > = {};
+  const reasonBuckets: Partial<Record<ReasonKey, ReasonBucket>> = {};
 
   for (const row of noTradeRows) {
     const { key, threshold } = normalizeReason(row.noTradeReason);
@@ -85,18 +90,20 @@ export async function loadGoldThresholdSuggestions(params: { days?: number; perc
   }
 
   const topNoTradeReasons = Object.entries(reasonBuckets)
-    .sort((a, b) => b[1].count - a[1].count)
+    .filter(([, bucket]) => bucket)
+    .sort((a, b) => (b[1]?.count ?? 0) - (a[1]?.count ?? 0))
     .slice(0, 5)
     .map(([key, bucket]) => ({
       key,
       label: key.replace(/_/g, " "),
-      count: bucket.count,
-      share: totalOutcomes ? bucket.count / noTradeRows.length : 0,
-      examples: bucket.examples,
+      count: bucket?.count ?? 0,
+      share: totalOutcomes && bucket ? bucket.count / noTradeRows.length : 0,
+      examples: bucket?.examples ?? [],
     }));
 
   const suggestions: Suggestion[] = [];
-  for (const [key, bucket] of Object.entries(reasonBuckets) as Array<[ReasonKey, (typeof reasonBuckets)[ReasonKey]]>) {
+  for (const [key, bucket] of Object.entries(reasonBuckets) as Array<[ReasonKey, ReasonBucket | undefined]>) {
+    if (!bucket) continue;
     const metric = reasonMatchers.find((m) => m.key === key)?.metric;
     if (!metric) continue;
     if (!bucket.scores.length) continue;

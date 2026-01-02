@@ -2,13 +2,14 @@ import Link from "next/link";
 import type { Locale } from "@/i18n";
 import { loadGoldThresholdRecommendations } from "@/src/server/admin/playbookThresholdService";
 import { loadGoldThresholdSuggestions } from "@/src/server/admin/playbookThresholdSuggestions";
+import { loadThresholdRelaxationSimulation } from "@/src/server/admin/playbookThresholdSimulation";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
   searchParams?: Promise<{ days?: string; includeOpen?: string }>;
 };
 
-const ALLOWED_DAYS = ["30", "60", "90"];
+const ALLOWED_DAYS = ["30", "60", "90", "180", "365", "730"];
 
 export default async function ThresholdsPage({ params, searchParams }: PageProps) {
   const locale = (await params).locale as Locale;
@@ -17,6 +18,11 @@ export default async function ThresholdsPage({ params, searchParams }: PageProps
   const includeOpen = query.includeOpen === "1";
   const rec = await loadGoldThresholdRecommendations({ days, includeOpen });
   const suggestions = await loadGoldThresholdSuggestions({ days, percentile: 0.7 });
+  const simulation = await loadThresholdRelaxationSimulation({
+    days,
+    biasCandidates: [80, 78, 75, 72, 70],
+    sqCandidates: [55, 52, 50],
+  });
 
   return (
     <div className="space-y-6">
@@ -158,6 +164,55 @@ export default async function ThresholdsPage({ params, searchParams }: PageProps
               Export JSON Suggestions
             </Link>
           </div>
+        </div>
+      </Card>
+
+      <Card title="B1 Simulation (Read-only)">
+        <div className="text-xs text-slate-300 mb-2">
+          Simuliert freigeschaltete Outcomes bei entspannteren Schwellen (Bias/SQ). Reine Zählung, keine Regeländerung.
+        </div>
+        <div className="mb-3 text-sm text-slate-200">
+          Baseline: {simulation.baseline.count} eligible | TP {simulation.baseline.closedCounts.hit_tp} / SL{" "}
+          {simulation.baseline.closedCounts.hit_sl} / Exp {simulation.baseline.closedCounts.expired} / Open{" "}
+          {simulation.baseline.closedCounts.open}
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-xs text-slate-200">
+            <thead>
+              <tr className="bg-slate-900/60">
+                <th className="px-2 py-1 text-left">BiasMin</th>
+                <th className="px-2 py-1 text-left">SQMin</th>
+                <th className="px-2 py-1 text-left">Eligible</th>
+                <th className="px-2 py-1 text-left">Delta</th>
+                <th className="px-2 py-1 text-left">TP</th>
+                <th className="px-2 py-1 text-left">SL</th>
+                <th className="px-2 py-1 text-left">Exp</th>
+                <th className="px-2 py-1 text-left">Open</th>
+              </tr>
+            </thead>
+            <tbody>
+              {simulation.grid.map((row) => (
+                <tr key={`${row.biasMin}-${row.sqMin ?? "sq"}`} className="border-b border-slate-800">
+                  <td className="px-2 py-1">{row.biasMin}</td>
+                  <td className="px-2 py-1">{row.sqMin ?? "-"}</td>
+                  <td className="px-2 py-1">{row.eligibleCount}</td>
+                  <td className="px-2 py-1">{row.delta > 0 ? `+${row.delta}` : row.delta}</td>
+                  <td className="px-2 py-1">{row.closedCounts.hit_tp}</td>
+                  <td className="px-2 py-1">{row.closedCounts.hit_sl}</td>
+                  <td className="px-2 py-1">{row.closedCounts.expired}</td>
+                  <td className="px-2 py-1">{row.closedCounts.open}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-3">
+          <Link
+            href={`/api/admin/playbooks/thresholds/simulate?days=${days}&bias=80,78,75,72,70&sq=55,52,50`}
+            className="text-xs text-blue-300 underline"
+          >
+            Export JSON Simulation
+          </Link>
         </div>
       </Card>
     </div>
