@@ -7,22 +7,22 @@ vi.mock("@/src/server/admin/playbookThresholdSimulation", () => ({
   loadThresholdRelaxationSimulation: (...args: unknown[]) => mockSimulate(...args),
 }));
 
-describe("admin playbook thresholds simulate auth", () => {
+describe("admin playbook thresholds simulate smoke", () => {
   const originalSecret = process.env.CRON_SECRET;
 
   beforeEach(() => {
     vi.resetAllMocks();
     process.env.CRON_SECRET = "cron-secret";
+    mockSimulate.mockResolvedValue({ meta: { ok: true }, baseline: { count: 1, closedCounts: { hit_tp: 0, hit_sl: 0, expired: 0, ambiguous: 0, open: 1 } }, grid: [] });
   });
 
   afterEach(() => {
     process.env.CRON_SECRET = originalSecret;
   });
 
-  it("allows Bearer CRON_SECRET", async () => {
-    mockSimulate.mockResolvedValue({ meta: { ok: true }, baseline: { count: 0, closedCounts: { hit_tp: 0, hit_sl: 0, expired: 0, ambiguous: 0, open: 0 } }, grid: [] });
+  it("returns JSON body on success", async () => {
     const { GET } = await import("@/src/app/api/admin/playbooks/thresholds/simulate/route");
-    const req = new NextRequest("http://localhost/api/admin/playbooks/thresholds/simulate", {
+    const req = new NextRequest("http://localhost/api/admin/playbooks/thresholds/simulate?bias=80", {
       method: "GET",
       headers: { authorization: "Bearer cron-secret" },
     });
@@ -30,18 +30,19 @@ describe("admin playbook thresholds simulate auth", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ok).toBe(true);
+    expect(body.data).toBeDefined();
   });
 
-  it("allows x-cron-secret header", async () => {
-    mockSimulate.mockResolvedValue({ meta: { ok: true }, baseline: { count: 0, closedCounts: { hit_tp: 0, hit_sl: 0, expired: 0, ambiguous: 0, open: 0 } }, grid: [] });
+  it("returns JSON error on unauthorized", async () => {
+    const originalAdmin = process.env.ADMIN_API_TOKEN;
+    process.env.ADMIN_API_TOKEN = "admin-token";
+    process.env.CRON_SECRET = "other";
     const { GET } = await import("@/src/app/api/admin/playbooks/thresholds/simulate/route");
-    const req = new NextRequest("http://localhost/api/admin/playbooks/thresholds/simulate", {
-      method: "GET",
-      headers: { "x-cron-secret": "cron-secret" },
-    });
+    const req = new NextRequest("http://localhost/api/admin/playbooks/thresholds/simulate", { method: "GET" });
     const res = await GET(req);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(401);
     const body = await res.json();
-    expect(body.ok).toBe(true);
+    expect(body.ok).toBe(false);
+    process.env.ADMIN_API_TOKEN = originalAdmin;
   });
 });

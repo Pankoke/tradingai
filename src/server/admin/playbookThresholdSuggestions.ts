@@ -155,11 +155,11 @@ function buildDistribution(values: number[]) {
   };
 }
 
-function percentile(values: number[], p: number): number | null {
-  if (!values.length) return null;
+function percentile(values: number[], p: number): number {
+  if (!values.length) return 0;
   const clamped = clampPercentile(p);
   const idx = Math.max(0, Math.ceil(clamped * values.length) - 1);
-  return values[idx] ?? null;
+  return values[idx] ?? 0;
 }
 
 function clampPercentile(p: number): number {
