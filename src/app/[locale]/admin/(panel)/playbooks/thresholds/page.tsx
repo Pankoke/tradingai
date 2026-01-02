@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Locale } from "@/i18n";
 import { loadGoldThresholdRecommendations } from "@/src/server/admin/playbookThresholdService";
+import { loadGoldThresholdSuggestions } from "@/src/server/admin/playbookThresholdSuggestions";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -15,6 +16,7 @@ export default async function ThresholdsPage({ params, searchParams }: PageProps
   const days = ALLOWED_DAYS.includes(query.days ?? "") ? Number(query.days) : 90;
   const includeOpen = query.includeOpen === "1";
   const rec = await loadGoldThresholdRecommendations({ days, includeOpen });
+  const suggestions = await loadGoldThresholdSuggestions({ days, percentile: 0.7 });
 
   return (
     <div className="space-y-6">
@@ -98,6 +100,66 @@ export default async function ThresholdsPage({ params, searchParams }: PageProps
           </div>
         </Card>
       </div>
+
+      <Card title="Calibration Suggestions (read-only)">
+        <div className="flex flex-wrap gap-2 text-xs text-slate-200">
+          {["30", "90", "180", "365", "730"].map((value) => (
+            <span
+              key={value}
+              className={`rounded-full px-3 py-1 font-semibold ${
+                Number(value) === days ? "bg-slate-200 text-slate-900" : "bg-slate-800 text-slate-200"
+              }`}
+            >
+              {value} Tage
+            </span>
+          ))}
+        </div>
+        <div className="mt-3 text-sm text-slate-200">
+          <div className="mb-3 rounded bg-slate-900/60 px-3 py-2 text-xs text-slate-300">
+            Heuristische, read-only Vorschläge basierend auf Outcomes. Aktive Playbook-Logik bleibt unverändert.
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold text-white">Top NO_TRADE Gründe</h3>
+              {suggestions.topNoTradeReasons.map((r) => (
+                <div key={r.key} className="rounded bg-slate-900/60 px-3 py-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-semibold capitalize">{r.label}</span>
+                    <span>{r.count} ({Math.round(r.share * 100)}%)</span>
+                  </div>
+                  {r.examples.length ? (
+                    <div className="mt-1 text-[11px] text-slate-400">{r.examples.join(" | ")}</div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold text-white">Suggested threshold relaxations</h3>
+              {suggestions.suggestions.map((s) => (
+                <div key={`${s.metric}-${s.reasonKey}`} className="rounded bg-slate-900/60 px-3 py-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="font-semibold">{s.metric}</span>
+                    <span>
+                      {s.currentThreshold ?? "?"} → {s.suggestedThreshold} (n={s.sampleSize}, unlock {s.wouldUnlockCount})
+                    </span>
+                  </div>
+                  <div className="text-slate-400">
+                    Dist P70:{s.distribution.p70 ?? "-"} | P80:{s.distribution.p80 ?? "-"} | P90:{s.distribution.p90 ?? "-"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="mt-3">
+            <Link
+              href={`/api/admin/playbooks/thresholds/suggestions?days=${days}&percentile=0.7`}
+              className="text-xs text-blue-300 underline"
+            >
+              Export JSON Suggestions
+            </Link>
+          </div>
+        </div>
+      </Card>
     </div>
   );
 }
