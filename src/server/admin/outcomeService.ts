@@ -45,6 +45,7 @@ export async function loadOutcomeStats(params: { days?: number; assetId?: string
     hit_sl: 0,
     expired: 0,
     ambiguous: 0,
+    invalid: 0,
   });
 
   const totals: Record<OutcomeStatus, number> = initBucket();
@@ -64,6 +65,7 @@ export async function loadOutcomeStats(params: { days?: number; assetId?: string
   const totalCount = rows.length;
   const expiredShare = totalCount > 0 ? totals.expired / totalCount : null;
   const ambiguousShare = totalCount > 0 ? totals.ambiguous / totalCount : null;
+  const invalidRate = totalCount > 0 ? (totals.invalid ?? 0) / totalCount : null;
 
   const assetIds = Array.from(new Set(rows.map((r) => r.assetId).filter(Boolean)));
   const assetMap: Record<string, string> = {};
@@ -85,6 +87,7 @@ export async function loadOutcomeStats(params: { days?: number; assetId?: string
     winRate,
     expiredShare,
     ambiguousShare,
+    invalidRate,
     recent,
   };
 }

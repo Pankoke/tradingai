@@ -122,8 +122,11 @@ async function main(): Promise<void> {
 
   const counts = countByStatus(outcomes);
   const closed = (counts.hit_tp ?? 0) + (counts.hit_sl ?? 0) + (counts.expired ?? 0) + (counts.ambiguous ?? 0);
-  const hitRate = formatPct(counts.hit_tp ?? 0, (counts.hit_tp ?? 0) + (counts.hit_sl ?? 0));
-  const expiryRate = formatPct(counts.expired ?? 0, closed);
+  const tpSl = (counts.hit_tp ?? 0) + (counts.hit_sl ?? 0);
+  const usableClosed = (counts.hit_tp ?? 0) + (counts.hit_sl ?? 0) + (counts.expired ?? 0);
+  const hitRate = formatPct(counts.hit_tp ?? 0, tpSl);
+  const expiryRate = formatPct(counts.expired ?? 0, usableClosed);
+  const invalidRate = formatPct(counts.invalid ?? 0, outcomes.length);
 
   const examples = await buildExamples(outcomes);
 
@@ -136,6 +139,8 @@ async function main(): Promise<void> {
     metrics: {
       hitRate,
       expiryRate,
+      invalidRate,
+      usableClosed,
     },
     samples: {
       hit_tp: examples.hit_tp ?? [],
@@ -143,6 +148,7 @@ async function main(): Promise<void> {
       expired: examples.expired ?? [],
       ambiguous: examples.ambiguous ?? [],
       open: examples.open ?? [],
+      invalid: examples.invalid ?? [],
     },
   };
 

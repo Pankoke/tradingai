@@ -4,6 +4,7 @@ import "tsconfig-paths/register";
 import { format } from "node:util";
 import { eq } from "drizzle-orm";
 import { computeSwingOutcome, parseZone } from "@/src/server/services/outcomeEvaluator";
+import { getAssetById } from "@/src/server/repositories/assetRepository";
 import { getCandlesForAsset } from "@/src/server/repositories/candleRepository";
 import { getSnapshotWithItems } from "@/src/server/repositories/perceptionSnapshotRepository";
 import { setupOutcomes } from "@/src/server/db/schema/setupOutcomes";
@@ -23,6 +24,69 @@ async function getOutcomeById(id: string): Promise<OutcomeRow | null> {
 function formatDate(value: Date | null | undefined): string {
   if (!value) return "-";
   return value.toISOString();
+}
+
+function summarizeCandles(candles: Candle[], windowBars: number) {
+  if (!candles.length) {
+    return {
+      count: 0,
+      from: null,
+      to: null,
+      first: null,
+      last: null,
+      medianClose: null,
+      medianMid: null,
+      minLow: null,
+      maxHigh: null,
+      hourHistogram: {},
+    };
+  }
+  const ordered = [...candles].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  const window = ordered.slice(0, windowBars);
+  const closes: number[] = [];
+  const mids: number[] = [];
+  const hours: Record<string, number> = {};
+  let minLow: number | null = null;
+  let maxHigh: number | null = null;
+  for (const c of window) {
+    const close = Number(c.close);
+    const high = Number(c.high);
+    const low = Number(c.low);
+    if (Number.isFinite(close)) closes.push(close);
+    if (Number.isFinite(high) && Number.isFinite(low)) mids.push((high + low) / 2);
+    if (minLow === null || low < minLow) minLow = low;
+    if (maxHigh === null || high > maxHigh) maxHigh = high;
+    const hour = c.timestamp.getUTCHours();
+    hours[hour.toString()] = (hours[hour.toString()] ?? 0) + 1;
+  }
+  const medianClose = closes.length
+    ? closes.slice().sort((a, b) => a - b)[Math.floor(closes.length / 2)]
+    : null;
+  const medianMid = mids.length ? mids.slice().sort((a, b) => a - b)[Math.floor(mids.length / 2)] : null;
+  return {
+    count: window.length,
+    from: ordered[0]?.timestamp.toISOString() ?? null,
+    to: window[window.length - 1]?.timestamp.toISOString() ?? null,
+    first: ordered[0]
+      ? { timestamp: ordered[0].timestamp.toISOString(), ohlc: [ordered[0].open, ordered[0].high, ordered[0].low, ordered[0].close] }
+      : null,
+    last: window[window.length - 1]
+      ? {
+          timestamp: window[window.length - 1].timestamp.toISOString(),
+          ohlc: [
+            window[window.length - 1].open,
+            window[window.length - 1].high,
+            window[window.length - 1].low,
+            window[window.length - 1].close,
+          ],
+        }
+      : null,
+    medianClose,
+    medianMid,
+    minLow,
+    maxHigh,
+    hourHistogram: hours,
+  };
 }
 
 function traceCandles(params: {
@@ -97,6 +161,8 @@ async function main(): Promise<void> {
     to,
   });
 
+  const candleSummary = summarizeCandles(candles, windowBars);
+
   const tp = parseZone(setup.takeProfit);
   const sl = parseZone(setup.stopLoss);
   const tpThreshold = setup.direction === "Long" ? tp.min ?? tp.max : tp.max ?? tp.min;
@@ -132,6 +198,22 @@ async function main(): Promise<void> {
       })
     : [];
 
+  const asset = await getAssetById(outcome.assetId);
+  const entryNumbers =
+    (setup.entryZone ?? "").match(/-?\d+(?:[.,]\d+)?/g)?.map((n) => Number(n.replace(",", "."))) ?? [];
+  const sortedEntry = entryNumbers.slice().sort((a, b) => a - b);
+  const entryMid = sortedEntry.length ? (sortedEntry[0] + sortedEntry[sortedEntry.length - 1]) / 2 : null;
+  const refPrice = candleSummary.medianMid ?? candleSummary.medianClose;
+  const parseSingle = (value?: string | null): number | null => {
+    if (!value) return null;
+    const nums = value.match(/-?\d+(?:[.,]\d+)?/g)?.map((n) => Number(n.replace(",", "."))) ?? [];
+    if (!nums.length) return null;
+    const sorted = nums.sort((a, b) => a - b);
+    return (sorted[0] + sorted[sorted.length - 1]) / 2;
+  };
+  const slMid = parseSingle(setup.stopLoss);
+  const tpMid = parseSingle(setup.takeProfit);
+
   const summary = {
     outcomeId: outcome.id,
     setupId: outcome.setupId,
@@ -152,6 +234,26 @@ async function main(): Promise<void> {
     to: to.toISOString(),
     expiryAt: formatDate(new Date(snapshotTime.getTime() + windowBars * DAY_MS)),
     trace,
+    assetId: outcome.assetId,
+    assetSymbol: asset?.symbol ?? null,
+    timeframe: outcome.timeframe,
+    candleSummary,
+    levelRatios: refPrice
+      ? {
+          refPrice,
+          entryMid,
+          stopLoss: setup.stopLoss,
+          takeProfit: setup.takeProfit,
+          entryToRef: entryMid ? entryMid / refPrice : null,
+          slToRef: slMid ? slMid / refPrice : null,
+          tpToRef: tpMid ? tpMid / refPrice : null,
+        }
+      : null,
+    levels: {
+      entryZone: setup.entryZone ?? null,
+      stopLoss: setup.stopLoss ?? null,
+      takeProfit: setup.takeProfit ?? null,
+    },
   };
 
   console.log(format("%j", summary));

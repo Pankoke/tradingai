@@ -11,6 +11,7 @@ import { resolvePlaybook } from "@/src/lib/engine/playbooks";
 
 const runnerLogger = logger.child({ scope: "outcome-runner" });
 const DAY_MS = 24 * 60 * 60 * 1000;
+const ENGINE_VERSION = process.env.SETUP_ENGINE_VERSION ?? "unknown";
 
 export type SwingSetupCandidate = Setup & {
   snapshotId: string;
@@ -27,6 +28,7 @@ export type OutcomeMetrics = {
   expired: number;
   ambiguous: number;
   still_open: number;
+  invalid: number;
   errors: number;
   skippedClosed: number;
 };
@@ -324,6 +326,7 @@ export async function runOutcomeEvaluationBatch(params: {
     expired: 0,
     ambiguous: 0,
     still_open: 0,
+    invalid: 0,
     errors: 0,
     skippedClosed: 0,
   };
@@ -357,6 +360,7 @@ export async function runOutcomeEvaluationBatch(params: {
       if (result.outcomeStatus === "hit_sl") metrics.hit_sl += 1;
       if (result.outcomeStatus === "expired") metrics.expired += 1;
       if (result.outcomeStatus === "ambiguous") metrics.ambiguous += 1;
+      if (result.outcomeStatus === "invalid") metrics.invalid += 1;
       if (result.outcomeStatus === "open") metrics.still_open += 1;
 
       if (params.dryRun) {
@@ -385,7 +389,7 @@ export async function runOutcomeEvaluationBatch(params: {
         setupType: candidate.setupType ?? null,
         gradeRationale: candidate.gradeRationale ?? null,
         noTradeReason: candidate.noTradeReason ?? null,
-        gradeDebugReason: (candidate as { gradeDebugReason?: string }).gradeDebugReason ?? null,
+        gradeDebugReason: buildDebugReason((candidate as { gradeDebugReason?: string }).gradeDebugReason),
         evaluatedAt: new Date(),
         windowBars: result.windowBars,
         outcomeStatus: result.outcomeStatus,
@@ -496,6 +500,15 @@ function topReasons(map: Record<string, number>): Array<{ reason: string; count:
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
     .map(([reason, count]) => ({ reason, count }));
+}
+
+function buildDebugReason(existing?: string | null): string | null {
+  const suffix = `engine=${ENGINE_VERSION}`;
+  if (existing && existing.length) {
+    if (existing.includes("engine=")) return existing;
+    return `${existing};${suffix}`;
+  }
+  return suffix;
 }
 
 function isCompatiblePlaybook(filter: string, resolved: string | null): boolean {

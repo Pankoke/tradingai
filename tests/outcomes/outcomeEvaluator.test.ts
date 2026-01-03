@@ -147,4 +147,28 @@ describe("computeSwingOutcome", () => {
     expect(result.outcomeStatus).toBe("hit_tp");
     expect(result.barsToOutcome).toBe(2);
   });
+
+  it("still records a hit when candles are fewer than the window", () => {
+    const result = computeSwingOutcome({
+      setup: baseSetup,
+      candles: [
+        candle("2025-01-02T00:00:00Z", 100, 80),
+        candle("2025-01-03T00:00:00Z", 100, 95),
+      ],
+      windowBars: 5,
+    });
+    expect(result.outcomeStatus).toBe("hit_sl");
+    expect(result.reason).toBeNull();
+    expect(result.usedCandles).toBe(2);
+  });
+
+  it("marks invalid when price scale is implausible", () => {
+    const result = computeSwingOutcome({
+      setup: { ...baseSetup, stopLoss: "4300", takeProfit: "4400", entryZone: "4300-4400" },
+      candles: [candle("2025-01-02T00:00:00Z", 2700, 2600), candle("2025-01-03T00:00:00Z", 2700, 2600)],
+      windowBars: 3,
+    });
+    expect(result.outcomeStatus).toBe("invalid");
+    expect(result.reason).toContain("price_scale_mismatch");
+  });
 });

@@ -527,11 +527,10 @@ function coerceScore(value: number | null | undefined): number | null {
 }
 
 function buildStatusCounts(rows: SetupOutcomeRow[]): StatusCounts {
-  const counts: StatusCounts = { hit_tp: 0, hit_sl: 0, expired: 0, ambiguous: 0, open: 0 };
+  const counts: StatusCounts = { hit_tp: 0, hit_sl: 0, expired: 0, ambiguous: 0, open: 0, invalid: 0 };
   for (const row of rows) {
     const status = row.outcomeStatus as OutcomeStatus;
-    if (counts[status] === undefined) continue;
-    counts[status] += 1;
+    counts[status] = (counts[status] ?? 0) + 1;
   }
   return counts;
 }
