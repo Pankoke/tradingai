@@ -6,6 +6,7 @@ import {
 } from "@/src/server/repositories/setupOutcomeRepository";
 import type { OutcomeStatus } from "@/src/server/services/outcomeEvaluator";
 import type { Setup } from "@/src/lib/engine/types";
+import { FIX_DATE } from "@/src/server/services/outcomePolicy";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -15,6 +16,7 @@ export type OutcomeStats = {
   winRate: number | null;
   expiredShare: number | null;
   ambiguousShare: number | null;
+  invalidRate: number | null;
   recent: Array<
     SetupOutcomeRow & {
       assetSymbol?: string;
@@ -38,6 +40,12 @@ export async function loadOutcomeStats(params: { days?: number; assetId?: string
     limit: 300,
     playbookId: params.playbookId,
   });
+  const cohort = rows.filter(
+    (row) =>
+      row.evaluatedAt &&
+      row.evaluatedAt >= FIX_DATE &&
+      (row.outcomeStatus as OutcomeStatus) !== "invalid",
+  );
 
   const initBucket = (): Record<OutcomeStatus, number> => ({
     open: 0,
@@ -51,7 +59,7 @@ export async function loadOutcomeStats(params: { days?: number; assetId?: string
   const totals: Record<OutcomeStatus, number> = initBucket();
   const byGrade: Record<string, Record<OutcomeStatus, number>> = {};
 
-  for (const row of rows) {
+  for (const row of cohort) {
     const grade = row.setupGrade ?? "unknown";
     const status = row.outcomeStatus as OutcomeStatus;
     const bucket = byGrade[grade] ?? initBucket();
@@ -62,12 +70,12 @@ export async function loadOutcomeStats(params: { days?: number; assetId?: string
 
   const closed = totals.hit_tp + totals.hit_sl;
   const winRate = closed > 0 ? totals.hit_tp / closed : null;
-  const totalCount = rows.length;
+  const totalCount = cohort.length;
   const expiredShare = totalCount > 0 ? totals.expired / totalCount : null;
   const ambiguousShare = totalCount > 0 ? totals.ambiguous / totalCount : null;
   const invalidRate = totalCount > 0 ? (totals.invalid ?? 0) / totalCount : null;
 
-  const assetIds = Array.from(new Set(rows.map((r) => r.assetId).filter(Boolean)));
+  const assetIds = Array.from(new Set(cohort.map((r) => r.assetId).filter(Boolean)));
   const assetMap: Record<string, string> = {};
   for (const assetId of assetIds) {
     const asset = await getAssetById(assetId);
@@ -76,7 +84,7 @@ export async function loadOutcomeStats(params: { days?: number; assetId?: string
     }
   }
 
-  const recent = rows.slice(0, 10).map((row) => ({
+  const recent = cohort.slice(0, 10).map((row) => ({
     ...row,
     assetSymbol: assetMap[row.assetId],
   }));

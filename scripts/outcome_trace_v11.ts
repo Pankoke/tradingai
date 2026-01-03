@@ -172,11 +172,13 @@ async function main(): Promise<void> {
     setup: {
       id: setup.id,
       assetId: setup.assetId,
+      symbol: setup.symbol,
       direction: setup.direction,
       profile: setup.profile,
       timeframe: setup.timeframe,
       stopLoss: setup.stopLoss,
       takeProfit: setup.takeProfit,
+      entryZone: setup.entryZone,
       setupGrade: setup.setupGrade,
       setupType: setup.setupType,
       gradeRationale: setup.gradeRationale,

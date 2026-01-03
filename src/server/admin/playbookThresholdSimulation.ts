@@ -5,6 +5,7 @@ import { listOutcomesForWindow, type SetupOutcomeRow } from "@/src/server/reposi
 import { getSnapshotById } from "@/src/server/repositories/perceptionSnapshotRepository";
 import type { Setup } from "@/src/lib/engine/types";
 import { computeSignalQuality } from "@/src/lib/engine/signalQuality";
+import { FIX_DATE } from "@/src/server/services/outcomePolicy";
 
 type StatusCounts = Record<OutcomeStatus, number>;
 
@@ -174,9 +175,15 @@ export async function loadThresholdRelaxationSimulation(params: SimulationParams
   });
   const fetchOutcomesMs = profileEnabled ? performance.now() - t0 : undefined;
   const closedStatuses: OutcomeStatus[] = ["hit_tp", "hit_sl", "expired", "ambiguous"];
+  const cohortFiltered = outcomesRaw.filter(
+    (o) =>
+      (o.evaluatedAt ? o.evaluatedAt >= FIX_DATE : true) &&
+      (o.outcomeStatus as OutcomeStatus) !== "invalid",
+  );
+  const excludedLegacy = outcomesRaw.length - cohortFiltered.length;
   let filtered = params.closedOnly
-    ? outcomesRaw.filter((o) => closedStatuses.includes(o.outcomeStatus as OutcomeStatus))
-    : outcomesRaw;
+    ? cohortFiltered.filter((o) => closedStatuses.includes(o.outcomeStatus as OutcomeStatus))
+    : cohortFiltered;
   let maxScanReached = false;
   if (params.closedOnly && filtered.length < effectiveLimit && outcomesRaw.length === initialFetchLimit) {
     const extraLimit = 2000;
@@ -372,6 +379,7 @@ export async function loadThresholdRelaxationSimulation(params: SimulationParams
         noTradeReasonCounts: includeNoTrade ? noTradeReasonCounts : undefined,
         noTradeReasonExamples: includeNoTrade ? noTradeReasonExamples : undefined,
         excludedNoTradeReasons: !includeNoTrade ? excludedNoTradeReasons : undefined,
+        excludedLegacy,
       },
       ...(profileEnabled
         ? {
