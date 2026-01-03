@@ -118,4 +118,33 @@ describe("computeSwingOutcome", () => {
     expect(result.outcomeStatus).toBe("open");
     expect(result.reason).toBe("insufficient_candles");
   });
+
+  it("ignores candles after the configured windowBars", () => {
+    const result = computeSwingOutcome({
+      setup: baseSetup,
+      candles: [
+        candle("2025-01-02T00:00:00Z", 100, 95),
+        candle("2025-01-03T00:00:00Z", 100, 95),
+        candle("2025-01-04T00:00:00Z", 100, 95),
+        candle("2025-01-05T00:00:00Z", 120, 90),
+      ],
+      windowBars: 2,
+    });
+    expect(result.outcomeStatus).toBe("expired");
+    expect(result.barsToOutcome).toBeNull();
+  });
+
+  it("skips invalid candle values but continues evaluation", () => {
+    const broken: Candle = {
+      ...candle("2025-01-02T00:00:00Z", 100, 95),
+      high: Number.NaN,
+    };
+    const result = computeSwingOutcome({
+      setup: baseSetup,
+      candles: [broken, candle("2025-01-03T00:00:00Z", 115, 100), candle("2025-01-04T00:00:00Z", 100, 95)],
+      windowBars: 3,
+    });
+    expect(result.outcomeStatus).toBe("hit_tp");
+    expect(result.barsToOutcome).toBe(2);
+  });
 });

@@ -9,6 +9,8 @@
     "./dev/**/*.ts",
     "./dev/**/*.tsx",
     "./printRingSummaries.ts",
+    "./outcome_audit_v11.ts",
+    "./outcome_trace_v11.ts",
     "../src/**/*.ts",
     "../src/**/*.tsx"
   ],

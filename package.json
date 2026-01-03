@@ -12,7 +12,9 @@
     "postinstall": "patch-package",
     "dev:ring-summaries": "ts-node --project scripts/tsconfig.scripts.json scripts/dev/printRingSummaries.ts",
     "backfill:1d": "ts-node --project scripts/tsconfig.scripts.json -r dotenv/config -r tsconfig-paths/register src/scripts/backfillDailyCandles.ts",
-    "backfill:swing": "ts-node --project scripts/tsconfig.scripts.json -r dotenv/config -r tsconfig-paths/register src/scripts/backfillSwingSnapshots.ts"
+    "backfill:swing": "ts-node --project scripts/tsconfig.scripts.json -r dotenv/config -r tsconfig-paths/register src/scripts/backfillSwingSnapshots.ts",
+    "outcomes:audit": "ts-node --project scripts/tsconfig.scripts.json -r dotenv/config -r tsconfig-paths/register scripts/outcome_audit_v11.ts",
+    "outcomes:trace": "ts-node --project scripts/tsconfig.scripts.json -r dotenv/config -r tsconfig-paths/register scripts/outcome_trace_v11.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.35.5",
