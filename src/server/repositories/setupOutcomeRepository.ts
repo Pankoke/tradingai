@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, desc, eq, gte, inArray, lte, sql, or, ilike, ne } from "drizzle-orm";
 import { db } from "@/src/server/db/db";
 import { setupOutcomes } from "@/src/server/db/schema/setupOutcomes";
+import { perceptionSnapshots } from "@/src/server/db/schema/perceptionSnapshots";
 import { excluded } from "@/src/server/db/sqlHelpers";
 
 export type SetupOutcomeRow = typeof setupOutcomes.$inferSelect;
@@ -153,6 +154,7 @@ export async function listOutcomesForWindow(params: {
   playbookId?: string;
   mode?: "all" | "latest";
   engineVersion?: string;
+  cohortFromSnapshot?: Date;
 }): Promise<SetupOutcomeRow[]> {
   const conditions = [];
   if (params.from) {
@@ -182,30 +184,44 @@ export async function listOutcomesForWindow(params: {
     }
   }
   const whereClause = conditions.length ? and(...conditions) : undefined;
+  const snapshotFilter =
+    params.cohortFromSnapshot != null
+      ? or(
+          gte(perceptionSnapshots.createdAt, params.cohortFromSnapshot),
+          and(sql`${perceptionSnapshots.createdAt} is null`, gte(perceptionSnapshots.snapshotTime, params.cohortFromSnapshot)),
+        )
+      : undefined;
   try {
     const limit = Math.min(500, Math.max(1, params.limit ?? 200));
     if (params.mode === "latest") {
       // latest per setupId (keep for optional mode)
       const rows = await db
-        .select()
+        .select({ setup_outcomes: setupOutcomes })
         .from(setupOutcomes)
-        .where(whereClause ?? sql`true`)
+        .leftJoin(perceptionSnapshots, eq(perceptionSnapshots.id, setupOutcomes.snapshotId))
+        .where(snapshotFilter ? and(whereClause ?? sql`true`, snapshotFilter) : whereClause ?? sql`true`)
         .orderBy(desc(setupOutcomes.evaluatedAt))
         .limit(limit);
       const seen = new Set<string>();
       const deduped: SetupOutcomeRow[] = [];
       for (const row of rows) {
-        if (seen.has(row.setupId)) continue;
-        seen.add(row.setupId);
-        deduped.push(row);
+        const current = row.setup_outcomes;
+        if (seen.has(current.setupId)) continue;
+        seen.add(current.setupId);
+        deduped.push(current);
       }
       return deduped;
     }
 
-    const query = whereClause
-      ? db.select().from(setupOutcomes).where(whereClause)
-      : db.select().from(setupOutcomes);
-    return query.orderBy(desc(setupOutcomes.evaluatedAt)).limit(limit);
+    const query = db
+      .select({ setup_outcomes: setupOutcomes })
+      .from(setupOutcomes)
+      .leftJoin(perceptionSnapshots, eq(perceptionSnapshots.id, setupOutcomes.snapshotId))
+      .where(snapshotFilter ? and(whereClause ?? sql`true`, snapshotFilter) : whereClause ?? sql`true`)
+      .orderBy(desc(setupOutcomes.evaluatedAt))
+      .limit(limit);
+    const rows = await query;
+    return rows.map((r) => r.setup_outcomes);
   } catch (error) {
     if (isMissingTableError(error)) return [];
     throw error;
@@ -221,6 +237,7 @@ export async function aggregateOutcomes(params: {
   playbookId?: string;
   engineVersion?: string;
   excludeInvalid?: boolean;
+  cohortFromSnapshot?: Date;
 }): Promise<OutcomeAggregateRow[]> {
   const conditions = [];
   if (params.from) {
@@ -251,6 +268,13 @@ export async function aggregateOutcomes(params: {
   }
 
   const whereClause = conditions.length ? and(...conditions) : undefined;
+  const snapshotFilter =
+    params.cohortFromSnapshot != null
+      ? or(
+          gte(perceptionSnapshots.createdAt, params.cohortFromSnapshot),
+          and(sql`${perceptionSnapshots.createdAt} is null`, gte(perceptionSnapshots.snapshotTime, params.cohortFromSnapshot)),
+        )
+      : undefined;
   try {
     const rows = await db
       .select({
@@ -266,7 +290,8 @@ export async function aggregateOutcomes(params: {
         invalid: sql<number>`sum(case when ${setupOutcomes.outcomeStatus} = 'invalid' then 1 else 0 end)`,
       })
       .from(setupOutcomes)
-      .where(whereClause)
+      .leftJoin(perceptionSnapshots, eq(perceptionSnapshots.id, setupOutcomes.snapshotId))
+      .where(snapshotFilter ? and(whereClause ?? sql`true`, snapshotFilter) : whereClause)
       .groupBy(setupOutcomes.playbookId, setupOutcomes.setupEngineVersion, setupOutcomes.evaluationTimeframe)
       .orderBy(desc(sql<number>`count(*)`));
     return rows;

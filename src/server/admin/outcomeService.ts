@@ -50,20 +50,17 @@ export type EngineHealthRow = OutcomeAggregateRow & {
 export async function loadOutcomeStats(params: { days?: number; assetId?: string; playbookId?: string }): Promise<OutcomeStats> {
   const days = params.days ?? 30;
   const from = new Date(Date.now() - days * DAY_MS);
+  const cohortFrom = from < FIX_DATE ? FIX_DATE : from;
   const rows = await listOutcomesForWindow({
     from,
+    cohortFromSnapshot: cohortFrom,
     assetId: params.assetId,
     profile: "SWING",
     timeframe: "1D",
     limit: 300,
     playbookId: params.playbookId,
   });
-  const cohort = rows.filter(
-    (row) =>
-      row.evaluatedAt &&
-      row.evaluatedAt >= FIX_DATE &&
-      (row.outcomeStatus as OutcomeStatus) !== "invalid",
-  );
+  const cohort = rows.filter((row) => (row.outcomeStatus as OutcomeStatus) !== "invalid");
 
   const initBucket = (): Record<OutcomeStatus, number> => ({
     open: 0,
@@ -196,7 +193,8 @@ export async function loadEngineHealth(params: {
   const from = new Date(Date.now() - days * DAY_MS);
   const cohortFrom = from < FIX_DATE ? FIX_DATE : from;
   const aggregates = await aggregateOutcomes({
-    from: cohortFrom,
+    from,
+    cohortFromSnapshot: cohortFrom,
     assetId: params.assetId,
     playbookId: params.playbookId ?? undefined,
     engineVersion: params.engineVersion,
@@ -206,7 +204,8 @@ export async function loadEngineHealth(params: {
   });
 
   const samplesRaw = await listOutcomesForWindow({
-    from: cohortFrom,
+    from,
+    cohortFromSnapshot: cohortFrom,
     assetId: params.assetId,
     playbookId: params.playbookId ?? undefined,
     engineVersion: params.engineVersion,
