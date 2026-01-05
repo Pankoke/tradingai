@@ -8,6 +8,7 @@ import {
 } from "@/src/server/repositories/setupOutcomeRepository";
 import { evaluateSwingSetupOutcome, type OutcomeStatus } from "@/src/server/services/outcomeEvaluator";
 import { resolvePlaybook } from "@/src/lib/engine/playbooks";
+import { FIX_DATE, isOutcomeInCohort } from "@/src/server/services/outcomePolicy";
 
 const runnerLogger = logger.child({ scope: "outcome-runner" });
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -16,6 +17,7 @@ const ENGINE_VERSION = process.env.SETUP_ENGINE_VERSION ?? "unknown";
 export type SwingSetupCandidate = Setup & {
   snapshotId: string;
   snapshotTime: Date;
+  snapshotVersion?: string | null;
   effectivePlaybookId?: string | null;
   resolvedPlaybookId?: string | null;
   storedPlaybookId?: string | null;
@@ -56,6 +58,8 @@ export async function loadRecentSwingCandidates(params: {
   limit?: number;
   assetId?: string;
   playbookId?: string;
+  ignorePolicy?: boolean;
+  from?: Date;
   reasons?: Record<string, number>;
   reasonSamples?: Record<string, string[]>;
   stats?: { snapshotsSeen: number; rawSetups: number; eligible: number };
@@ -77,10 +81,15 @@ export async function loadRecentSwingCandidates(params: {
 }): Promise<SwingSetupCandidate[]> {
   const daysBack = params.daysBack ?? 30;
   const limit = Math.min(500, Math.max(1, params.limit ?? 200));
-  const from = new Date(Date.now() - daysBack * DAY_MS);
+  const requestedFrom = params.from ?? new Date(Date.now() - daysBack * DAY_MS);
+  const from = params.ignorePolicy ? requestedFrom : requestedFrom < FIX_DATE ? FIX_DATE : requestedFrom;
   const assetFilter = resolveAssetIds(params.assetId);
   const assetFilterUpper = assetFilter?.map((a) => a.toUpperCase());
   const playbookFilter = params.playbookId ?? null;
+  const inferredAssetFilter =
+    !assetFilterUpper && playbookFilter?.startsWith("gold-swing")
+      ? ["GC=F", "XAUUSD", "XAUUSD=X", "GOLD", "gold"].map((v) => v.toUpperCase())
+      : assetFilterUpper;
   const pageSize = 50;
   let page = 1;
   let total = Infinity;
@@ -133,9 +142,9 @@ export async function loadRecentSwingCandidates(params: {
           continue;
         }
         const matchesAsset =
-          !assetFilterUpper ||
-          assetFilterUpper.includes(assetUpper) ||
-          (symbolUpper ? assetFilterUpper.includes(symbolUpper) : false);
+          !inferredAssetFilter ||
+          inferredAssetFilter.includes(assetUpper) ||
+          (symbolUpper ? inferredAssetFilter.includes(symbolUpper) : false);
         const playbookId = (raw as { setupPlaybookId?: string | null }).setupPlaybookId ?? null;
         let effectivePlaybookId = playbookId;
         let resolvedPlaybookId: string | null = null;
@@ -228,6 +237,7 @@ export async function loadRecentSwingCandidates(params: {
           ...raw,
           snapshotId: snapshot.id,
           snapshotTime,
+          snapshotVersion: snapshot.version ?? null,
           effectivePlaybookId,
           resolvedPlaybookId,
           storedPlaybookId: playbookId,
@@ -250,6 +260,8 @@ export async function runOutcomeEvaluationBatch(params: {
   assetId?: string;
   playbookId?: string;
   loggerInfo?: boolean;
+  from?: Date;
+  ignorePolicy?: boolean;
 }): Promise<{
   metrics: OutcomeMetrics;
   inserted: number;
@@ -296,9 +308,11 @@ export async function runOutcomeEvaluationBatch(params: {
   const goldSampleEligible: GoldSampleSetup[] = [];
   const candidates = await loadRecentSwingCandidates({
     daysBack: params.daysBack,
+    from: params.ignorePolicy ? params.from : params.from ?? FIX_DATE,
     limit: params.limit,
     assetId: params.assetId,
     playbookId: params.playbookId,
+    ignorePolicy: params.ignorePolicy,
     reasons: reasonCounts,
     reasonSamples,
     stats,
@@ -336,7 +350,7 @@ export async function runOutcomeEvaluationBatch(params: {
       (candidate as { generatedAt?: Date | string | null }).generatedAt != null
         ? new Date((candidate as { generatedAt?: Date | string | null }).generatedAt as string)
         : candidate.snapshotTime ?? null;
-    if (!anchorTime) {
+    if (!anchorTime || anchorTime < FIX_DATE) {
       incrementReason(reasonCounts, "missing_anchor_time");
       recordGoldReason("missing_anchor_time", { goldReasonCounts, goldReasonSamples, goldSamplesIneligible: goldSampleIneligible }, candidate, candidate.snapshotId, (candidate as { setupPlaybookId?: string | null }).setupPlaybookId ?? null, null, null);
       continue;
@@ -396,6 +410,8 @@ export async function runOutcomeEvaluationBatch(params: {
         outcomeAt: result.outcomeAt,
         barsToOutcome: result.barsToOutcome,
         reason: result.reason,
+        setupEngineVersion: candidate.snapshotVersion ?? ENGINE_VERSION,
+        evaluationTimeframe: candidate.timeframe ?? "1D",
       };
 
       await upsertOutcome(payload);

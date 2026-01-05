@@ -2,7 +2,9 @@ import { getAssetById } from "@/src/server/repositories/assetRepository";
 import { getSnapshotById } from "@/src/server/repositories/perceptionSnapshotRepository";
 import {
   listOutcomesForWindow,
+  aggregateOutcomes,
   type SetupOutcomeRow,
+  type OutcomeAggregateRow,
 } from "@/src/server/repositories/setupOutcomeRepository";
 import type { OutcomeStatus } from "@/src/server/services/outcomeEvaluator";
 import type { Setup } from "@/src/lib/engine/types";
@@ -27,6 +29,13 @@ export type OutcomeStats = {
 export type OutcomeExportRow = {
   outcome: SetupOutcomeRow;
   setup?: Setup;
+};
+
+export type EngineHealthRow = OutcomeAggregateRow & {
+  winRate: number | null;
+  expiryRate: number | null;
+  coverage: number | null;
+  samples: string[];
 };
 
 export async function loadOutcomeStats(params: { days?: number; assetId?: string; playbookId?: string }): Promise<OutcomeStats> {
@@ -134,4 +143,84 @@ export async function loadOutcomeExportRows(params: {
   }
 
   return result;
+}
+
+export async function loadEngineHealth(params: {
+  days?: number;
+  assetId?: string;
+  playbookId?: string;
+  engineVersion?: string;
+  profile?: string;
+  timeframe?: string;
+  includeUnknown?: boolean;
+  includeNullEvalTf?: boolean;
+}): Promise<EngineHealthRow[]> {
+  const days = params.days ?? 90;
+  const from = new Date(Date.now() - days * DAY_MS);
+  const cohortFrom = from < FIX_DATE ? FIX_DATE : from;
+  const aggregates = await aggregateOutcomes({
+    from: cohortFrom,
+    assetId: params.assetId,
+    playbookId: params.playbookId ?? undefined,
+    engineVersion: params.engineVersion,
+    profile: (params.profile ?? "SWING").toUpperCase(),
+    timeframe: params.timeframe ?? "1D",
+    excludeInvalid: true,
+  });
+
+  const samplesRaw = await listOutcomesForWindow({
+    from: cohortFrom,
+    assetId: params.assetId,
+    playbookId: params.playbookId ?? undefined,
+    engineVersion: params.engineVersion,
+    profile: (params.profile ?? "SWING").toUpperCase(),
+    timeframe: params.timeframe ?? "1D",
+    limit: 200,
+  });
+
+  const sampleMap = samplesRaw.reduce<Record<string, string[]>>((acc, row) => {
+    const key = `${row.playbookId ?? "unknown"}|${row.setupEngineVersion ?? "unknown"}|${row.timeframe ?? "1D"}`;
+    const bucket = acc[key] ?? [];
+    if (bucket.length < 10 && row.id) {
+      bucket.push(row.id);
+    }
+    acc[key] = bucket;
+    return acc;
+  }, {});
+
+  const filteredByTf =
+    params.includeNullEvalTf === true ? aggregates : aggregates.filter((row) => (row.evaluationTimeframe ?? "").length > 0);
+  const filteredAggregates =
+    params.includeUnknown === true
+      ? filteredByTf
+      : filteredByTf.filter(
+          (row) => (row.setupEngineVersion ?? "").trim().length > 0 && (row.setupEngineVersion ?? "unknown") !== "unknown",
+        );
+
+  return filteredAggregates.map((row) => {
+    const total = Number(row.total ?? 0);
+    const tp = Number(row.hit_tp ?? 0);
+    const sl = Number(row.hit_sl ?? 0);
+    const exp = Number(row.expired ?? 0);
+    const amb = Number(row.ambiguous ?? 0);
+    const inv = Number(row.invalid ?? 0);
+    const closed = tp + sl + exp + amb;
+    const winRate = tp + sl > 0 ? tp / (tp + sl) : null;
+    const expiryRate = closed > 0 ? exp / closed : null;
+    const coverage = total > 0 ? closed / total : null;
+    const sampleKey = `${row.playbookId ?? "unknown"}|${row.setupEngineVersion ?? "unknown"}|${row.evaluationTimeframe ?? "1D"}`;
+    return {
+      ...row,
+      total,
+      hit_tp: tp,
+      hit_sl: sl,
+      expired: exp,
+      ambiguous: amb,
+      invalid: inv,
+      winRate,
+      expiryRate,
+      coverage,
+      samples: sampleMap[sampleKey] ?? [],
+    };
+  });
 }

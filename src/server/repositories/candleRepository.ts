@@ -17,32 +17,50 @@ export async function getCandlesForAsset(params: {
   if (params.from > params.to) {
     throw new Error("`from` must be before `to`");
   }
+  const timeframe = params.timeframe.toUpperCase();
 
-  return drizzleDb
+  const rows = await drizzleDb
     .select()
     .from(candles)
     .where(
       and(
         eq(candles.assetId, params.assetId),
-        eq(candles.timeframe, params.timeframe),
+        eq(candles.timeframe, timeframe),
         gte(candles.timestamp, params.from),
         lte(candles.timestamp, params.to)
       )
     )
     .orderBy(desc(candles.timestamp));
+
+  if (timeframe === "1D") {
+    const seen = new Set<string>();
+    const deduped: Candle[] = [];
+    for (const row of rows) {
+      const k = `${row.timestamp.getUTCFullYear()}-${(row.timestamp.getUTCMonth() + 1)
+        .toString()
+        .padStart(2, "0")}-${row.timestamp.getUTCDate().toString().padStart(2, "0")}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      deduped.push(row);
+    }
+    return deduped;
+  }
+
+  return rows;
 }
 
 export async function getLatestCandleForAsset(params: {
   assetId: string;
   timeframe: string;
 }): Promise<Candle | null> {
+  const timeframe = params.timeframe.toUpperCase();
   const [candle] = await drizzleDb
     .select()
     .from(candles)
     .where(
       and(
         eq(candles.assetId, params.assetId),
-        eq(candles.timeframe, params.timeframe)
+        eq(candles.timeframe, timeframe)
       )
     )
     .orderBy(desc(candles.timestamp))
@@ -55,13 +73,14 @@ export async function getRecentCandlesForAsset(params: {
   timeframe: string;
   limit: number;
 }): Promise<Candle[]> {
+  const timeframe = params.timeframe.toUpperCase();
   return drizzleDb
     .select()
     .from(candles)
     .where(
       and(
         eq(candles.assetId, params.assetId),
-        eq(candles.timeframe, params.timeframe),
+        eq(candles.timeframe, timeframe),
       )
     )
     .orderBy(desc(candles.timestamp))
@@ -74,12 +93,18 @@ export async function upsertCandles(candleInputs: CandleInput[]): Promise<void> 
   }
 
   const rows: CandleInsert[] = candleInputs.map((input) => {
-    const id = `${input.assetId}-${input.timeframe}-${input.timestamp.getTime()}`;
+    const timeframe = input.timeframe.toUpperCase();
+    const ts = input.timestamp instanceof Date ? input.timestamp : new Date(input.timestamp);
+    const canonicalTimestamp =
+      timeframe === "1D"
+        ? new Date(Date.UTC(ts.getUTCFullYear(), ts.getUTCMonth(), ts.getUTCDate()))
+        : ts;
+    const id = `${input.assetId}-${timeframe}-${canonicalTimestamp.getTime()}`;
     return {
       id,
       assetId: input.assetId,
-      timeframe: input.timeframe,
-      timestamp: input.timestamp,
+      timeframe,
+      timestamp: canonicalTimestamp,
       open: input.open,
       high: input.high,
       low: input.low,

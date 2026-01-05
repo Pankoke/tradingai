@@ -1,11 +1,23 @@
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, gte, inArray, lte, sql, or, ilike } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte, sql, or, ilike, ne } from "drizzle-orm";
 import { db } from "@/src/server/db/db";
 import { setupOutcomes } from "@/src/server/db/schema/setupOutcomes";
 import { excluded } from "@/src/server/db/sqlHelpers";
 
 export type SetupOutcomeRow = typeof setupOutcomes.$inferSelect;
 export type SetupOutcomeInsert = typeof setupOutcomes.$inferInsert;
+export type OutcomeAggregateRow = {
+  playbookId: string | null;
+  setupEngineVersion: string | null;
+  evaluationTimeframe: string | null;
+  total: number;
+  open: number;
+  hit_tp: number;
+  hit_sl: number;
+  expired: number;
+  ambiguous: number;
+  invalid: number;
+};
 
 function isMissingTableError(error: unknown): boolean {
   if (typeof error === "object" && error) {
@@ -48,6 +60,8 @@ export async function upsertOutcome(payload: SetupOutcomeInsert): Promise<void> 
           outcomeAt: excluded(setupOutcomes.outcomeAt.name),
           barsToOutcome: excluded(setupOutcomes.barsToOutcome.name),
           reason: excluded(setupOutcomes.reason.name),
+          setupEngineVersion: excluded(setupOutcomes.setupEngineVersion.name),
+          evaluationTimeframe: excluded(setupOutcomes.evaluationTimeframe.name),
         },
       });
   } catch (error) {
@@ -138,6 +152,7 @@ export async function listOutcomesForWindow(params: {
   limit?: number;
   playbookId?: string;
   mode?: "all" | "latest";
+  engineVersion?: string;
 }): Promise<SetupOutcomeRow[]> {
   const conditions = [];
   if (params.from) {
@@ -154,6 +169,9 @@ export async function listOutcomesForWindow(params: {
   }
   if (params.timeframe) {
     conditions.push(eq(setupOutcomes.timeframe, params.timeframe));
+  }
+  if (params.engineVersion) {
+    conditions.push(eq(setupOutcomes.setupEngineVersion, params.engineVersion));
   }
   if (params.playbookId) {
     const playbook = params.playbookId;
@@ -188,6 +206,70 @@ export async function listOutcomesForWindow(params: {
       ? db.select().from(setupOutcomes).where(whereClause)
       : db.select().from(setupOutcomes);
     return query.orderBy(desc(setupOutcomes.evaluatedAt)).limit(limit);
+  } catch (error) {
+    if (isMissingTableError(error)) return [];
+    throw error;
+  }
+}
+
+export async function aggregateOutcomes(params: {
+  from?: Date;
+  to?: Date;
+  profile?: string;
+  timeframe?: string;
+  assetId?: string;
+  playbookId?: string;
+  engineVersion?: string;
+  excludeInvalid?: boolean;
+}): Promise<OutcomeAggregateRow[]> {
+  const conditions = [];
+  if (params.from) {
+    conditions.push(gte(setupOutcomes.evaluatedAt, params.from));
+  }
+  if (params.to) {
+    conditions.push(lte(setupOutcomes.evaluatedAt, params.to));
+  }
+  if (params.profile) {
+    conditions.push(eq(setupOutcomes.profile, params.profile));
+  }
+  if (params.timeframe) {
+    conditions.push(eq(setupOutcomes.timeframe, params.timeframe));
+  }
+  if (params.assetId) {
+    conditions.push(eq(setupOutcomes.assetId, params.assetId));
+  }
+  if (params.playbookId) {
+    conditions.push(
+      or(eq(setupOutcomes.playbookId, params.playbookId), ilike(setupOutcomes.playbookId, `${params.playbookId}%`)),
+    );
+  }
+  if (params.engineVersion) {
+    conditions.push(eq(setupOutcomes.setupEngineVersion, params.engineVersion));
+  }
+  if (params.excludeInvalid) {
+    conditions.push(ne(setupOutcomes.outcomeStatus, "invalid"));
+  }
+
+  const whereClause = conditions.length ? and(...conditions) : undefined;
+  try {
+    const rows = await db
+      .select({
+        playbookId: setupOutcomes.playbookId,
+        setupEngineVersion: setupOutcomes.setupEngineVersion,
+        evaluationTimeframe: setupOutcomes.evaluationTimeframe,
+        total: sql<number>`count(*)`,
+        open: sql<number>`sum(case when ${setupOutcomes.outcomeStatus} = 'open' then 1 else 0 end)`,
+        hit_tp: sql<number>`sum(case when ${setupOutcomes.outcomeStatus} = 'hit_tp' then 1 else 0 end)`,
+        hit_sl: sql<number>`sum(case when ${setupOutcomes.outcomeStatus} = 'hit_sl' then 1 else 0 end)`,
+        expired: sql<number>`sum(case when ${setupOutcomes.outcomeStatus} = 'expired' then 1 else 0 end)`,
+        ambiguous: sql<number>`sum(case when ${setupOutcomes.outcomeStatus} = 'ambiguous' then 1 else 0 end)`,
+        invalid: sql<number>`sum(case when ${setupOutcomes.outcomeStatus} = 'invalid' then 1 else 0 end)`,
+      })
+      .from(setupOutcomes)
+      .where(whereClause)
+      .groupBy(setupOutcomes.playbookId, setupOutcomes.setupEngineVersion, setupOutcomes.evaluationTimeframe)
+      .orderBy(desc(sql<number>`count(*)`));
+    return rows;
   } catch (error) {
     if (isMissingTableError(error)) return [];
     throw error;

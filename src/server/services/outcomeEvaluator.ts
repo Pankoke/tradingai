@@ -1,6 +1,7 @@
 import type { Setup } from "@/src/lib/engine/types";
 import type { Candle } from "@/src/server/repositories/candleRepository";
 import { getCandlesForAsset } from "@/src/server/repositories/candleRepository";
+import { dedupeDailyCandles } from "@/src/server/services/helpers/dedupeDailyCandles";
 
 export type OutcomeStatus = "open" | "hit_tp" | "hit_sl" | "expired" | "ambiguous" | "invalid";
 
@@ -15,9 +16,9 @@ type SwingSetupContext = Pick<
   Setup,
   | "id"
   | "assetId"
+  | "timeframe"
   | "direction"
   | "profile"
-  | "timeframe"
   | "stopLoss"
   | "takeProfit"
   | "setupGrade"
@@ -59,6 +60,7 @@ export function computeSwingOutcome(params: {
   setup: SwingSetupContext;
   candles: Candle[];
   windowBars?: number;
+  evaluationTimeframe?: string | null;
 }): OutcomeComputationResult & { usedCandles: number } {
   const windowBars = params.windowBars ?? 10;
   const tp = parseZone(params.setup.takeProfit);
@@ -80,7 +82,9 @@ export function computeSwingOutcome(params: {
   const slValue = slThreshold;
 
   const ordered = [...params.candles].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-  const window = ordered.slice(0, windowBars);
+  const daily = (params.evaluationTimeframe ?? params.setup.timeframe ?? "").toUpperCase() === "1D";
+  const deduped = daily ? dedupeDailyCandles(ordered) : ordered;
+  const window = deduped.slice(0, windowBars);
   const usedCandles = window.length;
 
   // Guardrail: Preis-Skala prüfen (Entry/SL/TP vs Candle-Preis)
@@ -189,11 +193,12 @@ export async function evaluateSwingSetupOutcome(params: {
   }
 > {
   const windowBars = params.windowBars ?? 10;
+  const evaluationTimeframe = params.setup.timeframe ?? "1D";
   const from = new Date(params.snapshotTime.getTime() + 1); // exclude the setup candle
   const to = new Date(params.snapshotTime.getTime() + (windowBars + 3) * DAY_MS);
   const candles = await getCandlesForAsset({
     assetId: params.setup.assetId,
-    timeframe: "1D",
+    timeframe: evaluationTimeframe.toUpperCase(),
     from,
     to,
   });
@@ -202,6 +207,7 @@ export async function evaluateSwingSetupOutcome(params: {
     setup: params.setup,
     candles,
     windowBars,
+    evaluationTimeframe,
   });
 
   return {

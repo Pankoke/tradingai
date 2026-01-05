@@ -22,6 +22,8 @@ export const setupOutcomes = pgTable(
     outcomeAt: timestamp("outcome_at", { withTimezone: true }),
     barsToOutcome: integer("bars_to_outcome"),
     reason: text("reason"),
+    setupEngineVersion: text("setup_engine_version"),
+    evaluationTimeframe: text("evaluation_timeframe"),
   },
   (table) => ({
     setupSnapshotUnique: uniqueIndex("setup_outcomes_snapshot_setup_idx").on(table.snapshotId, table.setupId),

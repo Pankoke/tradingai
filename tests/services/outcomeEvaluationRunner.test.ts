@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockListSnapshotsPaged = vi.fn();
 const mockGetOutcomesBySetupIds = vi.fn();
+const mockGetOutcomesBySnapshotAndSetupIds = vi.fn();
 const mockUpsertOutcome = vi.fn();
 const mockEvaluate = vi.fn();
 
@@ -11,6 +12,7 @@ vi.mock("@/src/server/repositories/perceptionSnapshotRepository", () => ({
 
 vi.mock("@/src/server/repositories/setupOutcomeRepository", () => ({
   getOutcomesBySetupIds: (...args: unknown[]) => mockGetOutcomesBySetupIds(...args),
+  getOutcomesBySnapshotAndSetupIds: (...args: unknown[]) => mockGetOutcomesBySnapshotAndSetupIds(...args),
   upsertOutcome: (...args: unknown[]) => mockUpsertOutcome(...args),
 }));
 
@@ -25,7 +27,8 @@ describe("runOutcomeEvaluationBatch", () => {
       snapshots: [
         {
           id: "snap1",
-          snapshotTime: new Date("2025-01-01T00:00:00Z"),
+          snapshotTime: new Date("2026-01-05T00:00:00Z"),
+          version: "v-env",
           setups: [
             {
               id: "s1",
@@ -35,6 +38,7 @@ describe("runOutcomeEvaluationBatch", () => {
               timeframe: "1D",
               stopLoss: "90",
               takeProfit: "110",
+              entryZone: "100 - 105",
               setupGrade: "A",
               setupType: "pullback_continuation",
             },
@@ -44,6 +48,7 @@ describe("runOutcomeEvaluationBatch", () => {
       total: 1,
     });
     mockGetOutcomesBySetupIds.mockResolvedValue({});
+    mockGetOutcomesBySnapshotAndSetupIds.mockResolvedValue({});
     mockUpsertOutcome.mockResolvedValue(undefined);
     mockEvaluate.mockResolvedValue({
       outcomeStatus: "hit_tp",
@@ -64,8 +69,8 @@ describe("runOutcomeEvaluationBatch", () => {
   });
 
   it("skips closed outcomes", async () => {
-    mockGetOutcomesBySetupIds.mockResolvedValue({
-      s1: { outcomeStatus: "hit_tp" },
+    mockGetOutcomesBySnapshotAndSetupIds.mockResolvedValue({
+      "snap1|s1": { outcomeStatus: "hit_tp" },
     });
     const { runOutcomeEvaluationBatch } = await import("@/src/server/services/outcomeEvaluationRunner");
     const result = await runOutcomeEvaluationBatch({ dryRun: false });
@@ -93,5 +98,15 @@ describe("runOutcomeEvaluationBatch", () => {
       }),
     );
     expect(result.metrics.evaluated).toBe(1);
+  });
+
+  it("passes snapshot version into outcome engine version", async () => {
+    const { runOutcomeEvaluationBatch } = await import("@/src/server/services/outcomeEvaluationRunner");
+    await runOutcomeEvaluationBatch({ dryRun: false });
+    expect(mockUpsertOutcome).toHaveBeenCalledWith(
+      expect.objectContaining({
+        setupEngineVersion: "v-env",
+      }),
+    );
   });
 });

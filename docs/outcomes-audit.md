@@ -26,8 +26,12 @@
    - Nach Fensterende ohne Treffer → **expired** (outcomeAt null, reason null).
 
 4) **Persistierte Felder (setup_outcomes)**  
-   - Kern: `setupId`, `snapshotId`, `assetId`, `profile`, `timeframe`, `direction`, `playbookId`, `setupGrade/Type`, `evaluatedAt`, `windowBars`, `outcomeStatus`, `outcomeAt`, `barsToOutcome`, `reason`.  
+   - Kern: `setupId`, `snapshotId`, `assetId`, `profile`, `timeframe`, `direction`, `playbookId`, `setupGrade/Type`, `evaluatedAt`, `windowBars`, `outcomeStatus`, `outcomeAt`, `barsToOutcome`, `reason`, `setupEngineVersion`.  
    - Indizes: `snapshot_id+setup_id` (unique), `asset_id+evaluated_at`, `setup_grade+outcome_status`.
+
+5) **Cohort-Policy (Model A)**  
+   - Calibration/Admin-Analysen nutzen standardmäßig nur Outcomes mit `evaluatedAt >= 2026-01-01T00:00:00Z` (env `OUTCOMES_VALID_FROM`) und `outcomeStatus != invalid`.  
+   - Engine-Version wird pro Outcome gespeichert (`setupEngineVersion`) und im Debug-Reason (`engine=<...>`) mitgeführt, damit Versionen vergleichbar bleiben.
 
 ## Mögliche Fehlerquellen / Risiken
 - **Ambiguous Candle**: TP & SL im selben Bar → immer `ambiguous`, keine Reihenfolge nach Open/Close.  

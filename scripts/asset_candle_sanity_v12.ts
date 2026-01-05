@@ -78,6 +78,13 @@ async function main(): Promise<void> {
     to,
   });
   const window = candles.slice(0, Math.min(args.limit, candles.length));
+  const perDay = candles.reduce<Record<string, number>>((acc, c) => {
+    const key = `${c.timestamp.getUTCFullYear()}-${(c.timestamp.getUTCMonth() + 1)
+      .toString()
+      .padStart(2, "0")}-${c.timestamp.getUTCDate().toString().padStart(2, "0")}`;
+    acc[key] = (acc[key] ?? 0) + 1;
+    return acc;
+  }, {});
   const closes = window.map((c) => Number(c.close)).filter((v) => Number.isFinite(v));
   const highs = window.map((c) => Number(c.high)).filter((v) => Number.isFinite(v));
   const lows = window.map((c) => Number(c.low)).filter((v) => Number.isFinite(v));
@@ -104,6 +111,10 @@ async function main(): Promise<void> {
       last: window[0] ?? null,
       latestInDb: latest ?? null,
     },
+    perDay: Object.entries(perDay)
+      .map(([day, count]) => ({ day, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 15),
   };
 
   console.log(format("%j", summary));
@@ -115,6 +126,11 @@ async function main(): Promise<void> {
         2,
       )} max=${summary.stats.mid.max.toFixed(2)}`,
     );
+  }
+  const noisy = summary.perDay.filter((d) => d.count > 1);
+  if (noisy.length) {
+    console.log("Days with >1 candle (timeframe=1D):");
+    noisy.forEach((d) => console.log(` - ${d.day}: ${d.count}`));
   }
 }
 

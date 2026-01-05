@@ -37,7 +37,7 @@ type BuildParams = {
   snapshotId?: string;
 };
 
-const SNAPSHOT_VERSION = "v1.0.0";
+const SNAPSHOT_VERSION = process.env.SETUP_ENGINE_VERSION ?? "v1.0.0";
 const MAX_LLM_SUMMARIES_PER_SNAPSHOT = 5;
 
 function deriveSnapshotLabel(date: Date): "morning" | "us_open" | "eod" | null {

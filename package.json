@@ -15,6 +15,9 @@
     "backfill:swing": "ts-node --project scripts/tsconfig.scripts.json -r dotenv/config -r tsconfig-paths/register src/scripts/backfillSwingSnapshots.ts",
     "outcomes:audit": "ts-node --project scripts/tsconfig.scripts.json -r dotenv/config -r tsconfig-paths/register scripts/outcome_audit_v11.ts",
     "outcomes:trace": "ts-node --project scripts/tsconfig.scripts.json -r dotenv/config -r tsconfig-paths/register scripts/outcome_trace_v11.ts",
+    "outcomes:run": "ts-node --project scripts/tsconfig.scripts.json -r dotenv/config -r tsconfig-paths/register scripts/outcomes_run_v13.ts",
+    "outcomes:backfill-engine": "ts-node --project scripts/tsconfig.scripts.json -r dotenv/config -r tsconfig-paths/register scripts/outcomes_backfill_engine_v15.ts",
+    "outcomes:purge": "ts-node --project scripts/tsconfig.scripts.json -r dotenv/config -r tsconfig-paths/register scripts/outcomes_purge_v16.ts",
     "assets:sanity": "ts-node --project scripts/tsconfig.scripts.json -r dotenv/config -r tsconfig-paths/register scripts/asset_candle_sanity_v12.ts",
     "setup:trace": "ts-node --project scripts/tsconfig.scripts.json -r dotenv/config -r tsconfig-paths/register scripts/setup_trace_v12.ts"
   },
