@@ -1,5 +1,5 @@
 import { getAssetById } from "@/src/server/repositories/assetRepository";
-import { getSnapshotById } from "@/src/server/repositories/perceptionSnapshotRepository";
+import { getSnapshotById, listSnapshotItems } from "@/src/server/repositories/perceptionSnapshotRepository";
 import {
   listOutcomesForWindow,
   aggregateOutcomes,
@@ -19,9 +19,18 @@ export type OutcomeStats = {
   expiredShare: number | null;
   ambiguousShare: number | null;
   invalidRate: number | null;
+  noTradeReasonCounts?: Record<string, number>;
   recent: Array<
     SetupOutcomeRow & {
       assetSymbol?: string;
+      biasScoreAtTime?: number | null;
+      scoreTrend?: number | null;
+      scoreTotal?: number | null;
+      confidence?: number | null;
+      riskReward?: unknown;
+      direction?: string | null;
+      gradeDebugReason?: string | null;
+      gradeRationale?: string[] | null;
     }
   >;
 };
@@ -67,6 +76,7 @@ export async function loadOutcomeStats(params: { days?: number; assetId?: string
 
   const totals: Record<OutcomeStatus, number> = initBucket();
   const byGrade: Record<string, Record<OutcomeStatus, number>> = {};
+  const noTradeReasonCounts: Record<string, number> = {};
 
   for (const row of cohort) {
     const grade = row.setupGrade ?? "unknown";
@@ -75,6 +85,9 @@ export async function loadOutcomeStats(params: { days?: number; assetId?: string
     byGrade[grade] = bucket;
     bucket[status] = (bucket[status] ?? 0) + 1;
     totals[status] = (totals[status] ?? 0) + 1;
+    if (grade === "NO_TRADE" && row.noTradeReason) {
+      noTradeReasonCounts[row.noTradeReason] = (noTradeReasonCounts[row.noTradeReason] ?? 0) + 1;
+    }
   }
 
   const closed = totals.hit_tp + totals.hit_sl;
@@ -93,10 +106,33 @@ export async function loadOutcomeStats(params: { days?: number; assetId?: string
     }
   }
 
-  const recent = cohort.slice(0, 10).map((row) => ({
-    ...row,
-    assetSymbol: assetMap[row.assetId],
-  }));
+  const recentBase = cohort.slice(0, 10);
+  const snapshotIds = Array.from(new Set(recentBase.map((r) => r.snapshotId)));
+  const snapshotItemsBySnapshot: Record<string, Map<string, unknown>> = {};
+  for (const snapId of snapshotIds) {
+    const items = await listSnapshotItems(snapId);
+    const map = new Map<string, unknown>();
+    items.forEach((item) => map.set(item.setupId, item));
+    snapshotItemsBySnapshot[snapId] = map;
+  }
+
+  const recent = recentBase.map((row) => {
+    const item = snapshotItemsBySnapshot[row.snapshotId]?.get(row.setupId) as
+      | (typeof import("../db/schema/perceptionSnapshotItems"))["perceptionSnapshotItems"]["$inferSelect"]
+      | undefined;
+    return {
+      ...row,
+      assetSymbol: assetMap[row.assetId],
+      biasScoreAtTime: item?.biasScoreAtTime ?? item?.biasScore ?? null,
+      scoreTrend: item?.scoreTrend ?? null,
+      scoreTotal: item?.scoreTotal ?? null,
+      confidence: item?.confidence ?? null,
+      riskReward: (row as { riskReward?: unknown }).riskReward ?? item?.riskReward ?? null,
+      direction: row.direction,
+      gradeDebugReason: row.gradeDebugReason ?? null,
+      gradeRationale: row.gradeRationale ?? null,
+    };
+  });
 
   return {
     totals,
@@ -105,6 +141,7 @@ export async function loadOutcomeStats(params: { days?: number; assetId?: string
     expiredShare,
     ambiguousShare,
     invalidRate,
+    noTradeReasonCounts: Object.keys(noTradeReasonCounts).length ? noTradeReasonCounts : undefined,
     recent,
   };
 }

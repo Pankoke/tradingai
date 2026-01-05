@@ -10,9 +10,9 @@ vi.mock("@/src/server/repositories/setupOutcomeRepository", () => {
   };
   return {
     listOutcomesForWindow: async () => [
-      { ...base, setupId: "s1", setupGrade: "NO_TRADE", noTradeReason: "Bias too weak (<80)", biasScore: 70, outcomeStatus: "open" },
+      { ...base, setupId: "s1", setupGrade: "NO_TRADE", noTradeReason: "Bias too weak (<70)", biasScore: 70, outcomeStatus: "open" },
       { ...base, setupId: "s2", setupGrade: "NO_TRADE", noTradeReason: "Trend weak (<50)", trendScore: 40, outcomeStatus: "open" },
-      { ...base, setupId: "s3", setupGrade: "NO_TRADE", noTradeReason: "Bias too weak (<80)", biasScore: 75, outcomeStatus: "open" },
+      { ...base, setupId: "s3", setupGrade: "NO_TRADE", noTradeReason: "Bias too weak (<70)", biasScore: 75, outcomeStatus: "open" },
       { ...base, setupId: "s4", setupGrade: "A", outcomeStatus: "hit_tp" },
     ],
   };

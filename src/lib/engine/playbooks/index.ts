@@ -53,7 +53,7 @@ const SWING_EVENT_WINDOW_MINUTES = 48 * 60;
 const ORDERFLOW_NEGATIVE_THRESHOLD = 30;
 const SIGNAL_QUALITY_FLOOR = 40;
 const SIGNAL_QUALITY_BASE = 55;
-const BIAS_MIN = 80;
+const BIAS_MIN = 70;
 const TREND_MIN = 50;
 const SOFT_TREND_BIAS_DELTA = 20;
 const GOLD_PLAYBOOK_ID = "gold-swing-v0.2";
@@ -207,7 +207,7 @@ function evaluateGoldSwing(context: PlaybookContext): PlaybookEvaluation {
   const { rings, signalQuality } = context;
 
   const baseFailures: Array<{ key: string; reason: string }> = [];
-  if (!flags.biasOk) baseFailures.push({ key: "bias", reason: "Bias too weak (<80)" });
+  if (!flags.biasOk) baseFailures.push({ key: "bias", reason: "Bias too weak (<70)" });
   if (!flags.trendOk) baseFailures.push({ key: "trend", reason: "Trend too weak (<50)" });
   if (!flags.signalQualityOk) baseFailures.push({ key: "signalQuality", reason: "Signal quality too low (<55)" });
   if (!flags.levelsOk) baseFailures.push({ key: "levels", reason: "Levels missing/invalid" });
@@ -246,7 +246,7 @@ function evaluateGoldSwing(context: PlaybookContext): PlaybookEvaluation {
   if (flags.tbSoftDivergence && !flags.tbConflictHard) softNegatives.push("trend_bias_divergence");
   if (flags.sentimentWeak) softNegatives.push("sentiment_weak");
 
-  rationale.push("Bias strong (>=80)");
+  rationale.push("Bias strong (>=70)");
   rationale.push("Trend supportive (>=50)");
   rationale.push("Signal quality ok (>=55)");
   rationale.push("Levels present");

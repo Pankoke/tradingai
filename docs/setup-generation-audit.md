@@ -30,7 +30,7 @@
 
 3) **Grade/NO_TRADE (Gold-Swing v0.2)** (`src/lib/engine/playbooks/index.ts`, evaluateGoldSwing)
    - Basis-Gates (NO_TRADE, erste Verletzung gewinnt):
-     - biasScore < 80 → NO_TRADE ("Bias too weak (<80)")
+     - biasScore < 70 → NO_TRADE ("Bias too weak (<70)")
      - trendScore < 50 → NO_TRADE
      - signalQuality < 55 → NO_TRADE
      - fehlende Levels/RiskReward → NO_TRADE
