@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Locale } from "@/i18n";
 import { loadOutcomeStats } from "@/src/server/admin/outcomeService";
+import { InfoTooltip } from "@/src/components/admin/InfoTooltip";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -25,6 +26,10 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
         <p className="text-sm text-slate-300">
           Read-only Outcome Tracking fǬr SWING / 1D. Fenster: letzte {days} Tage{assetId ? `, Asset: ${assetId}` : ""}.
         </p>
+        <div className="rounded-md bg-slate-900/60 p-3 text-xs text-slate-200">
+          KPIs beziehen sich auf handelbare Setups (Grade A/B). NO_TRADE ist eine bewusste Filter-Entscheidung und kein
+          negatives Outcome. Win-Rate misst nur TP vs SL, Expired/Open zeigen Reife des Beobachtungsfensters.
+        </div>
         <div className="flex flex-wrap gap-2 text-xs">
           {ALLOWED_DAYS.map((value) => (
             <Link
@@ -95,10 +100,51 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
         </Card>
         <Card title="Rates">
           <div className="space-y-2 text-sm text-slate-200">
-            <Metric label="Win-Rate (TP vs SL)" value={formatRate(stats.winRate)} />
-            <Metric label="Expired Anteil" value={formatRate(stats.expiredShare)} />
-            <Metric label="Ambiguous Anteil" value={formatRate(stats.ambiguousShare)} />
-            <Metric label="Samples" value={`${Object.values(stats.totals).reduce((a, b) => a + b, 0)}`} />
+            <Metric
+              label={
+                <div className="flex items-center gap-1">
+                  <span>Win-Rate (TP vs SL)</span>
+                  <InfoTooltip
+                    label="Win-Rate"
+                    text="TP / (TP+SL) für Grade A/B. OPEN, EXPIRED, AMBIGUOUS und NO_TRADE sind nicht enthalten."
+                  />
+                </div>
+              }
+              value={formatRate(stats.winRate)}
+            />
+            <Metric
+              label={
+                <div className="flex items-center gap-1">
+                  <span>Expired Anteil</span>
+                  <InfoTooltip
+                    label="Expired"
+                    text="Expired / (TP+SL+Expired). Misst Timing-Qualität, kein Signalfehler."
+                  />
+                </div>
+              }
+              value={formatRate(stats.expiredShare)}
+            />
+            <Metric
+              label={
+                <div className="flex items-center gap-1">
+                  <span>Ambiguous Anteil</span>
+                  <InfoTooltip label="Ambiguous" text="TP und SL im selben Candle. Zählt nicht in die Win-Rate." />
+                </div>
+              }
+              value={formatRate(stats.ambiguousShare)}
+            />
+            <Metric
+              label={
+                <div className="flex items-center gap-1">
+                  <span>Samples</span>
+                  <InfoTooltip
+                    label="Samples"
+                    text="Anzahl Outcomes im Fenster. Beinhaltet A/B-Setups; NO_TRADE wird separat im Grade-Bucket gezeigt."
+                  />
+                </div>
+              }
+              value={`${Object.values(stats.totals).reduce((a, b) => a + b, 0)}`}
+            />
           </div>
         </Card>
       </section>
@@ -159,7 +205,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({ label, value }: { label: React.ReactNode; value: string }) {
   return (
     <div className="flex justify-between rounded bg-slate-900/60 px-3 py-2">
       <span className="text-slate-300">{label}</span>

@@ -512,6 +512,12 @@ const content: Record<Locale, PageContent> = {
         question: "Was ist 'stale data'?",
         answer: "Daten älter als die definierte Frische-Grenze. Sie werden markiert und schwächen Confidence.",
       },
+      {
+        id: "faq-9",
+        question: "Wie messen wir Performance?",
+        answer:
+          "Wir werten nur handelbare Setups (Grade A/B) aus. NO_TRADE ist eine bewusste Entscheidung und zählt nicht als Verlust. Win-Rate allein genügt nicht: Expired/Open zeigen, ob das Beobachtungsfenster lang genug war.",
+      },
     ],
     transparencyAnchorLabel: "Zur Transparenz-Sektion springen",
   },
@@ -889,6 +895,12 @@ const content: Record<Locale, PageContent> = {
         id: "faq-8",
         question: "What counts as stale data?",
         answer: "Data older than its freshness window. It is flagged and lowers confidence.",
+      },
+      {
+        id: "faq-9",
+        question: "How do you measure performance?",
+        answer:
+          "Only tradable setups (Grades A/B) are counted in win rate. NO_TRADE is a deliberate filter, not a loss. Win rate alone is not enough: expired/open show whether the observation window was long enough.",
       },
     ],
     transparencyAnchorLabel: "Jump to transparency section",
