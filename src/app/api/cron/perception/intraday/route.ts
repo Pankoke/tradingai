@@ -3,11 +3,14 @@ import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 import { buildAndStorePerceptionSnapshot } from "@/src/features/perception/build/buildSetups";
 import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
 import { logger } from "@/src/lib/logger";
+import { db } from "@/src/server/db/db";
+import { sql } from "drizzle-orm";
 
 const cronLogger = logger.child({ route: "cron-perception-intraday" });
 const CRON_SECRET = process.env.CRON_SECRET;
 const AUTH_HEADER = "authorization";
 const ALT_HEADER = "x-cron-secret";
+const SNAPSHOT_LOCK_KEY = BigInt(917337);
 
 export async function POST(request: NextRequest): Promise<Response> {
   if (!CRON_SECRET) {
@@ -18,6 +21,15 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   const startedAt = Date.now();
+  const lockResult = await db.execute<{ locked: boolean }>(
+    sql`select pg_try_advisory_lock(${SNAPSHOT_LOCK_KEY}) as locked`,
+  );
+  const locked = Boolean(lockResult[0]?.locked);
+  if (!locked) {
+    cronLogger.warn("Skipping intraday perception build due to existing lock");
+    return respondOk({ skipped: true, message: "skipped (already running)" });
+  }
+
   try {
     const snapshot = await buildAndStorePerceptionSnapshot({
       source: "cron_intraday",
@@ -63,6 +75,12 @@ export async function POST(request: NextRequest): Promise<Response> {
       error: message,
     });
     return respondFail("INTERNAL_ERROR", message, 500);
+  } finally {
+    try {
+      await db.execute(sql`select pg_advisory_unlock(${SNAPSHOT_LOCK_KEY})`);
+    } catch (unlockError) {
+      cronLogger.warn("Failed to release advisory lock", { error: unlockError instanceof Error ? unlockError.message : unlockError });
+    }
   }
 }
 

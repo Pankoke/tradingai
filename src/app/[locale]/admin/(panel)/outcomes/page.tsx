@@ -109,7 +109,7 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
           <table className="min-w-full divide-y divide-slate-800 text-sm text-slate-200">
             <thead className="bg-slate-900/60">
               <tr>
-                {["Evaluated", "Asset", "Grade", "Type", "Outcome", "Bars"].map((h) => (
+                {["Evaluated", "Asset", "Snapshot", "Grade", "Type", "Outcome", "Bars"].map((h) => (
                   <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide text-slate-400">
                     {h}
                   </th>
@@ -123,6 +123,19 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
                     {row.evaluatedAt ? row.evaluatedAt.toISOString().slice(0, 19).replace("T", " ") : "-"}
                   </td>
                   <td className="px-3 py-2">{row.assetSymbol ?? row.assetId}</td>
+                  <td className="px-3 py-2 text-xs text-slate-300">
+                    <div className="font-mono">
+                      {row.snapshotShortId ?? row.snapshotId.slice(0, 6)}
+                      <span className="text-slate-500">…</span>
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                      {row.snapshotTime
+                        ? row.snapshotTime.toISOString().slice(0, 19).replace("T", " ")
+                        : row.snapshotCreatedAt
+                          ? row.snapshotCreatedAt.toISOString().slice(0, 19).replace("T", " ")
+                          : "-"}
+                    </div>
+                  </td>
                   <td className="px-3 py-2 font-semibold">{row.setupGrade ?? "-"}</td>
                   <td className="px-3 py-2">{row.setupType ?? "-"}</td>
                   <td className="px-3 py-2 uppercase font-semibold">{row.outcomeStatus}</td>

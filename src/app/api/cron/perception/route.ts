@@ -4,6 +4,7 @@ import { requestSnapshotBuild } from "@/src/server/perception/snapshotBuildServi
 import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
 import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 import { logger } from "@/src/lib/logger";
+import { SnapshotBuildInProgressError } from "@/src/server/perception/snapshotBuildService";
 
 const cronLogger = logger.child({ route: "cron-perception" });
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -54,6 +55,13 @@ export async function GET(request: NextRequest): Promise<Response> {
       totalSetups: setups.length,
     });
   } catch (error) {
+    if (error instanceof SnapshotBuildInProgressError) {
+      cronLogger.warn("Snapshot build skipped due to existing lock", { source: error.source });
+      return respondOk<CronSuccessBody>({
+        generatedAt: new Date().toISOString(),
+        totalSetups: 0,
+      });
+    }
     const message = error instanceof Error ? error.message : "unknown error";
     cronLogger.error("Failed to build perception snapshot", { error: message });
     await createAuditRun({

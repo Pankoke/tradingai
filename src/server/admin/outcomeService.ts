@@ -31,6 +31,10 @@ export type OutcomeStats = {
       direction?: string | null;
       gradeDebugReason?: string | null;
       gradeRationale?: string[] | null;
+      snapshotTime?: Date | null;
+      snapshotCreatedAt?: Date | null;
+      snapshotShortId?: string;
+      snapshotVersion?: string | null;
     }
   >;
 };
@@ -106,11 +110,26 @@ export async function loadOutcomeStats(params: { days?: number; assetId?: string
   const recentBase = cohort.slice(0, 10);
   const snapshotIds = Array.from(new Set(recentBase.map((r) => r.snapshotId)));
   const snapshotItemsBySnapshot: Record<string, Map<string, unknown>> = {};
+  const snapshotMeta: Record<
+    string,
+    { snapshotTime: Date | null; createdAt: Date | null; version: string | null; shortId: string }
+  > = {};
   for (const snapId of snapshotIds) {
     const items = await listSnapshotItems(snapId);
     const map = new Map<string, unknown>();
     items.forEach((item) => map.set(item.setupId, item));
     snapshotItemsBySnapshot[snapId] = map;
+    const snap = await getSnapshotById(snapId);
+    if (snap) {
+      snapshotMeta[snapId] = {
+        snapshotTime: snap.snapshotTime ?? null,
+        createdAt: (snap as { createdAt?: Date | null }).createdAt ?? null,
+        version: snap.version ?? null,
+        shortId: snap.id.slice(0, 6),
+      };
+    } else {
+      snapshotMeta[snapId] = { snapshotTime: null, createdAt: null, version: null, shortId: snapId.slice(0, 6) };
+    }
   }
 
   const recent = recentBase.map((row) => {
@@ -128,6 +147,10 @@ export async function loadOutcomeStats(params: { days?: number; assetId?: string
       direction: row.direction,
       gradeDebugReason: row.gradeDebugReason ?? null,
       gradeRationale: row.gradeRationale ?? null,
+      snapshotTime: snapshotMeta[row.snapshotId]?.snapshotTime ?? null,
+      snapshotCreatedAt: snapshotMeta[row.snapshotId]?.createdAt ?? null,
+      snapshotShortId: snapshotMeta[row.snapshotId]?.shortId,
+      snapshotVersion: snapshotMeta[row.snapshotId]?.version ?? null,
     };
   });
 
