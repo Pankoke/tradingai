@@ -11,6 +11,7 @@ export type CalibrationFilters = {
 export type CalibrationStats = {
   gradeCounts: Record<string, number>;
   gradeByDay: Array<{ day: string; grades: Record<string, number> }>;
+  typeGradeCounts: Array<{ setupType: string; grades: Record<string, number> }>;
   averages: {
     trendScore: number | null;
     biasScore: number | null;
@@ -30,6 +31,17 @@ export type CalibrationStats = {
   eventModifierCounts: Record<string, number>;
   missingSentimentShare: number;
   missingOrderflowShare: number;
+  noTradeReasons?: Array<{ reason: string; count: number }>;
+  noTradeByBiasBin?: Array<{ bin: number; reasons: Array<{ reason: string; count: number }> }>;
+  noTradeByTrendBin?: Array<{ bin: number; reasons: Array<{ reason: string; count: number }> }>;
+  scoreSummaryByGrade: Array<{
+    grade: string;
+    count: number;
+    bias: { p10: number | null; p50: number | null; p90: number | null };
+    trend: { p10: number | null; p50: number | null; p90: number | null };
+    scoreTotal: { p50: number | null };
+    confidence: { p50: number | null };
+  }>;
   recent: Array<Setup>;
 };
 
@@ -75,6 +87,19 @@ export async function loadCalibrationStats(filters: CalibrationFilters): Promise
   const eventCounts: Record<string, number> = {};
   let missingSentiment = 0;
   let missingOrderflow = 0;
+  const typeGradeMap = new Map<string, Record<string, number>>();
+  const noTradeReasons: Record<string, number> = {};
+  const biasBinReasons = new Map<number, Record<string, number>>();
+  const trendBinReasons = new Map<number, Record<string, number>>();
+  const scoreByGrade: Record<
+    string,
+    {
+      bias: number[];
+      trend: number[];
+      scoreTotal: number[];
+      confidence: number[];
+    }
+  > = {};
 
   const collectNums = {
     trendScore: [] as number[],
@@ -106,6 +131,36 @@ export async function loadCalibrationStats(filters: CalibrationFilters): Promise
 
     if (!isNumber(setup.rings?.sentimentScore)) missingSentiment += 1;
     if (!isNumber(setup.rings?.orderflowScore)) missingOrderflow += 1;
+
+    const typeKey = normalizeType(setup.setupType);
+    const tg = typeGradeMap.get(typeKey) ?? {};
+    tg[grade] = (tg[grade] ?? 0) + 1;
+    typeGradeMap.set(typeKey, tg);
+
+    const gradeScores =
+      scoreByGrade[grade] ?? { bias: [] as number[], trend: [] as number[], scoreTotal: [] as number[], confidence: [] as number[] };
+    if (isNumber(setup.rings?.biasScore)) gradeScores.bias.push(setup.rings?.biasScore as number);
+    if (isNumber(setup.rings?.trendScore)) gradeScores.trend.push(setup.rings?.trendScore as number);
+    if (isNumber((setup as { scoreTotal?: number }).scoreTotal))
+      gradeScores.scoreTotal.push((setup as { scoreTotal?: number }).scoreTotal as number);
+    if (isNumber(setup.confidence)) gradeScores.confidence.push(setup.confidence as number);
+    scoreByGrade[grade] = gradeScores;
+
+    if (grade === "NO_TRADE" && setup.noTradeReason) {
+      noTradeReasons[setup.noTradeReason] = (noTradeReasons[setup.noTradeReason] ?? 0) + 1;
+      const biasBin = bin10(setup.rings?.biasScore);
+      const trendBin = bin10(setup.rings?.trendScore);
+      if (biasBin !== null) {
+        const bucket = biasBinReasons.get(biasBin) ?? {};
+        bucket[setup.noTradeReason] = (bucket[setup.noTradeReason] ?? 0) + 1;
+        biasBinReasons.set(biasBin, bucket);
+      }
+      if (trendBin !== null) {
+        const bucket = trendBinReasons.get(trendBin) ?? {};
+        bucket[setup.noTradeReason] = (bucket[setup.noTradeReason] ?? 0) + 1;
+        trendBinReasons.set(trendBin, bucket);
+      }
+    }
   }
 
   const total = setups.length || 1;
@@ -136,6 +191,50 @@ export async function loadCalibrationStats(filters: CalibrationFilters): Promise
     eventModifierCounts: eventCounts,
     missingSentimentShare: missingSentiment / total,
     missingOrderflowShare: missingOrderflow / total,
+    typeGradeCounts: Array.from(typeGradeMap.entries()).map(([setupType, grades]) => ({ setupType, grades })),
+    noTradeReasons: Object.keys(noTradeReasons).length
+      ? Object.entries(noTradeReasons)
+          .sort((a, b) => b[1] - a[1])
+          .map(([reason, count]) => ({ reason, count }))
+      : undefined,
+    noTradeByBiasBin: biasBinReasons.size
+      ? Array.from(biasBinReasons.entries())
+          .sort((a, b) => a[0] - b[0])
+          .map(([bin, reasons]) => ({
+            bin,
+            reasons: Object.entries(reasons)
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 3)
+              .map(([reason, count]) => ({ reason, count })),
+          }))
+      : undefined,
+    noTradeByTrendBin: trendBinReasons.size
+      ? Array.from(trendBinReasons.entries())
+          .sort((a, b) => a[0] - b[0])
+          .map(([bin, reasons]) => ({
+            bin,
+            reasons: Object.entries(reasons)
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 3)
+              .map(([reason, count]) => ({ reason, count })),
+          }))
+      : undefined,
+    scoreSummaryByGrade: Object.entries(scoreByGrade).map(([grade, bucket]) => ({
+      grade,
+      count: (gradeCounts[grade] ?? 0) as number,
+      bias: {
+        p10: percentile(bucket.bias, 0.1),
+        p50: percentile(bucket.bias, 0.5),
+        p90: percentile(bucket.bias, 0.9),
+      },
+      trend: {
+        p10: percentile(bucket.trend, 0.1),
+        p50: percentile(bucket.trend, 0.5),
+        p90: percentile(bucket.trend, 0.9),
+      },
+      scoreTotal: { p50: percentile(bucket.scoreTotal, 0.5) },
+      confidence: { p50: percentile(bucket.confidence, 0.5) },
+    })),
     recent: setups
       .slice()
       .sort((a, b) => (b.snapshotCreatedAt ?? "").localeCompare(a.snapshotCreatedAt ?? ""))
@@ -180,4 +279,26 @@ function median(values: number[]): number | null {
     return Math.round(((sorted[mid - 1] + sorted[mid]) / 2) * 100) / 100;
   }
   return sorted[mid];
+}
+
+function percentile(values: number[], p: number): number | null {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const idx = (sorted.length - 1) * p;
+  const lo = Math.floor(idx);
+  const hi = Math.ceil(idx);
+  if (lo === hi) return sorted[lo];
+  const weight = idx - lo;
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * weight;
+}
+
+function normalizeType(type?: string | null): string {
+  if (!type || type.trim().length === 0) return "no_regime_alignment";
+  if (type.toLowerCase() === "unknown") return "no_regime_alignment";
+  return type;
+}
+
+function bin10(value?: number | null): number | null {
+  if (!isNumber(value)) return null;
+  return Math.floor((value as number) / 10) * 10;
 }

@@ -115,6 +115,127 @@ export default async function PlaybookCalibrationPage({ params, searchParams }: 
         </Card>
       </section>
 
+      <section className="grid gap-4 md:grid-cols-2">
+        <Card title="Type vs Grade">
+          {stats.typeGradeCounts.length === 0 ? (
+            <div className="text-sm text-slate-200">No data in selected window.</div>
+          ) : (
+            <div className="space-y-2 text-sm text-slate-200">
+              {stats.typeGradeCounts.map((row) => (
+                <div key={row.setupType} className="rounded bg-slate-900/60 px-3 py-2">
+                  <div className="text-xs uppercase text-slate-400">{row.setupType}</div>
+                  <div className="flex flex-wrap gap-2 text-xs text-slate-300">
+                    {Object.entries(row.grades).map(([g, c]) => (
+                      <span key={g} className="rounded bg-slate-800 px-2 py-1">
+                        {g}: {c}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+        <Card title="Top NO_TRADE Reasons">
+          {stats.noTradeReasons ? (
+            <div className="space-y-2 text-sm text-slate-200">
+              {stats.noTradeReasons.slice(0, 10).map((r) => (
+                <div key={r.reason} className="flex justify-between rounded bg-slate-900/60 px-3 py-2">
+                  <span className="text-slate-300">{r.reason}</span>
+                  <span className="font-semibold text-white">{r.count}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm text-slate-200">No NO_TRADE reasons in window.</div>
+          )}
+        </Card>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2">
+        <Card title="NO_TRADE by Bias (10er Bins)">
+          {stats.noTradeByBiasBin ? (
+            <div className="space-y-2 text-sm text-slate-200">
+              {stats.noTradeByBiasBin.map((bin) => (
+                <div key={bin.bin} className="rounded bg-slate-900/60 px-3 py-2">
+                  <div className="text-xs uppercase text-slate-400">Bias {bin.bin}–{bin.bin + 9}</div>
+                  <div className="space-y-1 text-xs text-slate-300">
+                    {bin.reasons.map((r) => (
+                      <div key={r.reason} className="flex justify-between">
+                        <span>{r.reason}</span>
+                        <span className="font-semibold text-white">{r.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm text-slate-200">Keine NO_TRADE Daten fǬr Bias-Bins.</div>
+          )}
+        </Card>
+        <Card title="NO_TRADE by Trend (10er Bins)">
+          {stats.noTradeByTrendBin ? (
+            <div className="space-y-2 text-sm text-slate-200">
+              {stats.noTradeByTrendBin.map((bin) => (
+                <div key={bin.bin} className="rounded bg-slate-900/60 px-3 py-2">
+                  <div className="text-xs uppercase text-slate-400">Trend {bin.bin}–{bin.bin + 9}</div>
+                  <div className="space-y-1 text-xs text-slate-300">
+                    {bin.reasons.map((r) => (
+                      <div key={r.reason} className="flex justify-between">
+                        <span>{r.reason}</span>
+                        <span className="font-semibold text-white">{r.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm text-slate-200">Keine NO_TRADE Daten fǬr Trend-Bins.</div>
+          )}
+        </Card>
+      </section>
+
+      <section className="space-y-3 rounded-lg border border-slate-800 bg-slate-900/60 p-4 shadow-sm">
+        <h2 className="text-sm font-semibold text-white">Score Summary by Grade</h2>
+        {stats.scoreSummaryByGrade.length === 0 ? (
+          <div className="text-sm text-slate-200">Keine Daten fǬr die aktuellen Filter.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-800 text-sm text-slate-200">
+              <thead className="bg-slate-900/60">
+                <tr>
+                  {["Grade", "Count", "Bias p10/p50/p90", "Trend p10/p50/p90", "ScoreTotal p50", "Confidence p50"].map(
+                    (h) => (
+                      <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide text-slate-400">
+                        {h}
+                      </th>
+                    ),
+                  )}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {stats.scoreSummaryByGrade.map((row) => (
+                  <tr key={row.grade} className="hover:bg-slate-900/50">
+                    <td className="px-3 py-2 font-semibold">{row.grade}</td>
+                    <td className="px-3 py-2">{row.count}</td>
+                    <td className="px-3 py-2">
+                      {fmt(row.bias.p10)}/{fmt(row.bias.p50)}/{fmt(row.bias.p90)}
+                    </td>
+                    <td className="px-3 py-2">
+                      {fmt(row.trend.p10)}/{fmt(row.trend.p50)}/{fmt(row.trend.p90)}
+                    </td>
+                    <td className="px-3 py-2">{fmt(row.scoreTotal.p50)}</td>
+                    <td className="px-3 py-2">{fmt(row.confidence.p50)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-white">Recent graded setups</h2>
         {stats.recent.length === 0 ? (
@@ -177,4 +298,9 @@ function MetricList({ stats }: { stats: Record<string, number | null> }) {
       ))}
     </div>
   );
+}
+
+function fmt(value: number | null): string {
+  if (value === null || Number.isNaN(value)) return "-";
+  return `${Math.round(value * 100) / 100}`;
 }
