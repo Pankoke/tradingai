@@ -13,7 +13,7 @@ export async function syncDailyCandlesForAsset(params: {
   from: Date;
   to: Date;
   timeframe?: MarketTimeframe;
-}): Promise<void> {
+}): Promise<{ timeframe: MarketTimeframe; inserted: number; provider: string }[]> {
   if (params.from > params.to) {
     throw new Error("`from` must be before `to`");
   }
@@ -25,11 +25,12 @@ export async function syncDailyCandlesForAsset(params: {
 
   const targetTimeframes: MarketTimeframe[] =
     params.timeframe != null ? [params.timeframe] : getTimeframesForAsset(params.asset);
-  let totalInserted = 0;
+  const results: { timeframe: MarketTimeframe; inserted: number; provider: string }[] = [];
 
   for (const timeframe of targetTimeframes) {
     const { primary, fallback } = resolveMarketDataProviders({ asset: params.asset, timeframe });
     let candles: CandleDomainModel[] = [];
+    let providerUsed: string = primary.provider;
 
     const fetchFrom = async (provider: typeof primary, tf: MarketTimeframe) => {
       if (tf === "1W") {
@@ -58,6 +59,7 @@ export async function syncDailyCandlesForAsset(params: {
           `[syncDailyCandlesForAsset] primary ${primary.provider} returned no data for ${params.asset.symbol} (${timeframe}), falling back to ${fallback.provider}`,
         );
         candles = fallbackCandles;
+        providerUsed = fallback.provider;
       }
     }
 
@@ -78,12 +80,14 @@ export async function syncDailyCandlesForAsset(params: {
     }));
 
     await upsertCandles(inserts);
-    totalInserted += inserts.length;
+    const inserted = inserts.length;
+    results.push({ timeframe, inserted, provider: providerUsed });
   }
 
   console.log(
-    `synced ${totalInserted} candles for ${params.asset.symbol} across ${targetTimeframes.length} timeframe(s)`,
+    `synced ${results.reduce((sum, r) => sum + r.inserted, 0)} candles for ${params.asset.symbol} across ${targetTimeframes.length} timeframe(s)`,
   );
+  return results;
 }
 
 /**

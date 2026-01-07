@@ -5,5 +5,6 @@ declare namespace NodeJS {
     CLERK_SECRET_KEY: string;
     TWELVEDATA_API_KEY?: string;
     MARKET_PROVIDER_MODE?: string;
+    INTRADAY_ASSET_WHITELIST?: string;
   }
 }

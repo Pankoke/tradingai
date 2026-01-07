@@ -14,12 +14,19 @@ const CRON_SECRET = process.env.CRON_SECRET;
 const AUTH_HEADER = "authorization";
 const ALT_HEADER = "x-cron-secret";
 const FRESH_THRESHOLD_MINUTES = 70;
+const ASSET_WHITELIST = (process.env.INTRADAY_ASSET_WHITELIST ?? "BTC,ETH,GOLD")
+  .split(",")
+  .map((v) => v.trim().toUpperCase())
+  .filter(Boolean);
 
 type SyncLog = {
   symbol: string;
   timeframes: MarketTimeframe[];
   synced: MarketTimeframe[];
   skippedFresh: MarketTimeframe[];
+  details: Partial<
+    Record<MarketTimeframe, { provider: string; fetched: number; persisted: number; reason?: string }>
+  >;
   errors?: string[];
 };
 
@@ -46,6 +53,11 @@ export async function POST(request: NextRequest): Promise<Response> {
     const now = new Date();
 
     for (const asset of assets) {
+      const upperId = asset.id.toUpperCase();
+      const upperSymbol = (asset.symbol ?? "").toUpperCase();
+      if (ASSET_WHITELIST.length && !ASSET_WHITELIST.includes(upperId) && !ASSET_WHITELIST.includes(upperSymbol)) {
+        continue;
+      }
       assetsConsidered += 1;
       const supported = getTimeframesForAsset(asset).filter((tf) => allowedIntraday.has(tf));
       if (!supported.length) {
@@ -58,6 +70,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         timeframes: supported,
         synced: [],
         skippedFresh: [],
+        details: {},
       };
 
       for (const timeframe of supported) {
@@ -67,13 +80,22 @@ export async function POST(request: NextRequest): Promise<Response> {
           if (isFresh(latest?.timestamp, FRESH_THRESHOLD_MINUTES)) {
             timeframesSkippedFresh += 1;
             log.skippedFresh.push(timeframe);
+            log.details[timeframe] = { provider: latest?.source ?? "-", fetched: 0, persisted: 0, reason: "fresh" };
             continue;
           }
 
           const from = computeFrom(latest?.timestamp, timeframe, now);
-          await syncDailyCandlesForAsset({ asset, timeframe, from, to: now });
-          timeframesSynced += 1;
-          log.synced.push(timeframe);
+          const results = await syncDailyCandlesForAsset({ asset, timeframe, from, to: now });
+          const tfResult = results.find((r) => r.timeframe === timeframe);
+          const inserted = tfResult?.inserted ?? 0;
+          const provider = tfResult?.provider ?? "unknown";
+          if (inserted > 0) {
+            timeframesSynced += 1;
+            log.synced.push(timeframe);
+            log.details[timeframe] = { provider, fetched: inserted, persisted: inserted };
+          } else {
+            log.details[timeframe] = { provider, fetched: 0, persisted: 0, reason: "no_data" };
+          }
         } catch (error) {
           failures += 1;
           const message = error instanceof Error ? error.message : "unknown error";
