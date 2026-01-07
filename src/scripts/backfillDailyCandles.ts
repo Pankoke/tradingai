@@ -1,7 +1,7 @@
 import * as dotenv from "dotenv";
 import { randomInt } from "node:crypto";
 import { getActiveAssets, type Asset } from "@/src/server/repositories/assetRepository";
-import { resolveMarketDataProvider } from "@/src/server/marketData/providerResolver";
+import { resolveMarketDataProviders } from "@/src/server/marketData/providerResolver";
 import { upsertCandles, getCandlesForAsset } from "@/src/server/repositories/candleRepository";
 import { aggregateWeeklyFromDaily } from "@/src/features/marketData/syncDailyCandles";
 import type { CandleDomainModel } from "@/src/server/providers/marketDataProvider";
@@ -50,19 +50,34 @@ async function sleep(ms: number): Promise<void> {
 }
 
 async function backfillAsset(asset: Asset, args: Args, endBoundary: Date): Promise<{ daily: number; weekly: number }> {
-  const provider = resolveMarketDataProvider(asset);
   const from = new Date(endBoundary);
   from.setDate(from.getDate() - args.days);
   const chunks = buildDateChunks(from, endBoundary, args.chunkDays);
   let dailyInserted = 0;
 
   for (const chunk of chunks) {
-    const candles: CandleDomainModel[] = await provider.fetchCandles({
+    const { primary, fallback } = resolveMarketDataProviders({ asset, timeframe: "1D" });
+    let candles: CandleDomainModel[] = await primary.fetchCandles({
       asset,
       timeframe: "1D",
       from: chunk.from,
       to: chunk.to,
     });
+
+    if (!candles.length && fallback) {
+      const fb = await fallback.fetchCandles({
+        asset,
+        timeframe: "1D",
+        from: chunk.from,
+        to: chunk.to,
+      });
+      if (fb.length) {
+        console.warn(
+          `[backfill] fallback provider ${fallback.provider} used for ${asset.symbol} (${chunk.from.toISOString()} - ${chunk.to.toISOString()})`,
+        );
+        candles = fb;
+      }
+    }
 
     if (!candles.length) {
       console.log(`[backfill] ${asset.symbol} ${chunk.from.toISOString()} - ${chunk.to.toISOString()}: no data`);
@@ -87,10 +102,11 @@ async function backfillAsset(asset: Asset, args: Args, endBoundary: Date): Promi
     }
 
     dailyInserted += candles.length;
+    const providerName = candles[0]?.source ?? primary.provider;
     console.log(
       `[backfill] ${asset.symbol} ${chunk.from.toISOString().slice(0, 10)} - ${chunk.to
         .toISOString()
-        .slice(0, 10)} | fetched=${candles.length} (provider=${provider.provider})`,
+        .slice(0, 10)} | fetched=${candles.length} (provider=${providerName})`,
     );
     await sleep(randomInt(300, 801));
   }

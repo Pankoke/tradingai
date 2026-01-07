@@ -1,7 +1,7 @@
 import type { Asset } from "@/src/server/repositories/assetRepository";
 import { upsertCandles } from "@/src/server/repositories/candleRepository";
 import type { MarketTimeframe } from "@/src/server/marketData/MarketDataProvider";
-import { resolveMarketDataProvider } from "@/src/server/marketData/providerResolver";
+import { resolveMarketDataProviders } from "@/src/server/marketData/providerResolver";
 import { YahooMarketDataProvider } from "@/src/server/providers/yahooMarketDataProvider";
 import { getTimeframesForAsset } from "@/src/server/marketData/timeframeConfig";
 import type { CandleDomainModel } from "@/src/server/providers/marketDataProvider";
@@ -28,40 +28,36 @@ export async function syncDailyCandlesForAsset(params: {
   let totalInserted = 0;
 
   for (const timeframe of targetTimeframes) {
-    const provider = resolveMarketDataProvider(params.asset);
+    const { primary, fallback } = resolveMarketDataProviders({ asset: params.asset, timeframe });
     let candles: CandleDomainModel[] = [];
 
-    if (timeframe === "1W") {
-      // Weekly candles are derived from 1D data to avoid provider inconsistencies.
-      const daily = await provider.fetchCandles({
+    const fetchFrom = async (provider: typeof primary, tf: MarketTimeframe) => {
+      if (tf === "1W") {
+        const daily = await provider.fetchCandles({
+          asset: params.asset,
+          timeframe: "1D",
+          from: params.from,
+          to: params.to,
+        });
+        return aggregateWeeklyFromDaily(daily);
+      }
+      return provider.fetchCandles({
         asset: params.asset,
-        timeframe: "1D",
+        timeframe: tf,
         from: params.from,
         to: params.to,
       });
-      candles = aggregateWeeklyFromDaily(daily);
-    } else {
-      candles = await provider.fetchCandles({
-        asset: params.asset,
-        timeframe,
-        from: params.from,
-        to: params.to,
-      });
-    }
+    };
 
-    if (!candles.length && provider.provider !== "yahoo" && timeframe === "1D") {
-      const fallback = new YahooMarketDataProvider();
-      const yahooCandles = await fallback.fetchCandles({
-        asset: params.asset,
-        timeframe,
-        from: params.from,
-        to: params.to,
-      });
-      if (yahooCandles.length) {
+    candles = await fetchFrom(primary, timeframe);
+
+    if (!candles.length && fallback) {
+      const fallbackCandles = await fetchFrom(fallback, timeframe);
+      if (fallbackCandles.length) {
         console.warn(
-          `[syncDailyCandlesForAsset] provider ${provider.provider} returned no data for ${params.asset.symbol} (${timeframe}), falling back to Yahoo`,
+          `[syncDailyCandlesForAsset] primary ${primary.provider} returned no data for ${params.asset.symbol} (${timeframe}), falling back to ${fallback.provider}`,
         );
-        candles = yahooCandles;
+        candles = fallbackCandles;
       }
     }
 

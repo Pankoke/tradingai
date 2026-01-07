@@ -3,7 +3,7 @@ import type { Asset } from "@/src/server/repositories/assetRepository";
 
 export type MarketTimeframe = "1D" | "4H" | "1H" | "15m" | "1W";
 
-export type MarketDataSource = "yahoo" | "binance" | "polygon";
+export type MarketDataSource = "yahoo" | "binance" | "polygon" | "twelvedata";
 
 export interface MarketDataProvider {
   readonly provider: MarketDataSource;
