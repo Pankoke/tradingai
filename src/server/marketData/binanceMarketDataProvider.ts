@@ -66,7 +66,12 @@ export class BinanceMarketDataProvider implements MarketDataProvider {
     try {
       const response = await fetch(url);
       if (!response.ok) {
-        console.warn(`[BinanceMarketDataProvider] request failed for ${symbol}: ${response.status}`);
+        console.warn(`[BinanceMarketDataProvider] request failed for ${symbol}: ${response.status}`, {
+          status: response.status,
+          url: url.toString(),
+          symbol,
+          timeframe: params.timeframe,
+        });
         return [];
       }
 

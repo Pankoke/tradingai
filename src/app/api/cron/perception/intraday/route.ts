@@ -57,6 +57,17 @@ export async function POST(request: NextRequest): Promise<Response> {
       },
     });
 
+    if (setupsArr.length === 0) {
+      const durationMsSkip = Date.now() - startedAt;
+      cronLogger.warn("Intraday build produced no setups (skipped)", { durationMs: durationMsSkip });
+      return respondOk({
+        skipped: true,
+        reason: "no_setups_available",
+        setups: 0,
+        durationMs: durationMsSkip,
+      });
+    }
+
     return respondOk({
       snapshotId: snapshot.snapshot.id,
       setups: setupsArr.length,
@@ -65,6 +76,25 @@ export async function POST(request: NextRequest): Promise<Response> {
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown error";
     const durationMs = Date.now() - startedAt;
+    if (message.includes("No setups available to pick setup of the day")) {
+      const durationMsSkip = Date.now() - startedAt;
+      cronLogger.warn("Intraday build skipped: no setups available", { durationMs: durationMsSkip });
+      await createAuditRun({
+        action: "perception_intraday",
+        source: "cron",
+        ok: true,
+        durationMs: durationMsSkip,
+        message: "cron_perception_intraday_skipped_no_setups",
+        meta: { skipped: true, reason: "no_setups_available" },
+      });
+      return respondOk({
+        skipped: true,
+        reason: "no_setups_available",
+        setups: 0,
+        durationMs: durationMsSkip,
+      });
+    }
+
     cronLogger.error("failed to build intraday perception snapshot", { error: message });
     await createAuditRun({
       action: "perception_intraday",

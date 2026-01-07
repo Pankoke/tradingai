@@ -275,6 +275,8 @@ class LivePerceptionDataSource implements PerceptionDataSource {
         symbol: asset.symbol,
         timeframe: baseTimeframe,
         thresholdMinutes: INTRADAY_STALE_MINUTES,
+        candleTimestamp: candle?.timestamp,
+        now: new Date(),
       });
       return null;
     }
