@@ -53,6 +53,19 @@ type TwelveDataResponse = {
   message?: string;
 };
 
+function mapAssetToTwelveDataSymbol(asset: Asset): string | null {
+  const upper = (asset.symbol ?? "").toUpperCase();
+  if (asset.assetClass === "crypto") {
+    if (upper.includes("BTC")) return "BTC/USD";
+    if (upper.includes("ETH")) return "ETH/USD";
+  }
+  if (upper === "GC=F" || upper === "GOLD" || upper === "XAUUSD" || upper === "XAUUSD=X" || asset.id?.toLowerCase() === "gold") {
+    return "XAU/USD";
+  }
+  // TODO: extend mapping for FX/indices/commodities as they are enabled
+  return null;
+}
+
 export class TwelveDataMarketDataProvider implements MarketDataProvider {
   public readonly provider = "twelvedata" as const;
 
@@ -73,8 +86,17 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
     }
 
     const interval = intervalForTf(params.timeframe);
+    const mappedSymbol = mapAssetToTwelveDataSymbol(params.asset);
+    if (!mappedSymbol) {
+      console.warn("[TwelveDataMarketDataProvider] missing symbol mapping", {
+        assetId: params.asset.id,
+        symbol: params.asset.symbol,
+        timeframe: params.timeframe,
+      });
+      return [];
+    }
     const url = new URL(BASE_URL);
-    url.searchParams.set("symbol", params.asset.symbol.toUpperCase());
+    url.searchParams.set("symbol", mappedSymbol);
     url.searchParams.set("interval", interval);
     url.searchParams.set("apikey", API_KEY);
     url.searchParams.set("start_date", params.from.toISOString());
