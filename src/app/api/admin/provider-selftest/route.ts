@@ -10,10 +10,43 @@ import type { Asset } from "@/src/server/repositories/assetRepository";
 
 const CRON_SECRET = process.env.CRON_SECRET;
 const DEFAULT_ASSETS: Asset[] = [
-  { id: "BTC", symbol: "BTCUSD", assetClass: "crypto" },
-  { id: "ETH", symbol: "ETHUSD", assetClass: "crypto" },
-  { id: "GOLD", symbol: "GC=F", assetClass: "commodity" },
-] as const;
+  {
+    id: "BTC",
+    symbol: "BTCUSD",
+    displaySymbol: "BTC/USD",
+    name: "Bitcoin",
+    assetClass: "crypto",
+    baseCurrency: null,
+    quoteCurrency: null,
+    isActive: true,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
+  },
+  {
+    id: "ETH",
+    symbol: "ETHUSD",
+    displaySymbol: "ETH/USD",
+    name: "Ethereum",
+    assetClass: "crypto",
+    baseCurrency: null,
+    quoteCurrency: null,
+    isActive: true,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
+  },
+  {
+    id: "GOLD",
+    symbol: "GC=F",
+    displaySymbol: "XAU/USD",
+    name: "Gold",
+    assetClass: "commodity",
+    baseCurrency: null,
+    quoteCurrency: null,
+    isActive: true,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
+  },
+];
 
 type ProviderResult = {
   provider: string;
