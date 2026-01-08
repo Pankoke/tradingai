@@ -100,6 +100,11 @@ function mapSetup(setup: Setup, opts?: { generatedAt?: string | null }): SetupVi
     snapshotTime: setup.snapshotCreatedAt ?? null,
     eventLevel,
     weakSignal: undefined,
+    dataSourcePrimary: (setup as { dataSourcePrimary?: string | null }).dataSourcePrimary ?? null,
+    dataSourceUsed: (setup as { dataSourceUsed?: string | null }).dataSourceUsed ?? null,
+    providerSymbolUsed: (setup as { providerSymbolUsed?: string | null }).providerSymbolUsed ?? null,
+    timeframeUsed: (setup as { timeframeUsed?: string | null }).timeframeUsed ?? setup.timeframe ?? null,
+    snapshotLabel: (setup as { snapshotLabel?: string | null }).snapshotLabel ?? null,
   };
 
   return {
@@ -145,6 +150,11 @@ function mapHomepageSetup(setup: HomepageSetup, opts?: { generatedAt?: string | 
     generatedAt: opts?.generatedAt ?? setup.snapshotCreatedAt ?? setup.snapshotTimestamp ?? null,
     eventLevel: setup.eventLevel ?? null,
     weakSignal: setup.weakSignal ?? false,
+    dataSourcePrimary: (setup as { dataSourcePrimary?: string | null }).dataSourcePrimary ?? null,
+    dataSourceUsed: (setup as { dataSourceUsed?: string | null }).dataSourceUsed ?? null,
+    providerSymbolUsed: (setup as { providerSymbolUsed?: string | null }).providerSymbolUsed ?? null,
+    timeframeUsed: (setup as { timeframeUsed?: string | null }).timeframeUsed ?? setup.timeframe ?? null,
+    snapshotLabel: (setup as { snapshotLabel?: string | null }).snapshotLabel ?? null,
   };
   const result: SetupViewModel = {
     id: setup.id,

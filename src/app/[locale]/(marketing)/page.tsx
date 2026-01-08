@@ -76,6 +76,7 @@ function toHomepageSetup(setup: Setup): HomepageSetup {
     assetId: setup.assetId,
     symbol: setup.symbol,
     timeframe: setup.timeframe,
+    timeframeUsed: (setup as { timeframeUsed?: string | null }).timeframeUsed ?? setup.timeframe ?? null,
     setupGrade: setup.setupGrade,
     setupType: setup.setupType,
     gradeRationale: setup.gradeRationale,
@@ -112,6 +113,15 @@ function toHomepageSetup(setup: Setup): HomepageSetup {
     rings: setup.rings,
     eventContext: setup.eventContext ?? null,
     ringAiSummary: setup.ringAiSummary ?? null,
+    eventModifier: setup.eventModifier ?? null,
+    sentiment: setup.sentiment ?? null,
+    orderflow: setup.orderflow ?? null,
+    profile: setup.profile ?? null,
+    setupPlaybookId: (setup as { setupPlaybookId?: string | null }).setupPlaybookId ?? null,
+    dataSourcePrimary: (setup as { dataSourcePrimary?: string | null }).dataSourcePrimary ?? null,
+    dataSourceUsed: (setup as { dataSourceUsed?: string | null }).dataSourceUsed ?? null,
+    providerSymbolUsed: (setup as { providerSymbolUsed?: string | null }).providerSymbolUsed ?? null,
+    snapshotLabel: (setup as { snapshotLabel?: string | null }).snapshotLabel ?? null,
   };
 }
 

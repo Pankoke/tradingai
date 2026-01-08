@@ -4,6 +4,14 @@ export type AssetMeta = {
   assetClass: string;
 };
 
+export type AssetDisplayContext = {
+  profile?: string | null;
+  timeframe?: string | null;
+  snapshotLabel?: string | null;
+  providerSymbolUsed?: string | null;
+  dataSourceUsed?: string | null;
+};
+
 const ASSET_LOOKUP: Record<string, AssetMeta> = {
   dax: { displaySymbol: "DAX", name: "DAX Index", assetClass: "Index" },
   spx: { displaySymbol: "S&P 500", name: "S&P 500 Index", assetClass: "Index" },
@@ -24,23 +32,47 @@ function normalizeKey(key?: string): string | undefined {
   return key?.toLowerCase();
 }
 
-export function getAssetMeta(assetId?: string, fallbackSymbol?: string): AssetMeta {
-  const lookupKey = normalizeKey(assetId) ?? normalizeKey(fallbackSymbol);
-  if (lookupKey && lookupKey in ASSET_LOOKUP) {
-    return ASSET_LOOKUP[lookupKey];
-  }
-  const fallbackLabel = fallbackSymbol ?? assetId ?? "Asset";
-  return {
-    displaySymbol: fallbackLabel,
-    name: fallbackLabel,
-    assetClass: "Asset",
-  };
+function isIntradayContext(context?: AssetDisplayContext): boolean {
+  const tf = context?.timeframe?.toUpperCase();
+  const profile = context?.profile?.toUpperCase();
+  const label = context?.snapshotLabel?.toLowerCase();
+  return profile === "INTRADAY" || label === "intraday" || tf === "1H" || tf === "4H";
 }
 
-export function formatAssetLabel(assetId?: string, symbol?: string): string {
-  const meta = getAssetMeta(assetId, symbol);
+export function getAssetMeta(assetId?: string, fallbackSymbol?: string, context?: AssetDisplayContext): AssetMeta {
+  const lookupKey = normalizeKey(assetId) ?? normalizeKey(fallbackSymbol);
+  const baseMeta =
+    lookupKey && lookupKey in ASSET_LOOKUP
+      ? ASSET_LOOKUP[lookupKey]
+      : {
+          displaySymbol: fallbackSymbol ?? assetId ?? "Asset",
+          name: fallbackSymbol ?? assetId ?? "Asset",
+          assetClass: "Asset",
+        };
+
+  const upperSymbol = (fallbackSymbol ?? "").toUpperCase();
+  const isGold =
+    lookupKey === "gold" ||
+    upperSymbol === "GC=F" ||
+    upperSymbol === "XAUUSD" ||
+    upperSymbol === "XAUUSD=X" ||
+    upperSymbol === "GOLD";
+
+  if (isGold && isIntradayContext(context)) {
+    return {
+      displaySymbol: "XAU/USD",
+      name: "Gold Spot (XAU/USD)",
+      assetClass: baseMeta.assetClass,
+    };
+  }
+
+  return baseMeta;
+}
+
+export function formatAssetLabel(assetId?: string, symbol?: string, context?: AssetDisplayContext): string {
+  const meta = getAssetMeta(assetId, symbol, context);
   if (meta.name !== meta.displaySymbol) {
-    return `${meta.displaySymbol} · ${meta.name}`;
+    return `${meta.displaySymbol} Жњ ${meta.name}`;
   }
   return meta.displaySymbol;
 }

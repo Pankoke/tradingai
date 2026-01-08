@@ -21,6 +21,11 @@ export type SetupMeta = {
   snapshotTime?: string | null;
   weakSignal?: boolean;
   eventLevel?: "high" | "medium" | "low" | null;
+  dataSourcePrimary?: string | null;
+  dataSourceUsed?: string | null;
+  providerSymbolUsed?: string | null;
+  timeframeUsed?: string | null;
+  snapshotLabel?: string | null;
 };
 
 export type SetupViewModel = {

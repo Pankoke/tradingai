@@ -1,6 +1,7 @@
 import { YahooMarketDataProvider } from "@/src/server/providers/yahooMarketDataProvider";
 import { BinanceMarketDataProvider } from "@/src/server/marketData/binanceMarketDataProvider";
 import { TwelveDataMarketDataProvider } from "@/src/server/marketData/twelvedataMarketDataProvider";
+import { FinnhubMarketDataProvider } from "@/src/server/marketData/finnhubMarketDataProvider";
 import type { MarketDataProvider, MarketTimeframe } from "./MarketDataProvider";
 import type { Asset } from "@/src/server/repositories/assetRepository";
 import { resolvePreferredSource } from "./assetProviderMapping";
@@ -8,6 +9,7 @@ import { resolvePreferredSource } from "./assetProviderMapping";
 const yahooProvider = new YahooMarketDataProvider();
 const binanceProvider = new BinanceMarketDataProvider();
 const twelveDataProvider = new TwelveDataMarketDataProvider();
+const finnhubProvider = new FinnhubMarketDataProvider();
 
 type ProviderMode = "yahoo" | "binance" | "mixed";
 
@@ -29,28 +31,22 @@ export function resolveMarketDataProviders(params: { asset: Asset; timeframe: Ma
   let primary: MarketDataProvider = yahooProvider;
   let fallback: MarketDataProvider | undefined = twelveDataProvider;
 
-  if (asset.assetClass === "crypto") {
-    if (isIntraday) {
-      primary = prefersBinance ? binanceProvider : binanceProvider;
-      fallback = twelveDataProvider;
-    } else {
-      primary = prefersBinance ? yahooProvider : yahooProvider;
-      fallback = twelveDataProvider;
-    }
+  if (isIntraday) {
+    primary = twelveDataProvider;
+    fallback = finnhubProvider;
+  } else if (asset.assetClass === "crypto") {
+    primary = prefersBinance ? yahooProvider : yahooProvider;
+    fallback = twelveDataProvider;
   } else {
-    if (isIntraday) {
-      primary = twelveDataProvider;
-      fallback = yahooProvider;
-    } else {
-      primary = yahooProvider;
-      fallback = twelveDataProvider;
-    }
+    primary = yahooProvider;
+    fallback = twelveDataProvider;
   }
 
   // Respect global mode toggle (kept for compatibility)
   switch (MARKET_PROVIDER_MODE) {
     case "binance":
-      if (prefersBinance) {
+      // intraday path stays twelvedata/finnhub to avoid binance; daily can still use binance for crypto if desired
+      if (!isIntraday && prefersBinance) {
         primary = binanceProvider;
         fallback = twelveDataProvider;
       }

@@ -4,6 +4,7 @@ declare namespace NodeJS {
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: string;
     CLERK_SECRET_KEY: string;
     TWELVEDATA_API_KEY?: string;
+    FINNHUB_API_KEY?: string;
     MARKET_PROVIDER_MODE?: string;
     INTRADAY_ASSET_WHITELIST?: string;
   }

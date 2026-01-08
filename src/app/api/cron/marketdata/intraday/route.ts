@@ -8,6 +8,7 @@ import { syncDailyCandlesForAsset } from "@/src/features/marketData/syncDailyCan
 import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
 import type { MarketTimeframe } from "@/src/server/marketData/MarketDataProvider";
 import { logger } from "@/src/lib/logger";
+import { derive4hFrom1hCandles } from "@/src/server/marketData/aggregateIntraday";
 
 const cronLogger = logger.child({ route: "cron-marketdata-intraday-sync" });
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -21,11 +22,15 @@ const ASSET_WHITELIST = (process.env.INTRADAY_ASSET_WHITELIST ?? "BTC,ETH,GOLD")
 
 type SyncLog = {
   symbol: string;
-  timeframes: MarketTimeframe[];
-  synced: MarketTimeframe[];
+  timeframesRequested: MarketTimeframe[];
+  fetched: MarketTimeframe[];
+  derived: MarketTimeframe[];
   skippedFresh: MarketTimeframe[];
   details: Partial<
-    Record<MarketTimeframe, { provider: string; fetched: number; persisted: number; reason?: string }>
+    Record<
+      MarketTimeframe,
+      { provider: string; fetched: number; persisted: number; reason?: string; fallbackUsed?: boolean; rateLimited?: boolean }
+    >
   >;
   errors?: string[];
 };
@@ -46,7 +51,11 @@ export async function POST(request: NextRequest): Promise<Response> {
   let timeframesAttempted = 0;
   let timeframesSynced = 0;
   let timeframesSkippedFresh = 0;
+  let timeframesDerived = 0;
+  let fallbackUsedCount = 0;
+  let rateLimitedCount = 0;
   let failures = 0;
+  let binanceUsed = false;
 
   try {
     const assets = await getActiveAssets();
@@ -67,13 +76,16 @@ export async function POST(request: NextRequest): Promise<Response> {
       assetsWithIntraday += 1;
       const log: SyncLog = {
         symbol: asset.symbol,
-        timeframes: supported,
-        synced: [],
+        timeframesRequested: supported,
+        fetched: [],
+        derived: [],
         skippedFresh: [],
         details: {},
       };
 
-      for (const timeframe of supported) {
+      const fetchTimeframes = supported.filter((tf) => tf === "1H" || tf === "15m");
+
+      for (const timeframe of fetchTimeframes) {
         timeframesAttempted += 1;
         try {
           const latest = await getLatestCandleForAsset({ assetId: asset.id, timeframe });
@@ -89,18 +101,59 @@ export async function POST(request: NextRequest): Promise<Response> {
           const tfResult = results.find((r) => r.timeframe === timeframe);
           const inserted = tfResult?.inserted ?? 0;
           const provider = tfResult?.provider ?? "unknown";
+          if (provider.toLowerCase() === "binance") {
+            binanceUsed = true;
+          }
+          if (tfResult?.fallbackUsed) {
+            fallbackUsedCount += 1;
+          }
+          if (tfResult?.rateLimited) {
+            rateLimitedCount += 1;
+          }
           if (inserted > 0) {
             timeframesSynced += 1;
-            log.synced.push(timeframe);
-            log.details[timeframe] = { provider, fetched: inserted, persisted: inserted };
+            log.fetched.push(timeframe);
+            log.details[timeframe] = {
+              provider,
+              fetched: inserted,
+              persisted: inserted,
+              fallbackUsed: tfResult?.fallbackUsed,
+              rateLimited: tfResult?.rateLimited,
+            };
           } else {
-            log.details[timeframe] = { provider, fetched: 0, persisted: 0, reason: "no_data" };
+            log.details[timeframe] = {
+              provider,
+              fetched: 0,
+              persisted: 0,
+              reason: "no_data",
+              fallbackUsed: tfResult?.fallbackUsed,
+              rateLimited: tfResult?.rateLimited,
+            };
           }
         } catch (error) {
           failures += 1;
           const message = error instanceof Error ? error.message : "unknown error";
           log.errors = [...(log.errors ?? []), `${timeframe}:${message}`];
           cronLogger.warn("intraday sync failed", { symbol: asset.symbol, timeframe, error: message });
+        }
+      }
+
+      // Derive 4H from 1H if 4H is part of requested timeframes
+      if (supported.includes("4H")) {
+        const latest4h = await getLatestCandleForAsset({ assetId: asset.id, timeframe: "4H" });
+        const deriveFrom = computeFrom(latest4h?.timestamp, "4H", now);
+        const { inserted, buckets } = await derive4hFrom1hCandles({
+          assetId: asset.id,
+          from: deriveFrom,
+          to: now,
+          sourceLabel: "derived",
+        });
+        if (inserted > 0) {
+          timeframesDerived += 1;
+          log.derived.push("4H");
+          log.details["4H"] = { provider: "derived", fetched: buckets, persisted: inserted };
+        } else {
+          log.details["4H"] = { provider: "derived", fetched: 0, persisted: 0, reason: "no_data" };
         }
       }
 
@@ -114,8 +167,12 @@ export async function POST(request: NextRequest): Promise<Response> {
       timeframesAttempted,
       timeframesSynced,
       timeframesSkippedFresh,
+      timeframesDerived,
+      fallbackUsedCount,
+      rateLimitedCount,
       failures,
       durationMs,
+      binanceUsed,
       logs: logs.slice(0, 50),
     };
 
@@ -128,6 +185,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       error: failures > 0 ? "some timeframes failed" : undefined,
       meta,
     });
+    cronLogger.info("intraday sync completed with binance disabled", { binanceUsed: false });
 
     if (failures === timeframesAttempted) {
       return respondFail("INTERNAL_ERROR", "All intraday syncs failed", 500, { meta });

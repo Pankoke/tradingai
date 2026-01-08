@@ -39,6 +39,11 @@ export type HomepageSetup = {
   orderflow?: Setup["orderflow"] | null;
   profile?: Setup["profile"] | null;
   setupPlaybookId?: string | null;
+  dataSourcePrimary?: string | null;
+  dataSourceUsed?: string | null;
+  providerSymbolUsed?: string | null;
+  timeframeUsed?: string | null;
+  snapshotLabel?: string | null;
 };
 
 export type HomepageSetups = {
@@ -117,6 +122,11 @@ function mapSetup(setup: Setup, timestamp: string): HomepageSetup {
     sentiment: setup.sentiment ?? null,
     orderflow: setup.orderflow ?? null,
     profile: setup.profile ?? null,
+    dataSourcePrimary: (setup as { dataSourcePrimary?: string | null }).dataSourcePrimary ?? null,
+    dataSourceUsed: (setup as { dataSourceUsed?: string | null }).dataSourceUsed ?? null,
+    providerSymbolUsed: (setup as { providerSymbolUsed?: string | null }).providerSymbolUsed ?? null,
+    timeframeUsed: (setup as { timeframeUsed?: string | null }).timeframeUsed ?? setup.timeframe ?? null,
+    snapshotLabel: (setup as { snapshotLabel?: string | null }).snapshotLabel ?? null,
   };
 }
 

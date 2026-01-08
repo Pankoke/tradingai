@@ -35,6 +35,8 @@ import { createDefaultRings } from "@/src/lib/engine/rings";
 import { applyOrderflowConfidenceAdjustment } from "@/src/lib/engine/orderflowAdjustments";
 import { getSetupProfileConfig, type SetupProfile } from "@/src/lib/config/setupProfile";
 import { logger } from "@/src/lib/logger";
+import { resolveMarketDataProviders } from "@/src/server/marketData/providerResolver";
+import { resolveProviderSymbolForSource } from "@/src/server/marketData/providerDisplay";
 
 export interface PerceptionDataSource {
   getSetupsForToday(params: { asOf: Date }): Promise<Setup[]>;
@@ -268,6 +270,8 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     const { asset, template, direction, normalizedDirection, profile, baseTimeframe, evaluationDate } = params;
     const profileConfig = getSetupProfileConfig(profile);
     const levelCategory = resolveLevelCategory(template);
+    const marketProviders = resolveMarketDataProviders({ asset, timeframe: baseTimeframe });
+    const dataSourcePrimary = marketProviders.primary.provider;
     const candle = await this.ensureLatestCandle(asset, baseTimeframe);
     await this.ensureSupplementalTimeframes(asset, baseTimeframe);
     if (profile === "INTRADAY" && isIntradayCandleStale(candle, new Date(), INTRADAY_STALE_MINUTES)) {
@@ -358,6 +362,11 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     });
     confidence = orderflowAdjustment.adjusted;
     const orderflowConfidenceDelta = orderflowAdjustment.delta;
+    const dataSourceUsed =
+      typeof candle?.source === "string" && candle.source
+        ? (candle.source as typeof dataSourcePrimary)
+        : dataSourcePrimary;
+    const providerSymbolUsed = resolveProviderSymbolForSource(asset, dataSourceUsed);
 
     const rings = {
       ...createDefaultRings(),
@@ -393,6 +402,10 @@ class LivePerceptionDataSource implements PerceptionDataSource {
       biasScore: rings.biasScore,
       sentimentScore: sentiment.score,
       balanceScore: rings.orderflowScore,
+      dataSourcePrimary,
+      dataSourceUsed,
+      providerSymbolUsed,
+      timeframeUsed: baseTimeframe,
       entryZone: computedLevels.entryZone,
       stopLoss: computedLevels.stopLoss,
       takeProfit: computedLevels.takeProfit,

@@ -25,8 +25,20 @@ export function SetupCardHeaderBlock({
   showEyebrow = true,
 }: Props): JSX.Element {
   const t = useT();
-  const meta = getAssetMeta(setup.assetId, setup.symbol);
-  const headline = formatAssetLabel(setup.assetId, setup.symbol);
+  const meta = getAssetMeta(setup.assetId, setup.symbol, {
+    profile,
+    timeframe: timeframe ?? setup.meta.timeframeUsed ?? setup.timeframe,
+    snapshotLabel: setup.meta.snapshotLabel ?? null,
+    providerSymbolUsed: setup.meta.providerSymbolUsed ?? null,
+    dataSourceUsed: setup.meta.dataSourceUsed ?? null,
+  });
+  const headline = formatAssetLabel(setup.assetId, setup.symbol, {
+    profile,
+    timeframe: timeframe ?? setup.meta.timeframeUsed ?? setup.timeframe,
+    snapshotLabel: setup.meta.snapshotLabel ?? null,
+    providerSymbolUsed: setup.meta.providerSymbolUsed ?? null,
+    dataSourceUsed: setup.meta.dataSourceUsed ?? null,
+  });
   const directionLower = setup.direction?.toLowerCase();
   const directionClass =
     directionLower === "long" ? "text-emerald-400" : directionLower === "short" ? "text-rose-400" : "text-slate-300";
@@ -34,6 +46,7 @@ export function SetupCardHeaderBlock({
   const profileChipLabel = buildProfileChipLabel(profile, timeframe);
   const playbookLabel = buildPlaybookLabel(setup);
   const gradeChip = buildGradeChip(setup);
+  const sourceLine = buildSourceLine(setup);
 
   return (
     <div className="space-y-2">
@@ -77,6 +90,7 @@ export function SetupCardHeaderBlock({
         ) : null}
         {renderDebugLine(setup)}
         <p className="text-sm text-slate-400">{meta.name}</p>
+        {sourceLine ? <p className="text-xs text-slate-400">{sourceLine}</p> : null}
       </div>
     </div>
   );
@@ -185,4 +199,35 @@ function renderDebugLine(setup: SetupViewModel): JSX.Element | null {
       Playbook: {resolved.playbook.id} Grade: {grade} ({resolved.reason})
     </p>
   );
+}
+
+function buildSourceLine(setup: SetupViewModel): string | null {
+  const primary = setup.meta.dataSourcePrimary ?? null;
+  const used = setup.meta.dataSourceUsed ?? primary;
+  const providerSymbol = setup.meta.providerSymbolUsed ?? setup.symbol ?? setup.assetId ?? null;
+  const timeframe = setup.meta.timeframeUsed ?? setup.timeframe ?? null;
+
+  if (!used && !providerSymbol && !timeframe) return null;
+
+  const formatProvider = (value: string | null) =>
+    value ? value.charAt(0).toUpperCase() + value.slice(1) : null;
+
+  const usedLabel = formatProvider(used);
+  const primaryLabel = formatProvider(primary);
+  const parts: string[] = [];
+
+  if (usedLabel && primaryLabel && usedLabel !== primaryLabel) {
+    parts.push(`Source: ${usedLabel} (fallback from ${primaryLabel})`);
+  } else if (usedLabel || primaryLabel) {
+    parts.push(`Source: ${usedLabel ?? primaryLabel}`);
+  }
+
+  if (providerSymbol) {
+    parts.push(providerSymbol);
+  }
+  if (timeframe) {
+    parts.push(timeframe.toUpperCase());
+  }
+
+  return parts.length ? parts.join(" · ") : null;
 }

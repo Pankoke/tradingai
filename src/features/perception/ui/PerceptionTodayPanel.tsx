@@ -88,6 +88,53 @@ export function mapEventRisk(modifierOrClassification: unknown): "low" | "medium
   return "low";
 }
 
+function buildAssetContextFromSetup(
+  setup?: Setup | null,
+  snapshotLabel?: string | null,
+): Parameters<typeof getAssetMeta>[2] {
+  if (!setup) return snapshotLabel ? { snapshotLabel } : undefined;
+  return {
+    profile: setup.profile ?? null,
+    timeframe: (setup as { timeframeUsed?: string | null }).timeframeUsed ?? setup.timeframe ?? null,
+    snapshotLabel: snapshotLabel ?? null,
+    providerSymbolUsed: (setup as { providerSymbolUsed?: string | null }).providerSymbolUsed ?? null,
+    dataSourceUsed: (setup as { dataSourceUsed?: string | null }).dataSourceUsed ?? null,
+  };
+}
+
+function buildSourceLineFromSetup(setup?: Setup | null): string | null {
+  if (!setup) return null;
+  const primary = (setup as { dataSourcePrimary?: string | null }).dataSourcePrimary ?? null;
+  const used = (setup as { dataSourceUsed?: string | null }).dataSourceUsed ?? primary;
+  const providerSymbol =
+    (setup as { providerSymbolUsed?: string | null }).providerSymbolUsed ?? setup.symbol ?? setup.assetId ?? null;
+  const timeframe = (setup as { timeframeUsed?: string | null }).timeframeUsed ?? setup.timeframe ?? null;
+
+  if (!used && !providerSymbol && !timeframe) return null;
+
+  const formatProvider = (value: string | null) =>
+    value ? value.charAt(0).toUpperCase() + value.slice(1) : null;
+
+  const usedLabel = formatProvider(used);
+  const primaryLabel = formatProvider(primary);
+  const parts: string[] = [];
+
+  if (usedLabel && primaryLabel && usedLabel !== primaryLabel) {
+    parts.push(`Source: ${usedLabel} (fallback from ${primaryLabel})`);
+  } else if (usedLabel || primaryLabel) {
+    parts.push(`Source: ${usedLabel ?? primaryLabel}`);
+  }
+
+  if (providerSymbol) {
+    parts.push(providerSymbol);
+  }
+  if (timeframe) {
+    parts.push(timeframe.toUpperCase());
+  }
+
+  return parts.length ? parts.join(" · ") : null;
+}
+
 function buildEventTooltip(
   baseTooltip: string,
   eventContext?: { topEvents?: Array<{ title?: string; scheduledAt?: string }> | null } | null,
@@ -389,14 +436,30 @@ export function PerceptionTodayPanel(): JSX.Element {
                     {t("perception.today.heroLabel")}
                   </p>
                   <div className="flex items-center gap-3">
-                    <h3 className="text-2xl font-semibold text-white">
-                      {formatAssetLabel(heroItem.assetId)}
-                    </h3>
-                    <span className="rounded-full bg-slate-800/60 px-2 py-0.5 text-[11px] uppercase tracking-[0.2em] text-slate-300">
-                      {getAssetMeta(heroItem.assetId).assetClass}
-                    </span>
+                    {(() => {
+                      const heroContext = buildAssetContextFromSetup(heroSetup ?? null, data.snapshot.label ?? null);
+                      const heroMeta = getAssetMeta(
+                        heroSetup?.assetId ?? heroItem.assetId,
+                        heroSetup?.symbol ?? heroItem.assetId,
+                        heroContext,
+                      );
+                      const heroSourceLine = buildSourceLineFromSetup(heroSetup ?? null);
+                      return (
+                        <>
+                          <h3 className="text-2xl font-semibold text-white">
+                            {formatAssetLabel(heroSetup?.assetId ?? heroItem.assetId, heroSetup?.symbol ?? heroItem.assetId, heroContext)}
+                          </h3>
+                          <span className="rounded-full bg-slate-800/60 px-2 py-0.5 text-[11px] uppercase tracking-[0.2em] text-slate-300">
+                            {heroMeta.assetClass}
+                          </span>
+                          <p className="text-sm text-slate-400">{heroMeta.name}</p>
+                          {heroSourceLine ? (
+                            <p className="text-[11px] text-slate-400">{heroSourceLine}</p>
+                          ) : null}
+                        </>
+                      );
+                    })()}
                   </div>
-                  <p className="text-sm text-slate-400">{getAssetMeta(heroItem.assetId).name}</p>
                   <div
                     className={`flex items-center gap-1 rounded-full border px-3 py-1 text-xs uppercase tracking-[0.15em] ${heroDirectionMeta.accent}`}
                   >
@@ -500,7 +563,9 @@ export function PerceptionTodayPanel(): JSX.Element {
                   </div>
                   <div className="space-y-3">
                     {additionalEntries.map(({ item, setup, rings }) => {
-                      const asset = getAssetMeta(item.assetId);
+                      const assetContext = buildAssetContextFromSetup(setup ?? null, data.snapshot.label ?? null);
+                      const asset = getAssetMeta(setup?.assetId ?? item.assetId, setup?.symbol ?? item.assetId, assetContext);
+                      const sourceLine = buildSourceLineFromSetup(setup ?? null);
                       const { Icon, accent } = DIRECTION_META[item.direction];
                       return (
                         <PerceptionCard key={item.id} innerClassName="p-4" className="">
@@ -509,6 +574,7 @@ export function PerceptionTodayPanel(): JSX.Element {
                               <div>
                                 <p className="text-sm font-semibold text-white">{asset.displaySymbol}</p>
                                 <p className="text-xs text-slate-400">{asset.name}</p>
+                                {sourceLine ? <p className="text-[11px] text-slate-400">{sourceLine}</p> : null}
                               </div>
                               <div
                                 className={`flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.2em] ${accent}`}

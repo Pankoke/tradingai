@@ -5,15 +5,24 @@ import { resolveMarketDataProviders } from "@/src/server/marketData/providerReso
 import { YahooMarketDataProvider } from "@/src/server/providers/yahooMarketDataProvider";
 import { getTimeframesForAsset } from "@/src/server/marketData/timeframeConfig";
 import type { CandleDomainModel } from "@/src/server/providers/marketDataProvider";
+import { FinnhubRateLimitError } from "@/src/server/marketData/finnhubMarketDataProvider";
 
 const MAX_YEARS = 5;
+
+type SyncResult = {
+  timeframe: MarketTimeframe;
+  inserted: number;
+  provider: string;
+  fallbackUsed?: boolean;
+  rateLimited?: boolean;
+};
 
 export async function syncDailyCandlesForAsset(params: {
   asset: Asset;
   from: Date;
   to: Date;
   timeframe?: MarketTimeframe;
-}): Promise<{ timeframe: MarketTimeframe; inserted: number; provider: string }[]> {
+}): Promise<SyncResult[]> {
   if (params.from > params.to) {
     throw new Error("`from` must be before `to`");
   }
@@ -25,12 +34,14 @@ export async function syncDailyCandlesForAsset(params: {
 
   const targetTimeframes: MarketTimeframe[] =
     params.timeframe != null ? [params.timeframe] : getTimeframesForAsset(params.asset);
-  const results: { timeframe: MarketTimeframe; inserted: number; provider: string }[] = [];
+  const results: SyncResult[] = [];
 
   for (const timeframe of targetTimeframes) {
     const { primary, fallback } = resolveMarketDataProviders({ asset: params.asset, timeframe });
     let candles: CandleDomainModel[] = [];
     let providerUsed: string = primary.provider;
+    let fallbackUsed = false;
+    let rateLimited = false;
 
     const fetchFrom = async (provider: typeof primary, tf: MarketTimeframe) => {
       if (tf === "1W") {
@@ -50,20 +61,38 @@ export async function syncDailyCandlesForAsset(params: {
       });
     };
 
-    candles = await fetchFrom(primary, timeframe);
+    try {
+      candles = await fetchFrom(primary, timeframe);
+    } catch (error) {
+      if (error instanceof FinnhubRateLimitError) {
+        rateLimited = true;
+      } else {
+        throw error;
+      }
+    }
 
     if (!candles.length && fallback) {
-      const fallbackCandles = await fetchFrom(fallback, timeframe);
-      if (fallbackCandles.length) {
-        console.warn(
-          `[syncDailyCandlesForAsset] primary ${primary.provider} returned no data for ${params.asset.symbol} (${timeframe}), falling back to ${fallback.provider}`,
-        );
-        candles = fallbackCandles;
-        providerUsed = fallback.provider;
+      try {
+        const fallbackCandles = await fetchFrom(fallback, timeframe);
+        if (fallbackCandles.length) {
+          console.warn(
+            `[syncDailyCandlesForAsset] primary ${primary.provider} returned no data for ${params.asset.symbol} (${timeframe}), falling back to ${fallback.provider}`,
+          );
+          candles = fallbackCandles;
+          providerUsed = fallback.provider;
+          fallbackUsed = true;
+        }
+      } catch (error) {
+        if (error instanceof FinnhubRateLimitError) {
+          rateLimited = true;
+        } else {
+          throw error;
+        }
       }
     }
 
     if (!candles.length) {
+      results.push({ timeframe, inserted: 0, provider: providerUsed, fallbackUsed, rateLimited });
       continue;
     }
 
@@ -81,7 +110,7 @@ export async function syncDailyCandlesForAsset(params: {
 
     await upsertCandles(inserts);
     const inserted = inserts.length;
-    results.push({ timeframe, inserted, provider: providerUsed });
+    results.push({ timeframe, inserted, provider: providerUsed, fallbackUsed, rateLimited });
   }
 
   console.log(
