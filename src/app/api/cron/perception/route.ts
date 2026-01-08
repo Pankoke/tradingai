@@ -5,6 +5,7 @@ import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
 import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 import { logger } from "@/src/lib/logger";
 import { SnapshotBuildInProgressError } from "@/src/server/perception/snapshotBuildService";
+import { consumeLlmUsageStats } from "@/src/server/ai/ringSummaryOpenAi";
 
 const cronLogger = logger.child({ route: "cron-perception" });
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       ok: true,
       durationMs: Date.now() - startedAt,
       message: "cron_snapshot_build",
-      meta: { reused: result.reused, totalSetups: setups.length },
+      meta: { reused: result.reused, totalSetups: setups.length, llm: consumeLlmUsageStats() },
     });
 
     return respondOk<CronSuccessBody>({

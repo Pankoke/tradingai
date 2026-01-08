@@ -19,6 +19,19 @@ function isLlmEnabled(): boolean {
   return Boolean(process.env.OPENAI_API_KEY) && process.env.RING_AI_SUMMARY_LLM_ENABLED === "1";
 }
 
+const llmUsage = {
+  used: false,
+  count: 0,
+  model: DEFAULT_MODEL,
+};
+
+export function consumeLlmUsageStats(): { used: boolean; count: number; model?: string } {
+  const snapshot = { ...llmUsage };
+  llmUsage.used = false;
+  llmUsage.count = 0;
+  return snapshot;
+}
+
 /**
  * Calls OpenAI to refine the ring AI summary. If anything fails or the feature is disabled,
  * returns the heuristic summary unchanged.
@@ -104,6 +117,8 @@ Task: Provide a refined short headline (1 sentence) and an enriched long summary
     const newShort = sentences.shift() ?? heuristic.shortSummary;
     const newLong = [sentences.join(" ") || heuristic.longSummary].join(" ").trim();
 
+    llmUsage.used = true;
+    llmUsage.count += 1;
     return {
       shortSummary: newShort,
       longSummary: newLong.length ? newLong : heuristic.longSummary,

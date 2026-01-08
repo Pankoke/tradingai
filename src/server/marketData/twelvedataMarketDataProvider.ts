@@ -1,15 +1,12 @@
 import type { CandleDomainModel } from "@/src/server/providers/marketDataProvider";
 import type { Asset } from "@/src/server/repositories/assetRepository";
 import type { MarketDataProvider, MarketTimeframe } from "./MarketDataProvider";
+import { getThrottler } from "@/src/server/marketData/requestThrottler";
 
 const BASE_URL = process.env.TWELVEDATA_API_KEY
   ? "https://api.twelvedata.com/time_series"
   : "";
 const API_KEY = process.env.TWELVEDATA_API_KEY;
-const RATE_LIMIT_PER_MINUTE = 8;
-
-let windowStart = 0;
-let requestCount = 0;
 
 function intervalForTf(tf: MarketTimeframe): string {
   switch (tf) {
@@ -25,19 +22,6 @@ function intervalForTf(tf: MarketTimeframe): string {
     default:
       return "1day";
   }
-}
-
-function allowRequest(): boolean {
-  const now = Date.now();
-  if (now - windowStart > 60_000) {
-    windowStart = now;
-    requestCount = 0;
-  }
-  if (requestCount >= RATE_LIMIT_PER_MINUTE) {
-    return false;
-  }
-  requestCount += 1;
-  return true;
 }
 
 type TwelveDataResponse = {
@@ -80,11 +64,7 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
       console.warn("[TwelveDataMarketDataProvider] API key missing, skipping fetch");
       return [];
     }
-    if (!allowRequest()) {
-      console.warn("[TwelveDataMarketDataProvider] rate limit window reached, skipping fetch");
-      return [];
-    }
-
+    const throttler = getThrottler(this.provider);
     const interval = intervalForTf(params.timeframe);
     const mappedSymbol = mapAssetToTwelveDataSymbol(params.asset);
     if (!mappedSymbol) {
@@ -104,7 +84,11 @@ export class TwelveDataMarketDataProvider implements MarketDataProvider {
     url.searchParams.set("outputsize", String(params.limit ?? 500));
 
     try {
-      const response = await fetch(url, { cache: "no-store" });
+      const response = await throttler.fetch(url.toString(), { cache: "no-store" });
+      if (response.status === 429) {
+        console.warn("[TwelveDataMarketDataProvider] rate limited");
+        return [];
+      }
       if (!response.ok) {
         const body = await response.text();
         console.warn(

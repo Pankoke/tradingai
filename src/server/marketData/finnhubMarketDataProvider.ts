@@ -1,6 +1,7 @@
 import type { CandleDomainModel } from "@/src/server/providers/marketDataProvider";
 import type { Asset } from "@/src/server/repositories/assetRepository";
 import type { MarketDataProvider, MarketTimeframe } from "./MarketDataProvider";
+import { getThrottler } from "@/src/server/marketData/requestThrottler";
 
 type FinnhubResolution = "60" | "240" | "15" | "D" | "W";
 
@@ -85,7 +86,8 @@ export class FinnhubMarketDataProvider implements MarketDataProvider {
     url.searchParams.set("to", Math.floor(params.to.getTime() / 1000).toString());
     url.searchParams.set("token", apiKey);
 
-    const response = await fetch(url, { cache: "no-store" });
+    const throttler = getThrottler(this.provider);
+    const response = await throttler.fetch(url.toString(), { cache: "no-store" });
     if (response.status === 429) {
       throw new FinnhubRateLimitError();
     }
@@ -124,6 +126,21 @@ export class FinnhubMarketDataProvider implements MarketDataProvider {
       });
     }
     return candles;
+  }
+
+  async fetchLatestPrice(params: { asset: Asset; timeframe?: MarketTimeframe }): Promise<number | null> {
+    const now = new Date();
+    const tf = params.timeframe ?? "1H";
+    const from = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+    const candles = await this.fetchCandles({
+      asset: params.asset,
+      timeframe: tf,
+      from,
+      to: now,
+      limit: 1,
+    });
+    const latest = candles.at(-1);
+    return latest ? latest.close : null;
   }
 }
 

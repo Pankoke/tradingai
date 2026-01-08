@@ -9,6 +9,7 @@ import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
 import type { MarketTimeframe } from "@/src/server/marketData/MarketDataProvider";
 import { logger } from "@/src/lib/logger";
 import { derive4hFrom1hCandles } from "@/src/server/marketData/aggregateIntraday";
+import { consumeThrottlerStats } from "@/src/server/marketData/requestThrottler";
 
 const cronLogger = logger.child({ route: "cron-marketdata-intraday-sync" });
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -173,6 +174,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       failures,
       durationMs,
       binanceUsed,
+      throttling: consumeThrottlerStats(),
       logs: logs.slice(0, 50),
     };
 
