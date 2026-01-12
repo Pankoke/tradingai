@@ -5,6 +5,9 @@ import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
 import { logger } from "@/src/lib/logger";
 import { db } from "@/src/server/db/db";
 import { sql } from "drizzle-orm";
+import { gateCandlesPerAsset } from "@/src/server/health/freshnessGate";
+import { FRESHNESS_THRESHOLDS_MINUTES } from "@/src/server/health/freshnessThresholds";
+import { getActiveAssets } from "@/src/server/repositories/assetRepository";
 
 const cronLogger = logger.child({ route: "cron-perception-intraday" });
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -31,11 +34,60 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   try {
+    const assets = await getActiveAssets();
+    const assetIds = assets.map((a) => a.id);
+    const freshnessGate = await gateCandlesPerAsset({
+      assetIds,
+      timeframes: ["1H", "4H"],
+      thresholdsByTimeframe: {
+        "1H": FRESHNESS_THRESHOLDS_MINUTES.intraday["1H"] ?? 180,
+        "4H": FRESHNESS_THRESHOLDS_MINUTES.intraday["4H"] ?? 480,
+      },
+    });
+    const allowedAssetIds = freshnessGate.perAsset
+      .filter((entry) => entry.results.find((r) => r.timeframe === "1H")?.status === "ok")
+      .map((entry) => entry.assetId);
+
+    if (allowedAssetIds.length === 0) {
+      const durationMsSkip = Date.now() - startedAt;
+      await createAuditRun({
+        action: "perception_intraday",
+        source: "cron",
+        ok: true,
+        durationMs: durationMsSkip,
+        message: "cron_perception_intraday_skipped_due_to_freshness",
+        meta: {
+          freshness: {
+            gate: "perception_intraday",
+            status: "stale",
+            skippedAssets: freshnessGate.perAsset.map((entry) => ({
+              assetId: entry.assetId,
+              reasons: entry.results.filter((r) => r.timeframe === "1H" && r.status !== "ok"),
+            })),
+            checkedTimeframes: ["1H", "4H"],
+            thresholdsMinutes: {
+              "1H": FRESHNESS_THRESHOLDS_MINUTES.intraday["1H"],
+              "4H": FRESHNESS_THRESHOLDS_MINUTES.intraday["4H"],
+            },
+          },
+          externalFetches: 0,
+          skipped: true,
+        },
+      });
+      return respondOk({
+        skipped: true,
+        reason: "freshness_gate",
+        setups: 0,
+        durationMs: durationMsSkip,
+      });
+    }
+
     const snapshot = await buildAndStorePerceptionSnapshot({
       source: "cron_intraday",
       allowSync: false,
       profiles: ["INTRADAY"],
       label: "intraday",
+      assetFilter: allowedAssetIds,
     });
     const setupsArr =
       Array.isArray((snapshot as { setups?: unknown }).setups)
@@ -57,6 +109,21 @@ export async function POST(request: NextRequest): Promise<Response> {
         profiles: ["INTRADAY"],
         timeframesUsed: ["1H", "4H"],
         externalFetches: 0,
+        freshness: {
+          gate: "perception_intraday",
+          status: allowedAssetIds.length === assetIds.length ? "ok" : "partial",
+          skippedAssets: freshnessGate.perAsset
+            .filter((entry) => entry.results.some((r) => r.timeframe === "1H" && r.status !== "ok"))
+            .map((entry) => ({
+              assetId: entry.assetId,
+              reasons: entry.results.filter((r) => r.timeframe === "1H" && r.status !== "ok"),
+            })),
+          checkedTimeframes: ["1H", "4H"],
+          thresholdsMinutes: {
+            "1H": FRESHNESS_THRESHOLDS_MINUTES.intraday["1H"],
+            "4H": FRESHNESS_THRESHOLDS_MINUTES.intraday["4H"],
+          },
+        },
       },
     });
 

@@ -2,7 +2,7 @@ name: "Daily Outcome Evaluation (Swing 1D)"
 
 on:
   schedule:
-    - cron: "0 5 * * *" # daily at 05:00 UTC
+    - cron: "10 6 * * *" # daily at 06:10 UTC, after perception swing
   workflow_dispatch: {}
 
 jobs:

@@ -6,6 +6,9 @@ import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 import { logger } from "@/src/lib/logger";
 import { SnapshotBuildInProgressError } from "@/src/server/perception/snapshotBuildService";
 import { consumeLlmUsageStats } from "@/src/server/ai/ringSummaryOpenAi";
+import { gateCandlesPerAsset } from "@/src/server/health/freshnessGate";
+import { FRESHNESS_THRESHOLDS_MINUTES } from "@/src/server/health/freshnessThresholds";
+import { getActiveAssets } from "@/src/server/repositories/assetRepository";
 
 const cronLogger = logger.child({ route: "cron-perception" });
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -27,7 +30,57 @@ export async function GET(request: NextRequest): Promise<Response> {
 
   const startedAt = Date.now();
   try {
-    const result = await requestSnapshotBuild({ source: "cron", force: true, profiles: ["SWING"], allowSync: false });
+    const assets = await getActiveAssets();
+    const assetIds = assets.map((a) => a.id);
+    const freshnessGate = await gateCandlesPerAsset({
+      assetIds,
+      timeframes: ["1D", "1W"],
+      thresholdsByTimeframe: {
+        "1D": FRESHNESS_THRESHOLDS_MINUTES.swing["1D"] ?? 4320,
+        "1W": FRESHNESS_THRESHOLDS_MINUTES.swing["1W"] ?? 20160,
+      },
+    });
+    const allowedAssetIds = freshnessGate.perAsset
+      .filter((entry) => entry.results.every((r) => r.status === "ok"))
+      .map((entry) => entry.assetId);
+
+    if (allowedAssetIds.length === 0) {
+      await createAuditRun({
+        action: "snapshot_build",
+        source: "cron",
+        ok: true,
+        durationMs: Date.now() - startedAt,
+        message: "cron_snapshot_skipped_due_to_freshness",
+        meta: {
+          freshness: {
+            gate: "perception_swing",
+            status: "stale",
+            skippedAssets: freshnessGate.perAsset.map((entry) => ({
+              assetId: entry.assetId,
+              reasons: entry.results.filter((r) => r.status !== "ok"),
+            })),
+            checkedTimeframes: ["1D", "1W"],
+            thresholdsMinutes: {
+              "1D": FRESHNESS_THRESHOLDS_MINUTES.swing["1D"],
+              "1W": FRESHNESS_THRESHOLDS_MINUTES.swing["1W"],
+            },
+          },
+          externalFetches: 0,
+        },
+      });
+      return respondOk<CronSuccessBody>({
+        generatedAt: new Date().toISOString(),
+        totalSetups: 0,
+      });
+    }
+
+    const result = await requestSnapshotBuild({
+      source: "cron",
+      force: true,
+      profiles: ["SWING"],
+      allowSync: false,
+      assetFilter: allowedAssetIds,
+    });
     const snapshotRecord = result.snapshot.snapshot;
     const snapshotTime =
       snapshotRecord.snapshotTime instanceof Date
@@ -55,6 +108,21 @@ export async function GET(request: NextRequest): Promise<Response> {
         profiles: ["SWING"],
         timeframesUsed: ["1D", "1W"],
         externalFetches: 0,
+        freshness: {
+          gate: "perception_swing",
+          status: allowedAssetIds.length === assetIds.length ? "ok" : "partial",
+          skippedAssets: freshnessGate.perAsset
+            .filter((entry) => entry.results.some((r) => r.status !== "ok"))
+            .map((entry) => ({
+              assetId: entry.assetId,
+              reasons: entry.results.filter((r) => r.status !== "ok"),
+            })),
+          checkedTimeframes: ["1D", "1W"],
+          thresholdsMinutes: {
+            "1D": FRESHNESS_THRESHOLDS_MINUTES.swing["1D"],
+            "1W": FRESHNESS_THRESHOLDS_MINUTES.swing["1W"],
+          },
+        },
       },
     });
 

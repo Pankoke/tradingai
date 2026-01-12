@@ -158,6 +158,7 @@ export async function requestSnapshotBuild(params: {
   profiles?: import("@/src/lib/config/setupProfile").SetupProfile[];
   allowSync?: boolean;
   label?: string;
+  assetFilter?: string[];
 }): Promise<{ snapshot: PerceptionSnapshotWithItems; reused: boolean }> {
   const latest = await loadLatestSnapshotFromStore();
   if (!params.force && latest && isSnapshotFromToday(latest.snapshot.snapshotTime)) {
@@ -188,6 +189,7 @@ export async function requestSnapshotBuild(params: {
       allowSync,
       profiles: params.profiles,
       label: params.label,
+      assetFilter: params.assetFilter,
     });
     updateRunState({
       status: "succeeded",
