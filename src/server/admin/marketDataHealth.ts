@@ -43,18 +43,12 @@ const MS_MINUTE = 60 * 1000;
 const MS_HOUR = 60 * MS_MINUTE;
 const MS_DAY = 24 * MS_HOUR;
 
-const YAHOO_CONFIG: ProviderTimeframeConfig[] = [
+const PROVIDER_CONFIGS: ProviderTimeframeConfig[] = [
   { provider: "yahoo", timeframe: "1D", freshMs: 3 * MS_DAY, staleMs: 7 * MS_DAY },
+  { provider: "twelvedata", timeframe: "1H", freshMs: 3 * MS_HOUR, staleMs: 12 * MS_HOUR },
+  { provider: "finnhub", timeframe: "1H", freshMs: 3 * MS_HOUR, staleMs: 12 * MS_HOUR },
+  { provider: "derived", timeframe: "4H", freshMs: 8 * MS_HOUR, staleMs: 24 * MS_HOUR },
 ];
-
-const BINANCE_CONFIG: ProviderTimeframeConfig[] = [
-  { provider: "binance", timeframe: "15m", freshMs: 60 * MS_MINUTE, staleMs: 6 * MS_HOUR },
-  { provider: "binance", timeframe: "1H", freshMs: 3 * MS_HOUR, staleMs: 12 * MS_HOUR },
-  { provider: "binance", timeframe: "4H", freshMs: 8 * MS_HOUR, staleMs: 24 * MS_HOUR },
-  { provider: "binance", timeframe: "1D", freshMs: 2 * MS_DAY, staleMs: 5 * MS_DAY },
-];
-
-const PROVIDER_CONFIGS: ProviderTimeframeConfig[] = [...YAHOO_CONFIG, ...BINANCE_CONFIG];
 
 const STATUS_WEIGHT: Record<MarketDataStatus, number> = {
   fresh: 0,
@@ -142,8 +136,7 @@ export async function getMarketDataHealth(): Promise<MarketDataHealth> {
   });
 
   const staleCandidates: StaleAssetEntry[] = assets.map((asset) => {
-    const configs = asset.assetClass === "crypto" ? BINANCE_CONFIG : YAHOO_CONFIG;
-    const summaries = configs.map((config) => {
+    const summaries = PROVIDER_CONFIGS.map((config) => {
       const key = `${asset.id}-${config.provider}-${config.timeframe}`;
       const timestamp = assetStatMap.get(key) ?? null;
       const statusData = evaluateStatus(timestamp, config);
@@ -156,7 +149,7 @@ export async function getMarketDataHealth(): Promise<MarketDataHealth> {
         ...statusData,
       };
     });
-    const fallbackConfig = configs[0];
+    const fallbackConfig = PROVIDER_CONFIGS[0];
     return (
       pickWorst(summaries) ?? {
         assetId: asset.id,

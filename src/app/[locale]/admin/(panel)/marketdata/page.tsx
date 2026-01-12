@@ -33,7 +33,9 @@ export default async function AdminMarketDataPage({ params }: Props) {
 
   const providerLabelMap: Record<string, string> = {
     yahoo: messages["admin.marketdata.provider.yahoo"],
-    binance: messages["admin.marketdata.provider.binance"],
+    twelvedata: messages["admin.marketdata.provider.twelvedata"] ?? "TwelveData",
+    finnhub: messages["admin.marketdata.provider.finnhub"] ?? "Finnhub",
+    derived: messages["admin.marketdata.provider.derived"] ?? "Derived",
   };
 
   const formatDate = (value: Date | null): string =>
