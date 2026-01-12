@@ -27,7 +27,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 
   const startedAt = Date.now();
   try {
-    const result = await requestSnapshotBuild({ source: "cron", force: true });
+    const result = await requestSnapshotBuild({ source: "cron", force: true, profiles: ["SWING"], allowSync: false });
     const snapshotRecord = result.snapshot.snapshot;
     const snapshotTime =
       snapshotRecord.snapshotTime instanceof Date
@@ -48,7 +48,14 @@ export async function GET(request: NextRequest): Promise<Response> {
       ok: true,
       durationMs: Date.now() - startedAt,
       message: "cron_snapshot_build",
-      meta: { reused: result.reused, totalSetups: setups.length, llm: consumeLlmUsageStats() },
+      meta: {
+        reused: result.reused,
+        totalSetups: setups.length,
+        llm: consumeLlmUsageStats(),
+        profiles: ["SWING"],
+        timeframesUsed: ["1D", "1W"],
+        externalFetches: 0,
+      },
     });
 
     return respondOk<CronSuccessBody>({

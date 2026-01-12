@@ -5,14 +5,15 @@ import { mockEvents } from "@/src/lib/mockEvents";
 import { mockBiasSnapshot } from "@/src/lib/mockBias";
 import { setupDefinitions, type SetupDefinition } from "@/src/lib/engine/setupDefinitions";
 import { computeLevelsForSetup, type SetupLevelCategory } from "@/src/lib/engine/levels";
-import { syncDailyCandlesForAsset } from "@/src/features/marketData/syncDailyCandles";
 import { getActiveAssets, type Asset } from "@/src/server/repositories/assetRepository";
 import { getEventsInRange } from "@/src/server/repositories/eventRepository";
 import { DbBiasProvider, type BiasDomainModel } from "@/src/server/providers/biasProvider";
 import { getLatestCandleForAsset, type Candle } from "@/src/server/repositories/candleRepository";
 import type { Timeframe } from "@/src/server/providers/marketDataProvider";
 import type { MarketTimeframe } from "@/src/server/marketData/MarketDataProvider";
-import { getTimeframesForAsset, TIMEFRAME_SYNC_WINDOWS } from "@/src/server/marketData/timeframeConfig";
+import { getProfileTimeframes, getTimeframesForAsset, TIMEFRAME_SYNC_WINDOWS } from "@/src/server/marketData/timeframeConfig";
+import { resolveMarketDataProviders } from "@/src/server/marketData/providerResolver";
+import { syncDailyCandlesForAsset } from "@/src/features/marketData/syncDailyCandles";
 import { buildMarketMetrics } from "@/src/lib/engine/marketMetrics";
 import type { MarketMetrics } from "@/src/lib/engine/marketMetrics";
 import {
@@ -35,7 +36,6 @@ import { createDefaultRings } from "@/src/lib/engine/rings";
 import { applyOrderflowConfidenceAdjustment } from "@/src/lib/engine/orderflowAdjustments";
 import { getSetupProfileConfig, type SetupProfile } from "@/src/lib/config/setupProfile";
 import { logger } from "@/src/lib/logger";
-import { resolveMarketDataProviders } from "@/src/server/marketData/providerResolver";
 import { resolveProviderSymbolForSource } from "@/src/server/marketData/providerDisplay";
 
 export interface PerceptionDataSource {
@@ -130,12 +130,12 @@ class LivePerceptionDataSource implements PerceptionDataSource {
         const template = setupDefinitions[index % setupDefinitions.length];
         const direction = index % 2 === 0 ? "Long" : "Short";
         const normalizedDirection = direction.toLowerCase() as "long" | "short";
-        const supportedTimeframes = getTimeframesForAsset(asset);
 
         for (const profile of profiles) {
           const config = getSetupProfileConfig(profile);
           const baseTimeframe = this.normalizeTimeframe(config.primaryTimeframe);
-          if (profile === "INTRADAY" && !supportedTimeframes.includes(baseTimeframe)) {
+          const supportedTimeframes = getProfileTimeframes(profile, asset);
+          if (!supportedTimeframes.includes(baseTimeframe)) {
             continue;
           }
 
@@ -314,7 +314,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     });
     const normalizedBiasScore = this.normalizeBiasScore(biasSnapshot?.biasScore);
 
-    const timeframes = getTimeframesForAsset(asset);
+    const timeframes = getProfileTimeframes(profile, asset);
     const metrics = await buildMarketMetrics({
       asset,
       referencePrice,
@@ -603,7 +603,7 @@ export function createPerceptionDataSource(config?: {
   assetFilter?: string[];
 }): PerceptionDataSource {
   const mode = getPerceptionDataMode();
-  const allowSync = config?.allowSync ?? true;
+  const allowSync = config?.allowSync ?? false;
   const profiles = config?.profiles ?? (["SWING", "INTRADAY", "POSITION"] satisfies SetupProfile[]);
 
   if (mode === "live") {

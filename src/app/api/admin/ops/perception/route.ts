@@ -65,10 +65,11 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => ({}));
   const force = Boolean(body?.force);
+  const profiles = Array.isArray(body?.profiles) && body.profiles.length ? body.profiles : ["SWING"];
 
   const startedAt = new Date();
   try {
-    const result = await requestSnapshotBuild({ source: "admin", force });
+    const result = await requestSnapshotBuild({ source: "admin", force, profiles, allowSync: false });
     const snapshotWithItems = result.snapshot;
     const snapshot = snapshotWithItems.snapshot;
     const snapshotSource = getSnapshotSourceFromNotes(snapshot.notes) ?? "admin";

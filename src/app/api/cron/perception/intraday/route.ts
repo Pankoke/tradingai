@@ -54,6 +54,9 @@ export async function POST(request: NextRequest): Promise<Response> {
       meta: {
         setups: setupsArr.length,
         snapshotId: snapshot.snapshot.id,
+        profiles: ["INTRADAY"],
+        timeframesUsed: ["1H", "4H"],
+        externalFetches: 0,
       },
     });
 

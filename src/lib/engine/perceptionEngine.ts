@@ -239,7 +239,7 @@ export async function buildPerceptionSnapshot(options?: {
 }): Promise<PerceptionSnapshot> {
   const asOf = options?.asOf ?? new Date();
   const dataSource = createPerceptionDataSource({
-    allowSync: options?.allowSync ?? true,
+    allowSync: options?.allowSync ?? false,
     profiles: options?.profiles,
     assetFilter: options?.assetFilter,
   });

@@ -155,6 +155,9 @@ export async function getSnapshotBuildStatus(): Promise<{
 export async function requestSnapshotBuild(params: {
   source: SnapshotBuildSource;
   force?: boolean;
+  profiles?: import("@/src/lib/config/setupProfile").SetupProfile[];
+  allowSync?: boolean;
+  label?: string;
 }): Promise<{ snapshot: PerceptionSnapshotWithItems; reused: boolean }> {
   const latest = await loadLatestSnapshotFromStore();
   if (!params.force && latest && isSnapshotFromToday(latest.snapshot.snapshotTime)) {
@@ -179,8 +182,13 @@ export async function requestSnapshotBuild(params: {
     reused: false,
   });
   try {
-    const allowSync = params.source !== "ui";
-    const snapshot = await buildAndStorePerceptionSnapshot({ source: params.source, allowSync });
+    const allowSync = params.allowSync ?? false;
+    const snapshot = await buildAndStorePerceptionSnapshot({
+      source: params.source,
+      allowSync,
+      profiles: params.profiles,
+      label: params.label,
+    });
     updateRunState({
       status: "succeeded",
       finishedAt: new Date().toISOString(),
