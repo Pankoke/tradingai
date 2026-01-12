@@ -196,11 +196,9 @@ export function computeLevelsForSetup(params: {
     params.bandScale ??
     (params.profile === "INTRADAY"
       ? 0.65
-      : params.profile === "SCALP"
-        ? 0.5
-        : params.profile === "POSITION"
-          ? 1.05
-          : 1);
+      : params.profile === "POSITION"
+        ? 1.05
+        : 1);
   const bandPctRaw = baseBand * profileBandScale * volFactor;
   const bandPct = clamp(bandPctRaw, 0.001, 0.05);
   const stopBand = clamp(bandPct * stopFactor, 0.001, 0.03);

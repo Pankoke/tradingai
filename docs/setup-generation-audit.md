@@ -16,7 +16,7 @@
      - `referencePrice`: Zahl > 0 (Mid/Close aus Perception Engine).
      - `direction` (long/short), `volatilityScore` (0–100), `confidence` (0–100), `category` (pullback/breakout/range/etc.), `profile`.
    - Base-Band per Category: pullback 0.7%, breakout 0.9%, range 0.6%, trendContinuation 0.8%, liquidityGrab 1.1%, unknown 0.6%.
-   - Profile-Scaling: SCALP 0.5, INTRADAY 0.65, sonst 1.0.
+   - Profile-Scaling: INTRADAY 0.65, sonst 1.0.
    - Volatility/Confidence-Faktoren:
      - volFactor = clamp(0.5 + volNorm*1.5, 0.5, 2.0)
      - stopFactor = clamp(1.3 - confNorm*0.6, 0.7, 1.3)

@@ -1,18 +1,9 @@
 import type { MarketTimeframe } from "@/src/server/marketData/MarketDataProvider";
 
 const INTRADAY_BASE: MarketTimeframe[] = ["4H", "1H"];
-const SCALP_TIMEFRAME: MarketTimeframe = "15m";
-
-function isScalpEnabled(): boolean {
-  return process.env.ENABLE_SCALP_CANDLES === "1";
-}
 
 export function getAllowedIntradayTimeframes(): MarketTimeframe[] {
-  const allowed = [...INTRADAY_BASE];
-  if (isScalpEnabled()) {
-    allowed.push(SCALP_TIMEFRAME);
-  }
-  return allowed;
+  return [...INTRADAY_BASE];
 }
 
 export function isTimeframeAllowed(timeframe: MarketTimeframe): boolean {

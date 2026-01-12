@@ -4,7 +4,7 @@ import { filterAllowedTimeframes } from "@/src/lib/config/candleTimeframes";
 import type { SetupProfile } from "@/src/lib/config/setupProfile";
 
 const BASE_TIMEFRAMES: MarketTimeframe[] = ["1D", "1W"];
-const CRYPTO_TIMEFRAMES: MarketTimeframe[] = ["1D", "1W", "4H", "1H", "15m"];
+const CRYPTO_TIMEFRAMES: MarketTimeframe[] = ["1D", "1W", "4H", "1H"];
 const INTRADAY_WHITELIST_SYMBOLS = new Set<string>([
   "GC=F",
   "GOLD",
@@ -50,9 +50,6 @@ export function getProfileTimeframes(profile: SetupProfile, asset: Asset): Marke
   }
   if (profile === "INTRADAY") {
     return ["1H", "4H"];
-  }
-  if (profile === "SCALP") {
-    return ["1H"]; // 15m bewusst nicht aktiviert
   }
   return ["1D", "1W"];
 }

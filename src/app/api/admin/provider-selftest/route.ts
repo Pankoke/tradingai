@@ -74,10 +74,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return respondFail("UNAUTHORIZED", "Unauthorized", 401);
   }
 
-  const search = request.nextUrl.searchParams;
-  const include15m = search.get("scalp") === "1" || process.env.ENABLE_SCALP_CANDLES === "1";
   const assets: Asset[] = DEFAULT_ASSETS;
-  const timeframes: MarketTimeframe[] = include15m ? ["1H", "15m"] : ["1H"];
+  const timeframes: MarketTimeframe[] = ["1H"];
   const from = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const to = new Date();
 
@@ -99,7 +97,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
             from,
             to,
           });
-          const validation = validateCandles(candles, { expectTimeframeMinutes: timeframe === "1H" ? 60 : 15 });
+          const validation = validateCandles(candles, { expectTimeframeMinutes: 60 });
           results.push({
             provider: provider.provider,
             asset: asset.id,

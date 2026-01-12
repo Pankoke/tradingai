@@ -8,9 +8,8 @@ describe("timeframeConfig", () => {
     expect(frames).toContain("1D");
   });
 
-  it("gates 15m unless enabled", async () => {
+  it("does not include unsupported 15m timeframe", async () => {
     vi.resetModules();
-    delete process.env.ENABLE_SCALP_CANDLES;
     const { getTimeframesForAsset } = await import("@/src/server/marketData/timeframeConfig");
     const frames = getTimeframesForAsset({ assetClass: "crypto" } as any);
     expect(frames).not.toContain("15m");

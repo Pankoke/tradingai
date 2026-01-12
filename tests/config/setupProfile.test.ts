@@ -3,8 +3,8 @@ import { deriveSetupProfileFromTimeframe, getSetupProfileConfig } from "@/src/li
 
 describe("setupProfile config", () => {
   it("derives profiles from timeframe", () => {
-    expect(deriveSetupProfileFromTimeframe("5m")).toBe("SCALP");
-    expect(deriveSetupProfileFromTimeframe("15m")).toBe("SCALP");
+    expect(deriveSetupProfileFromTimeframe("5m")).toBe("INTRADAY");
+    expect(deriveSetupProfileFromTimeframe("15m")).toBe("INTRADAY");
     expect(deriveSetupProfileFromTimeframe("1h")).toBe("INTRADAY");
     expect(deriveSetupProfileFromTimeframe("4h")).toBe("INTRADAY");
     expect(deriveSetupProfileFromTimeframe("1D")).toBe("SWING");
@@ -16,7 +16,5 @@ describe("setupProfile config", () => {
     const swing = getSetupProfileConfig("SWING");
     expect(swing.eventWindows.execMinutes).toBe(120);
     expect(swing.eventWindows.contextMinutes).toBe(2880);
-    const scalps = getSetupProfileConfig("SCALP");
-    expect(scalps.eventWindows.execMinutes).toBeGreaterThan(0);
   });
 });

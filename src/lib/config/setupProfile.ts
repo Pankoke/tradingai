@@ -1,4 +1,4 @@
-export type SetupProfile = "SCALP" | "INTRADAY" | "SWING" | "POSITION";
+export type SetupProfile = "INTRADAY" | "SWING" | "POSITION";
 
 type EventWindowConfig = {
   execMinutes: number;
@@ -20,13 +20,6 @@ type SetupProfileConfig = {
 };
 
 const PROFILE_CONFIG: Record<SetupProfile, SetupProfileConfig> = {
-  SCALP: {
-    profile: "SCALP",
-    primaryTimeframe: "5m",
-    confirmTimeframe: "15m",
-    eventWindows: { execMinutes: 45, contextMinutes: 360, postMinutes: 60 },
-    levelsDefaults: { bandScale: 0.5 },
-  },
   INTRADAY: {
     profile: "INTRADAY",
     primaryTimeframe: "1H",
@@ -52,8 +45,8 @@ const PROFILE_CONFIG: Record<SetupProfile, SetupProfileConfig> = {
 export function deriveSetupProfileFromTimeframe(timeframe: string | undefined | null): SetupProfile {
   if (!timeframe) return "SWING";
   const tf = timeframe.toLowerCase();
-  if (tf.includes("5m")) return "SCALP";
-  if (tf.includes("15m")) return "SCALP";
+  if (tf.includes("5m")) return "INTRADAY";
+  if (tf.includes("15m")) return "INTRADAY";
   if (tf.includes("1h")) return "INTRADAY";
   if (tf.includes("4h")) return "INTRADAY";
   if (tf.includes("1w") || tf.includes("week")) return "POSITION";

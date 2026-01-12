@@ -10,7 +10,6 @@ declare namespace NodeJS {
     MARKETDATA_TWELVEDATA_MAX_RPM?: string;
     MARKETDATA_FINNHUB_MAX_RPM?: string;
     MARKETDATA_INTRADAY_MAX_REQUESTS_PER_RUN?: string;
-    ENABLE_SCALP_CANDLES?: string;
     JB_NEWS_API_KEY?: string;
     EVENTS_INGEST_MIN_IMPACT?: string;
     EVENTS_RETENTION_DAYS?: string;

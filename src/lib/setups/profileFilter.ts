@@ -12,7 +12,7 @@ export function parseProfileFilter(raw?: string | null): ProfileFilter {
 }
 
 function resolveProfile(setup: Pick<Setup, "profile" | "timeframe">): SetupProfile {
-  if (setup.profile === "SCALP" || setup.profile === "INTRADAY" || setup.profile === "SWING" || setup.profile === "POSITION") {
+  if (setup.profile === "INTRADAY" || setup.profile === "SWING" || setup.profile === "POSITION") {
     return setup.profile;
   }
   return deriveSetupProfileFromTimeframe(setup.timeframe);

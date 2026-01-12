@@ -45,7 +45,7 @@ function resolveProfileWeights(profile?: SetupProfile): Record<keyof SetupScoreB
       pattern: 0.12,
     };
   }
-  // SWING / POSITION / SCALP fall back to baseline
+  // SWING / POSITION fall back to baseline
   return {
     total: 1,
     trend: 0.4,

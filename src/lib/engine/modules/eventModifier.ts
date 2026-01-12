@@ -119,7 +119,7 @@ function classifyTimeframe(raw?: string): "intraday" | "daily" | "swing" | "unkn
 }
 
 function resolveProfile(setup?: Pick<Setup, "profile" | "timeframe">): SetupProfile {
-  if (setup?.profile && ["SCALP", "INTRADAY", "SWING", "POSITION"].includes(setup.profile)) {
+  if (setup?.profile && ["INTRADAY", "SWING", "POSITION"].includes(setup.profile)) {
     return setup.profile as SetupProfile;
   }
   return deriveSetupProfileFromTimeframe(setup?.timeframe);
