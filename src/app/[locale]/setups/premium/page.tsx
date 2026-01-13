@@ -94,6 +94,7 @@ function toHomepageSetup(setup: Setup): HomepageSetup {
     assetId: setup.assetId,
     symbol: setup.symbol,
     timeframe: setup.timeframe,
+    timeframeUsed: (setup as { timeframeUsed?: string | null }).timeframeUsed ?? setup.timeframe ?? null,
     profile: setup.profile ?? deriveSetupProfileFromTimeframe(setup.timeframe),
     direction: setup.direction,
     setupGrade: setup.setupGrade,
@@ -122,6 +123,9 @@ function toHomepageSetup(setup: Setup): HomepageSetup {
     eventContext: setup.eventContext ?? null,
     sentiment: setup.sentiment ?? null,
     orderflow: setup.orderflow ?? null,
+    dataSourcePrimary: (setup as { dataSourcePrimary?: string | null }).dataSourcePrimary ?? null,
+    dataSourceUsed: (setup as { dataSourceUsed?: string | null }).dataSourceUsed ?? null,
+    providerSymbolUsed: (setup as { providerSymbolUsed?: string | null }).providerSymbolUsed ?? null,
     ringAiSummary: setup.ringAiSummary ?? null,
   };
 }
