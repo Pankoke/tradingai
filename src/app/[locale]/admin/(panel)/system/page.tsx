@@ -5,6 +5,7 @@ import deMessages from "@/src/messages/de.json";
 import enMessages from "@/src/messages/en.json";
 import { getSystemHealthReport } from "@/src/server/admin/systemHealth";
 import { listAuditRuns } from "@/src/server/repositories/auditRunRepository";
+import { getLatestFreshnessRuns } from "@/src/server/admin/freshnessAuditService";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -17,6 +18,20 @@ const STATUS_TONES: Record<Status, string> = {
   warning: "bg-amber-500/15 text-amber-200 border border-amber-400/40",
   critical: "bg-rose-500/15 text-rose-200 border border-rose-400/40",
 };
+
+const GATE_LABELS: Record<string, string> = {
+  perception_swing: "Perception Swing (Daily)",
+  snapshot_build: "Perception Swing (Daily)",
+  perception_intraday: "Perception Intraday",
+  outcomes: "Outcomes Evaluate",
+};
+
+function resolveGateLabel(gate: string | null, action: string): string {
+  if (gate && GATE_LABELS[gate]) return GATE_LABELS[gate];
+  if (gate) return gate;
+  if (action === "snapshot_build") return "Snapshot Build (no freshness meta)";
+  return action;
+}
 
 function formatNumber(locale: Locale, value: number): string {
   return value.toLocaleString(locale === "de" ? "de-DE" : "en-US");
@@ -77,9 +92,13 @@ export default async function AdminSystemHealthPage({ params }: Props) {
   const { locale: localeParam } = await params;
   const locale = localeParam as Locale;
   const messages = locale === "de" ? deMessages : enMessages;
-  const [health, auditPreview] = await Promise.all([
+  const [health, auditPreview, freshnessRuns] = await Promise.all([
     getSystemHealthReport(),
     listAuditRuns({ limit: 8 }),
+    getLatestFreshnessRuns({
+      actions: ["snapshot_build", "perception_intraday", "outcomes.evaluate"],
+      limitPerAction: 1,
+    }),
   ]);
   const recentRuns = auditPreview.runs;
 
@@ -207,6 +226,75 @@ export default async function AdminSystemHealthPage({ params }: Props) {
               <div className="text-xs text-rose-300">{health.dbHealth.error}</div>
             )}
           </dl>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-800 bg-slate-950/40 p-5 shadow-lg shadow-black/40">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Freshness Gates</p>
+            <p className="text-sm text-slate-400">Letzte Gate-Ergebnisse (Perception Swing/Intraday, Outcomes)</p>
+          </div>
+          <Link href={`/${locale}/admin/audit?freshness=1`} className="text-sm text-sky-300 hover:text-sky-100">
+            {messages["admin.audit.title"]}
+          </Link>
+        </div>
+        <div className="mt-4 overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-800 text-sm">
+            <thead className="bg-slate-900/60 text-left text-xs uppercase tracking-wide text-slate-400">
+              <tr>
+                <th className="px-4 py-2">Job</th>
+                <th className="px-4 py-2">Status</th>
+                <th className="px-4 py-2">Skipped</th>
+                <th className="px-4 py-2">When</th>
+                <th className="px-4 py-2">Reasons</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800">
+              {freshnessRuns.map((run) => (
+                <tr key={`${run.action}-${run.timestamp.toString()}`}>
+                  <td className="px-4 py-2 text-slate-100">
+                    <div className="font-semibold">{resolveGateLabel(run.gate, run.action)}</div>
+                    <div className="text-xs text-slate-500">{run.gate ?? run.action}</div>
+                  </td>
+                  <td className="px-4 py-2">
+                    <span
+                      className={clsx(
+                        "rounded-full px-2 py-1 text-xs font-semibold",
+                        run.freshnessStatus === "ok" ? STATUS_TONES.ok : STATUS_TONES.warning,
+                      )}
+                    >
+                      {run.freshnessStatus}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2 text-slate-200">{run.skippedCount ?? 0}</td>
+                  <td className="px-4 py-2 text-slate-400" title={new Date(run.timestamp).toISOString()}>
+                    {formatAgo(run.timestamp.toString(), locale)}
+                  </td>
+                  <td className="px-4 py-2 text-slate-300">
+                    {run.reasonsPreview.length ? (
+                      <div className="space-y-1">
+                        {run.reasonsPreview.map((r, idx) => (
+                          <div key={`${run.id}-r-${idx}`} className="text-xs text-slate-400">
+                            {r.assetId ?? "asset"} {r.timeframe ?? ""} {r.status ?? ""} {r.ageMinutes ? `(${Math.round(r.ageMinutes)}m)` : ""}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-slate-500">-</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {freshnessRuns.length === 0 && (
+                <tr>
+                  <td className="px-4 py-3 text-slate-400" colSpan={5}>
+                    Keine Freshness-Daten vorhanden.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </section>
 

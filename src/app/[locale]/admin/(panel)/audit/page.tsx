@@ -5,6 +5,7 @@ import deMessages from "@/src/messages/de.json";
 import enMessages from "@/src/messages/en.json";
 import { listAuditRuns } from "@/src/server/repositories/auditRunRepository";
 import { JsonReveal } from "@/src/components/admin/JsonReveal";
+import { getFreshnessRuns } from "@/src/server/admin/freshnessAuditService";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -17,6 +18,8 @@ type ParsedSearch = {
   ok?: "true" | "false";
   page: number;
   pageSize: number;
+  freshness?: boolean;
+  gate?: string;
 };
 
 export const ACTION_OPTIONS = [
@@ -31,6 +34,7 @@ export const ACTION_OPTIONS = [
   "outcomes.evaluate",
 ] as const;
 const SOURCE_OPTIONS = ["admin", "cron", "ui"] as const;
+const GATE_OPTIONS = ["perception_swing", "perception_intraday", "outcomes"] as const;
 
 const STATUS_TONES = {
   ok: "bg-emerald-500/15 text-emerald-200 border border-emerald-400/40",
@@ -48,7 +52,9 @@ function parseSearchParams(raw: Record<string, string | string[] | undefined>): 
   const ok = toArrayValue(raw.ok)?.trim() as "true" | "false" | undefined;
   const page = Math.max(1, Number(toArrayValue(raw.page) ?? "1") || 1);
   const pageSize = Math.min(100, Math.max(5, Number(toArrayValue(raw.pageSize) ?? "20") || 20));
-  return { action: action || undefined, source: source || undefined, ok, page, pageSize };
+  const freshness = toArrayValue(raw.freshness) === "1";
+  const gate = toArrayValue(raw.gate)?.trim();
+  return { action: action || undefined, source: source || undefined, ok, page, pageSize, freshness, gate };
 }
 
 function buildQueryString(
@@ -59,6 +65,8 @@ function buildQueryString(
   if (current.action) params.set("action", current.action);
   if (current.source) params.set("source", current.source);
   if (current.ok) params.set("ok", current.ok);
+  if (current.freshness) params.set("freshness", "1");
+  if (current.gate) params.set("gate", current.gate);
   params.set("page", current.page.toString());
   params.set("pageSize", current.pageSize.toString());
 
@@ -98,16 +106,37 @@ export default async function AdminAuditPage({ params, searchParams }: PageProps
   const messages = locale === "de" ? deMessages : enMessages;
   const resolvedSearch = parseSearchParams(await searchParams);
 
-  const { runs, total } = await listAuditRuns({
-    filters: {
-      action: resolvedSearch.action,
-      source: resolvedSearch.source,
-      ok: resolvedSearch.ok === undefined ? undefined : resolvedSearch.ok === "true",
-    },
-    limit: resolvedSearch.pageSize,
-    offset: (resolvedSearch.page - 1) * resolvedSearch.pageSize,
-  });
+  const baseFilters = {
+    action: resolvedSearch.action,
+    source: resolvedSearch.source,
+    ok: resolvedSearch.ok === undefined ? undefined : resolvedSearch.ok === "true",
+  };
 
+  const runs = resolvedSearch.freshness
+    ? await getFreshnessRuns({
+        hasFreshnessOnly: true,
+        action: resolvedSearch.action,
+        gate: resolvedSearch.gate,
+        limit: resolvedSearch.pageSize,
+      })
+    : (
+        await listAuditRuns({
+          filters: baseFilters,
+          limit: resolvedSearch.pageSize,
+          offset: (resolvedSearch.page - 1) * resolvedSearch.pageSize,
+        })
+      ).runs.map((run) => {
+        const freshness = (run.meta as any)?.freshness ?? {};
+        const skippedAssets = Array.isArray(freshness.skippedAssets) ? freshness.skippedAssets : [];
+        return {
+          ...run,
+          gate: typeof freshness.gate === "string" ? freshness.gate : null,
+          status: typeof freshness.status === "string" ? freshness.status : null,
+          skippedCount: skippedAssets.length,
+        };
+      });
+
+  const total = runs.length;
   const pageCount = Math.max(1, Math.ceil(total / resolvedSearch.pageSize));
 
   return (
@@ -177,6 +206,31 @@ export default async function AdminAuditPage({ params, searchParams }: PageProps
               ))}
             </select>
           </label>
+          <label className="flex items-center gap-2 text-sm text-slate-200">
+            <input
+              type="checkbox"
+              name="freshness"
+              value="1"
+              defaultChecked={resolvedSearch.freshness}
+              className="h-4 w-4 rounded border-slate-600 bg-slate-950 text-sky-500"
+            />
+            <span>Only Freshness</span>
+          </label>
+          <label className="space-y-1 text-sm text-slate-200">
+            <span>Gate</span>
+            <select
+              name="gate"
+              defaultValue={resolvedSearch.gate ?? ""}
+              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white"
+            >
+              <option value="">{messages["admin.audit.filters.any"]}</option>
+              {GATE_OPTIONS.map((gate) => (
+                <option key={gate} value={gate}>
+                  {gate}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         <div className="flex gap-3">
           <button
@@ -203,6 +257,8 @@ export default async function AdminAuditPage({ params, searchParams }: PageProps
                 <th className="px-4 py-3">{messages["admin.audit.table.action"]}</th>
                 <th className="px-4 py-3">{messages["admin.audit.table.source"]}</th>
                 <th className="px-4 py-3">{messages["admin.audit.table.status"]}</th>
+                <th className="px-4 py-3">Freshness Gate</th>
+                <th className="px-4 py-3">Skipped</th>
                 <th className="px-4 py-3">{messages["admin.audit.table.duration"]}</th>
                 <th className="px-4 py-3">{messages["admin.audit.table.message"]}</th>
                 <th className="px-4 py-3">{messages["admin.audit.table.details"]}</th>
@@ -212,9 +268,11 @@ export default async function AdminAuditPage({ params, searchParams }: PageProps
               {runs.map((run) => (
                 <tr key={run.id}>
                   <td className="px-4 py-3 text-slate-300">
-                    {run.createdAt instanceof Date
-                      ? formatDate(run.createdAt, locale)
-                      : formatDate(new Date(run.createdAt), locale)}
+                    {"timestamp" in run
+                      ? formatDate((run as any).timestamp, locale)
+                      : run.createdAt instanceof Date
+                        ? formatDate(run.createdAt, locale)
+                        : formatDate(new Date(run.createdAt), locale)}
                   </td>
                   <td className="px-4 py-3">{getActionLabel(run.action, messages)}</td>
                   <td className="px-4 py-3">{getSourceLabel(run.source, messages)}</td>
@@ -223,8 +281,10 @@ export default async function AdminAuditPage({ params, searchParams }: PageProps
                       {run.ok ? messages["admin.audit.status.ok"] : messages["admin.audit.status.fail"]}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-slate-300">{run.durationMs != null ? `${run.durationMs} ms` : "–"}</td>
-                  <td className="px-4 py-3 text-slate-300">{run.message ?? "–"}</td>
+                  <td className="px-4 py-3 text-slate-200">{(run as any).gate ?? "—"}</td>
+                  <td className="px-4 py-3 text-slate-200">{(run as any).skippedCount ?? 0}</td>
+                  <td className="px-4 py-3 text-slate-300">{run.durationMs != null ? `${run.durationMs} ms` : "—"}</td>
+                  <td className="px-4 py-3 text-slate-300">{run.message ?? "—"}</td>
                   <td className="px-4 py-3">
                     {run.meta || run.error ? (
                       <JsonReveal

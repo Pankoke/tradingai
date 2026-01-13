@@ -88,3 +88,4 @@ ORDER BY created_at DESC LIMIT 20;
 - Intraday Perception: 1H ≤ 180m (Skip Asset), 4H ≤ 480m (Warn). Audit `meta.freshness`.
 - Outcomes Evaluate: benötigt Swing-Snapshot ≤ 12h alt und 1D/1W Candles nicht stale; andernfalls NO-OP mit Audit `abortedDueToFreshness`.
 - Perception/Outcomes rufen keine Provider-APIs; sie prüfen ausschließlich DB-Freshness.
+- Admin Observability: Freshness-Gates sichtbar unter Admin → System (Latest Gates), Admin → Marketdata (Latest Gate Results) und Admin → Audit (Gate/Status/Skipped + Filter `freshness=1`).
