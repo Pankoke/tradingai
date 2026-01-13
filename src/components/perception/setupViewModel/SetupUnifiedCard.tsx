@@ -54,6 +54,13 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
   }, [primaryCollapsed.text, t, vm]);
   const bulletsToRender = expanded ? executionContent.bullets : collapsedBullets;
   const execDebugEnabled = process.env.NEXT_PUBLIC_EXEC_DEBUG === "1";
+  const insightSetup = setupOriginal ?? (vm as unknown as Setup);
+  const sourceDebugLine =
+    execDebugEnabled && insightSetup
+      ? `debug: source used=${insightSetup.dataSourceUsed ?? "-"} primary=${insightSetup.dataSourcePrimary ?? "-"} fallback=${
+          insightSetup.dataSourceUsed && insightSetup.dataSourcePrimary && insightSetup.dataSourceUsed !== insightSetup.dataSourcePrimary ? "YES" : "no"
+        } providerSymbol=${insightSetup.providerSymbolUsed ?? "-"} tf=${insightSetup.timeframeUsed ?? insightSetup.timeframe}`
+      : null;
   const executionDebugLine =
     execDebugEnabled && !expanded
       ? [
@@ -72,12 +79,12 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
             : null,
           `debug: rings t=${primaryCollapsed.debug.rings.trendScore ?? "n/a"} b=${primaryCollapsed.debug.rings.biasScore ?? "n/a"} s=${primaryCollapsed.debug.rings.sentimentScore ?? "n/a"} of=${primaryCollapsed.debug.rings.orderflowScore ?? "n/a"} e=${primaryCollapsed.debug.rings.eventScore ?? "n/a"} c=${primaryCollapsed.debug.rings.confidenceScore ?? "n/a"} sq=${primaryCollapsed.debug.signalQualityScore ?? "n/a"} conf=${primaryCollapsed.debug.confidenceScore ?? "n/a"} deltaTB=${primaryCollapsed.debug.trendBiasDelta ?? "n/a"}`,
           `debug: thresholds ofHi=${primaryCollapsed.debug.thresholds.orderflowHigh} ofLo=${primaryCollapsed.debug.thresholds.orderflowLow} dTB=${primaryCollapsed.debug.thresholds.trendBiasDelta} confHi=${primaryCollapsed.debug.thresholds.confidenceHigh} sqHi=${primaryCollapsed.debug.thresholds.signalQualityHigh} sqMed=${primaryCollapsed.debug.thresholds.signalQualityStandard}`,
+          sourceDebugLine,
         ].filter((line): line is string => Boolean(line))
       : null;
   const actionCardsVariant = expanded ? "full" : "mini";
 
   const generatedAtText = vm.meta.generatedAt ?? vm.meta.snapshotCreatedAt ?? vm.meta.snapshotTime ?? null;
-  const insightSetup = setupOriginal ?? (vm as unknown as Setup);
   const showInsightPanel = mode === "sotd" || expanded;
   const numberFormatter = useMemo(() => new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2, minimumFractionDigits: 2 }), []);
 
