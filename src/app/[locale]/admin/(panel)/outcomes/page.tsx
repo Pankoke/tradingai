@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Locale } from "@/i18n";
 import { loadOutcomeStats } from "@/src/server/admin/outcomeService";
 import { InfoTooltip } from "@/src/components/admin/InfoTooltip";
+import { OutcomesExportButtons } from "@/src/components/admin/OutcomesExportButtons";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -63,24 +64,13 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
             ),
           )}
         </div>
-        <div className="flex gap-3 text-xs">
-          <a
-            className="rounded-full bg-slate-800 px-3 py-1 font-semibold text-slate-200 hover:bg-slate-700"
-            href={`/api/admin/outcomes/export?days=${days}${assetId ? `&assetId=${assetId}` : ""}${
-              playbookId ? `&playbookId=${playbookId}` : ""
-            }${showNoTradeType ? "&showNoTradeType=1" : ""}&format=csv`}
-          >
-            Export CSV
-          </a>
-          <a
-            className="rounded-full bg-slate-800 px-3 py-1 font-semibold text-slate-200 hover:bg-slate-700"
-            href={`/api/admin/outcomes/export?days=${days}${assetId ? `&assetId=${assetId}` : ""}${
-              playbookId ? `&playbookId=${playbookId}` : ""
-            }${showNoTradeType ? "&showNoTradeType=1" : ""}&format=json`}
-          >
-            Export JSON
-          </a>
-        </div>
+        <OutcomesExportButtons
+          days={days}
+          assetId={assetId}
+          playbookId={playbookId}
+          showNoTradeType={showNoTradeType}
+          locale={locale}
+        />
       </header>
 
       <section className="grid gap-4 md:grid-cols-2">

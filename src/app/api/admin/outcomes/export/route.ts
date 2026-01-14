@@ -9,10 +9,17 @@ function authCheck(request: Request): { ok: boolean; meta: Record<string, unknow
   const cronToken = process.env.CRON_SECRET;
   const header = request.headers.get("authorization");
   const bearer = header?.replace("Bearer", "").trim();
+  const cookies = request.headers.get("cookie") ?? "";
+  const clerkStatus = request.headers.get("x-clerk-auth-status");
+  const alt = request.headers.get("x-cron-secret");
   const env = process.env.NODE_ENV;
   const isLocal = env === "development" || env === "test";
-  const usedCron = !!cronToken && bearer === cronToken;
-  const usedAdmin = !!adminToken && bearer === adminToken;
+  const usedCron = !!cronToken && (bearer === cronToken || alt === cronToken);
+  const sessionCookie =
+    cookies.includes("__session=") || cookies.includes("__client_uat=") || cookies.includes("__clerk_session");
+  const usedAdminToken = !!adminToken && bearer === adminToken;
+  const usedSession = !!clerkStatus && clerkStatus !== "signed-out" ? true : sessionCookie;
+  const usedAdmin = usedAdminToken || usedSession;
 
   if (adminToken) {
     return { ok: usedAdmin || usedCron, meta: { hasAdmin: true, hasCron: !!cronToken, usedAdmin, usedCron } };
