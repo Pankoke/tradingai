@@ -1,12 +1,13 @@
 import type { NextRequest } from "next/server";
 import { db } from "@/src/server/db/db";
 import { perceptionSnapshots } from "@/src/server/db/schema/perceptionSnapshots";
-import { gte } from "drizzle-orm";
+import { gte, inArray } from "drizzle-orm";
 import type { Setup } from "@/src/lib/engine/types";
 import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 import { listOutcomesForWindow } from "@/src/server/repositories/setupOutcomeRepository";
 import { getSnapshotById } from "@/src/server/repositories/perceptionSnapshotRepository";
 import { computeSignalQuality } from "@/src/lib/engine/signalQuality";
+import { deriveSetupDecision } from "@/src/lib/decision/setupDecision";
 
 type GradeKey = "A" | "B" | "NO_TRADE";
 
@@ -62,7 +63,8 @@ export async function GET(request: NextRequest): Promise<Response> {
   const playbookId = url.searchParams.get("playbookId") ?? undefined;
   const windowFieldRaw = (url.searchParams.get("windowField") ?? "evaluatedAt").toLowerCase();
   const windowBasedOn = windowFieldRaw === "createdat" ? "createdAt" : windowFieldRaw === "outcomeat" ? "outcomeAt" : "evaluatedAt";
-  const dedupeBy = (url.searchParams.get("dedupeBy") ?? "").toLowerCase() === "setupid" ? "setupId" : null;
+  const dedupeRaw = (url.searchParams.get("dedupeBy") ?? "").toLowerCase();
+  const dedupeBy: "setupId" | "snapshotId" | null = dedupeRaw === "setupid" ? "setupId" : dedupeRaw === "snapshotid" ? "snapshotId" : "snapshotId";
   const effectiveDays = Number.isFinite(daysBack) && daysBack > 0 ? daysBack : 30;
   const from = new Date(Date.now() - effectiveDays * 24 * 60 * 60 * 1000);
 
@@ -92,12 +94,15 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     const total = matches.length;
     const gradeCounts: Record<GradeKey, number> = { A: 0, B: 0, NO_TRADE: 0 };
+    const decisionCounts: Record<"TRADE" | "WATCH" | "BLOCKED", number> = { TRADE: 0, WATCH: 0, BLOCKED: 0 };
     let staleCount = 0;
     let fallbackCount = 0;
 
     for (const setup of matches) {
       const grade = normalizeGrade((setup as { setupGrade?: string | null }).setupGrade ?? null);
       gradeCounts[grade] += 1;
+      const decision = deriveSetupDecision(setup).decision;
+      decisionCounts[decision] += 1;
       const validity = (setup as { validity?: { isStale?: boolean } | null }).validity;
       if (validity?.isStale) staleCount += 1;
       const dataSourcePrimary = (setup as { dataSourcePrimary?: string | null }).dataSourcePrimary;
@@ -126,7 +131,12 @@ export async function GET(request: NextRequest): Promise<Response> {
             return outcomeAt ? outcomeAt >= from : false;
           })
         : outcomesRaw;
-    const outcomes = dedupeBy === "setupId" ? dedupeBySetupId(filteredByOutcomeAt) : filteredByOutcomeAt;
+    const outcomes =
+      dedupeBy === "setupId"
+        ? dedupeBySetupId(filteredByOutcomeAt)
+        : dedupeBy === "snapshotId"
+          ? dedupeBySnapshotId(filteredByOutcomeAt)
+          : filteredByOutcomeAt;
     const outcomeGrades: Record<GradeKey, Record<string, number>> = {
       A: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
       B: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
@@ -134,11 +144,38 @@ export async function GET(request: NextRequest): Promise<Response> {
     };
 
     const snapshotCache = new Map<string, Setup[]>();
+    const snapshotIds = Array.from(
+      new Set(
+        outcomes
+          .map((o) => (o as { snapshotId?: string | null }).snapshotId)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+    if (snapshotIds.length) {
+      const snapshotRows = await db
+        .select({ id: perceptionSnapshots.id, setups: perceptionSnapshots.setups })
+        .from(perceptionSnapshots)
+        .where(inArray(perceptionSnapshots.id, snapshotIds));
+      snapshotRows.forEach((row) => {
+        const setups = (row.setups as Setup[] | undefined) ?? [];
+        snapshotCache.set(row.id, setups);
+      });
+    }
     let outcomesWithGrade = 0;
     let outcomesMissingGrade = 0;
     let outcomesWithMultipleMatches = 0;
     let signalQualityMissing = 0;
     let signalQualityTotal = 0;
+    const outcomesDecisionBuckets: Record<"TRADE" | "WATCH" | "BLOCKED", Record<string, number>> = {
+      TRADE: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
+      WATCH: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
+      BLOCKED: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
+    };
+    let watchOutcomeTradeHits = 0;
+    let watchOutcomeTotal = 0;
+    let outcomesMappedToDecision = 0;
+    let outcomesMissingSnapshot = 0;
+    let outcomesMissingSetupInSnapshot = 0;
 
     for (const outcome of outcomes) {
       const snapshotId = (outcome as { snapshotId?: string | null }).snapshotId;
@@ -163,6 +200,23 @@ export async function GET(request: NextRequest): Promise<Response> {
       const status = (outcome as { outcomeStatus?: string }).outcomeStatus ?? "open";
       if (bucket[status] !== undefined) {
         bucket[status] += 1;
+      }
+      const decisionFromOutcome = deriveOutcomeDecision(resolvedGrade.grade, outcome, snapshotCache, snapshotId, setupId);
+      if (!snapshotId || !snapshotCache.has(snapshotId)) {
+        outcomesMissingSnapshot += 1;
+      } else if (snapshotId && setupId) {
+        const setups = snapshotCache.get(snapshotId) ?? [];
+        const found = setups.find((s) => s.id === setupId);
+        if (!found) outcomesMissingSetupInSnapshot += 1;
+      }
+      outcomesMappedToDecision += 1;
+      const decisionBucket = outcomesDecisionBuckets[decisionFromOutcome] ?? outcomesDecisionBuckets.BLOCKED;
+      if (decisionBucket[status] !== undefined) {
+        decisionBucket[status] += 1;
+      }
+      if (decisionFromOutcome === "WATCH") {
+        watchOutcomeTotal += 1;
+        if (status === "hit_tp" || status === "hit_sl") watchOutcomeTradeHits += 1;
       }
 
       // signalQuality coverage
@@ -210,6 +264,17 @@ export async function GET(request: NextRequest): Promise<Response> {
       pctMissing: pct(signalQualityMissing, signalQualityTotal),
     };
 
+    const decisionDistribution = {
+      total,
+      TRADE: { count: decisionCounts.TRADE, pct: pct(decisionCounts.TRADE, total) },
+      WATCH: { count: decisionCounts.WATCH, pct: pct(decisionCounts.WATCH, total) },
+      BLOCKED: { count: decisionCounts.BLOCKED, pct: pct(decisionCounts.BLOCKED, total) },
+    };
+
+    const outcomesSummaryByDecision = mapDecisionOutcomes(outcomesDecisionBuckets);
+    const watchToTradeProxy =
+      watchOutcomeTotal > 0 ? { count: watchOutcomeTradeHits, total: watchOutcomeTotal, pct: pct(watchOutcomeTradeHits, watchOutcomeTotal) } : null;
+
     return respondOk({
       meta: { assetId: "GOLD", profile: "SWING", timeframe: "1D", daysBack: effectiveDays },
       gradeDistribution: {
@@ -226,6 +291,9 @@ export async function GET(request: NextRequest): Promise<Response> {
         NO_TRADE: outcomesSummaryByGrade("NO_TRADE"),
       },
       signalQualityCoverage,
+      decisionDistribution,
+      outcomesByDecision: outcomesSummaryByDecision,
+      watchToTradeProxy,
       debugMeta: {
         outcomesQuery: {
           daysBack: effectiveDays,
@@ -255,8 +323,20 @@ export async function GET(request: NextRequest): Promise<Response> {
           outcomesWithGrade,
           outcomesMissingGrade,
           outcomesWithMultipleMatches,
+        },
+        decisions: {
+          setupsCount: decisionDistribution.total,
+          outcomesCount: outcomes.length,
+          outcomesMappedToDecision,
+          outcomesMissingSnapshot,
+          outcomesMissingSetupInSnapshot,
+          outcomesDecisionBreakdown: {
+            TRADE: outcomesDecisionBuckets.TRADE,
+            WATCH: outcomesDecisionBuckets.WATCH,
+            BLOCKED: outcomesDecisionBuckets.BLOCKED,
+          },
+        },
       },
-    },
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown error";
@@ -275,6 +355,22 @@ function dedupeBySetupId(outcomes: unknown[]) {
     }
     if (seen.has(setupId)) continue;
     seen.add(setupId);
+    result.push(outcome);
+  }
+  return result;
+}
+
+function dedupeBySnapshotId(outcomes: unknown[]) {
+  const seen = new Set<string>();
+  const result: typeof outcomes = [];
+  for (const outcome of outcomes) {
+    const snapshotId = (outcome as { snapshotId?: string | null }).snapshotId;
+    if (!snapshotId) {
+      result.push(outcome);
+      continue;
+    }
+    if (seen.has(snapshotId)) continue;
+    seen.add(snapshotId);
     result.push(outcome);
   }
   return result;
@@ -304,6 +400,50 @@ async function resolveGradeFromSnapshot(params: {
     return { grade: null, sourceCount: 0 };
   }
   return { grade: matches[0].setupGrade ?? null, sourceCount: matches.length };
+}
+
+function deriveOutcomeDecision(
+  grade: string | null,
+  outcome: unknown,
+  snapshotCache: Map<string, Setup[]>,
+  snapshotId?: string | null,
+  setupId?: string | null,
+): "TRADE" | "WATCH" | "BLOCKED" {
+  if (grade === "A" || grade === "B") return "TRADE";
+  // try to reuse setup data if present
+  if (snapshotId && setupId) {
+    const setups = snapshotCache.get(snapshotId);
+    const setup = setups?.find((s) => s.id === setupId);
+    if (setup) {
+      return deriveSetupDecision(setup).decision;
+    }
+  }
+  // fallback: no info -> treat as blocked
+  const noTradeReason = (outcome as { noTradeReason?: string | null }).noTradeReason ?? null;
+  const rationale = (outcome as { gradeRationale?: string[] | null }).gradeRationale ?? null;
+  if (noTradeReason || (rationale?.length ?? 0) > 0) {
+    const decision = deriveSetupDecision({
+      setupGrade: grade ?? "NO_TRADE",
+      noTradeReason,
+      gradeRationale: rationale ?? [],
+      setupPlaybookId: (outcome as { playbookId?: string | null }).playbookId ?? null,
+    } as unknown as Setup);
+    return decision.decision;
+  }
+  return "BLOCKED";
+}
+
+function mapDecisionOutcomes(buckets: Record<"TRADE" | "WATCH" | "BLOCKED", Record<string, number>>) {
+  const wrap = (bucket: Record<string, number>) => {
+    const evaluatedCount = (bucket.hit_tp ?? 0) + (bucket.hit_sl ?? 0);
+    const winRateTpVsSl = evaluatedCount > 0 ? (bucket.hit_tp ?? 0) / evaluatedCount : 0;
+    return { ...bucket, evaluatedCount, winRateTpVsSl };
+  };
+  return {
+    TRADE: wrap(buckets.TRADE),
+    WATCH: wrap(buckets.WATCH),
+    BLOCKED: wrap(buckets.BLOCKED),
+  };
 }
 
 /**

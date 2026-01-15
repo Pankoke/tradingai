@@ -6,6 +6,7 @@ import { formatAssetLabel, getAssetMeta } from "@/src/lib/formatters/asset";
 import type { SetupViewModel } from "@/src/components/perception/setupViewModel/types";
 import { Tooltip } from "@/src/components/ui/tooltip";
 import { getPlaybookLabel, resolvePlaybookWithReason } from "@/src/lib/engine/playbooks";
+import { watchEnabledPlaybookIds, tradeRequirementsByPlaybook } from "@/src/lib/config/watchDecision";
 
 type Props = {
   setup: SetupViewModel;
@@ -48,6 +49,7 @@ export function SetupCardHeaderBlock({
   const decisionChip = buildDecisionChip(setup);
   const sourceLine = buildSourceLine(setup);
   const decisionLine = buildDecisionLine(setup);
+  const requirementsLine = buildRequirementsLine(setup);
 
   return (
     <div className="space-y-2">
@@ -92,6 +94,7 @@ export function SetupCardHeaderBlock({
         {renderDebugLine(setup)}
         <p className="text-sm text-slate-400">{meta.name}</p>
         {decisionLine}
+        {requirementsLine}
         {sourceLine ? <p className="text-xs text-slate-400">{sourceLine}</p> : null}
       </div>
     </div>
@@ -142,6 +145,7 @@ function buildDecisionChip(setup: SetupViewModel): JSX.Element | null {
 
   const rationaleLines = setup.decisionReasons ?? setup.gradeRationale ?? [];
   const noTrade = setup.noTradeReason;
+  const gradeLabel = grade && grade !== "NO_TRADE" ? grade : grade === "NO_TRADE" ? "NO_TRADE" : null;
 
   let tone = "border-slate-600 bg-slate-800/80 text-slate-200";
   let label = "NO TRADE";
@@ -167,6 +171,7 @@ function buildDecisionChip(setup: SetupViewModel): JSX.Element | null {
   const tooltipContent =
     rationaleLines.length || noTrade ? (
       <div className="space-y-2">
+        {gradeLabel ? <p className="text-xs text-slate-300">Playbook-Grade: {gradeLabel}</p> : null}
         {rationaleLines.length ? (
           <ul className="list-disc space-y-1 pl-4">
             {rationaleLines.map((line) => (
@@ -252,8 +257,21 @@ function buildSourceLine(setup: SetupViewModel): string | null {
 
 function buildDecisionLine(setup: SetupViewModel): JSX.Element | null {
   if (!setup.setupDecision || setup.setupDecision === "TRADE") return null;
-  const reasons = setup.decisionReasons ?? [];
+  const reasons = (setup.decisionReasons ?? []).slice(0, 2);
   if (!reasons.length) return null;
   const tone = setup.setupDecision === "WATCH" ? "text-amber-200" : "text-rose-200";
   return <p className={`text-xs ${tone}`}>{reasons.slice(0, 2).join(" • ")}</p>;
+}
+
+function buildRequirementsLine(setup: SetupViewModel): JSX.Element | null {
+  if (setup.setupDecision !== "WATCH") return null;
+  const playbookId = (setup.setupPlaybookId ?? "").toLowerCase();
+  if (!watchEnabledPlaybookIds.has(playbookId)) return null;
+  const requirements = tradeRequirementsByPlaybook[playbookId] ?? [];
+  if (!requirements.length) return null;
+  return (
+    <p className="text-xs text-slate-300">
+      Für TRADE nötig: {requirements.slice(0, 3).join(" · ")}
+    </p>
+  );
 }
