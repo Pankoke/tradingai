@@ -6,6 +6,7 @@ import { computeSignalQuality, type SignalQuality } from "@/src/lib/engine/signa
 import type { RiskRewardSummary } from "@/src/lib/engine/types";
 import { isEventModifierEnabledClient } from "@/src/lib/config/eventModifier";
 import { deriveSetupProfileFromTimeframe } from "@/src/lib/config/setupProfile";
+import { deriveSetupDecision } from "@/src/lib/decision/setupDecision";
 
 function isHomepageSetup(input: SetupSource): input is HomepageSetup {
   if ("weakSignal" in input || "eventLevel" in input) {
@@ -93,6 +94,7 @@ function mapSetup(setup: Setup, opts?: { generatedAt?: string | null }): SetupVi
   const modifierEnabled = isEventModifierEnabledClient();
   const eventLevel = modifierEnabled ? null : deriveEventLevelFromScore(setup.rings?.eventScore);
   const signalQuality = computeSignalQuality(setup);
+  const decision = deriveSetupDecision(setup);
   const meta: SetupMeta = {
     snapshotId: setup.snapshotId ?? null,
     snapshotCreatedAt: setup.snapshotCreatedAt ?? null,
@@ -121,6 +123,9 @@ function mapSetup(setup: Setup, opts?: { generatedAt?: string | null }): SetupVi
     gradeRationale: setup.gradeRationale ?? null,
     noTradeReason: setup.noTradeReason ?? null,
     gradeDebugReason: setup.gradeDebugReason ?? null,
+    setupDecision: decision.decision,
+    decisionReasons: decision.reasons,
+    decisionCategory: decision.category ?? null,
     eventContext: setup.eventContext ?? null,
     eventModifier: setup.eventModifier ?? null,
     riskReward: setup.riskReward ?? null,
@@ -143,6 +148,7 @@ function mapHomepageSetup(setup: HomepageSetup, opts?: { generatedAt?: string | 
   const entry = parseHomepageEntry(setup.entryZone);
   const stop = parseHomepagePoint(setup.stopLoss);
   const tp = parseHomepagePoint(setup.takeProfit);
+  const decision = deriveSetupDecision(setup);
   const meta: SetupMeta = {
     snapshotId: setup.snapshotId ?? null,
     snapshotCreatedAt: setup.snapshotCreatedAt ?? null,
@@ -166,6 +172,9 @@ function mapHomepageSetup(setup: HomepageSetup, opts?: { generatedAt?: string | 
     gradeRationale: setup.gradeRationale ?? null,
     noTradeReason: setup.noTradeReason ?? null,
     gradeDebugReason: setup.gradeDebugReason ?? null,
+    setupDecision: decision.decision,
+    decisionReasons: decision.reasons,
+    decisionCategory: decision.category ?? null,
     direction: setup.direction,
     setupPlaybookId: (setup as { setupPlaybookId?: string | null }).setupPlaybookId ?? null,
     rings: setup.rings,

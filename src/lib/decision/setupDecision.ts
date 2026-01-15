@@ -1,0 +1,128 @@
+import { watchEnabledPlaybookIds, hardReasonKeywords, softReasonKeywords, type SetupDecision, type SetupDecisionCategory } from "@/src/lib/config/watchDecision";
+import type { Setup } from "@/src/lib/engine/types";
+import type { HomepageSetup } from "@/src/lib/homepage-setups";
+
+type SetupLike = Setup | HomepageSetup | (Setup & HomepageSetup) | (HomepageSetup & Setup);
+
+type DecisionResult = {
+  decision: SetupDecision;
+  category?: SetupDecisionCategory;
+  reasons: string[];
+};
+
+const MAX_REASONS = 3;
+
+export function deriveSetupDecision(setup: SetupLike): DecisionResult {
+  const grade = (setup as { setupGrade?: string | null }).setupGrade ?? null;
+  const playbookId = ((setup as { setupPlaybookId?: string | null }).setupPlaybookId ?? "").toLowerCase();
+  const noTradeReason = (setup as { noTradeReason?: string | null }).noTradeReason ?? null;
+  const gradeRationale = (setup as { gradeRationale?: string[] | null }).gradeRationale ?? [];
+  const gradeDebugReason = (setup as { gradeDebugReason?: string | null }).gradeDebugReason ?? null;
+
+  if (grade === "A" || grade === "B") {
+    return { decision: "TRADE", reasons: [] };
+  }
+
+  const watchEnabled = watchEnabledPlaybookIds.has(playbookId);
+  const hard = isHardKo(setup);
+  const soft = !hard && isSoftReason(noTradeReason, gradeRationale);
+
+  const reasons = buildReasons(noTradeReason, gradeRationale, gradeDebugReason);
+
+  if (!watchEnabled) {
+    return { decision: "BLOCKED", category: hard ? "hard" : "soft", reasons };
+  }
+
+  if (!hard && soft) {
+    return { decision: "WATCH", category: "soft", reasons };
+  }
+
+  return { decision: "BLOCKED", category: hard ? "hard" : "soft", reasons };
+}
+
+function buildReasons(noTradeReason: string | null, gradeRationale: string[] | null, debugReason: string | null): string[] {
+  const reasons = [noTradeReason, ...(gradeRationale ?? []), debugReason].filter((v): v is string => Boolean(v?.trim()));
+  const unique: string[] = [];
+  for (const reason of reasons) {
+    if (!unique.includes(reason)) unique.push(reason);
+    if (unique.length >= MAX_REASONS) break;
+  }
+  return unique;
+}
+
+function isHardKo(setup: SetupLike): boolean {
+  const validity = (setup as { validity?: { isStale?: boolean } | null }).validity;
+  if (validity?.isStale) return true;
+
+  const entryZone = (setup as { entryZone?: unknown }).entryZone;
+  const stopLoss = (setup as { stopLoss?: unknown }).stopLoss;
+  const takeProfit = (setup as { takeProfit?: unknown }).takeProfit;
+  if (levelsMissing(entryZone, stopLoss, takeProfit)) return true;
+
+  const eventModifier = (setup as { eventModifier?: { classification?: string | null } | null }).eventModifier;
+  const classification = (eventModifier?.classification ?? "").toLowerCase();
+  if (classification.includes("execution_critical") || classification.includes("blocked") || classification.includes("knockout")) {
+    return true;
+  }
+
+  const textBlocks = collectTextBlocks(setup);
+  return containsKeyword(textBlocks, hardReasonKeywords);
+}
+
+function isSoftReason(noTradeReason: string | null, gradeRationale?: string[] | null): boolean {
+  const texts = [noTradeReason, ...(gradeRationale ?? [])].filter(Boolean) as string[];
+  return containsKeyword(texts, softReasonKeywords);
+}
+
+function collectTextBlocks(setup: SetupLike): string[] {
+  const noTradeReason = (setup as { noTradeReason?: string | null }).noTradeReason ?? "";
+  const gradeRationale = (setup as { gradeRationale?: string[] | null }).gradeRationale ?? [];
+  const gradeDebugReason = (setup as { gradeDebugReason?: string | null }).gradeDebugReason ?? "";
+  return [noTradeReason, gradeDebugReason, ...gradeRationale].filter(Boolean) as string[];
+}
+
+function containsKeyword(texts: string[], keywords: string[]): boolean {
+  const joined = texts.map((t) => t.toLowerCase());
+  return joined.some((text) => keywords.some((kw) => text.includes(kw)));
+}
+
+function levelsMissing(
+  entryZone: unknown,
+  stopLoss: unknown,
+  takeProfit: unknown,
+): boolean {
+  const entryMissing = normalizeRange(entryZone);
+  const stopMissing = normalizeNumber(stopLoss);
+  const takeMissing = normalizeNumber(takeProfit);
+  return entryMissing || stopMissing || takeMissing;
+}
+
+function normalizeRange(value: unknown): boolean {
+  if (typeof value === "string") {
+    const matches = value.match(/-?\d+(\.\d+)?/g);
+    if (!matches || matches.length === 0) return true;
+    return matches.every((m) => !Number.isFinite(Number.parseFloat(m)));
+  }
+  if (value && typeof value === "object" && "from" in (value as Record<string, unknown>) && "to" in (value as Record<string, unknown>)) {
+    const from = (value as { from?: number | null }).from;
+    const to = (value as { to?: number | null }).to;
+    return !(Number.isFinite(from ?? NaN) || Number.isFinite(to ?? NaN));
+  }
+  return true;
+}
+
+function normalizeNumber(value: unknown): boolean {
+  if (typeof value === "number") return !Number.isFinite(value);
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value);
+    return !Number.isFinite(parsed);
+  }
+  return true;
+}
+
+export function getDecisionOrder(decision: SetupDecision | null | undefined): number {
+  if (decision === "TRADE") return 0;
+  if (decision === "WATCH") return 1;
+  if (decision === "BLOCKED") return 2;
+  return 3;
+}

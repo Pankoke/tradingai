@@ -1,6 +1,7 @@
 import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
 import type { Setup } from "@/src/lib/engine/types";
 import { clamp } from "@/src/lib/math";
+import { deriveSetupDecision } from "@/src/lib/decision/setupDecision";
 
 export type HomepageSetup = {
   id: string;
@@ -13,6 +14,9 @@ export type HomepageSetup = {
   gradeRationale?: Setup["gradeRationale"];
   noTradeReason?: Setup["noTradeReason"];
   gradeDebugReason?: Setup["gradeDebugReason"];
+  setupDecision?: "TRADE" | "WATCH" | "BLOCKED";
+  decisionReasons?: string[];
+  decisionCategory?: "soft" | "hard";
   confidence: number;
   weakSignal?: boolean;
   eventLevel: "high" | "medium" | "low";
@@ -85,6 +89,7 @@ function parseEntryZone(value?: string | null): { from: number | null; to: numbe
 }
 
 function mapSetup(setup: Setup, timestamp: string): HomepageSetup {
+  const decision = deriveSetupDecision(setup);
   return {
     id: setup.id,
     assetId: setup.assetId,
@@ -97,6 +102,9 @@ function mapSetup(setup: Setup, timestamp: string): HomepageSetup {
     gradeRationale: setup.gradeRationale,
     noTradeReason: setup.noTradeReason,
     gradeDebugReason: setup.gradeDebugReason,
+    setupDecision: decision.decision,
+    decisionReasons: decision.reasons,
+    decisionCategory: decision.category,
     confidence: clamp(setup.confidence, 0, 100),
     weakSignal: setup.confidence < 60,
     eventLevel: EVENT_LEVEL(setup.eventScore),

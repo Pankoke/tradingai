@@ -1,5 +1,6 @@
 import type { Setup } from "@/src/lib/engine/types";
 import { filterSetupsByProfile, parseProfileFilter } from "@/src/lib/setups/profileFilter";
+import { deriveSetupDecision, getDecisionOrder } from "@/src/lib/decision/setupDecision";
 
 export type SortKey = "signal_quality" | "confidence" | "risk_reward" | "direction";
 export type SortDir = "asc" | "desc";
@@ -88,6 +89,22 @@ export function applySort(setups: Setup[], sort: SortKey, dir: SortDir): Setup[]
   const cloned = [...setups];
 
   return cloned.sort((a, b) => {
+    const decisionA = deriveSetupDecision(a);
+    const decisionB = deriveSetupDecision(b);
+    const decisionOrderDiff = getDecisionOrder(decisionA.decision) - getDecisionOrder(decisionB.decision);
+    if (decisionOrderDiff !== 0) return decisionOrderDiff;
+
+    if (decisionA.decision === "TRADE" && decisionB.decision === "TRADE") {
+      const gradeOrder = (grade: Setup["setupGrade"] | null | undefined): number => {
+        if (grade === "A") return 0;
+        if (grade === "B") return 1;
+        return 2;
+      };
+      const gradeDiff = gradeOrder((a as { setupGrade?: Setup["setupGrade"] | null }).setupGrade) -
+        gradeOrder((b as { setupGrade?: Setup["setupGrade"] | null }).setupGrade);
+      if (gradeDiff !== 0) return gradeDiff;
+    }
+
     if (sort === "signal_quality") {
       const av = getSignalQualityScore(a);
       const bv = getSignalQualityScore(b);

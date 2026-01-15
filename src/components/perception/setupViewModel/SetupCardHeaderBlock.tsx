@@ -45,8 +45,9 @@ export function SetupCardHeaderBlock({
   const formattedGeneratedAt = formatGeneratedAt(generatedAtText);
   const profileChipLabel = buildProfileChipLabel(profile, timeframe);
   const playbookLabel = buildPlaybookLabel(setup);
-  const gradeChip = buildGradeChip(setup);
+  const decisionChip = buildDecisionChip(setup);
   const sourceLine = buildSourceLine(setup);
+  const decisionLine = buildDecisionLine(setup);
 
   return (
     <div className="space-y-2">
@@ -71,9 +72,9 @@ export function SetupCardHeaderBlock({
       <div className="space-y-1">
         <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
           <span>{headline}</span>
-          <span className={directionClass}> · {setup.direction}</span>
+          <span className={directionClass}> • {setup.direction}</span>
         </h2>
-        {profileChipLabel || gradeChip || playbookLabel ? (
+        {profileChipLabel || decisionChip || playbookLabel ? (
           <div className="flex flex-wrap gap-2">
             {profileChipLabel ? (
               <span className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/80 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-slate-200">
@@ -85,11 +86,12 @@ export function SetupCardHeaderBlock({
                 {playbookLabel}
               </span>
             ) : null}
-            {gradeChip}
+            {decisionChip}
           </div>
         ) : null}
         {renderDebugLine(setup)}
         <p className="text-sm text-slate-400">{meta.name}</p>
+        {decisionLine}
         {sourceLine ? <p className="text-xs text-slate-400">{sourceLine}</p> : null}
       </div>
     </div>
@@ -133,18 +135,35 @@ function formatGeneratedAt(input?: string | null): string | null {
   return `${day}.${month}.${year}, ${paddedHour}:${paddedMinute} ${tzName}`;
 }
 
-function buildGradeChip(setup: SetupViewModel): JSX.Element | null {
-  const grade = setup.setupGrade;
-  if (!grade) return null;
-  const tone =
-    grade === "A"
-      ? "border-emerald-500/60 bg-emerald-500/15 text-emerald-200"
-      : grade === "B"
-        ? "border-amber-500/60 bg-amber-500/15 text-amber-100"
-        : "border-slate-600 bg-slate-800/80 text-slate-200";
+function buildDecisionChip(setup: SetupViewModel): JSX.Element | null {
+  const decision = setup.setupDecision ?? null;
+  const grade = setup.setupGrade ?? null;
+  if (!decision && !grade) return null;
 
-  const rationaleLines = setup.gradeRationale?.filter(Boolean) ?? [];
+  const rationaleLines = setup.decisionReasons ?? setup.gradeRationale ?? [];
   const noTrade = setup.noTradeReason;
+
+  let tone = "border-slate-600 bg-slate-800/80 text-slate-200";
+  let label = "NO TRADE";
+  if (decision === "TRADE") {
+    if (grade === "A") {
+      tone = "border-emerald-500/60 bg-emerald-500/15 text-emerald-200";
+      label = "A";
+    } else if (grade === "B") {
+      tone = "border-amber-500/60 bg-amber-500/15 text-amber-100";
+      label = "B";
+    } else {
+      tone = "border-emerald-500/50 bg-emerald-500/10 text-emerald-200";
+      label = "TRADE";
+    }
+  } else if (decision === "WATCH") {
+    tone = "border-amber-400/60 bg-amber-400/10 text-amber-100";
+    label = "WATCH";
+  } else if (decision === "BLOCKED") {
+    tone = "border-rose-500/60 bg-rose-500/10 text-rose-100";
+    label = "BLOCKED";
+  }
+
   const tooltipContent =
     rationaleLines.length || noTrade ? (
       <div className="space-y-2">
@@ -158,10 +177,9 @@ function buildGradeChip(setup: SetupViewModel): JSX.Element | null {
         {noTrade ? <p className="text-amber-200">No-trade Grund: {noTrade}</p> : null}
       </div>
     ) : (
-      "Setup-Grade"
+      "Setup-Entscheidung"
     );
 
-  const label = grade === "NO_TRADE" ? "NO TRADE" : grade;
   const chip = (
     <span
       className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.12em] ${tone}`}
@@ -230,4 +248,12 @@ function buildSourceLine(setup: SetupViewModel): string | null {
   }
 
   return parts.length ? parts.join(" · ") : null;
+}
+
+function buildDecisionLine(setup: SetupViewModel): JSX.Element | null {
+  if (!setup.setupDecision || setup.setupDecision === "TRADE") return null;
+  const reasons = setup.decisionReasons ?? [];
+  if (!reasons.length) return null;
+  const tone = setup.setupDecision === "WATCH" ? "text-amber-200" : "text-rose-200";
+  return <p className={`text-xs ${tone}`}>{reasons.slice(0, 2).join(" • ")}</p>;
 }

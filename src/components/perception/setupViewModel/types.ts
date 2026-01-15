@@ -42,6 +42,9 @@ export type SetupViewModel = {
   gradeRationale?: string[] | null;
   noTradeReason?: string | null;
   gradeDebugReason?: string | null;
+  setupDecision?: "TRADE" | "WATCH" | "BLOCKED";
+  decisionReasons?: string[];
+  decisionCategory?: "soft" | "hard" | null;
   rings: Setup["rings"];
   eventContext?: Setup["eventContext"] | null;
   eventModifier?: Setup["eventModifier"] | null;

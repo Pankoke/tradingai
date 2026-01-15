@@ -80,6 +80,7 @@ function toHomepageSetup(setup: Setup): HomepageSetup {
     setupGrade: setup.setupGrade,
     setupType: setup.setupType,
     gradeRationale: setup.gradeRationale,
+    gradeDebugReason: setup.gradeDebugReason,
     noTradeReason: setup.noTradeReason,
     direction: setup.direction,
     confidence: clamp(setup.confidence, 0, 100),
