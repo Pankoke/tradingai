@@ -53,7 +53,10 @@ const SWING_EVENT_WINDOW_MINUTES = 48 * 60;
 const ORDERFLOW_NEGATIVE_THRESHOLD = 30;
 const SIGNAL_QUALITY_FLOOR = 40;
 const SIGNAL_QUALITY_BASE = 55;
-const BIAS_MIN = 70;
+// Phase0 (30d, gold) showed WATCH TP/SL win-rate ~83% (5/1) with many bias KOs.
+// Keep A strict, loosen B bias gate: A uses 80, B uses 70.
+const BIAS_MIN_A = 80;
+const BIAS_MIN_B = 70;
 const TREND_MIN = 50;
 const SOFT_TREND_BIAS_DELTA = 20;
 const GOLD_PLAYBOOK_ID = "gold-swing-v0.2";
@@ -63,7 +66,9 @@ const FX_PLAYBOOK_ID = "fx-swing-v0.1";
 const GENERIC_PLAYBOOK_ID = "generic-swing-v0.1";
 
 export const goldPlaybookThresholds = {
-  biasMin: BIAS_MIN,
+  biasMinA: BIAS_MIN_A,
+  biasMinB: BIAS_MIN_B,
+  biasMin: BIAS_MIN_A, // legacy consumers; keep strict bias for A visible
   trendMin: TREND_MIN,
   signalQualityMin: SIGNAL_QUALITY_BASE,
   orderflowMin: ORDERFLOW_NEGATIVE_THRESHOLD,
@@ -157,6 +162,7 @@ function hasTrendBiasConflict(context: PlaybookContext): boolean {
 
 type GoldSwingFlags = {
   biasOk: boolean;
+  biasOkA: boolean;
   trendOk: boolean;
   signalQualityOk: boolean;
   sentimentWeak: boolean;
@@ -170,7 +176,8 @@ type GoldSwingFlags = {
 
 function evaluateGoldSwingConditions(context: PlaybookContext): GoldSwingFlags {
   const { rings, eventModifier, signalQuality, levels } = context;
-  const biasOk = rings.biasScore >= BIAS_MIN;
+  const biasOkA = rings.biasScore >= BIAS_MIN_A;
+  const biasOkB = rings.biasScore >= BIAS_MIN_B;
   const trendOk = rings.trendScore >= TREND_MIN;
   const signalQualityOk = typeof signalQuality?.score === "number" ? signalQuality.score >= SIGNAL_QUALITY_BASE : false;
   const sentimentWeak = typeof rings.sentimentScore === "number" ? rings.sentimentScore < 55 : false;
@@ -187,7 +194,8 @@ function evaluateGoldSwingConditions(context: PlaybookContext): GoldSwingFlags {
   const rrrUnattractive = typeof levels?.riskReward?.rrr === "number" ? levels.riskReward.rrr < 1 : false;
 
   return {
-    biasOk,
+    biasOk: biasOkB,
+    biasOkA,
     trendOk,
     signalQualityOk,
     sentimentWeak,
@@ -245,6 +253,7 @@ function evaluateGoldSwing(context: PlaybookContext): PlaybookEvaluation {
   if (flags.orderflowNegative) softNegatives.push("orderflow_negative");
   if (flags.tbSoftDivergence && !flags.tbConflictHard) softNegatives.push("trend_bias_divergence");
   if (flags.sentimentWeak) softNegatives.push("sentiment_weak");
+  if (!flags.biasOkA) softNegatives.push("bias_below_A");
 
   rationale.push("Bias strong (>=70)");
   rationale.push("Trend supportive (>=50)");
@@ -264,7 +273,9 @@ function evaluateGoldSwing(context: PlaybookContext): PlaybookEvaluation {
       ? "Orderflow negative"
       : r === "trend_bias_divergence"
         ? "Trend/Bias divergence"
-        : "Sentiment weak",
+        : r === "bias_below_A"
+          ? `Bias below A threshold (<${BIAS_MIN_A})`
+          : "Sentiment weak",
   );
   return {
     setupGrade: "B",

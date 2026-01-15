@@ -73,12 +73,25 @@ export async function GET(request: NextRequest): Promise<Response> {
       .select({
         setups: perceptionSnapshots.setups,
         snapshotTime: perceptionSnapshots.snapshotTime,
+        createdAt: perceptionSnapshots.snapshotTime,
       })
       .from(perceptionSnapshots)
       .where(gte(perceptionSnapshots.snapshotTime, from));
 
     const matches: Setup[] = [];
+    const biasBuckets: Record<string, { total: number; byGrade: Record<GradeKey, number>; noTradeReasons: Record<string, number> }> = {
+      "<70": { total: 0, byGrade: { A: 0, B: 0, NO_TRADE: 0 }, noTradeReasons: {} },
+      "70-79": { total: 0, byGrade: { A: 0, B: 0, NO_TRADE: 0 }, noTradeReasons: {} },
+      ">=80": { total: 0, byGrade: { A: 0, B: 0, NO_TRADE: 0 }, noTradeReasons: {} },
+    };
+    let minCreated: Date | null = null;
+    let maxCreated: Date | null = null;
     for (const row of rows) {
+      const createdAt = (row as { createdAt?: Date | null }).createdAt ?? row.snapshotTime ?? null;
+      if (createdAt) {
+        if (!minCreated || createdAt < minCreated) minCreated = createdAt;
+        if (!maxCreated || createdAt > maxCreated) maxCreated = createdAt;
+      }
       const setups = Array.isArray(row.setups) ? (row.setups as Setup[]) : [];
       for (const setup of setups) {
         const assetId = (setup.assetId ?? setup.symbol ?? "").toUpperCase();
@@ -88,6 +101,16 @@ export async function GET(request: NextRequest): Promise<Response> {
         const matchesPlaybook = playbookId ? setupPlaybookId === playbookId.toLowerCase() : true;
         if (assetId === canonicalAssetIdUpper && profile === "SWING" && timeframe === "1D" && matchesPlaybook) {
           matches.push(setup);
+          const bias = typeof setup.biasScore === "number" ? setup.biasScore : null;
+          const bucketKey = bias == null ? null : bias < 70 ? "<70" : bias < 80 ? "70-79" : ">=80";
+          if (bucketKey) {
+            const b = biasBuckets[bucketKey];
+            b.total += 1;
+            const grade = normalizeGrade((setup as { setupGrade?: string | null }).setupGrade ?? null);
+            b.byGrade[grade] += 1;
+            const reason = (setup as { noTradeReason?: string | null }).noTradeReason ?? "n/a";
+            b.noTradeReasons[reason] = (b.noTradeReasons[reason] ?? 0) + 1;
+          }
         }
       }
     }
@@ -335,6 +358,11 @@ export async function GET(request: NextRequest): Promise<Response> {
             WATCH: outcomesDecisionBuckets.WATCH,
             BLOCKED: outcomesDecisionBuckets.BLOCKED,
           },
+        },
+        biasHistogram: biasBuckets,
+        cohortTimeRange: {
+          snapshotTimeMin: minCreated ? minCreated.toISOString() : null,
+          snapshotTimeMax: maxCreated ? maxCreated.toISOString() : null,
         },
       },
     });
