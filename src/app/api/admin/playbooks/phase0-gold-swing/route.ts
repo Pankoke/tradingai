@@ -10,6 +10,32 @@ import { computeSignalQuality } from "@/src/lib/engine/signalQuality";
 
 type GradeKey = "A" | "B" | "NO_TRADE";
 
+function authCheck(request: Request): { ok: boolean; meta: Record<string, unknown> } {
+  const adminToken = process.env.ADMIN_API_TOKEN;
+  const cronToken = process.env.CRON_SECRET;
+  const header = request.headers.get("authorization");
+  const bearer = header?.replace("Bearer", "").trim();
+  const cookies = request.headers.get("cookie") ?? "";
+  const clerkStatus = request.headers.get("x-clerk-auth-status");
+  const alt = request.headers.get("x-cron-secret");
+  const env = process.env.NODE_ENV;
+  const isLocal = env === "development" || env === "test";
+  const usedCron = !!cronToken && (bearer === cronToken || alt === cronToken);
+  const sessionCookie =
+    cookies.includes("__session=") || cookies.includes("__client_uat=") || cookies.includes("__clerk_session");
+  const usedAdminToken = !!adminToken && bearer === adminToken;
+  const usedSession = !!clerkStatus && clerkStatus !== "signed-out" ? true : sessionCookie;
+  const usedAdmin = usedAdminToken || usedSession;
+
+  if (adminToken) {
+    return { ok: usedAdmin || usedCron, meta: { hasAdmin: true, hasCron: !!cronToken, usedAdmin, usedCron } };
+  }
+  if (isLocal && !adminToken) {
+    return { ok: true, meta: { localMode: true, hasCron: !!cronToken, usedCron, usedAdmin } };
+  }
+  return { ok: usedCron, meta: { hasAdmin: false, hasCron: !!cronToken, usedCron, usedAdmin } };
+}
+
 function normalizeGrade(value: unknown): GradeKey {
   if (value === "A" || value === "B") return value;
   return "NO_TRADE";
@@ -21,8 +47,19 @@ function pct(count: number, total: number): number {
 }
 
 export async function GET(request: NextRequest): Promise<Response> {
+  const auth = authCheck(request);
+  if (!auth.ok) {
+    const env = process.env.NODE_ENV;
+    const details = env === "development" || env === "test" ? auth.meta : undefined;
+    return respondFail("UNAUTHORIZED", "Unauthorized", 401, details);
+  }
+
   const url = new URL(request.url);
   const daysBack = Number.parseInt(url.searchParams.get("daysBack") ?? "30", 10);
+  const playbookId = url.searchParams.get("playbookId") ?? undefined;
+  const windowFieldRaw = (url.searchParams.get("windowField") ?? "evaluatedAt").toLowerCase();
+  const windowBasedOn = windowFieldRaw === "createdat" ? "createdAt" : "evaluatedAt";
+  const dedupeBy = (url.searchParams.get("dedupeBy") ?? "").toLowerCase() === "setupid" ? "setupId" : null;
   const effectiveDays = Number.isFinite(daysBack) && daysBack > 0 ? daysBack : 30;
   const from = new Date(Date.now() - effectiveDays * 24 * 60 * 60 * 1000);
 
@@ -42,7 +79,9 @@ export async function GET(request: NextRequest): Promise<Response> {
         const assetId = (setup.assetId ?? setup.symbol ?? "").toUpperCase();
         const profile = (setup.profile ?? "").toUpperCase();
         const timeframe = (setup.timeframeUsed ?? setup.timeframe ?? "").toUpperCase();
-        if (assetId === "GOLD" && profile === "SWING" && timeframe === "1D") {
+        const setupPlaybookId = (setup.setupPlaybookId ?? "").toLowerCase();
+        const matchesPlaybook = playbookId ? setupPlaybookId === playbookId.toLowerCase() : true;
+        if (assetId === "GOLD" && profile === "SWING" && timeframe === "1D" && matchesPlaybook) {
           matches.push(setup);
         }
       }
@@ -66,14 +105,18 @@ export async function GET(request: NextRequest): Promise<Response> {
     }
 
     // Outcomes summary
-    const outcomes = await listOutcomesForWindow({
-      from,
+    const outcomesQuery = {
+      from: windowBasedOn === "evaluatedAt" ? from : undefined,
+      cohortFromSnapshot: windowBasedOn === "createdAt" ? from : undefined,
       assetId: "GOLD",
       profile: "SWING",
       timeframe: "1D",
-      mode: "all",
-      limit: 2000,
-    });
+      mode: "all" as const,
+      limit: 5000,
+      playbookId,
+    };
+    const outcomesRaw = await listOutcomesForWindow(outcomesQuery);
+    const outcomes = dedupeBy === "setupId" ? dedupeBySetupId(outcomesRaw) : outcomesRaw;
     const outcomeGrades: Record<GradeKey, Record<string, number>> = {
       A: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
       B: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
@@ -81,11 +124,31 @@ export async function GET(request: NextRequest): Promise<Response> {
     };
 
     const snapshotCache = new Map<string, Setup[]>();
+    let outcomesWithGrade = 0;
+    let outcomesMissingGrade = 0;
+    let outcomesWithMultipleMatches = 0;
     let signalQualityMissing = 0;
     let signalQualityTotal = 0;
 
     for (const outcome of outcomes) {
-      const grade = normalizeGrade((outcome as { setupGrade?: string | null }).setupGrade ?? null);
+      const snapshotId = (outcome as { snapshotId?: string | null }).snapshotId;
+      const setupId = (outcome as { setupId?: string | null }).setupId;
+      const gradeSource = (outcome as { setupGrade?: string | null }).setupGrade;
+      const resolvedGrade = await resolveGradeFromSnapshot({
+        grade: gradeSource,
+        snapshotId,
+        setupId,
+        snapshotCache,
+      });
+      if (resolvedGrade.sourceCount > 1) {
+        outcomesWithMultipleMatches += 1;
+      }
+      if (resolvedGrade.grade) {
+        outcomesWithGrade += 1;
+      } else {
+        outcomesMissingGrade += 1;
+      }
+      const grade = normalizeGrade(resolvedGrade.grade ?? null);
       const bucket = outcomeGrades[grade];
       const status = (outcome as { outcomeStatus?: string }).outcomeStatus ?? "open";
       if (bucket[status] !== undefined) {
@@ -95,8 +158,6 @@ export async function GET(request: NextRequest): Promise<Response> {
       // signalQuality coverage
       signalQualityTotal += 1;
       let signalQuality: number | null | undefined = null;
-      const snapshotId = (outcome as { snapshotId?: string | null }).snapshotId;
-      const setupId = (outcome as { setupId?: string | null }).setupId;
       if (snapshotId && setupId) {
         let setups = snapshotCache.get(snapshotId);
         if (!setups) {
@@ -125,6 +186,14 @@ export async function GET(request: NextRequest): Promise<Response> {
       return { ...bucket, evaluatedCount, winRateTpVsSl };
     };
 
+    const playbooksSeen = Array.from(
+      new Set(
+        outcomes
+          .map((o) => (o as { playbookId?: string | null }).playbookId)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+
     const signalQualityCoverage = {
       missingCount: signalQualityMissing,
       totalCount: signalQualityTotal,
@@ -147,11 +216,82 @@ export async function GET(request: NextRequest): Promise<Response> {
         NO_TRADE: outcomesSummaryByGrade("NO_TRADE"),
       },
       signalQualityCoverage,
+      debugMeta: {
+        outcomesQuery: {
+          daysBack: effectiveDays,
+          windowBasedOn,
+          playbookIdsUsed: playbookId ? [playbookId] : playbooksSeen,
+          assetIdsUsed: ["GOLD"],
+          profileUsed: "SWING",
+          timeframeUsed: "1D",
+          dedupeBy: dedupeBy ?? undefined,
+        },
+        outcomesFetched: {
+          totalRows: outcomes.length,
+          distinctSetupIds: new Set(
+            outcomes
+              .map((o) => (o as { setupId?: string | null }).setupId)
+              .filter((id): id is string => Boolean(id)),
+          ).size,
+          distinctSnapshotIds: new Set(
+            outcomes
+              .map((o) => (o as { snapshotId?: string | null }).snapshotId)
+              .filter((id): id is string => Boolean(id)),
+          ).size,
+        },
+        joinQuality: {
+          outcomesWithGrade,
+          outcomesMissingGrade,
+          outcomesWithMultipleMatches,
+      },
+    },
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown error";
     return respondFail("INTERNAL_ERROR", message, 500);
   }
+}
+
+function dedupeBySetupId(outcomes: unknown[]) {
+  const seen = new Set<string>();
+  const result: typeof outcomes = [];
+  for (const outcome of outcomes) {
+    const setupId = (outcome as { setupId?: string | null }).setupId;
+    if (!setupId) {
+      result.push(outcome);
+      continue;
+    }
+    if (seen.has(setupId)) continue;
+    seen.add(setupId);
+    result.push(outcome);
+  }
+  return result;
+}
+
+async function resolveGradeFromSnapshot(params: {
+  grade?: string | null;
+  snapshotId?: string | null;
+  setupId?: string | null;
+  snapshotCache: Map<string, Setup[]>;
+}): Promise<{ grade: string | null; sourceCount: number }> {
+  if (params.grade) {
+    return { grade: params.grade, sourceCount: 1 };
+  }
+  const snapshotId = params.snapshotId;
+  const setupId = params.setupId;
+  if (!snapshotId || !setupId) return { grade: null, sourceCount: 0 };
+
+  let setups = params.snapshotCache.get(snapshotId);
+  if (!setups) {
+    const snapshot = await getSnapshotById(snapshotId);
+    setups = (snapshot?.setups as Setup[] | undefined) ?? [];
+    params.snapshotCache.set(snapshotId, setups);
+  }
+  const matches = setups.filter((s) => s.id === setupId);
+  if (!matches.length) {
+    return { grade: null, sourceCount: 0 };
+  }
+  return { grade: matches[0].setupGrade ?? null, sourceCount: matches.length };
 }
 
 /**
