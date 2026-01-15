@@ -56,9 +56,12 @@ export async function GET(request: NextRequest): Promise<Response> {
 
   const url = new URL(request.url);
   const daysBack = Number.parseInt(url.searchParams.get("daysBack") ?? "30", 10);
+  const requestedAssetId = url.searchParams.get("assetId") ?? "gold";
+  const canonicalAssetId = requestedAssetId.toLowerCase();
+  const canonicalAssetIdUpper = canonicalAssetId.toUpperCase();
   const playbookId = url.searchParams.get("playbookId") ?? undefined;
   const windowFieldRaw = (url.searchParams.get("windowField") ?? "evaluatedAt").toLowerCase();
-  const windowBasedOn = windowFieldRaw === "createdat" ? "createdAt" : "evaluatedAt";
+  const windowBasedOn = windowFieldRaw === "createdat" ? "createdAt" : windowFieldRaw === "outcomeat" ? "outcomeAt" : "evaluatedAt";
   const dedupeBy = (url.searchParams.get("dedupeBy") ?? "").toLowerCase() === "setupid" ? "setupId" : null;
   const effectiveDays = Number.isFinite(daysBack) && daysBack > 0 ? daysBack : 30;
   const from = new Date(Date.now() - effectiveDays * 24 * 60 * 60 * 1000);
@@ -81,7 +84,7 @@ export async function GET(request: NextRequest): Promise<Response> {
         const timeframe = (setup.timeframeUsed ?? setup.timeframe ?? "").toUpperCase();
         const setupPlaybookId = (setup.setupPlaybookId ?? "").toLowerCase();
         const matchesPlaybook = playbookId ? setupPlaybookId === playbookId.toLowerCase() : true;
-        if (assetId === "GOLD" && profile === "SWING" && timeframe === "1D" && matchesPlaybook) {
+        if (assetId === canonicalAssetIdUpper && profile === "SWING" && timeframe === "1D" && matchesPlaybook) {
           matches.push(setup);
         }
       }
@@ -108,7 +111,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     const outcomesQuery = {
       from: windowBasedOn === "evaluatedAt" ? from : undefined,
       cohortFromSnapshot: windowBasedOn === "createdAt" ? from : undefined,
-      assetId: "GOLD",
+      assetId: canonicalAssetId,
       profile: "SWING",
       timeframe: "1D",
       mode: "all" as const,
@@ -116,7 +119,14 @@ export async function GET(request: NextRequest): Promise<Response> {
       playbookId,
     };
     const outcomesRaw = await listOutcomesForWindow(outcomesQuery);
-    const outcomes = dedupeBy === "setupId" ? dedupeBySetupId(outcomesRaw) : outcomesRaw;
+    const filteredByOutcomeAt =
+      windowBasedOn === "outcomeAt"
+        ? outcomesRaw.filter((o) => {
+            const outcomeAt = (o as { outcomeAt?: Date | null }).outcomeAt;
+            return outcomeAt ? outcomeAt >= from : false;
+          })
+        : outcomesRaw;
+    const outcomes = dedupeBy === "setupId" ? dedupeBySetupId(filteredByOutcomeAt) : filteredByOutcomeAt;
     const outcomeGrades: Record<GradeKey, Record<string, number>> = {
       A: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
       B: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
@@ -221,7 +231,9 @@ export async function GET(request: NextRequest): Promise<Response> {
           daysBack: effectiveDays,
           windowBasedOn,
           playbookIdsUsed: playbookId ? [playbookId] : playbooksSeen,
-          assetIdsUsed: ["GOLD"],
+          requestedAssetId,
+          canonicalAssetIdUsed: canonicalAssetId,
+          assetIdsUsed: [canonicalAssetId],
           profileUsed: "SWING",
           timeframeUsed: "1D",
           dedupeBy: dedupeBy ?? undefined,
