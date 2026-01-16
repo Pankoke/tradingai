@@ -12,6 +12,7 @@
     "./outcome_audit_v11.ts",
     "./outcome_trace_v11.ts",
     "./setup_trace_v12.ts",
+    "./build-weekly-health-report.ts",
     "../src/**/*.ts",
     "../src/**/*.tsx"
   ],

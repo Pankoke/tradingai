@@ -299,7 +299,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       watchOutcomeTotal > 0 ? { count: watchOutcomeTradeHits, total: watchOutcomeTotal, pct: pct(watchOutcomeTradeHits, watchOutcomeTotal) } : null;
 
     return respondOk({
-      meta: { assetId: "GOLD", profile: "SWING", timeframe: "1D", daysBack: effectiveDays },
+      meta: { assetId: canonicalAssetIdUpper, profile: "SWING", timeframe: "1D", daysBack: effectiveDays },
       gradeDistribution: {
         total,
         A: { count: gradeCounts.A, pct: pct(gradeCounts.A, total) },

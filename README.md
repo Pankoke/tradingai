@@ -102,6 +102,11 @@ Tests
 
 npm test
 
+## Weekly Health Reports
+- Automatisch via GitHub Action `phase0-monitor` (Mo 06:00 UTC oder manuell per workflow_dispatch).
+- Liest Phase0-Endpoints (Gold/BTC Swing) und legt Markdown unter `reports/weekly/YYYY-MM-DD.md` ab.
+- Voraussetzung: GitHub `vars.BASE_URL` (Deployment-URL) und `secrets.CRON_SECRET`. Reports werden committed.
+
 Backfill Daily/Weekly Candles
 -----------------------------
 

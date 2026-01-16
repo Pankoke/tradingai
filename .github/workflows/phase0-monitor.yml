@@ -1,0 +1,68 @@
+name: Phase0 Monitor
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # weekly Monday 06:00 UTC
+  workflow_dispatch:
+
+env:
+  BASE_URL: ${{ vars.BASE_URL }}
+
+jobs:
+  phase0:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install --ignore-scripts
+
+      - name: Fetch Phase0 Gold
+        run: |
+          curl -sS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "$BASE_URL/api/admin/playbooks/phase0-gold-swing?daysBack=30&playbookId=gold-swing-v0.2&assetId=gold&dedupeBy=snapshotId&windowField=evaluatedAt" \
+            -o phase0_gold.json
+
+      - name: Fetch Phase0 BTC
+        run: |
+          curl -sS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "$BASE_URL/api/admin/playbooks/phase0-gold-swing?daysBack=30&playbookId=crypto-swing-v0.1&assetId=btc&dedupeBy=snapshotId&windowField=evaluatedAt" \
+            -o phase0_btc.json
+
+      - name: Build weekly health report
+        run: npx ts-node --project scripts/tsconfig.scripts.json scripts/build-weekly-health-report.ts
+
+      - name: Upload JSON artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase0-json
+          path: |
+            phase0_gold.json
+            phase0_btc.json
+
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase0-report
+          path: reports/weekly/*.md
+
+      - name: Commit report
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          if git status --porcelain | grep reports/weekly; then
+            git add reports/weekly/*.md
+            DATE=$(date -u +%F)
+            git commit -m "chore(reports): weekly health report ${DATE}"
+            git push
+          else
+            echo "No report changes to commit."
+          fi
