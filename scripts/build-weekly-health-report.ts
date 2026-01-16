@@ -21,9 +21,15 @@ type Phase0Response = { ok: true; data: Phase0Payload } | { ok: false; error: un
 
 async function loadJson(path: string): Promise<Phase0Payload> {
   const raw = await fs.readFile(path, "utf-8");
-  const parsed: Phase0Response = JSON.parse(raw);
+  let parsed: Phase0Response;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    throw new Error(`Invalid JSON at ${path}: ${(err as Error).message}`);
+  }
   if (!parsed || parsed.ok !== true || !parsed.data) {
-    throw new Error(`Invalid Phase0 JSON at ${path}`);
+    const details = (parsed as { error?: unknown })?.error ?? "unknown";
+    throw new Error(`Invalid Phase0 JSON at ${path}: ${JSON.stringify(details)}`);
   }
   return parsed.data;
 }

@@ -34,13 +34,13 @@ jobs:
 
       - name: Fetch Phase0 Gold
         run: |
-          curl -sS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+          curl -sSf -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             "$BASE_URL/api/admin/playbooks/phase0-gold-swing?daysBack=30&playbookId=gold-swing-v0.2&assetId=gold&dedupeBy=snapshotId&windowField=evaluatedAt" \
             -o phase0_gold.json
 
       - name: Fetch Phase0 BTC
         run: |
-          curl -sS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+          curl -sSf -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             "$BASE_URL/api/admin/playbooks/phase0-gold-swing?daysBack=30&playbookId=crypto-swing-v0.1&assetId=btc&dedupeBy=snapshotId&windowField=evaluatedAt" \
             -o phase0_btc.json
 
