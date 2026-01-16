@@ -58,6 +58,10 @@ export default clerkMiddleware((auth, request) => {
     return;
   }
 
+  if (isBypassedAdminPath) {
+    return;
+  }
+
   const hasSession = isAdminSessionFromRequest(request);
   if (hasSession) {
     return;
