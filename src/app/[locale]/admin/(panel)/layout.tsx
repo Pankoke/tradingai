@@ -24,6 +24,7 @@ export default async function AdminPanelLayout({ params, children }: Props) {
     { href: `/${locale}/admin/playbooks/thresholds`, label: "Playbook Thresholds" },
     { href: `/${locale}/admin/outcomes`, label: "Outcomes" },
     { href: `/${locale}/admin/outcomes/engine-health`, label: "Engine Health" },
+    { href: `/${locale}/admin/monitoring/reports`, label: "Health Reports" },
     { href: `/${locale}/admin/ops`, label: messages["admin.nav.ops"] },
     { href: `/${locale}/admin/system`, label: messages["admin.nav.system"] },
     { href: `/${locale}/admin/system/coverage`, label: "Coverage" },
