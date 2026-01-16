@@ -1,7 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { notFound } from "next/navigation";
-import { marked } from "marked";
+import { marked, Renderer } from "marked";
 
 type PageProps = {
   params: Promise<{ locale: string; date: string }>;
@@ -22,7 +22,12 @@ export default async function ReportDetailPage({ params }: PageProps) {
   const content = await loadReport(date);
   if (!content) return notFound();
 
-  const html = marked.parse(content);
+  const renderer = new Renderer();
+  renderer.html = (html) => {
+    const escaped = html.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return `<pre>${escaped}</pre>`;
+  };
+  const html = marked.parse(content, { renderer });
 
   return (
     <div className="space-y-4">
