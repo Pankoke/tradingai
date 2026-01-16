@@ -31,17 +31,21 @@ jobs:
             echo "BASE_URL is not set (expected in secrets.BASE_URL or vars.BASE_URL)."
             exit 1
           fi
+          CLEAN_BASE="${BASE_URL%/}"
+          echo "Using BASE_URL host: $(echo "${CLEAN_BASE}" | sed 's|https://||;s|http://||' | cut -d/ -f1)"
+          echo "BASE_URL length: ${#CLEAN_BASE}"
+          echo "CLEAN_BASE=${CLEAN_BASE}" >> $GITHUB_ENV
 
       - name: Fetch Phase0 Gold
         run: |
           curl -sSf -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "$BASE_URL/api/admin/playbooks/phase0-gold-swing?daysBack=30&playbookId=gold-swing-v0.2&assetId=gold&dedupeBy=snapshotId&windowField=evaluatedAt" \
+            "$CLEAN_BASE/api/admin/playbooks/phase0-gold-swing?daysBack=30&playbookId=gold-swing-v0.2&assetId=gold&dedupeBy=snapshotId&windowField=evaluatedAt" \
             -o phase0_gold.json
 
       - name: Fetch Phase0 BTC
         run: |
           curl -sSf -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "$BASE_URL/api/admin/playbooks/phase0-gold-swing?daysBack=30&playbookId=crypto-swing-v0.1&assetId=btc&dedupeBy=snapshotId&windowField=evaluatedAt" \
+            "$CLEAN_BASE/api/admin/playbooks/phase0-gold-swing?daysBack=30&playbookId=crypto-swing-v0.1&assetId=btc&dedupeBy=snapshotId&windowField=evaluatedAt" \
             -o phase0_btc.json
 
       - name: Build weekly health report
