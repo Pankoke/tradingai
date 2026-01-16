@@ -41,11 +41,13 @@ export default clerkMiddleware((auth, request) => {
   const { nextUrl } = request;
   const pathname = nextUrl.pathname;
   const adminEnabled = isAdminEnabled();
+  const adminBypassPaths = ["/api/admin/playbooks/phase0-gold-swing"];
+  const isBypassedAdminPath = adminBypassPaths.includes(pathname);
 
   const isAdminApi = pathname.startsWith("/api/admin");
   const isAdminPath = isProtectedAdminRoute(pathname) || pathname.startsWith("/api/admin");
 
-  if (!adminEnabled && isAdminPath) {
+  if (!adminEnabled && isAdminPath && !isBypassedAdminPath) {
     if (isAdminApi) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
