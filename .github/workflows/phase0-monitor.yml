@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  BASE_URL: ${{ vars.BASE_URL }}
+  BASE_URL: ${{ secrets.BASE_URL || vars.BASE_URL }}
 
 jobs:
   phase0:
@@ -24,6 +24,13 @@ jobs:
 
       - name: Install dependencies
         run: npm install --ignore-scripts
+
+      - name: Validate BASE_URL
+        run: |
+          if [ -z "${BASE_URL}" ]; then
+            echo "BASE_URL is not set (expected in secrets.BASE_URL or vars.BASE_URL)."
+            exit 1
+          fi
 
       - name: Fetch Phase0 Gold
         run: |
