@@ -160,9 +160,14 @@ async function main() {
   reportLines.push(renderAssetSection("Gold Swing", gold));
   reportLines.push(renderAssetSection("BTC Swing", btc));
 
-  const outPath = resolve("reports", "weekly", `${dateStr}.md`);
-  await fs.mkdir(resolve("reports", "weekly"), { recursive: true });
+  const outputDir = resolve(process.cwd(), "reports", "weekly");
+  const outPath = resolve(outputDir, `${dateStr}.md`);
+  await fs.mkdir(outputDir, { recursive: true });
   await fs.writeFile(outPath, reportLines.join("\n"), "utf-8");
+  const written = await fs.stat(outPath).catch(() => null);
+  if (!written || !written.isFile()) {
+    throw new Error(`Report was not written to ${outPath}`);
+  }
   // eslint-disable-next-line no-console
   console.log(`Report written to ${outPath}`);
 }

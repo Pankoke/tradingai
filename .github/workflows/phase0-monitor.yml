@@ -51,6 +51,11 @@ jobs:
       - name: Build weekly health report
         run: npx ts-node --project scripts/tsconfig.scripts.json scripts/build-weekly-health-report.ts
 
+      - name: Verify report exists
+        run: |
+          ls -la reports/weekly
+          test -f reports/weekly/*.md
+
       - name: Upload JSON artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -69,11 +74,13 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@users.noreply.github.com"
+          git status
           if git status --porcelain | grep reports/weekly; then
             git add reports/weekly/*.md
             DATE=$(date -u +%F)
-            git commit -m "chore(reports): weekly health report ${DATE}"
+            git commit -m "Weekly Health Report (${DATE})"
             git push
           else
             echo "No report changes to commit."
+            exit 1
           fi
