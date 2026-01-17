@@ -568,7 +568,7 @@ function resolveScores(setup: Setup): {
     typeof (setup as { confidence?: number | null }).confidence === "number"
       ? (setup as { confidence?: number | null }).confidence
       : setup.rings?.confidenceScore ?? null;
-  const confidence = typeof confidenceRaw === "number" ? confidenceRaw : null;
+  const confidence: number | null = typeof confidenceRaw === "number" ? confidenceRaw : null;
   return { bias, trend, signalQuality, confidence };
 }
 
