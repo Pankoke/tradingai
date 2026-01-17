@@ -12,6 +12,16 @@ type WatchSegment = {
   avgSignalQuality: number | null;
   avgConfidence: number | null;
 };
+type WatchUpgradeCandidates = {
+  definition: Record<string, unknown>;
+  totalWatchFailsTrend: number;
+  candidatesCount: number;
+  candidatesPctOfWatchFailsTrend: number;
+  avgBias: number | null;
+  avgTrend: number | null;
+  avgSignalQuality: number | null;
+  avgConfidence: number | null;
+};
 
 type Phase0Payload = {
   meta?: { assetId?: string; profile?: string; timeframe?: string; daysBack?: number };
@@ -19,11 +29,13 @@ type Phase0Payload = {
   gradeDistribution?: Distribution;
   outcomesByDecision?: Record<"TRADE" | "WATCH" | "BLOCKED", OutcomeBucket>;
   outcomesByWatchSegment?: Record<string, OutcomeBucket> | null;
+  outcomesByWatchUpgradeCandidate?: OutcomeBucket | null;
   watchToTradeProxy?: { count: number; total: number; pct: number } | null;
   debugMeta?: {
     biasHistogram?: Record<string, BiasBucket>;
     cohortTimeRange?: { snapshotTimeMin?: string | null; snapshotTimeMax?: string | null };
     watchSegments?: Record<string, WatchSegment> | null;
+    watchUpgradeCandidates?: WatchUpgradeCandidates | null;
   };
 };
 
@@ -140,6 +152,7 @@ function renderAssetSection(label: string, data: Phase0Payload): string {
   const cohort = data.debugMeta?.cohortTimeRange;
   const alerts = buildAlerts(data);
   const isGold = (meta.assetId ?? "").toLowerCase() === "gold";
+  const upgrade = isGold ? data.debugMeta?.watchUpgradeCandidates : null;
 
   const lines = [
     `## ${label}`,
@@ -156,6 +169,20 @@ function renderAssetSection(label: string, data: Phase0Payload): string {
     renderOutcomes("Outcomes BLOCKED", data.outcomesByDecision?.BLOCKED),
     renderWatchProxy(data.watchToTradeProxy ?? null),
     isGold ? renderWatchSegments(data.debugMeta?.watchSegments ?? null, data.outcomesByWatchSegment ?? null) : "",
+    isGold && upgrade
+      ? [
+          "### Upgrade Candidate (WATCH_FAILS_TREND filtered)",
+          `- total WATCH_FAILS_TREND: ${upgrade.totalWatchFailsTrend}`,
+          `- candidates: ${upgrade.candidatesCount} (${upgrade.candidatesPctOfWatchFailsTrend}%)`,
+          `- avg bias ${upgrade.avgBias ?? "n/a"} | trend ${upgrade.avgTrend ?? "n/a"} | SQ ${upgrade.avgSignalQuality ?? "n/a"} | conf ${upgrade.avgConfidence ?? "n/a"}`,
+          data.outcomesByWatchUpgradeCandidate
+            ? `- outcomes: eval=${data.outcomesByWatchUpgradeCandidate.evaluatedCount ?? 0} winRate=${formatPct(
+                data.outcomesByWatchUpgradeCandidate.winRateTpVsSl ?? 0,
+              )}`
+            : "- outcomes: n/a",
+          "",
+        ].join("\n")
+      : "",
     renderBiasHistogram(data.debugMeta?.biasHistogram),
   ];
   return lines.join("\n");

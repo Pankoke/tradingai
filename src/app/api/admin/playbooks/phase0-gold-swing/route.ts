@@ -137,6 +137,12 @@ export async function GET(request: NextRequest): Promise<Response> {
       WATCH_OTHER: { count: 0, sumBias: 0, sumTrend: 0, sumSQ: 0, sumConf: 0 },
     };
     let watchTotal = 0;
+    let watchFailsTrendTotal = 0;
+    let upgradeCandidatesCount = 0;
+    let upgradeCandidatesSumBias = 0;
+    let upgradeCandidatesSumTrend = 0;
+    let upgradeCandidatesSumSQ = 0;
+    let upgradeCandidatesSumConf = 0;
     let staleCount = 0;
     let fallbackCount = 0;
 
@@ -162,6 +168,16 @@ export async function GET(request: NextRequest): Promise<Response> {
         bucket.sumSQ += scores.signalQuality ?? 0;
         bucket.sumConf += scores.confidence ?? 0;
         watchTotal += 1;
+        if (segment === "WATCH_FAILS_TREND") {
+          watchFailsTrendTotal += 1;
+          if (isUpgradeCandidate(setup, scores)) {
+            upgradeCandidatesCount += 1;
+            upgradeCandidatesSumBias += scores.bias ?? 0;
+            upgradeCandidatesSumTrend += scores.trend ?? 0;
+            upgradeCandidatesSumSQ += scores.signalQuality ?? 0;
+            upgradeCandidatesSumConf += scores.confidence ?? 0;
+          }
+        }
       }
     }
 
@@ -224,6 +240,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       WATCH: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
       BLOCKED: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
     };
+    const watchUpgradeCandidateOutcomes: Record<string, number> = { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 };
     const watchSegmentOutcomes: Record<WatchSegmentKey, Record<string, number>> = {
       WATCH_MEETS_REQUIREMENTS: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
       WATCH_FAILS_ONLY_CONFIDENCE: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
@@ -283,6 +300,16 @@ export async function GET(request: NextRequest): Promise<Response> {
           const segBucket = watchSegmentOutcomes[segment] ?? watchSegmentOutcomes.WATCH_OTHER;
           if (segBucket[status] !== undefined) {
             segBucket[status] += 1;
+          }
+          const setups = snapshotCache.get(snapshotId ?? "") ?? [];
+          const setup = setups.find((s) => s.id === setupId);
+          if (segment === "WATCH_FAILS_TREND" && setup) {
+            const scores = resolveScores(setup);
+            if (isUpgradeCandidate(setup, scores)) {
+              if (watchUpgradeCandidateOutcomes[status] !== undefined) {
+                watchUpgradeCandidateOutcomes[status] += 1;
+              }
+            }
           }
         }
       }
@@ -350,6 +377,10 @@ export async function GET(request: NextRequest): Promise<Response> {
       isGoldAsset(playbookId, canonicalAssetId) && watchOutcomeTotal > 0
         ? mapWatchOutcomeBuckets(watchSegmentOutcomes)
         : null;
+    const outcomesByWatchUpgradeCandidate =
+      isGoldAsset(playbookId, canonicalAssetId) && watchOutcomeTotal > 0
+        ? mapDecisionOutcomes({ TRADE: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 }, WATCH: watchUpgradeCandidateOutcomes, BLOCKED: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 } }).WATCH
+        : null;
 
     return respondOk({
       meta: { assetId: canonicalAssetIdUpper, profile: "SWING", timeframe: "1D", daysBack: effectiveDays },
@@ -371,6 +402,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       outcomesByDecision: outcomesSummaryByDecision,
       watchToTradeProxy,
       outcomesByWatchSegment,
+      outcomesByWatchUpgradeCandidate,
       debugMeta: {
         outcomesQuery: {
           daysBack: effectiveDays,
@@ -402,6 +434,26 @@ export async function GET(request: NextRequest): Promise<Response> {
           outcomesWithMultipleMatches,
         },
         watchSegments,
+        watchUpgradeCandidates:
+          isGoldAsset(playbookId, canonicalAssetId) && watchFailsTrendTotal > 0
+            ? {
+                definition: {
+                  segment: "WATCH_FAILS_TREND",
+                  minBias: 65,
+                  minSignalQuality: 55,
+                  minConfidence: 55,
+                  requireNonStale: true,
+                  excludeHardKnockout: true,
+                },
+                totalWatchFailsTrend: watchFailsTrendTotal,
+                candidatesCount: upgradeCandidatesCount,
+                candidatesPctOfWatchFailsTrend: pct(upgradeCandidatesCount, watchFailsTrendTotal),
+                avgBias: upgradeCandidatesCount ? Math.round((upgradeCandidatesSumBias / upgradeCandidatesCount) * 10) / 10 : null,
+                avgTrend: upgradeCandidatesCount ? Math.round((upgradeCandidatesSumTrend / upgradeCandidatesCount) * 10) / 10 : null,
+                avgSignalQuality: upgradeCandidatesCount ? Math.round((upgradeCandidatesSumSQ / upgradeCandidatesCount) * 10) / 10 : null,
+                avgConfidence: upgradeCandidatesCount ? Math.round((upgradeCandidatesSumConf / upgradeCandidatesCount) * 10) / 10 : null,
+              }
+            : null,
         decisions: {
           setupsCount: decisionDistribution.total,
           outcomesCount: outcomes.length,
@@ -627,6 +679,28 @@ function mapWatchSegments(
     };
   });
   return result;
+}
+
+function isUpgradeCandidate(setup: Setup, scores: { bias: number | null; trend: number | null; signalQuality: number | null; confidence: number | null }): boolean {
+  const validity = (setup as { validity?: { isStale?: boolean; hasInvalidLevels?: boolean; missingLevels?: boolean } | null }).validity;
+  if (validity?.isStale) return false;
+  if (validity?.hasInvalidLevels || validity?.missingLevels) return false;
+  const eventModifier = (setup as { eventModifier?: string | null }).eventModifier?.toLowerCase() ?? "";
+  if (eventModifier.includes("execution_critical") || eventModifier.includes("blocked") || eventModifier.includes("knockout")) {
+    return false;
+  }
+  const noTradeReason = ((setup as { noTradeReason?: string | null }).noTradeReason ?? "").toLowerCase();
+  if (noTradeReason.includes("event") || noTradeReason.includes("conflict")) {
+    return false;
+  }
+  const gradeDebug = ((setup as { gradeDebugReason?: string[] | null }).gradeDebugReason ?? []).join(" ").toLowerCase();
+  if (gradeDebug.includes("event") || gradeDebug.includes("conflict")) {
+    return false;
+  }
+  const biasOk = (scores.bias ?? -Infinity) >= 65;
+  const sqOk = (scores.signalQuality ?? -Infinity) >= 55;
+  const confOk = (scores.confidence ?? -Infinity) >= 55;
+  return biasOk && sqOk && confOk;
 }
 
 /**
