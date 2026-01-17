@@ -731,7 +731,13 @@ function isUpgradeCandidate(setup: Setup, scores: { bias: number | null; trend: 
   if (noTradeReason.includes("event") || noTradeReason.includes("conflict")) {
     return false;
   }
-  const gradeDebug = ((setup as { gradeDebugReason?: string[] | null }).gradeDebugReason ?? []).join(" ").toLowerCase();
+  const gradeDebugRaw = (setup as { gradeDebugReason?: unknown }).gradeDebugReason;
+  const gradeDebug =
+    Array.isArray(gradeDebugRaw) && gradeDebugRaw.every((x) => typeof x === "string")
+      ? gradeDebugRaw.join(" ").toLowerCase()
+      : typeof gradeDebugRaw === "string"
+        ? gradeDebugRaw.toLowerCase()
+        : "";
   if (gradeDebug.includes("event") || gradeDebug.includes("conflict")) {
     return false;
   }
