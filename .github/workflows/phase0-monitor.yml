@@ -66,7 +66,12 @@ jobs:
       - name: Verify report exists
         run: |
           ls -la reports/weekly
-          test -f reports/weekly/*.md
+          if [ -n "${REPORT_FILE}" ]; then
+            test -f "reports/weekly/${REPORT_FILE}"
+          else
+            # fallback: ensure at least one md exists
+            ls reports/weekly/*.md >/dev/null
+          fi
 
       - name: Upload JSON artifacts
         uses: actions/upload-artifact@v4
