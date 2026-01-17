@@ -170,6 +170,10 @@ async function main() {
   const m = String(now.getUTCMonth() + 1).padStart(2, "0");
   const d = String(now.getUTCDate()).padStart(2, "0");
   const dateStr = `${y}-${m}-${d}`;
+  const hh = String(now.getUTCHours()).padStart(2, "0");
+  const mm = String(now.getUTCMinutes()).padStart(2, "0");
+  const ss = String(now.getUTCSeconds()).padStart(2, "0");
+  const stamp = `${dateStr}_${hh}-${mm}-${ss}`;
 
   const reportLines = [
     `# Weekly Health Report (${dateStr})`,
@@ -189,13 +193,16 @@ async function main() {
   reportLines.push(renderAssetSection("BTC Swing", btc));
 
   const outputDir = resolve(process.cwd(), "reports", "weekly");
-  const outPath = resolve(outputDir, `${dateStr}.md`);
+  const fileName = `${stamp}.md`;
+  const outPath = resolve(outputDir, fileName);
   await fs.mkdir(outputDir, { recursive: true });
   await fs.writeFile(outPath, reportLines.join("\n"), "utf-8");
   const written = await fs.stat(outPath).catch(() => null);
   if (!written || !written.isFile()) {
     throw new Error(`Report was not written to ${outPath}`);
   }
+  // eslint-disable-next-line no-console
+  console.log(`REPORT_FILE=${fileName}`);
   // eslint-disable-next-line no-console
   console.log(`Report written to ${outPath}`);
 }

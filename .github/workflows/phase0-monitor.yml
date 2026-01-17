@@ -52,7 +52,16 @@ jobs:
             -o phase0_btc.json
 
       - name: Build weekly health report
-        run: npx ts-node --project scripts/tsconfig.scripts.json scripts/build-weekly-health-report.ts
+        run: |
+          REPORT_LOG=$(npx ts-node --project scripts/tsconfig.scripts.json scripts/build-weekly-health-report.ts)
+          echo "${REPORT_LOG}"
+          REPORT_FILE=$(echo "${REPORT_LOG}" | awk -F= '/REPORT_FILE=/{print $2}' | tail -n1)
+          if [ -z "${REPORT_FILE}" ]; then
+            echo "Could not detect REPORT_FILE from script output"
+            exit 1
+          fi
+          echo "REPORT_FILE=${REPORT_FILE}" >> $GITHUB_ENV
+          echo "Report file: ${REPORT_FILE}"
 
       - name: Verify report exists
         run: |
@@ -80,8 +89,8 @@ jobs:
           git status
           if git status --porcelain | grep reports/weekly; then
             git add reports/weekly/*.md
-            DATE=$(date -u +%F)
-            git commit -m "Weekly Health Report (${DATE})"
+            MSG="chore(reports): weekly health report ${REPORT_FILE:-$(date -u +%F)}"
+            git commit -m "${MSG}"
             git push
           else
             echo "No report changes to commit."
