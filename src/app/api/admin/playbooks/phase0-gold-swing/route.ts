@@ -572,7 +572,11 @@ function resolveScores(setup: Setup): {
   } else {
     confidence = null;
   }
-  return { bias, trend, signalQuality, confidence };
+  const confidenceFinal: number | null = confidence ?? null;
+  const signalQualityFinal: number | null = signalQuality ?? null;
+  const biasFinal: number | null = bias ?? null;
+  const trendFinal: number | null = trend ?? null;
+  return { bias: biasFinal, trend: trendFinal, signalQuality: signalQualityFinal, confidence: confidenceFinal };
 }
 
 function classifyWatchSegment(scores: { bias: number | null; trend: number | null; signalQuality: number | null; confidence: number | null }): WatchSegmentKey {
