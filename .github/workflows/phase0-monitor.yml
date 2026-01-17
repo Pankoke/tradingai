@@ -5,6 +5,9 @@ on:
     - cron: "0 6 * * 1" # weekly Monday 06:00 UTC
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 env:
   BASE_URL: ${{ secrets.BASE_URL || vars.BASE_URL }}
 
