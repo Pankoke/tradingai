@@ -564,11 +564,12 @@ function resolveScores(setup: Setup): {
     const computed = computeSignalQuality(setup);
     signalQuality = computed?.score ?? null;
   }
-  const confidenceRaw =
-    typeof (setup as { confidence?: number | null }).confidence === "number"
-      ? (setup as { confidence?: number | null }).confidence
-      : setup.rings?.confidenceScore ?? null;
-  const confidence: number | null = typeof confidenceRaw === "number" ? confidenceRaw : null;
+  let confidence: number | null = null;
+  if (typeof (setup as { confidence?: number | null }).confidence === "number") {
+    confidence = (setup as { confidence?: number | null }).confidence as number;
+  } else if (setup.rings && typeof setup.rings.confidenceScore === "number") {
+    confidence = setup.rings.confidenceScore;
+  }
   return { bias, trend, signalQuality, confidence };
 }
 
