@@ -732,12 +732,7 @@ function isUpgradeCandidate(setup: Setup, scores: { bias: number | null; trend: 
     return false;
   }
   const gradeDebugRaw = (setup as { gradeDebugReason?: unknown }).gradeDebugReason;
-  const gradeDebug =
-    Array.isArray(gradeDebugRaw) && gradeDebugRaw.every((x) => typeof x === "string")
-      ? gradeDebugRaw.join(" ").toLowerCase()
-      : typeof gradeDebugRaw === "string"
-        ? gradeDebugRaw.toLowerCase()
-        : "";
+  const gradeDebug = safeJoinToLower(gradeDebugRaw);
   if (gradeDebug.includes("event") || gradeDebug.includes("conflict")) {
     return false;
   }
@@ -859,6 +854,15 @@ function bucketBtcRrrOutcomes(
     "1.5-1.99": wrap(buckets["1.5-1.99"]),
     ">=2.0": wrap(buckets[">=2.0"]),
   };
+}
+
+function safeJoinToLower(value: unknown): string {
+  if (Array.isArray(value)) {
+    const parts = value.filter((v) => typeof v === "string") as string[];
+    return parts.join(" ").toLowerCase();
+  }
+  if (typeof value === "string") return value.toLowerCase();
+  return "";
 }
 
 /**
