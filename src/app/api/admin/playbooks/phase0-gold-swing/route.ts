@@ -759,18 +759,25 @@ function parseLevelPlausibility(setup: Setup): { stopPct: number | null; targetP
   };
   let entryMid: number | null = null;
   if (entryZone) {
-    const parts = entryZone.split("-").map((p) => parseNumber(p.trim()));
-    if (parts.length === 2 && parts[0] != null && parts[1] != null) {
-      entryMid = (parts[0] + parts[1]) / 2;
+    try {
+      const parts = entryZone.split("-").map((p) => parseNumber(p.trim()));
+      if (parts.length === 2 && parts[0] != null && parts[1] != null) {
+        entryMid = (parts[0] + parts[1]) / 2;
+      }
+    } catch {
+      entryMid = null;
     }
   }
-  if (entryMid == null) return { stopPct: null, targetPct: null, rrr: null, parseError: true };
+  if (entryMid == null || entryMid === 0) return { stopPct: null, targetPct: null, rrr: null, parseError: true };
   const stop = stopLoss ?? null;
   const target = takeProfit ?? null;
   if (stop == null || target == null) return { stopPct: null, targetPct: null, rrr: null, parseError: true };
   const stopPct = Math.abs(entryMid - stop) / entryMid * 100;
   const targetPct = Math.abs(target - entryMid) / entryMid * 100;
   const rrr = stopPct > 0 ? targetPct / stopPct : null;
+  if (!Number.isFinite(stopPct) || !Number.isFinite(targetPct)) {
+    return { stopPct: null, targetPct: null, rrr: null, parseError: true };
+  }
   return { stopPct, targetPct, rrr, parseError: false };
 }
 
@@ -801,37 +808,38 @@ function bucketBtcRrrOutcomes(
   outcomes: unknown[],
   canonicalAssetId: string,
 ): Record<string, { hit_tp: number; hit_sl: number; open: number; expired: number; ambiguous: number; evaluatedCount: number; winRateTpVsSl: number }> | null {
-  const buckets: Record<
-    string,
-    { hit_tp: number; hit_sl: number; open: number; expired: number; ambiguous: number; count: number }
-  > = {
+  const buckets: Record<string, { hit_tp: number; hit_sl: number; open: number; expired: number; ambiguous: number; count: number }> = {
     "<1.0": { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0, count: 0 },
     "1.0-1.49": { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0, count: 0 },
     "1.5-1.99": { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0, count: 0 },
     ">=2.0": { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0, count: 0 },
   };
   for (const outcome of outcomes) {
-    const snapshotId = (outcome as { snapshotId?: string | null }).snapshotId;
-    const setupId = (outcome as { setupId?: string | null }).setupId;
-    if (!snapshotId || !setupId) continue;
-    const setups = snapshotCache.get(snapshotId);
-    const setup = setups?.find((s) => s.id === setupId);
-    if (!setup) continue;
-    const assetId = (setup.assetId ?? setup.symbol ?? "").toLowerCase();
-    if (assetId !== canonicalAssetId) continue;
-    const plausibility = parseLevelPlausibility(setup);
-    const rrr = plausibility.rrr;
-    if (rrr == null) continue;
-    let bucketKey: string = "<1.0";
-    if (rrr >= 2.0) bucketKey = ">=2.0";
-    else if (rrr >= 1.5) bucketKey = "1.5-1.99";
-    else if (rrr >= 1.0) bucketKey = "1.0-1.49";
-    const status = (outcome as { outcomeStatus?: string }).outcomeStatus ?? "open";
-    const b = buckets[bucketKey];
-    if (status in b) {
-      b[status as keyof typeof b] += 1;
+    try {
+      const snapshotId = (outcome as { snapshotId?: string | null }).snapshotId;
+      const setupId = (outcome as { setupId?: string | null }).setupId;
+      if (!snapshotId || !setupId) continue;
+      const setups = snapshotCache.get(snapshotId);
+      const setup = setups?.find((s) => s.id === setupId);
+      if (!setup) continue;
+      const assetId = (setup.assetId ?? setup.symbol ?? "").toLowerCase();
+      if (assetId !== canonicalAssetId) continue;
+      const plausibility = parseLevelPlausibility(setup);
+      const rrr = plausibility.rrr;
+      if (rrr == null) continue;
+      let bucketKey: string = "<1.0";
+      if (rrr >= 2.0) bucketKey = ">=2.0";
+      else if (rrr >= 1.5) bucketKey = "1.5-1.99";
+      else if (rrr >= 1.0) bucketKey = "1.0-1.49";
+      const status = (outcome as { outcomeStatus?: string }).outcomeStatus ?? "open";
+      const b = buckets[bucketKey];
+      if (status in b) {
+        b[status as keyof typeof b] += 1;
+      }
+      b.count += 1;
+    } catch {
+      continue;
     }
-    b.count += 1;
   }
   const wrap = (b: { hit_tp: number; hit_sl: number; open: number; expired: number; ambiguous: number; count: number }) => {
     const evaluatedCount = (b.hit_tp ?? 0) + (b.hit_sl ?? 0);
