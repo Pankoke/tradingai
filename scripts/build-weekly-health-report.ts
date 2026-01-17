@@ -153,6 +153,10 @@ function renderAssetSection(label: string, data: Phase0Payload): string {
   const alerts = buildAlerts(data);
   const isGold = (meta.assetId ?? "").toLowerCase() === "gold";
   const upgrade = isGold ? data.debugMeta?.watchUpgradeCandidates : null;
+  const isBtc = (meta.assetId ?? "").toLowerCase() === "btc";
+  const btcAlignment = data.debugMeta?.btcAlignmentBreakdown;
+  const btcLevels = data.debugMeta?.btcLevelPlausibility;
+  const btcRrr = data.outcomesByBtcTradeRrrBucket;
 
   const lines = [
     `## ${label}`,
@@ -180,6 +184,35 @@ function renderAssetSection(label: string, data: Phase0Payload): string {
                 data.outcomesByWatchUpgradeCandidate.winRateTpVsSl ?? 0,
               )}`
             : "- outcomes: n/a",
+          "",
+        ].join("\n")
+      : "",
+    isBtc && btcAlignment
+      ? [
+          "### Alignment / NO_TRADE reasons (BTC)",
+          ...btcAlignment.top.map((item) => `- ${item.reason}: ${item.count} (${item.pct}%)`),
+          "",
+        ].join("\n")
+      : "",
+    isBtc && btcLevels
+      ? [
+          "### TRADE Level Plausibility (BTC)",
+          `- count: ${btcLevels.count}, parseErrors: ${btcLevels.parseErrors}`,
+          `- stop pct avg=${btcLevels.avgStopPct ?? "n/a"} p50=${btcLevels.p50StopPct ?? "n/a"} p90=${btcLevels.p90StopPct ?? "n/a"}`,
+          `- target pct avg=${btcLevels.avgTargetPct ?? "n/a"} p50=${btcLevels.p50TargetPct ?? "n/a"} p90=${btcLevels.p90TargetPct ?? "n/a"}`,
+          `- avg RRR: ${btcLevels.avgRRR ?? "n/a"}`,
+          "",
+        ].join("\n")
+      : "",
+    isBtc && btcRrr
+      ? [
+          "### RRR Buckets (BTC TRADE Outcomes)",
+          ...Object.entries(btcRrr).map(
+            ([bucket, v]) =>
+              `- ${bucket}: hit_tp=${v.hit_tp ?? 0} hit_sl=${v.hit_sl ?? 0} open=${v.open ?? 0} eval=${v.evaluatedCount ?? 0} winRate=${formatPct(
+                v.winRateTpVsSl ?? 0,
+              )}`,
+          ),
           "",
         ].join("\n")
       : "",

@@ -18,6 +18,19 @@ type WatchSegmentKey =
   | "WATCH_FAILS_BIAS"
   | "WATCH_OTHER";
 
+type BtcAlignmentStats = {
+  total: number;
+  reasons: Record<string, number>;
+};
+
+type BtcLevelStats = {
+  count: number;
+  parseErrors: number;
+  stopPcts: number[];
+  targetPcts: number[];
+  rrrs: number[];
+};
+
 function authCheck(request: Request): { ok: boolean; meta: Record<string, unknown> } {
   const adminToken = process.env.ADMIN_API_TOKEN;
   const cronToken = process.env.CRON_SECRET;
@@ -143,6 +156,8 @@ export async function GET(request: NextRequest): Promise<Response> {
     let upgradeCandidatesSumTrend = 0;
     let upgradeCandidatesSumSQ = 0;
     let upgradeCandidatesSumConf = 0;
+    const btcAlignment: BtcAlignmentStats = { total: 0, reasons: {} };
+    const btcLevels: BtcLevelStats = { count: 0, parseErrors: 0, stopPcts: [], targetPcts: [], rrrs: [] };
     let staleCount = 0;
     let fallbackCount = 0;
 
@@ -177,6 +192,21 @@ export async function GET(request: NextRequest): Promise<Response> {
             upgradeCandidatesSumSQ += scores.signalQuality ?? 0;
             upgradeCandidatesSumConf += scores.confidence ?? 0;
           }
+        }
+      } else if (canonicalAssetId === "btc" && (decision === "BLOCKED" || decision === "WATCH")) {
+        const reason = ((setup as { noTradeReason?: string | null }).noTradeReason ?? "unknown").trim();
+        const key = reason.length ? reason : "unknown";
+        btcAlignment.total += 1;
+        btcAlignment.reasons[key] = (btcAlignment.reasons[key] ?? 0) + 1;
+      } else if (canonicalAssetId === "btc" && decision === "TRADE") {
+        const plausibility = parseLevelPlausibility(setup);
+        if (plausibility.parseError) {
+          btcLevels.parseErrors += 1;
+        } else {
+          if (plausibility.stopPct != null) btcLevels.stopPcts.push(plausibility.stopPct);
+          if (plausibility.targetPct != null) btcLevels.targetPcts.push(plausibility.targetPct);
+          if (plausibility.rrr != null) btcLevels.rrrs.push(plausibility.rrr);
+          btcLevels.count += 1;
         }
       }
     }
@@ -381,6 +411,10 @@ export async function GET(request: NextRequest): Promise<Response> {
       isGoldAsset(playbookId, canonicalAssetId) && watchOutcomeTotal > 0
         ? mapDecisionOutcomes({ TRADE: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 }, WATCH: watchUpgradeCandidateOutcomes, BLOCKED: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 } }).WATCH
         : null;
+    const outcomesByBtcTradeRrrBucket =
+      canonicalAssetId === "btc"
+        ? bucketBtcRrrOutcomes(snapshotCache, outcomes, canonicalAssetId)
+        : null;
 
     return respondOk({
       meta: { assetId: canonicalAssetIdUpper, profile: "SWING", timeframe: "1D", daysBack: effectiveDays },
@@ -403,6 +437,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       watchToTradeProxy,
       outcomesByWatchSegment,
       outcomesByWatchUpgradeCandidate,
+      outcomesByBtcTradeRrrBucket,
       debugMeta: {
         outcomesQuery: {
           daysBack: effectiveDays,
@@ -454,6 +489,8 @@ export async function GET(request: NextRequest): Promise<Response> {
                 avgConfidence: upgradeCandidatesCount ? Math.round((upgradeCandidatesSumConf / upgradeCandidatesCount) * 10) / 10 : null,
               }
             : null,
+        btcAlignmentBreakdown: canonicalAssetId === "btc" ? topReasonsWithPct(btcAlignment) : null,
+        btcLevelPlausibility: canonicalAssetId === "btc" ? summarizeLevelPlausibility(btcLevels) : null,
         decisions: {
           setupsCount: decisionDistribution.total,
           outcomesCount: outcomes.length,
@@ -701,6 +738,112 @@ function isUpgradeCandidate(setup: Setup, scores: { bias: number | null; trend: 
   const sqOk = (scores.signalQuality ?? -Infinity) >= 55;
   const confOk = (scores.confidence ?? -Infinity) >= 55;
   return biasOk && sqOk && confOk;
+}
+
+function topReasonsWithPct(breakdown: BtcAlignmentStats) {
+  const entries = Object.entries(breakdown.reasons)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([reason, count]) => ({ reason, count, pct: pct(count, breakdown.total) }));
+  return { total: breakdown.total, top: entries };
+}
+
+function parseLevelPlausibility(setup: Setup): { stopPct: number | null; targetPct: number | null; rrr: number | null; parseError: boolean } {
+  const entryZone = (setup as { entryZone?: string | null }).entryZone ?? null;
+  const stopLoss = (setup as { stopLoss?: number | null }).stopLoss ?? null;
+  const takeProfit = (setup as { takeProfit?: number | null }).takeProfit ?? null;
+  const parseNumber = (val: string | null) => {
+    if (!val) return null;
+    const num = Number.parseFloat(val.replace(/[^\d.-]/g, ""));
+    return Number.isFinite(num) ? num : null;
+  };
+  let entryMid: number | null = null;
+  if (entryZone) {
+    const parts = entryZone.split("-").map((p) => parseNumber(p.trim()));
+    if (parts.length === 2 && parts[0] != null && parts[1] != null) {
+      entryMid = (parts[0] + parts[1]) / 2;
+    }
+  }
+  if (entryMid == null) return { stopPct: null, targetPct: null, rrr: null, parseError: true };
+  const stop = stopLoss ?? null;
+  const target = takeProfit ?? null;
+  if (stop == null || target == null) return { stopPct: null, targetPct: null, rrr: null, parseError: true };
+  const stopPct = Math.abs(entryMid - stop) / entryMid * 100;
+  const targetPct = Math.abs(target - entryMid) / entryMid * 100;
+  const rrr = stopPct > 0 ? targetPct / stopPct : null;
+  return { stopPct, targetPct, rrr, parseError: false };
+}
+
+function summarizeLevelPlausibility(stats: BtcLevelStats) {
+  const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
+  const pctile = (arr: number[], p: number) => {
+    if (!arr.length) return null;
+    const sorted = [...arr].sort((a, b) => a - b);
+    const idx = Math.min(sorted.length - 1, Math.max(0, Math.floor((p / 100) * sorted.length)));
+    return Math.round(sorted[idx] * 10) / 10;
+  };
+  const avg = (arr: number[]) => (arr.length ? Math.round((sum(arr) / arr.length) * 10) / 10 : null);
+  return {
+    count: stats.count,
+    parseErrors: stats.parseErrors,
+    avgStopPct: avg(stats.stopPcts),
+    p50StopPct: pctile(stats.stopPcts, 50),
+    p90StopPct: pctile(stats.stopPcts, 90),
+    avgTargetPct: avg(stats.targetPcts),
+    p50TargetPct: pctile(stats.targetPcts, 50),
+    p90TargetPct: pctile(stats.targetPcts, 90),
+    avgRRR: avg(stats.rrrs),
+  };
+}
+
+function bucketBtcRrrOutcomes(
+  snapshotCache: Map<string, Setup[]>,
+  outcomes: unknown[],
+  canonicalAssetId: string,
+): Record<string, { hit_tp: number; hit_sl: number; open: number; expired: number; ambiguous: number; evaluatedCount: number; winRateTpVsSl: number }> | null {
+  const buckets: Record<
+    string,
+    { hit_tp: number; hit_sl: number; open: number; expired: number; ambiguous: number; count: number }
+  > = {
+    "<1.0": { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0, count: 0 },
+    "1.0-1.49": { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0, count: 0 },
+    "1.5-1.99": { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0, count: 0 },
+    ">=2.0": { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0, count: 0 },
+  };
+  for (const outcome of outcomes) {
+    const snapshotId = (outcome as { snapshotId?: string | null }).snapshotId;
+    const setupId = (outcome as { setupId?: string | null }).setupId;
+    if (!snapshotId || !setupId) continue;
+    const setups = snapshotCache.get(snapshotId);
+    const setup = setups?.find((s) => s.id === setupId);
+    if (!setup) continue;
+    const assetId = (setup.assetId ?? setup.symbol ?? "").toLowerCase();
+    if (assetId !== canonicalAssetId) continue;
+    const plausibility = parseLevelPlausibility(setup);
+    const rrr = plausibility.rrr;
+    if (rrr == null) continue;
+    let bucketKey: string = "<1.0";
+    if (rrr >= 2.0) bucketKey = ">=2.0";
+    else if (rrr >= 1.5) bucketKey = "1.5-1.99";
+    else if (rrr >= 1.0) bucketKey = "1.0-1.49";
+    const status = (outcome as { outcomeStatus?: string }).outcomeStatus ?? "open";
+    const b = buckets[bucketKey];
+    if (status in b) {
+      b[status as keyof typeof b] += 1;
+    }
+    b.count += 1;
+  }
+  const wrap = (b: { hit_tp: number; hit_sl: number; open: number; expired: number; ambiguous: number; count: number }) => {
+    const evaluatedCount = (b.hit_tp ?? 0) + (b.hit_sl ?? 0);
+    const winRateTpVsSl = evaluatedCount > 0 ? (b.hit_tp ?? 0) / evaluatedCount : 0;
+    return { hit_tp: b.hit_tp, hit_sl: b.hit_sl, open: b.open, expired: b.expired, ambiguous: b.ambiguous, evaluatedCount, winRateTpVsSl };
+  };
+  return {
+    "<1.0": wrap(buckets["<1.0"]),
+    "1.0-1.49": wrap(buckets["1.0-1.49"]),
+    "1.5-1.99": wrap(buckets["1.5-1.99"]),
+    ">=2.0": wrap(buckets[">=2.0"]),
+  };
 }
 
 /**
