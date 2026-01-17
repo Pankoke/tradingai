@@ -30,12 +30,25 @@ type Phase0Payload = {
   outcomesByDecision?: Record<"TRADE" | "WATCH" | "BLOCKED", OutcomeBucket>;
   outcomesByWatchSegment?: Record<string, OutcomeBucket> | null;
   outcomesByWatchUpgradeCandidate?: OutcomeBucket | null;
+  outcomesByBtcTradeRrrBucket?: Record<string, OutcomeBucket> | null;
   watchToTradeProxy?: { count: number; total: number; pct: number } | null;
   debugMeta?: {
     biasHistogram?: Record<string, BiasBucket>;
     cohortTimeRange?: { snapshotTimeMin?: string | null; snapshotTimeMax?: string | null };
     watchSegments?: Record<string, WatchSegment> | null;
     watchUpgradeCandidates?: WatchUpgradeCandidates | null;
+    btcAlignmentBreakdown?: { total: number; top: { reason: string; count: number; pct: number }[] } | null;
+    btcLevelPlausibility?: {
+      count: number;
+      parseErrors: number;
+      avgStopPct: number | null;
+      p50StopPct: number | null;
+      p90StopPct: number | null;
+      avgTargetPct: number | null;
+      p50TargetPct: number | null;
+      p90TargetPct: number | null;
+      avgRRR: number | null;
+    } | null;
   };
 };
 
