@@ -564,10 +564,11 @@ function resolveScores(setup: Setup): {
     const computed = computeSignalQuality(setup);
     signalQuality = computed?.score ?? null;
   }
-  const confidence =
+  const confidenceRaw =
     typeof (setup as { confidence?: number | null }).confidence === "number"
       ? (setup as { confidence?: number | null }).confidence
-      : setup.rings?.confidenceScore ?? null;
+      : setup.rings?.confidenceScore;
+  const confidence = typeof confidenceRaw === "number" ? confidenceRaw : null;
   return { bias, trend, signalQuality, confidence };
 }
 
