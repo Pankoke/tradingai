@@ -567,8 +567,11 @@ function resolveScores(setup: Setup): {
   let confidence: number | null = null;
   if (typeof (setup as { confidence?: number | null }).confidence === "number") {
     confidence = (setup as { confidence?: number | null }).confidence as number;
-  } else if (setup.rings && typeof setup.rings.confidenceScore === "number") {
-    confidence = setup.rings.confidenceScore;
+  } else {
+    const ringsConfidence = setup.rings?.confidenceScore;
+    if (typeof ringsConfidence === "number") {
+      confidence = ringsConfidence;
+    }
   }
   return { bias, trend, signalQuality, confidence };
 }
