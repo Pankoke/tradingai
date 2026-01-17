@@ -43,7 +43,7 @@ jobs:
         run: |
           curl -sS -w "%{http_code}" -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             "$CLEAN_BASE/api/admin/playbooks/phase0-gold-swing?daysBack=30&playbookId=gold-swing-v0.2&assetId=gold&dedupeBy=snapshotId&windowField=evaluatedAt" \
-            -o phase0_gold.json > .curl_gold_status
+            -o phase0_gold.json > .curl_gold_status || true
           STATUS=$(cat .curl_gold_status)
           if [ "$STATUS" != "200" ]; then
             echo "Gold endpoint returned HTTP $STATUS"
@@ -55,7 +55,7 @@ jobs:
         run: |
           curl -sS -w "%{http_code}" -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             "$CLEAN_BASE/api/admin/playbooks/phase0-gold-swing?daysBack=30&playbookId=crypto-swing-v0.1&assetId=btc&dedupeBy=snapshotId&windowField=evaluatedAt" \
-            -o phase0_btc.json > .curl_btc_status
+            -o phase0_btc.json > .curl_btc_status || true
           STATUS=$(cat .curl_btc_status)
           if [ "$STATUS" != "200" ]; then
             echo "BTC endpoint returned HTTP $STATUS"
