@@ -722,7 +722,8 @@ function isUpgradeCandidate(setup: Setup, scores: { bias: number | null; trend: 
   const validity = (setup as { validity?: { isStale?: boolean; hasInvalidLevels?: boolean; missingLevels?: boolean } | null }).validity;
   if (validity?.isStale) return false;
   if (validity?.hasInvalidLevels || validity?.missingLevels) return false;
-  const eventModifier = (setup as { eventModifier?: string | null }).eventModifier?.toLowerCase() ?? "";
+  const eventModifierRaw = (setup as { eventModifier?: unknown }).eventModifier;
+  const eventModifier = typeof eventModifierRaw === "string" ? eventModifierRaw.toLowerCase() : "";
   if (eventModifier.includes("execution_critical") || eventModifier.includes("blocked") || eventModifier.includes("knockout")) {
     return false;
   }
