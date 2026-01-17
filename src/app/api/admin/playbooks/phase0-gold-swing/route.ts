@@ -10,6 +10,13 @@ import { computeSignalQuality } from "@/src/lib/engine/signalQuality";
 import { deriveSetupDecision } from "@/src/lib/decision/setupDecision";
 
 type GradeKey = "A" | "B" | "NO_TRADE";
+type WatchSegmentKey =
+  | "WATCH_MEETS_REQUIREMENTS"
+  | "WATCH_FAILS_ONLY_CONFIDENCE"
+  | "WATCH_FAILS_ONLY_SIGNAL_QUALITY"
+  | "WATCH_FAILS_TREND"
+  | "WATCH_FAILS_BIAS"
+  | "WATCH_OTHER";
 
 function authCheck(request: Request): { ok: boolean; meta: Record<string, unknown> } {
   const adminToken = process.env.ADMIN_API_TOKEN;
@@ -118,6 +125,18 @@ export async function GET(request: NextRequest): Promise<Response> {
     const total = matches.length;
     const gradeCounts: Record<GradeKey, number> = { A: 0, B: 0, NO_TRADE: 0 };
     const decisionCounts: Record<"TRADE" | "WATCH" | "BLOCKED", number> = { TRADE: 0, WATCH: 0, BLOCKED: 0 };
+    const watchSegmentStats: Record<
+      WatchSegmentKey,
+      { count: number; sumBias: number; sumTrend: number; sumSQ: number; sumConf: number }
+    > = {
+      WATCH_MEETS_REQUIREMENTS: { count: 0, sumBias: 0, sumTrend: 0, sumSQ: 0, sumConf: 0 },
+      WATCH_FAILS_ONLY_CONFIDENCE: { count: 0, sumBias: 0, sumTrend: 0, sumSQ: 0, sumConf: 0 },
+      WATCH_FAILS_ONLY_SIGNAL_QUALITY: { count: 0, sumBias: 0, sumTrend: 0, sumSQ: 0, sumConf: 0 },
+      WATCH_FAILS_TREND: { count: 0, sumBias: 0, sumTrend: 0, sumSQ: 0, sumConf: 0 },
+      WATCH_FAILS_BIAS: { count: 0, sumBias: 0, sumTrend: 0, sumSQ: 0, sumConf: 0 },
+      WATCH_OTHER: { count: 0, sumBias: 0, sumTrend: 0, sumSQ: 0, sumConf: 0 },
+    };
+    let watchTotal = 0;
     let staleCount = 0;
     let fallbackCount = 0;
 
@@ -132,6 +151,17 @@ export async function GET(request: NextRequest): Promise<Response> {
       const dataSourceUsed = (setup as { dataSourceUsed?: string | null }).dataSourceUsed ?? dataSourcePrimary;
       if (dataSourcePrimary && dataSourceUsed && dataSourcePrimary !== dataSourceUsed) {
         fallbackCount += 1;
+      }
+      if (decision === "WATCH" && isGoldAsset(playbookId, canonicalAssetId)) {
+        const scores = resolveScores(setup);
+        const segment = classifyWatchSegment(scores);
+        const bucket = watchSegmentStats[segment];
+        bucket.count += 1;
+        bucket.sumBias += scores.bias ?? 0;
+        bucket.sumTrend += scores.trend ?? 0;
+        bucket.sumSQ += scores.signalQuality ?? 0;
+        bucket.sumConf += scores.confidence ?? 0;
+        watchTotal += 1;
       }
     }
 
@@ -194,6 +224,14 @@ export async function GET(request: NextRequest): Promise<Response> {
       WATCH: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
       BLOCKED: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
     };
+    const watchSegmentOutcomes: Record<WatchSegmentKey, Record<string, number>> = {
+      WATCH_MEETS_REQUIREMENTS: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
+      WATCH_FAILS_ONLY_CONFIDENCE: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
+      WATCH_FAILS_ONLY_SIGNAL_QUALITY: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
+      WATCH_FAILS_TREND: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
+      WATCH_FAILS_BIAS: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
+      WATCH_OTHER: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
+    };
     let watchOutcomeTradeHits = 0;
     let watchOutcomeTotal = 0;
     let outcomesMappedToDecision = 0;
@@ -240,6 +278,13 @@ export async function GET(request: NextRequest): Promise<Response> {
       if (decisionFromOutcome === "WATCH") {
         watchOutcomeTotal += 1;
         if (status === "hit_tp" || status === "hit_sl") watchOutcomeTradeHits += 1;
+        if (isGoldAsset(playbookId, canonicalAssetId)) {
+          const segment = resolveOutcomeWatchSegment(snapshotCache, snapshotId, setupId);
+          const segBucket = watchSegmentOutcomes[segment] ?? watchSegmentOutcomes.WATCH_OTHER;
+          if (segBucket[status] !== undefined) {
+            segBucket[status] += 1;
+          }
+        }
       }
 
       // signalQuality coverage
@@ -297,6 +342,14 @@ export async function GET(request: NextRequest): Promise<Response> {
     const outcomesSummaryByDecision = mapDecisionOutcomes(outcomesDecisionBuckets);
     const watchToTradeProxy =
       watchOutcomeTotal > 0 ? { count: watchOutcomeTradeHits, total: watchOutcomeTotal, pct: pct(watchOutcomeTradeHits, watchOutcomeTotal) } : null;
+    const watchSegments =
+      isGoldAsset(playbookId, canonicalAssetId) && watchTotal > 0
+        ? mapWatchSegments(watchSegmentStats, watchTotal)
+        : null;
+    const outcomesByWatchSegment =
+      isGoldAsset(playbookId, canonicalAssetId) && watchOutcomeTotal > 0
+        ? mapWatchOutcomeBuckets(watchSegmentOutcomes)
+        : null;
 
     return respondOk({
       meta: { assetId: canonicalAssetIdUpper, profile: "SWING", timeframe: "1D", daysBack: effectiveDays },
@@ -317,6 +370,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       decisionDistribution,
       outcomesByDecision: outcomesSummaryByDecision,
       watchToTradeProxy,
+      outcomesByWatchSegment,
       debugMeta: {
         outcomesQuery: {
           daysBack: effectiveDays,
@@ -347,6 +401,7 @@ export async function GET(request: NextRequest): Promise<Response> {
           outcomesMissingGrade,
           outcomesWithMultipleMatches,
         },
+        watchSegments,
         decisions: {
           setupsCount: decisionDistribution.total,
           outcomesCount: outcomes.length,
@@ -472,6 +527,98 @@ function mapDecisionOutcomes(buckets: Record<"TRADE" | "WATCH" | "BLOCKED", Reco
     WATCH: wrap(buckets.WATCH),
     BLOCKED: wrap(buckets.BLOCKED),
   };
+}
+
+function mapWatchOutcomeBuckets(buckets: Record<WatchSegmentKey, Record<string, number>>) {
+  const wrap = (bucket: Record<string, number>) => {
+    const evaluatedCount = (bucket.hit_tp ?? 0) + (bucket.hit_sl ?? 0);
+    const winRateTpVsSl = evaluatedCount > 0 ? (bucket.hit_tp ?? 0) / evaluatedCount : 0;
+    return { ...bucket, evaluatedCount, winRateTpVsSl };
+  };
+  const result: Record<WatchSegmentKey, Record<string, number>> = {} as Record<WatchSegmentKey, Record<string, number>>;
+  (Object.keys(buckets) as WatchSegmentKey[]).forEach((key) => {
+    result[key] = wrap(buckets[key]);
+  });
+  return result;
+}
+
+function isGoldAsset(playbookId: string | undefined, canonicalAssetId: string): boolean {
+  if (canonicalAssetId === "gold") return true;
+  if (!playbookId) return false;
+  return playbookId.toLowerCase().startsWith("gold-swing");
+}
+
+function resolveScores(setup: Setup): {
+  bias: number | null;
+  trend: number | null;
+  signalQuality: number | null;
+  confidence: number | null;
+} {
+  const bias = typeof setup.biasScore === "number" ? setup.biasScore : null;
+  const trend =
+    typeof (setup as { trendScore?: number | null }).trendScore === "number"
+      ? (setup as { trendScore?: number | null }).trendScore
+      : setup.rings?.trendScore ?? null;
+  let signalQuality = typeof (setup as { signalQuality?: number | null }).signalQuality === "number" ? (setup as { signalQuality?: number | null }).signalQuality : null;
+  if (signalQuality == null) {
+    const computed = computeSignalQuality(setup);
+    signalQuality = computed?.score ?? null;
+  }
+  const confidence =
+    typeof (setup as { confidence?: number | null }).confidence === "number"
+      ? (setup as { confidence?: number | null }).confidence
+      : setup.rings?.confidenceScore ?? null;
+  return { bias, trend, signalQuality, confidence };
+}
+
+function classifyWatchSegment(scores: { bias: number | null; trend: number | null; signalQuality: number | null; confidence: number | null }): WatchSegmentKey {
+  const biasOk = (scores.bias ?? -Infinity) >= 70;
+  const trendOk = (scores.trend ?? -Infinity) >= 50;
+  const sqOk = (scores.signalQuality ?? -Infinity) >= 55;
+  const confOk = (scores.confidence ?? -Infinity) >= 60;
+
+  if (biasOk && trendOk && sqOk && confOk) return "WATCH_MEETS_REQUIREMENTS";
+  if (biasOk && trendOk && sqOk && !confOk) return "WATCH_FAILS_ONLY_CONFIDENCE";
+  if (biasOk && trendOk && confOk && !sqOk) return "WATCH_FAILS_ONLY_SIGNAL_QUALITY";
+  if (!trendOk) return "WATCH_FAILS_TREND";
+  if (!biasOk) return "WATCH_FAILS_BIAS";
+  return "WATCH_OTHER";
+}
+
+function resolveOutcomeWatchSegment(snapshotCache: Map<string, Setup[]>, snapshotId?: string | null, setupId?: string | null): WatchSegmentKey {
+  if (!snapshotId || !setupId) return "WATCH_OTHER";
+  const setups = snapshotCache.get(snapshotId);
+  const setup = setups?.find((s) => s.id === setupId);
+  if (!setup) return "WATCH_OTHER";
+  const scores = resolveScores(setup);
+  return classifyWatchSegment(scores);
+}
+
+function mapWatchSegments(
+  stats: Record<WatchSegmentKey, { count: number; sumBias: number; sumTrend: number; sumSQ: number; sumConf: number }>,
+  watchTotal: number,
+) {
+  const round1 = (val: number) => Math.round(val * 10) / 10;
+  const toAvg = (sum: number, count: number) => (count > 0 ? round1(sum / count) : null);
+  const result: Record<
+    WatchSegmentKey,
+    { count: number; pct: number; avgBias: number | null; avgTrend: number | null; avgSignalQuality: number | null; avgConfidence: number | null }
+  > = {} as Record<
+    WatchSegmentKey,
+    { count: number; pct: number; avgBias: number | null; avgTrend: number | null; avgSignalQuality: number | null; avgConfidence: number | null }
+  >;
+  (Object.keys(stats) as WatchSegmentKey[]).forEach((key) => {
+    const entry = stats[key];
+    result[key] = {
+      count: entry.count,
+      pct: pct(entry.count, watchTotal),
+      avgBias: toAvg(entry.sumBias, entry.count),
+      avgTrend: toAvg(entry.sumTrend, entry.count),
+      avgSignalQuality: toAvg(entry.sumSQ, entry.count),
+      avgConfidence: toAvg(entry.sumConf, entry.count),
+    };
+  });
+  return result;
 }
 
 /**

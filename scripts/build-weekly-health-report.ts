@@ -4,16 +4,26 @@ import { resolve } from "path";
 type Distribution = { total: number; [key: string]: { count: number; pct: number } | number };
 type OutcomeBucket = { hit_tp?: number; hit_sl?: number; open?: number; expired?: number; ambiguous?: number; evaluatedCount?: number; winRateTpVsSl?: number };
 type BiasBucket = { total: number; byGrade: Record<"A" | "B" | "NO_TRADE", number>; noTradeReasons: Record<string, number> };
+type WatchSegment = {
+  count: number;
+  pct: number;
+  avgBias: number | null;
+  avgTrend: number | null;
+  avgSignalQuality: number | null;
+  avgConfidence: number | null;
+};
 
 type Phase0Payload = {
   meta?: { assetId?: string; profile?: string; timeframe?: string; daysBack?: number };
   decisionDistribution?: Distribution;
   gradeDistribution?: Distribution;
   outcomesByDecision?: Record<"TRADE" | "WATCH" | "BLOCKED", OutcomeBucket>;
+  outcomesByWatchSegment?: Record<string, OutcomeBucket> | null;
   watchToTradeProxy?: { count: number; total: number; pct: number } | null;
   debugMeta?: {
     biasHistogram?: Record<string, BiasBucket>;
     cohortTimeRange?: { snapshotTimeMin?: string | null; snapshotTimeMax?: string | null };
+    watchSegments?: Record<string, WatchSegment> | null;
   };
 };
 
@@ -109,10 +119,27 @@ function buildAlerts(data: Phase0Payload): string[] {
   return alerts;
 }
 
+function renderWatchSegments(segments?: Record<string, WatchSegment> | null, outcomes?: Record<string, OutcomeBucket> | null): string {
+  if (!segments) return "";
+  const lines: string[] = ["### WATCH Segments (Gold)"];
+  for (const [key, seg] of Object.entries(segments)) {
+    const outcome = outcomes?.[key];
+    const evaluated = outcome ? outcome.evaluatedCount ?? ((outcome.hit_tp ?? 0) + (outcome.hit_sl ?? 0)) : 0;
+    const winRate = outcome ? outcome.winRateTpVsSl ?? 0 : 0;
+    lines.push(
+      `- ${key}: ${seg.count} (${seg.pct}%) | avg bias ${seg.avgBias ?? "n/a"} | trend ${seg.avgTrend ?? "n/a"} | SQ ${seg.avgSignalQuality ?? "n/a"} | conf ${seg.avgConfidence ?? "n/a"}` +
+        (outcomes ? ` | outcomes eval=${evaluated} winRate=${formatPct(winRate)}` : ""),
+    );
+  }
+  lines.push("");
+  return lines.join("\n");
+}
+
 function renderAssetSection(label: string, data: Phase0Payload): string {
   const meta = data.meta ?? {};
   const cohort = data.debugMeta?.cohortTimeRange;
   const alerts = buildAlerts(data);
+  const isGold = (meta.assetId ?? "").toLowerCase() === "gold";
 
   const lines = [
     `## ${label}`,
@@ -128,6 +155,7 @@ function renderAssetSection(label: string, data: Phase0Payload): string {
     renderOutcomes("Outcomes WATCH", data.outcomesByDecision?.WATCH),
     renderOutcomes("Outcomes BLOCKED", data.outcomesByDecision?.BLOCKED),
     renderWatchProxy(data.watchToTradeProxy ?? null),
+    isGold ? renderWatchSegments(data.debugMeta?.watchSegments ?? null, data.outcomesByWatchSegment ?? null) : "",
     renderBiasHistogram(data.debugMeta?.biasHistogram),
   ];
   return lines.join("\n");
