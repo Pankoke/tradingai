@@ -128,7 +128,7 @@ export async function GET(request: NextRequest): Promise<Response> {
             b.total += 1;
             const grade = normalizeGrade((setup as { setupGrade?: string | null }).setupGrade ?? null);
             b.byGrade[grade] += 1;
-            const reason = (setup as { noTradeReason?: string | null }).noTradeReason ?? "n/a";
+            const reason = normalizeText((setup as { noTradeReason?: unknown }).noTradeReason) ?? "n/a";
             b.noTradeReasons[reason] = (b.noTradeReasons[reason] ?? 0) + 1;
           }
         }
@@ -158,6 +158,8 @@ export async function GET(request: NextRequest): Promise<Response> {
     let upgradeCandidatesSumConf = 0;
     const btcAlignment: BtcAlignmentStats = { total: 0, reasons: {} };
     const btcLevels: BtcLevelStats = { count: 0, parseErrors: 0, stopPcts: [], targetPcts: [], rrrs: [] };
+    let btcAlignmentDerived = 0;
+    let btcAlignmentMissing = 0;
     let staleCount = 0;
     let fallbackCount = 0;
 
@@ -194,8 +196,16 @@ export async function GET(request: NextRequest): Promise<Response> {
           }
         }
       } else if (canonicalAssetId === "btc" && (decision === "BLOCKED" || decision === "WATCH")) {
-        const reason = ((setup as { noTradeReason?: string | null }).noTradeReason ?? "unknown").trim();
+        const reasonRaw = (setup as { noTradeReason?: unknown }).noTradeReason;
+        const reasonNormalized = normalizeText(reasonRaw);
+        const reason = reasonNormalized ?? "unknown";
         const key = reason.length ? reason : "unknown";
+        const reasonLc = reason.toLowerCase();
+        if (reasonLc.includes("alignment derived")) {
+          btcAlignmentDerived += 1;
+        } else if (reasonLc.includes("alignment") && reasonLc.includes("default")) {
+          btcAlignmentMissing += 1;
+        }
         btcAlignment.total += 1;
         btcAlignment.reasons[key] = (btcAlignment.reasons[key] ?? 0) + 1;
       } else if (canonicalAssetId === "btc" && decision === "TRADE") {
@@ -490,6 +500,15 @@ export async function GET(request: NextRequest): Promise<Response> {
               }
             : null,
         btcAlignmentBreakdown: canonicalAssetId === "btc" ? topReasonsWithPct(btcAlignment) : null,
+        btcAlignmentCounters:
+          canonicalAssetId === "btc"
+            ? {
+                derived: btcAlignmentDerived,
+                missing: btcAlignmentMissing,
+                resolved: Math.max(btcAlignment.total - btcAlignmentMissing, 0),
+                total: btcAlignment.total,
+              }
+            : null,
         btcLevelPlausibility: canonicalAssetId === "btc" ? summarizeLevelPlausibility(btcLevels) : null,
         decisions: {
           setupsCount: decisionDistribution.total,
@@ -863,6 +882,15 @@ function safeJoinToLower(value: unknown): string {
   }
   if (typeof value === "string") return value.toLowerCase();
   return "";
+}
+
+function normalizeText(value: unknown): string | null {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    const joined = value.filter((v) => typeof v === "string").join(" ").trim();
+    return joined.length ? joined : null;
+  }
+  return null;
 }
 
 /**

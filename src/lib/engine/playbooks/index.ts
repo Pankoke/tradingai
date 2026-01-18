@@ -294,11 +294,12 @@ function evaluateDefault(context: PlaybookContext): PlaybookEvaluation {
       gradeRationale: ["Default alignment: bias & trend supportive"],
     };
   }
+  const derivedDirection = rings.biasScore >= 50 ? "LONG" : "SHORT";
   return {
     setupGrade: "NO_TRADE",
     setupType: deriveSetupType(rings),
-    gradeRationale: [],
-    noTradeReason: "No default alignment",
+    gradeRationale: [`Derived alignment ${derivedDirection}; bias/trend below defaults`],
+    noTradeReason: `Alignment derived (${derivedDirection}) from bias/trend`,
   };
 }
 
