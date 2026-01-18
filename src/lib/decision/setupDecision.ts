@@ -18,6 +18,8 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
   const noTradeReason = (setup as { noTradeReason?: string | null }).noTradeReason ?? null;
   const gradeRationale = (setup as { gradeRationale?: string[] | null }).gradeRationale ?? [];
   const gradeDebugReason = (setup as { gradeDebugReason?: string | null }).gradeDebugReason ?? null;
+  const biasScore = (setup as { biasScore?: number | null }).biasScore ?? null;
+  const trendScore = (setup as { trendScore?: number | null }).trendScore ?? null;
 
   if (grade === "A" || grade === "B") {
     return { decision: "TRADE", reasons: [] };
@@ -28,6 +30,27 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
   const soft = !hard && isSoftReason(noTradeReason, gradeRationale);
 
   const reasons = buildReasons(noTradeReason, gradeRationale, gradeDebugReason);
+
+  // BTC Swing: provide deterministic fallback alignment instead of hard-blocking on missing alignment
+  // Source of "No default alignment" was the default playbook evaluation (crypto swing) when no alignment was resolved.
+  // Here we derive a fallback direction so the decision becomes WATCH (soft) rather than BLOCKED.
+  const isCryptoSwing = playbookId === "crypto-swing-v0.1";
+  const alignmentMissing = (noTradeReason ?? "").toLowerCase().includes("alignment");
+  if (isCryptoSwing && watchEnabled && !hard && (alignmentMissing || !noTradeReason)) {
+    const directionRaw = (setup as { direction?: string | null }).direction ?? "";
+    const direction =
+      directionRaw.toLowerCase().includes("short") || directionRaw.toLowerCase().includes("sell")
+        ? "SHORT"
+        : directionRaw.toLowerCase().includes("long") || directionRaw.toLowerCase().includes("buy")
+          ? "LONG"
+          : null;
+    const trendFallback = trendScore !== null && trendScore >= 50;
+    const biasFallback = biasScore !== null && biasScore >= 70;
+    const fallbackDir = direction ?? (trendFallback || biasFallback ? "LONG" : "SHORT");
+    const alignmentReason = `Alignment derived (fallback ${fallbackDir})`;
+    const mergedReasons = buildReasons(alignmentReason, gradeRationale, gradeDebugReason);
+    return { decision: "WATCH", category: "soft", reasons: mergedReasons };
+  }
 
   if (!watchEnabled) {
     return { decision: "BLOCKED", category: hard ? "hard" : "soft", reasons };

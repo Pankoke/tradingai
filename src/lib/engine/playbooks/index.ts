@@ -294,6 +294,8 @@ function evaluateDefault(context: PlaybookContext): PlaybookEvaluation {
       gradeRationale: ["Default alignment: bias & trend supportive"],
     };
   }
+  // Previously this branch emitted "No default alignment" (see reports); we now derive a safe fallback
+  // direction so downstream decision logic can treat it as a soft WATCH instead of a hard block.
   const derivedDirection = rings.biasScore >= 50 ? "LONG" : "SHORT";
   return {
     setupGrade: "NO_TRADE",

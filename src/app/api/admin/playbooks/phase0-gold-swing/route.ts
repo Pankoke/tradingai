@@ -198,14 +198,17 @@ export async function GET(request: NextRequest): Promise<Response> {
       } else if (canonicalAssetId === "btc" && (decision === "BLOCKED" || decision === "WATCH")) {
         const reasonRaw = (setup as { noTradeReason?: unknown }).noTradeReason;
         const reasonNormalized = normalizeText(reasonRaw);
-        const reason = reasonNormalized ?? "unknown";
-        const key = reason.length ? reason : "unknown";
+        let reason = reasonNormalized ?? "unknown";
         const reasonLc = reason.toLowerCase();
-        if (reasonLc.includes("alignment derived")) {
+        if (reasonLc.includes("alignment") && reasonLc.includes("default")) {
+          reason = "Alignment derived (fallback)";
           btcAlignmentDerived += 1;
-        } else if (reasonLc.includes("alignment") && reasonLc.includes("default")) {
+        } else if (reasonLc.includes("alignment derived")) {
+          btcAlignmentDerived += 1;
+        } else if (reasonLc.includes("alignment")) {
           btcAlignmentMissing += 1;
         }
+        const key = reason.length ? reason : "unknown";
         btcAlignment.total += 1;
         btcAlignment.reasons[key] = (btcAlignment.reasons[key] ?? 0) + 1;
       } else if (canonicalAssetId === "btc" && decision === "TRADE") {
@@ -503,6 +506,9 @@ export async function GET(request: NextRequest): Promise<Response> {
         btcAlignmentCounters:
           canonicalAssetId === "btc"
             ? {
+                alignmentResolvedCount: Math.max(btcAlignment.total - btcAlignmentMissing, 0),
+                alignmentDerivedCount: btcAlignmentDerived,
+                alignmentStillMissingCount: btcAlignmentMissing,
                 derived: btcAlignmentDerived,
                 missing: btcAlignmentMissing,
                 resolved: Math.max(btcAlignment.total - btcAlignmentMissing, 0),

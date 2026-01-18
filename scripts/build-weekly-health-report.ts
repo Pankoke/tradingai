@@ -38,6 +38,12 @@ type Phase0Payload = {
     watchSegments?: Record<string, WatchSegment> | null;
     watchUpgradeCandidates?: WatchUpgradeCandidates | null;
     btcAlignmentBreakdown?: { total: number; top: { reason: string; count: number; pct: number }[] } | null;
+    btcAlignmentCounters?: {
+      alignmentResolvedCount?: number;
+      alignmentDerivedCount?: number;
+      alignmentStillMissingCount?: number;
+      total?: number;
+    } | null;
     btcLevelPlausibility?: {
       count: number;
       parseErrors: number;
@@ -168,6 +174,9 @@ function renderAssetSection(label: string, data: Phase0Payload): string {
   const upgrade = isGold ? data.debugMeta?.watchUpgradeCandidates : null;
   const isBtc = (meta.assetId ?? "").toLowerCase() === "btc";
   const btcAlignment = data.debugMeta?.btcAlignmentBreakdown;
+  const btcAlignmentCounters = data.debugMeta?.btcAlignmentCounters as
+    | { alignmentResolvedCount?: number; alignmentDerivedCount?: number; alignmentStillMissingCount?: number; total?: number }
+    | undefined;
   const btcLevels = data.debugMeta?.btcLevelPlausibility;
   const btcRrr = data.outcomesByBtcTradeRrrBucket;
 
@@ -203,6 +212,9 @@ function renderAssetSection(label: string, data: Phase0Payload): string {
     isBtc && btcAlignment
       ? [
           "### Alignment / NO_TRADE reasons (BTC)",
+          btcAlignmentCounters
+            ? `- alignment resolved=${btcAlignmentCounters.alignmentResolvedCount ?? 0} | derived=${btcAlignmentCounters.alignmentDerivedCount ?? 0} | missing=${btcAlignmentCounters.alignmentStillMissingCount ?? 0} | total=${btcAlignmentCounters.total ?? 0}`
+            : "",
           ...btcAlignment.top.map((item) => `- ${item.reason}: ${item.count} (${item.pct}%)`),
           "",
         ].join("\n")
