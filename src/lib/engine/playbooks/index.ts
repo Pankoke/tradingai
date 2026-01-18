@@ -63,6 +63,7 @@ const TREND_MIN = 50;
 const SOFT_TREND_BIAS_DELTA = 20;
 const GOLD_PLAYBOOK_ID = "gold-swing-v0.2";
 const INDEX_PLAYBOOK_ID = "index-swing-v0.1";
+const SPX_PLAYBOOK_ID = "spx-swing-v0.1";
 const CRYPTO_PLAYBOOK_ID = "crypto-swing-v0.1";
 const FX_PLAYBOOK_ID = "fx-swing-v0.1";
 const GENERIC_PLAYBOOK_ID = "generic-swing-v0.1";
@@ -100,6 +101,16 @@ function matchIndexAsset(asset: PlaybookContext["asset"]): MatchResult {
   return { matched: false, reason: "no index match" };
 }
 
+function matchSpxAsset(asset: PlaybookContext["asset"]): MatchResult {
+  const id = (asset.id ?? "").toLowerCase();
+  const symbol = (asset.symbol ?? "").toUpperCase();
+  if (id === "spx") return { matched: true, reason: "spx id" };
+  if (symbol.includes("GSPC") || symbol === "^GSPC" || symbol === "SPX" || symbol.includes("SP500")) {
+    return { matched: true, reason: "spx symbol" };
+  }
+  return { matched: false, reason: "no spx match" };
+}
+
 function matchFxAsset(asset: PlaybookContext["asset"]): MatchResult {
   const symbol = (asset.symbol ?? "").toUpperCase();
   if (symbol.endsWith("=X")) return { matched: true, reason: "fx yahoo =X" };
@@ -121,6 +132,9 @@ function resolvePlaybookIdForAsset(asset: PlaybookContext["asset"], profile?: st
   if (!profileKey.includes("swing")) {
     return { playbook: genericSwingPlaybook, reason: "non-swing profile" };
   }
+
+  const spx = matchSpxAsset(asset);
+  if (spx.matched) return { playbook: spxSwingPlaybook, reason: spx.reason };
 
   const gold = matchGoldAsset(asset);
   if (gold.matched) return { playbook: goldSwingPlaybook, reason: gold.reason };
@@ -321,6 +335,122 @@ const indexSwingPlaybook: Playbook = {
   evaluateSetup: evaluateDefault,
 };
 
+// --- SPX Swing Playbook (Phase-0 monitoring) ---
+const SPX_VOL_HARD_LABEL = "high";
+const SPX_VOL_SOFT_LABEL = "medium";
+const SPX_TREND_MIN = 60;
+const SPX_BIAS_MIN = 70;
+const SPX_SIGNAL_QUALITY_MIN = 55;
+const SPX_CONFIRMATION_MIN = 55;
+
+type SpxWatchSegment =
+  | "WATCH_FAILS_REGIME_CONFIRMATION"
+  | "WATCH_FAILS_VOLATILITY"
+  | "WATCH_FAILS_PULLBACK_QUALITY"
+  | "WATCH_FAILS_BIAS_ALIGNMENT"
+  | "WATCH_RANGE_CONSTRUCTIVE"
+  | "WATCH_OTHER";
+
+function evaluateSpxSwing(context: PlaybookContext): PlaybookEvaluation {
+  const { rings, signalQuality, levels } = context;
+  const regime = deriveRegimeTag({
+    rings: {
+      ...rings,
+      momentumScore: (context.orderflow?.score ?? null) as number | null,
+    },
+  } as unknown as Setup);
+
+  const volatilityLabel =
+    levels?.riskReward?.volatilityLabel ??
+    (typeof levels?.riskReward?.riskPercent === "number" && levels.riskReward.riskPercent > 6 ? "high" : null);
+  const volHard = volatilityLabel === SPX_VOL_HARD_LABEL;
+  const volSoft = !volHard && volatilityLabel === SPX_VOL_SOFT_LABEL;
+
+  if (volHard) {
+    return {
+      setupGrade: "NO_TRADE",
+      setupType: deriveSetupType(rings),
+      gradeRationale: [],
+      noTradeReason: "High volatility (blocked)",
+      debugReason: "spx:block_high_vol",
+    };
+  }
+
+  const biasOk = rings.biasScore >= SPX_BIAS_MIN;
+  const trendOk = rings.trendScore >= SPX_TREND_MIN;
+  const sqOk = typeof signalQuality?.score === "number" ? signalQuality.score >= SPX_SIGNAL_QUALITY_MIN : false;
+  const confirmationScore =
+    typeof rings.orderflowScore === "number"
+      ? rings.orderflowScore
+      : typeof context.orderflow?.score === "number"
+        ? context.orderflow.score
+        : null;
+  const confirmationOk = (confirmationScore ?? -Infinity) >= SPX_CONFIRMATION_MIN;
+
+  const pullbackWeak =
+    (typeof levels?.riskReward?.riskPercent === "number" && levels.riskReward.riskPercent > 6) ||
+    (typeof levels?.riskReward?.rewardPercent === "number" && levels.riskReward.rewardPercent < 1.5);
+
+  const rationale: string[] = [];
+  const debugReasons: string[] = [];
+
+  const assignWatch = (segment: SpxWatchSegment, reason: string): PlaybookEvaluation => ({
+    setupGrade: "NO_TRADE",
+    setupType: deriveSetupType(rings),
+    gradeRationale: rationale.slice(0, 3),
+    noTradeReason: reason,
+    debugReason: `spx:${segment}`,
+  });
+
+  // Regime handling: TREND default WATCH unless all gates met; RANGE is always WATCH (never BLOCKED)
+  if (regime === "MISSING") {
+    debugReasons.push("regime:missing");
+  } else if (regime === "RANGE") {
+    return assignWatch("WATCH_RANGE_CONSTRUCTIVE", "Regime range/chop (trend confirmation missing)");
+  }
+
+  if (!biasOk) {
+    return assignWatch("WATCH_FAILS_BIAS_ALIGNMENT", "Bias not aligned for trade");
+  }
+
+  if (volSoft) {
+    return assignWatch("WATCH_FAILS_VOLATILITY", "Volatility elevated (soft gate)");
+  }
+
+  if (regime !== "TREND") {
+    return assignWatch("WATCH_FAILS_REGIME_CONFIRMATION", "Regime not TREND");
+  }
+
+  if (!trendOk || !confirmationOk) {
+    return assignWatch("WATCH_FAILS_REGIME_CONFIRMATION", "Trend/confirmation below threshold");
+  }
+
+  if (pullbackWeak) {
+    return assignWatch("WATCH_FAILS_PULLBACK_QUALITY", "Pullback/structure quality insufficient");
+  }
+
+  if (!sqOk) {
+    return assignWatch("WATCH_OTHER", "Signal quality below trade threshold (phase-0)");
+  }
+
+  rationale.push("Regime TREND", `Bias strong (>=${SPX_BIAS_MIN})`, `Trend strong (>=${SPX_TREND_MIN})`);
+  rationale.push("Volatility ok", "Confirmation via orderflow", `Signal quality >= ${SPX_SIGNAL_QUALITY_MIN}`);
+
+  return {
+    setupGrade: "B",
+    setupType: deriveSetupType(rings),
+    gradeRationale: rationale.slice(0, 3),
+    debugReason: debugReasons.concat("spx:trade").join(";"),
+  };
+}
+
+const spxSwingPlaybook: Playbook = {
+  id: SPX_PLAYBOOK_ID,
+  label: "SPX Swing",
+  shortLabel: "SPX",
+  evaluateSetup: evaluateSpxSwing,
+};
+
 function evaluateCryptoSwing(context: PlaybookContext): PlaybookEvaluation {
   const { rings, orderflow } = context;
   const biasOk = rings.biasScore >= 70;
@@ -396,6 +526,7 @@ const genericSwingPlaybook: Playbook = {
 const PLAYBOOK_LABELS: Record<string, { label: string; short: string }> = {
   [GOLD_PLAYBOOK_ID]: { label: "Gold Swing", short: "Gold Swing" },
   [INDEX_PLAYBOOK_ID]: { label: "Index Swing", short: "Index Swing" },
+  [SPX_PLAYBOOK_ID]: { label: "SPX Swing", short: "SPX Swing" },
   [CRYPTO_PLAYBOOK_ID]: { label: "Crypto Swing", short: "Crypto Swing" },
   [FX_PLAYBOOK_ID]: { label: "FX Swing", short: "FX Swing" },
   [GENERIC_PLAYBOOK_ID]: { label: "Generic Swing", short: "Generic Swing" },
@@ -430,6 +561,7 @@ export function getPlaybookLabel(playbookId?: string | null, locale: "en" | "de"
   if (locale === "de") {
     if (playbookId === GOLD_PLAYBOOK_ID) return "Gold Swing";
     if (playbookId === INDEX_PLAYBOOK_ID) return "Index Swing";
+    if (playbookId === SPX_PLAYBOOK_ID) return "SPX Swing";
     if (playbookId === CRYPTO_PLAYBOOK_ID) return "Krypto Swing";
     if (playbookId === FX_PLAYBOOK_ID) return "FX Swing";
     if (playbookId === GENERIC_PLAYBOOK_ID) return "Generic Swing";

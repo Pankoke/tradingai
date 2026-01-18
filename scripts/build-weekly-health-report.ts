@@ -73,9 +73,23 @@ type Phase0Payload = {
   };
 };
 
-type Phase0Response = { ok: true; data: Phase0Payload } | { ok: false; error: unknown };
+export type AssetPhase0Summary = {
+  meta: { assetId: string; timeframe: string; sampleWindowDays: number };
+  decisionDistribution: Record<string, number>;
+  gradeDistribution?: Record<string, number>;
+  watchSegmentsDistribution?: Record<string, number>;
+  upgradeCandidates?: { total: number; byReason?: Record<string, number> };
+  regimeDistribution?: Record<string, number>;
+  diagnostics?: {
+    regimeDistribution?: Record<string, number>;
+    volatilityBuckets?: Array<{ bucket: string; count: number }>;
+    notes?: string[];
+  };
+};
 
-async function loadJson(path: string): Promise<Phase0Payload> {
+type Phase0Response = { ok: true; data: Phase0Payload & { summaries?: Record<string, AssetPhase0Summary> } } | { ok: false; error: unknown };
+
+async function loadJson(path: string): Promise<Phase0Payload & { summaries?: Record<string, AssetPhase0Summary> }> {
   const raw = await fs.readFile(path, "utf-8");
   let parsed: Phase0Response;
   try {
@@ -104,6 +118,22 @@ function renderDistribution(title: string, dist?: Distribution): string {
       return `- ${k}: ${val.count ?? 0} (${val.pct ?? 0}%)`;
     });
   return [`### ${title}`, ...lines, ""].join("\n");
+}
+
+function renderCountTable(title: string, entries?: Record<string, number>): string {
+  if (!entries || Object.keys(entries).length === 0) {
+    return [`### ${title}`, "- No data", ""].join("\n");
+  }
+  const lines = [
+    `### ${title}`,
+    "| Key | Count |",
+    "| --- | ---: |",
+    ...Object.entries(entries)
+      .sort((a, b) => b[1] - a[1])
+      .map(([k, v]) => `| ${k} | ${v} |`),
+    "",
+  ];
+  return lines.join("\n");
 }
 
 function renderOutcomes(title: string, bucket?: OutcomeBucket): string {
@@ -351,9 +381,98 @@ function renderAssetSection(label: string, data: Phase0Payload): string {
   return lines.join("\n");
 }
 
+export function renderAssetSummarySection(summary: AssetPhase0Summary, label?: string): string {
+  const name = label ?? `${summary.meta.assetId.toUpperCase()} Swing`;
+  const lines: string[] = [];
+  lines.push(`## ${name} (${summary.meta.timeframe ?? "n/a"})`);
+  lines.push(`- Meta: asset=${summary.meta.assetId} tf=${summary.meta.timeframe} days=${summary.meta.sampleWindowDays}`);
+  lines.push("");
+  lines.push(renderCountTable("Decision Distribution", summary.decisionDistribution));
+  if (summary.gradeDistribution) lines.push(renderCountTable("Grade Distribution", summary.gradeDistribution));
+  if (summary.watchSegmentsDistribution) lines.push(renderCountTable("WATCH Segments", summary.watchSegmentsDistribution));
+  if (summary.upgradeCandidates) {
+    lines.push("### WATCH+ / Upgrade Candidates");
+    lines.push(`- total: ${summary.upgradeCandidates.total}`);
+    if (summary.upgradeCandidates.byReason) {
+      Object.entries(summary.upgradeCandidates.byReason)
+        .sort((a, b) => b[1] - a[1])
+        .forEach(([k, v]) => lines.push(`- ${k}: ${v}`));
+    }
+    lines.push("");
+  }
+  if (summary.regimeDistribution) lines.push(renderCountTable("Regime Distribution", summary.regimeDistribution));
+  if (summary.diagnostics) {
+    lines.push("### Diagnostics");
+    if (summary.diagnostics.regimeDistribution) {
+      lines.push(renderCountTable("Regime Distribution", summary.diagnostics.regimeDistribution));
+    }
+    if (summary.diagnostics.volatilityBuckets && summary.diagnostics.volatilityBuckets.length > 0) {
+      const volTable = ["| Bucket | Count |", "| --- | ---: |", ...summary.diagnostics.volatilityBuckets.map((b) => `| ${b.bucket} | ${b.count} |`), ""];
+      lines.push("#### Volatility Buckets");
+      lines.push(volTable.join("\n"));
+    }
+    if (
+      !summary.diagnostics.regimeDistribution &&
+      !(summary.diagnostics.volatilityBuckets && summary.diagnostics.volatilityBuckets.length > 0)
+    ) {
+      lines.push("- No diagnostics data");
+    }
+    if (summary.diagnostics.notes && summary.diagnostics.notes.length > 0) {
+      summary.diagnostics.notes.forEach((n) => lines.push(`- ${n}`));
+    }
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+
 async function main() {
   const gold = await loadJson("phase0_gold.json");
   const btc = await loadJson("phase0_btc.json");
+
+const summariesFromPayload = gold.summaries ?? btc.summaries ?? undefined;
+
+  const sampleWindowDays =
+    gold.meta?.daysBack ?? btc.meta?.daysBack ?? gold.meta?.daysBack ?? 30;
+
+  const fallbackSummaryFromPayload = (data: Phase0Payload, assetId: string): AssetPhase0Summary => {
+    const dist = data.decisionDistribution;
+    const grade = data.gradeDistribution;
+    const watchSegments = data.debugMeta?.watchSegments
+      ? Object.fromEntries(Object.entries(data.debugMeta.watchSegments).map(([k, v]) => [k, v.count]))
+      : undefined;
+    return {
+      meta: { assetId, timeframe: (data.meta?.timeframe ?? "1D").toString(), sampleWindowDays },
+      decisionDistribution: dist
+        ? Object.fromEntries(
+            Object.entries(dist)
+              .filter(([k]) => k !== "total")
+              .map(([k, v]) => [k, typeof v === "number" ? v : (v as { count?: number }).count ?? 0]),
+          )
+        : {},
+      gradeDistribution: grade
+        ? Object.fromEntries(
+            Object.entries(grade)
+              .filter(([k]) => k !== "total")
+              .map(([k, v]) => [k, typeof v === "number" ? v : (v as { count?: number }).count ?? 0]),
+          )
+        : undefined,
+      watchSegmentsDistribution: watchSegments,
+      upgradeCandidates: data.debugMeta?.watchUpgradeCandidates
+        ? { total: data.debugMeta.watchUpgradeCandidates.candidatesCount ?? 0 }
+        : undefined,
+      regimeDistribution: undefined,
+    };
+  };
+
+  const summaries: Record<string, AssetPhase0Summary> = { ...(summariesFromPayload ?? {}) };
+  const ensure = (assetId: string, data: Phase0Payload) => {
+    if (!summaries[assetId]) {
+      summaries[assetId] = fallbackSummaryFromPayload(data, assetId);
+    }
+  };
+  ensure("gold", gold);
+  ensure("btc", btc);
+  ensure("spx", {} as Phase0Payload); // falls spx nicht geliefert wurde, leeres Summary erzeugen
 
   const now = new Date();
   const y = now.getUTCFullYear();
@@ -379,8 +498,13 @@ async function main() {
     reportLines.push("- none");
   }
   reportLines.push("");
-  reportLines.push(renderAssetSection("Gold Swing", gold));
-  reportLines.push(renderAssetSection("BTC Swing", btc));
+
+  const assetOrder = ["gold", "btc", "spx"];
+  assetOrder
+    .filter((a) => summaries[a])
+    .forEach((assetId) => {
+      reportLines.push(renderAssetSummarySection(summaries[assetId], `${assetId.toUpperCase()} Swing`));
+    });
 
   const outputDir = resolve(process.cwd(), "reports", "weekly");
   const fileName = `${stamp}.md`;

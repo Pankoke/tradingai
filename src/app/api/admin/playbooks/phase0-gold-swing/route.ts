@@ -9,6 +9,7 @@ import { getSnapshotById } from "@/src/server/repositories/perceptionSnapshotRep
 import { computeSignalQuality } from "@/src/lib/engine/signalQuality";
 import { deriveSetupDecision } from "@/src/lib/decision/setupDecision";
 import { deriveRegimeTag } from "@/src/lib/engine/metrics/regime";
+import type { SetupDecision } from "@/src/lib/config/watchDecision";
 
 type GradeKey = "A" | "B" | "NO_TRADE";
 type WatchSegmentKey =
@@ -18,6 +19,13 @@ type WatchSegmentKey =
   | "WATCH_FAILS_TREND"
   | "WATCH_FAILS_BIAS"
   | "WATCH_OTHER";
+type SpxWatchSegmentKey =
+  | "WATCH_FAILS_REGIME_CONFIRMATION"
+  | "WATCH_FAILS_VOLATILITY"
+  | "WATCH_FAILS_PULLBACK_QUALITY"
+  | "WATCH_FAILS_BIAS_ALIGNMENT"
+  | "WATCH_RANGE_CONSTRUCTIVE"
+  | "WATCH_OTHER";
 
 type BtcAlignmentStats = {
   total: number;
@@ -26,6 +34,21 @@ type BtcAlignmentStats = {
 
 type BtcWatchSegmentKey = "WATCH_FAILS_REGIME" | "WATCH_FAILS_CONFIRMATION" | "WATCH_FAILS_TREND" | "WATCH_OTHER";
 type RegimeTag = "TREND" | "RANGE" | "MISSING";
+type AssetDiagnostics = {
+  regimeDistribution?: Record<string, number>;
+  volatilityBuckets?: Array<{ bucket: string; count: number }>;
+  notes?: string[];
+};
+
+type AssetPhase0Summary = {
+  meta: { assetId: string; timeframe: string; sampleWindowDays: number };
+  decisionDistribution: Record<SetupDecision, number>;
+  gradeDistribution?: Record<GradeKey, number>;
+  watchSegmentsDistribution?: Record<string, number>;
+  upgradeCandidates?: { total: number; byReason?: Record<string, number> };
+  regimeDistribution?: Record<string, number>;
+  diagnostics?: AssetDiagnostics;
+};
 
 type BtcLevelStats = {
   count: number;
@@ -615,6 +638,19 @@ export async function GET(request: NextRequest): Promise<Response> {
       btcAlignmentReasonMapped += mappedCount;
     }
 
+    const summariesAssetIds = ["gold", "btc", "spx"];
+    const summaries = Object.fromEntries(
+      summariesAssetIds.map((asset) => [
+        asset,
+        buildPhase0SummaryForAsset({
+          rows,
+          assetId: asset,
+          sampleWindowDays: effectiveDays,
+          playbookId: asset === canonicalAssetId ? playbookId ?? undefined : undefined,
+        }),
+      ]),
+    );
+
     return respondOk({
       meta: { assetId: canonicalAssetIdUpper, profile: "SWING", timeframe: "1D", daysBack: effectiveDays },
       gradeDistribution: {
@@ -746,6 +782,7 @@ export async function GET(request: NextRequest): Promise<Response> {
           snapshotTimeMax: maxCreated ? maxCreated.toISOString() : null,
         },
       },
+      summaries,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown error";
@@ -1214,6 +1251,91 @@ function mapAlignmentReason(reason: string): string {
   if (lower.includes("no default alignment")) return "Alignment derived (fallback)";
   if (lower.includes("alignment derived")) return "Alignment derived (fallback)";
   return reason;
+}
+
+type SummaryInputRow = { setups: unknown; snapshotTime?: Date | null; createdAt?: Date | null };
+type BuildSummaryParams = {
+  rows: SummaryInputRow[];
+  assetId: string;
+  sampleWindowDays: number;
+  playbookId?: string | null;
+};
+
+export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPhase0Summary {
+  const { rows, assetId, sampleWindowDays, playbookId } = params;
+  const target = assetId.toLowerCase();
+  const targetUpper = target.toUpperCase();
+
+  const decisionDistribution: Record<SetupDecision, number> = { TRADE: 0, WATCH: 0, BLOCKED: 0 };
+  const gradeCounts: Record<GradeKey, number> = { A: 0, B: 0, NO_TRADE: 0 };
+  const watchSegments: Record<string, number> = {};
+  const upgradeReasons: Record<string, number> = {};
+  const regimeDistribution: Record<string, number> = {};
+  const volatilityBuckets: Record<string, number> = {};
+
+  for (const row of rows) {
+    const setups = Array.isArray((row as { setups?: unknown }).setups) ? ((row as { setups: Setup[] }).setups ?? []) : [];
+    for (const setup of setups) {
+      const asset = (setup.assetId ?? setup.symbol ?? "").toUpperCase();
+      const profile = (setup.profile ?? "").toUpperCase();
+      const timeframe = (setup.timeframeUsed ?? setup.timeframe ?? "").toUpperCase();
+      const setupPlaybookId = (setup.setupPlaybookId ?? "").toLowerCase();
+      const matchesPlaybook = playbookId ? setupPlaybookId === playbookId.toLowerCase() : true;
+      if (asset !== targetUpper || profile !== "SWING" || timeframe !== "1D" || !matchesPlaybook) continue;
+
+      const grade = normalizeGrade((setup as { setupGrade?: string | null }).setupGrade ?? null);
+      gradeCounts[grade] += 1;
+
+      const decisionResult = deriveSetupDecision(setup);
+      decisionDistribution[decisionResult.decision] += 1;
+
+      if (target === "gold" && decisionResult.decision === "WATCH") {
+        const scores = resolveScores(setup);
+        const segment = classifyWatchSegment(scores);
+        watchSegments[segment] = (watchSegments[segment] ?? 0) + 1;
+        const isUpgrade = isUpgradeCandidate(setup, scores);
+        if (isUpgrade) {
+          upgradeReasons["WATCH_FAILS_TREND"] = (upgradeReasons["WATCH_FAILS_TREND"] ?? 0) + 1;
+        }
+      }
+
+      if (target === "btc") {
+        const regime = deriveRegimeTag(setup);
+        regimeDistribution[regime] = (regimeDistribution[regime] ?? 0) + 1;
+      }
+
+      if (target === "spx") {
+        const regime = deriveRegimeTag(setup);
+        regimeDistribution[regime] = (regimeDistribution[regime] ?? 0) + 1;
+      }
+
+      if (typeof (setup as { riskReward?: { volatilityLabel?: string | null } }).riskReward?.volatilityLabel === "string") {
+        const label = ((setup as { riskReward?: { volatilityLabel?: string | null } }).riskReward?.volatilityLabel ?? "unknown").toLowerCase();
+        volatilityBuckets[label] = (volatilityBuckets[label] ?? 0) + 1;
+      }
+    }
+  }
+
+  const gradeTotal = gradeCounts.A + gradeCounts.B + gradeCounts.NO_TRADE;
+  const summary: AssetPhase0Summary = {
+    meta: { assetId: target, timeframe: "1D", sampleWindowDays },
+    decisionDistribution,
+    gradeDistribution: gradeTotal > 0 ? gradeCounts : undefined,
+    watchSegmentsDistribution: Object.keys(watchSegments).length ? watchSegments : undefined,
+    upgradeCandidates: Object.keys(upgradeReasons).length
+      ? { total: Object.values(upgradeReasons).reduce((s, v) => s + v, 0), byReason: upgradeReasons }
+      : { total: 0 },
+    regimeDistribution: Object.keys(regimeDistribution).length ? regimeDistribution : undefined,
+    diagnostics:
+      Object.keys(regimeDistribution).length || Object.keys(volatilityBuckets).length
+        ? {
+            regimeDistribution: Object.keys(regimeDistribution).length ? regimeDistribution : undefined,
+            volatilityBuckets: Object.entries(volatilityBuckets).map(([bucket, count]) => ({ bucket, count })),
+          }
+        : undefined,
+  };
+
+  return summary;
 }
 
 /**

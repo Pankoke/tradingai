@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:weekly-report": "vitest tests/phase0/weeklyReportRenderer.test.ts",
     "postinstall": "patch-package",
     "dev:ring-summaries": "ts-node --project scripts/tsconfig.scripts.json scripts/dev/printRingSummaries.ts",
     "backfill:1d": "ts-node --project scripts/tsconfig.scripts.json -r dotenv/config -r tsconfig-paths/register src/scripts/backfillDailyCandles.ts",
