@@ -17,6 +17,8 @@ function makeSummary(assetId: string): AssetPhase0Summary {
             ],
           }
         : undefined,
+    blockedReasonsDistribution: assetId === "spx" ? { "High volatility": 3 } : undefined,
+    noTradeReasonsDistribution: { "Regime range": 2 },
   };
 }
 
@@ -35,5 +37,7 @@ describe("renderAssetSummarySection", () => {
     expect(rendered).toContain("| TRADE_B | 1 |");
     expect(rendered).toContain("Volatility Buckets");
     expect(rendered).toContain("| low | 2 |");
+    expect(rendered).toContain("Blocked Reasons");
+    expect(rendered).toContain("NO_TRADE Reasons");
   });
 });

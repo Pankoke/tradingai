@@ -48,6 +48,9 @@ type AssetPhase0Summary = {
   upgradeCandidates?: { total: number; byReason?: Record<string, number> };
   regimeDistribution?: Record<string, number>;
   diagnostics?: AssetDiagnostics;
+  blockedReasonsDistribution?: Record<string, number>;
+  noTradeReasonsDistribution?: Record<string, number>;
+  watchReasonsDistribution?: Record<string, number>;
 };
 
 type BtcLevelStats = {
@@ -1272,6 +1275,9 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
   const upgradeReasons: Record<string, number> = {};
   const regimeDistribution: Record<string, number> = {};
   const volatilityBuckets: Record<string, number> = {};
+  const blockedReasons: Record<string, number> = {};
+  const noTradeReasons: Record<string, number> = {};
+  const watchReasons: Record<string, number> = {};
 
   for (const row of rows) {
     const setups = Array.isArray((row as { setups?: unknown }).setups) ? ((row as { setups: Setup[] }).setups ?? []) : [];
@@ -1288,6 +1294,14 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
 
       const decisionResult = deriveSetupDecision(setup);
       decisionDistribution[decisionResult.decision] += 1;
+      const normalizedReason = normalizeText((setup as { noTradeReason?: unknown }).noTradeReason);
+      if (normalizedReason) {
+        if (decisionResult.decision === "BLOCKED") {
+          blockedReasons[normalizedReason] = (blockedReasons[normalizedReason] ?? 0) + 1;
+        } else if (decisionResult.decision === "WATCH") {
+          watchReasons[normalizedReason] = (watchReasons[normalizedReason] ?? 0) + 1;
+        }
+      }
 
       if (target === "gold" && decisionResult.decision === "WATCH") {
         const scores = resolveScores(setup);
@@ -1313,6 +1327,11 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
         const label = ((setup as { riskReward?: { volatilityLabel?: string | null } }).riskReward?.volatilityLabel ?? "unknown").toLowerCase();
         volatilityBuckets[label] = (volatilityBuckets[label] ?? 0) + 1;
       }
+
+      // NO_TRADE reasons based on grade (independent of decision)
+      if (grade === "NO_TRADE" && normalizedReason) {
+        noTradeReasons[normalizedReason] = (noTradeReasons[normalizedReason] ?? 0) + 1;
+      }
     }
   }
 
@@ -1333,6 +1352,9 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
             volatilityBuckets: Object.entries(volatilityBuckets).map(([bucket, count]) => ({ bucket, count })),
           }
         : undefined,
+    blockedReasonsDistribution: Object.keys(blockedReasons).length ? blockedReasons : undefined,
+    noTradeReasonsDistribution: Object.keys(noTradeReasons).length ? noTradeReasons : undefined,
+    watchReasonsDistribution: Object.keys(watchReasons).length ? watchReasons : undefined,
   };
 
   return summary;

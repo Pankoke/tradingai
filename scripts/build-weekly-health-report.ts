@@ -85,6 +85,9 @@ export type AssetPhase0Summary = {
     volatilityBuckets?: Array<{ bucket: string; count: number }>;
     notes?: string[];
   };
+  blockedReasonsDistribution?: Record<string, number>;
+  noTradeReasonsDistribution?: Record<string, number>;
+  watchReasonsDistribution?: Record<string, number>;
 };
 
 type Phase0Response = { ok: true; data: Phase0Payload & { summaries?: Record<string, AssetPhase0Summary> } } | { ok: false; error: unknown };
@@ -421,6 +424,15 @@ export function renderAssetSummarySection(summary: AssetPhase0Summary, label?: s
       summary.diagnostics.notes.forEach((n) => lines.push(`- ${n}`));
     }
     lines.push("");
+  }
+  if (summary.blockedReasonsDistribution && Object.keys(summary.blockedReasonsDistribution).length) {
+    lines.push(renderCountTable("Blocked Reasons", summary.blockedReasonsDistribution));
+  }
+  if (summary.noTradeReasonsDistribution && Object.keys(summary.noTradeReasonsDistribution).length) {
+    lines.push(renderCountTable("NO_TRADE Reasons", summary.noTradeReasonsDistribution));
+  }
+  if (summary.watchReasonsDistribution && Object.keys(summary.watchReasonsDistribution).length) {
+    lines.push(renderCountTable("WATCH Reasons", summary.watchReasonsDistribution));
   }
   return lines.join("\n");
 }
