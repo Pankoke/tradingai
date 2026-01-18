@@ -500,6 +500,12 @@ export async function GET(request: NextRequest): Promise<Response> {
       canonicalAssetId === "btc" ? mapGenericOutcomeBuckets(outcomesBtcTrendBuckets) : null;
     const outcomesByBtcTradeVolBucket =
       canonicalAssetId === "btc" ? mapGenericOutcomeBuckets(outcomesBtcVolBuckets) : null;
+    let remappedBiasBuckets = biasBuckets;
+    if (canonicalAssetId === "btc") {
+      const { buckets, mappedCount } = remapBtcBiasReasons(biasBuckets);
+      remappedBiasBuckets = buckets;
+      btcAlignmentReasonMapped += mappedCount;
+    }
 
     return respondOk({
       meta: { assetId: canonicalAssetIdUpper, profile: "SWING", timeframe: "1D", daysBack: effectiveDays },
@@ -588,6 +594,7 @@ export async function GET(request: NextRequest): Promise<Response> {
                 missing: btcAlignmentMissing,
                 resolved: Math.max(btcAlignment.total - btcAlignmentMissing, 0),
                 total: btcAlignment.total,
+                mapped: btcAlignmentReasonMapped,
               }
             : null,
         btcLevelPlausibility: canonicalAssetId === "btc" ? summarizeLevelPlausibility(btcLevels) : null,
@@ -603,7 +610,7 @@ export async function GET(request: NextRequest): Promise<Response> {
             BLOCKED: outcomesDecisionBuckets.BLOCKED,
           },
         },
-        biasHistogram: biasBuckets,
+        biasHistogram: remappedBiasBuckets,
         cohortTimeRange: {
           snapshotTimeMin: minCreated ? minCreated.toISOString() : null,
           snapshotTimeMax: maxCreated ? maxCreated.toISOString() : null,
@@ -736,6 +743,26 @@ function mapGenericOutcomeBuckets(
     result[key] = wrap(buckets[key]);
   });
   return result;
+}
+
+function remapBtcBiasReasons(buckets: Record<string, { total: number; byGrade: Record<GradeKey, number>; noTradeReasons: Record<string, number> }>): {
+  buckets: Record<string, { total: number; byGrade: Record<GradeKey, number>; noTradeReasons: Record<string, number> }>;
+  mappedCount: number;
+} {
+  let mappedCount = 0;
+  const clone: Record<string, { total: number; byGrade: Record<GradeKey, number>; noTradeReasons: Record<string, number> }> = {
+    "<70": { total: buckets["<70"].total, byGrade: { ...buckets["<70"].byGrade }, noTradeReasons: {} },
+    "70-79": { total: buckets["70-79"].total, byGrade: { ...buckets["70-79"].byGrade }, noTradeReasons: {} },
+    ">=80": { total: buckets[">=80"].total, byGrade: { ...buckets[">=80"].byGrade }, noTradeReasons: {} },
+  };
+  Object.entries(buckets).forEach(([bucketKey, bucket]) => {
+    Object.entries(bucket.noTradeReasons).forEach(([reason, count]) => {
+      const mapped = mapAlignmentReason(reason);
+      if (mapped !== reason) mappedCount += count;
+      clone[bucketKey].noTradeReasons[mapped] = (clone[bucketKey].noTradeReasons[mapped] ?? 0) + count;
+    });
+  });
+  return { buckets: clone, mappedCount };
 }
 
 function mapWatchOutcomeBuckets(buckets: Record<WatchSegmentKey, Record<string, number>>) {
