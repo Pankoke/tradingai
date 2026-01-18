@@ -533,7 +533,7 @@ const summariesFromPayload = gold.summaries ?? btc.summaries ?? undefined;
   console.log(`Report written to ${outPath}`);
 }
 
-if (process.env.VITEST !== "true") {
+if (process.env.VITEST !== "true" && !process.env.VITEST_WORKER_ID) {
   main().catch((err) => {
     // eslint-disable-next-line no-console
     console.error(err);

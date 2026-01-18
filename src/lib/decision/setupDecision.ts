@@ -20,6 +20,10 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
   const gradeDebugReason = (setup as { gradeDebugReason?: string | null }).gradeDebugReason ?? null;
   const biasScore = (setup as { biasScore?: number | null }).biasScore ?? null;
   const trendScore = (setup as { trendScore?: number | null }).trendScore ?? null;
+  const assetClass =
+    ((setup as { assetClass?: string | null }).assetClass ??
+      (setup as { asset?: { assetClass?: string | null } | null }).asset?.assetClass ??
+      "")?.toLowerCase();
 
   if (grade === "A" || grade === "B") {
     return { decision: "TRADE", reasons: [] };
@@ -48,6 +52,24 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
     const biasFallback = biasScore !== null && biasScore >= 70;
     const fallbackDir = direction ?? (trendFallback || biasFallback ? "LONG" : "SHORT");
     const alignmentReason = `Alignment derived (fallback ${fallbackDir})`;
+    const mergedReasons = buildReasons(alignmentReason, gradeRationale, gradeDebugReason);
+    return { decision: "WATCH", category: "soft", reasons: mergedReasons };
+  }
+
+  // Index (e.g. SPX) fallback alignment: avoid hard-blocking when alignment is missing
+  const isIndexAsset = assetClass === "index" || playbookId === "spx-swing-v0.1";
+  if (isIndexAsset && watchEnabled && !hard && alignmentMissing) {
+    const directionRaw = (setup as { direction?: string | null }).direction ?? "";
+    const direction =
+      directionRaw.toLowerCase().includes("short") || directionRaw.toLowerCase().includes("sell")
+        ? "SHORT"
+        : directionRaw.toLowerCase().includes("long") || directionRaw.toLowerCase().includes("buy")
+          ? "LONG"
+          : null;
+    const trendFallback = trendScore !== null && trendScore >= 50;
+    const biasFallback = biasScore !== null && biasScore >= 60;
+    const fallbackDir = direction ?? (trendFallback || biasFallback ? "LONG" : "SHORT");
+    const alignmentReason = `Alignment derived (index fallback ${fallbackDir})`;
     const mergedReasons = buildReasons(alignmentReason, gradeRationale, gradeDebugReason);
     return { decision: "WATCH", category: "soft", reasons: mergedReasons };
   }
