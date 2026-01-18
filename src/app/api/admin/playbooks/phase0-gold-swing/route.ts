@@ -8,6 +8,7 @@ import { listOutcomesForWindow } from "@/src/server/repositories/setupOutcomeRep
 import { getSnapshotById } from "@/src/server/repositories/perceptionSnapshotRepository";
 import { computeSignalQuality } from "@/src/lib/engine/signalQuality";
 import { deriveSetupDecision } from "@/src/lib/decision/setupDecision";
+import { deriveRegimeTag } from "@/src/lib/engine/metrics/regime";
 
 type GradeKey = "A" | "B" | "NO_TRADE";
 type WatchSegmentKey =
@@ -23,7 +24,8 @@ type BtcAlignmentStats = {
   reasons: Record<string, number>;
 };
 
-type BtcWatchSegmentKey = "WATCH_FAILS_CONFIRMATION" | "WATCH_FAILS_TREND" | "WATCH_OTHER";
+type BtcWatchSegmentKey = "WATCH_FAILS_REGIME" | "WATCH_FAILS_CONFIRMATION" | "WATCH_FAILS_TREND" | "WATCH_OTHER";
+type RegimeTag = "TREND" | "RANGE" | "MISSING";
 
 type BtcLevelStats = {
   count: number;
@@ -168,10 +170,12 @@ export async function GET(request: NextRequest): Promise<Response> {
     const btcLevels: BtcLevelStats = { count: 0, parseErrors: 0, stopPcts: [], targetPcts: [], rrrs: [] };
     let btcAlignmentDerived = 0;
     let btcAlignmentMissing = 0;
+    const btcRegimeCounts: Record<RegimeTag, number> = { TREND: 0, RANGE: 0, MISSING: 0 };
     const btcWatchSegmentStats: Record<
       BtcWatchSegmentKey,
       { count: number; sumBias: number; sumTrend: number; sumOrderflow: number; sumConf: number }
     > = {
+      WATCH_FAILS_REGIME: { count: 0, sumBias: 0, sumTrend: 0, sumOrderflow: 0, sumConf: 0 },
       WATCH_FAILS_CONFIRMATION: { count: 0, sumBias: 0, sumTrend: 0, sumOrderflow: 0, sumConf: 0 },
       WATCH_FAILS_TREND: { count: 0, sumBias: 0, sumTrend: 0, sumOrderflow: 0, sumConf: 0 },
       WATCH_OTHER: { count: 0, sumBias: 0, sumTrend: 0, sumOrderflow: 0, sumConf: 0 },
@@ -192,6 +196,11 @@ export async function GET(request: NextRequest): Promise<Response> {
       if (dataSourcePrimary && dataSourceUsed && dataSourcePrimary !== dataSourceUsed) {
         fallbackCount += 1;
       }
+      if (canonicalAssetId === "btc") {
+        const regime = deriveRegimeTag(setup);
+        btcRegimeCounts[regime] += 1;
+      }
+
       if (decision === "WATCH" && isGoldAsset(playbookId, canonicalAssetId)) {
         const scores = resolveScores(setup);
         const segment = classifyWatchSegment(scores);
@@ -214,6 +223,7 @@ export async function GET(request: NextRequest): Promise<Response> {
         }
       } else if (canonicalAssetId === "btc" && decision === "WATCH") {
         const scores = resolveScores(setup);
+        const regime = deriveRegimeTag(setup);
         const orderflowScore =
           typeof setup.rings?.orderflowScore === "number"
             ? setup.rings.orderflowScore
@@ -222,11 +232,14 @@ export async function GET(request: NextRequest): Promise<Response> {
               : null;
         const trendOk = (scores.trend ?? -Infinity) >= 60;
         const confirmationOk = (orderflowScore ?? -Infinity) >= 55;
-        const segment: BtcWatchSegmentKey = !trendOk
-          ? "WATCH_FAILS_TREND"
-          : confirmationOk
-            ? "WATCH_OTHER"
-            : "WATCH_FAILS_CONFIRMATION";
+        const segment: BtcWatchSegmentKey =
+          regime !== "TREND"
+            ? "WATCH_FAILS_REGIME"
+            : !trendOk
+              ? "WATCH_FAILS_TREND"
+              : confirmationOk
+                ? "WATCH_OTHER"
+                : "WATCH_FAILS_CONFIRMATION";
         const bucket = btcWatchSegmentStats[segment];
         bucket.count += 1;
         bucket.sumBias += scores.bias ?? 0;
@@ -508,6 +521,16 @@ export async function GET(request: NextRequest): Promise<Response> {
       WATCH: { count: decisionCounts.WATCH, pct: pct(decisionCounts.WATCH, total) },
       BLOCKED: { count: decisionCounts.BLOCKED, pct: pct(decisionCounts.BLOCKED, total) },
     };
+    const btcRegimeTotal = btcRegimeCounts.TREND + btcRegimeCounts.RANGE + btcRegimeCounts.MISSING;
+    const btcRegimeDistribution =
+      canonicalAssetId === "btc"
+        ? {
+            TREND: { count: btcRegimeCounts.TREND, pct: pct(btcRegimeCounts.TREND, btcRegimeTotal || 1) },
+            RANGE: { count: btcRegimeCounts.RANGE, pct: pct(btcRegimeCounts.RANGE, btcRegimeTotal || 1) },
+            MISSING: { count: btcRegimeCounts.MISSING, pct: pct(btcRegimeCounts.MISSING, btcRegimeTotal || 1) },
+            total: btcRegimeTotal,
+          }
+        : null;
 
     const outcomesSummaryByDecision = mapDecisionOutcomes(outcomesDecisionBuckets);
     const watchToTradeProxy =
@@ -572,6 +595,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       outcomesByBtcTradeVolBucket,
       outcomesByBtcTradeRrrBucket,
       debugMeta: {
+        btcRegimeDistribution,
         outcomesQuery: {
           daysBack: effectiveDays,
           windowBasedOn,

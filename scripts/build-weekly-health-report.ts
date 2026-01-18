@@ -48,6 +48,7 @@ type Phase0Payload = {
     cohortTimeRange?: { snapshotTimeMin?: string | null; snapshotTimeMax?: string | null };
     watchSegments?: Record<string, WatchSegment> | null;
     btcWatchSegments?: Record<string, BtcWatchSegment> | null;
+    btcRegimeDistribution?: { total?: number; TREND?: { count: number; pct: number }; RANGE?: { count: number; pct: number }; MISSING?: { count: number; pct: number } } | null;
     watchUpgradeCandidates?: WatchUpgradeCandidates | null;
     btcAlignmentBreakdown?: { total: number; top: { reason: string; count: number; pct: number }[] } | null;
     btcAlignmentCounters?: {
@@ -178,6 +179,17 @@ function renderWatchSegments(segments?: Record<string, WatchSegment> | null, out
   return lines.join("\n");
 }
 
+function renderRegimeDistribution(dist?: { total?: number; TREND?: { count: number; pct: number }; RANGE?: { count: number; pct: number }; MISSING?: { count: number; pct: number } } | null): string {
+  if (!dist || typeof dist.total !== "number" || dist.total === 0) return "";
+  return [
+    "### BTC Regime Distribution",
+    `- TREND: ${dist.TREND?.count ?? 0} (${dist.TREND?.pct ?? 0}%)`,
+    `- RANGE: ${dist.RANGE?.count ?? 0} (${dist.RANGE?.pct ?? 0}%)`,
+    `- MISSING: ${dist.MISSING?.count ?? 0} (${dist.MISSING?.pct ?? 0}%)`,
+    "",
+  ].join("\n");
+}
+
 function renderBtcWatchSegments(segments?: Record<string, BtcWatchSegment> | null): string {
   if (!segments) return "";
   const lines: string[] = ["### BTC WATCH Segments"];
@@ -206,6 +218,7 @@ function renderAssetSection(label: string, data: Phase0Payload): string {
   const btcDir = data.outcomesByBtcTradeDirection;
   const btcTrend = data.outcomesByBtcTradeTrendBucket;
   const btcVol = data.outcomesByBtcTradeVolBucket;
+  const btcRegime = data.debugMeta?.btcRegimeDistribution;
 
   const lines = [
     `## ${label}`,
@@ -222,6 +235,7 @@ function renderAssetSection(label: string, data: Phase0Payload): string {
     renderOutcomes("Outcomes BLOCKED", data.outcomesByDecision?.BLOCKED),
     renderWatchProxy(data.watchToTradeProxy ?? null),
     isGold ? renderWatchSegments(data.debugMeta?.watchSegments ?? null, data.outcomesByWatchSegment ?? null) : "",
+    isBtc ? renderBtcWatchSegments(data.debugMeta?.btcWatchSegments ?? null) : "",
     isBtc ? renderBtcWatchSegments(data.debugMeta?.btcWatchSegments ?? null) : "",
     isGold && upgrade
       ? [
@@ -281,6 +295,7 @@ function renderAssetSection(label: string, data: Phase0Payload): string {
           "",
         ].join("\n")
       : "",
+    isBtc ? renderRegimeDistribution(btcRegime ?? null) : "",
     isBtc && btcTrend
       ? [
           "### BTC TRADE by Trend Bucket",

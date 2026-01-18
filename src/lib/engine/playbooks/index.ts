@@ -1,5 +1,7 @@
 import type { EventModifier, RiskRewardSummary } from "@/src/lib/engine/types";
 import type { SignalQuality } from "@/src/lib/engine/signalQuality";
+import { deriveRegimeTag } from "@/src/lib/engine/metrics/regime";
+import type { Setup } from "@/src/lib/engine/types";
 
 export type SetupGrade = "A" | "B" | "NO_TRADE";
 export type SetupPlaybookType = "pullback_continuation" | "range_bias" | "unknown";
@@ -326,12 +328,26 @@ function evaluateCryptoSwing(context: PlaybookContext): PlaybookEvaluation {
   const confirmationScore =
     typeof rings.orderflowScore === "number" ? rings.orderflowScore : typeof orderflow?.score === "number" ? orderflow.score : null;
   const confirmationOk = (confirmationScore ?? -Infinity) >= 55;
+  const regime = deriveRegimeTag({
+    rings: { ...rings, momentumScore: (orderflow?.score ?? null) as number | null },
+  } as unknown as Setup);
+
+  if (regime !== "TREND") {
+    return {
+      setupGrade: "NO_TRADE",
+      setupType: deriveSetupType(rings),
+      gradeRationale: ["Regime range/chop (trend confirmation missing)"],
+      noTradeReason: "Regime range/chop (trend confirmation missing)",
+      debugReason: `regime:${regime}`,
+    };
+  }
 
   if (biasOk && trendOk && confirmationOk) {
     return {
       setupGrade: "B",
       setupType: deriveSetupType(rings),
       gradeRationale: ["Bias strong (>=70)", "Trend supportive (>=60)", "Confirmation via orderflow (>=55)"],
+      debugReason: "regime:TREND",
     };
   }
 
