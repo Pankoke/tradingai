@@ -171,6 +171,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     let btcAlignmentDerived = 0;
     let btcAlignmentMissing = 0;
     const btcRegimeCounts: Record<RegimeTag, number> = { TREND: 0, RANGE: 0, MISSING: 0 };
+    const btcRegimeForSetup = new Map<string, RegimeTag>();
     const btcWatchSegmentStats: Record<
       BtcWatchSegmentKey,
       { count: number; sumBias: number; sumTrend: number; sumOrderflow: number; sumConf: number }
@@ -181,6 +182,8 @@ export async function GET(request: NextRequest): Promise<Response> {
       WATCH_OTHER: { count: 0, sumBias: 0, sumTrend: 0, sumOrderflow: 0, sumConf: 0 },
     };
     let btcWatchTotal = 0;
+    let btcTradesAllowedTrend = 0;
+    let btcTradesBlockedByRegime = 0;
     let staleCount = 0;
     let fallbackCount = 0;
 
@@ -199,6 +202,15 @@ export async function GET(request: NextRequest): Promise<Response> {
       if (canonicalAssetId === "btc") {
         const regime = deriveRegimeTag(setup);
         btcRegimeCounts[regime] += 1;
+        const key = `${(setup as { snapshotId?: string | null }).snapshotId ?? ""}|${setup.id}`;
+        btcRegimeForSetup.set(key, regime);
+        if (decision === "TRADE") {
+          if (regime === "TREND") {
+            btcTradesAllowedTrend += 1;
+          } else {
+            btcTradesBlockedByRegime += 1;
+          }
+        }
       }
 
       if (decision === "WATCH" && isGoldAsset(playbookId, canonicalAssetId)) {
@@ -561,6 +573,41 @@ export async function GET(request: NextRequest): Promise<Response> {
       canonicalAssetId === "btc" ? mapGenericOutcomeBuckets(outcomesBtcTrendBuckets) : null;
     const outcomesByBtcTradeVolBucket =
       canonicalAssetId === "btc" ? mapGenericOutcomeBuckets(outcomesBtcVolBuckets) : null;
+    const outcomeRegimeBuckets: Record<RegimeTag, Record<string, number>> = {
+      TREND: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
+      RANGE: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
+      MISSING: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
+    };
+    if (canonicalAssetId === "btc") {
+      for (const outcome of outcomes) {
+        const snapshotId = (outcome as { snapshotId?: string | null }).snapshotId;
+        const setupId = (outcome as { setupId?: string | null }).setupId;
+        const key = `${snapshotId ?? ""}|${setupId ?? ""}`;
+        let regime = btcRegimeForSetup.get(key);
+        if (!regime && snapshotId && setupId) {
+          const setups = snapshotCache.get(snapshotId);
+          const setup = setups?.find((s) => s.id === setupId);
+          if (setup) {
+            regime = deriveRegimeTag(setup);
+          }
+        }
+        const decision = deriveOutcomeDecision(
+          (outcome as { grade?: string | null }).grade ?? null,
+          outcome,
+          snapshotCache,
+          snapshotId,
+          setupId,
+        );
+        if (decision !== "TRADE") continue;
+        const bucket = outcomeRegimeBuckets[regime ?? "MISSING"];
+        const status = (outcome as { status?: string | null }).status ?? "";
+        if (status === "hit_tp") bucket.hit_tp = (bucket.hit_tp ?? 0) + 1;
+        else if (status === "hit_sl") bucket.hit_sl = (bucket.hit_sl ?? 0) + 1;
+        else if (status === "expired") bucket.expired = (bucket.expired ?? 0) + 1;
+        else if (status === "ambiguous") bucket.ambiguous = (bucket.ambiguous ?? 0) + 1;
+        else bucket.open = (bucket.open ?? 0) + 1;
+      }
+    }
     let remappedBiasBuckets = biasBuckets;
     if (canonicalAssetId === "btc") {
       const { buckets, mappedCount } = remapBtcBiasReasons(biasBuckets);
@@ -594,6 +641,14 @@ export async function GET(request: NextRequest): Promise<Response> {
       outcomesByBtcTradeTrendBucket,
       outcomesByBtcTradeVolBucket,
       outcomesByBtcTradeRrrBucket,
+      outcomesByBtcRegime:
+        canonicalAssetId === "btc"
+          ? {
+              TREND: mapOutcomeBucket(outcomeRegimeBuckets.TREND),
+              RANGE: mapOutcomeBucket(outcomeRegimeBuckets.RANGE),
+              MISSING: mapOutcomeBucket(outcomeRegimeBuckets.MISSING),
+            }
+          : null,
       debugMeta: {
         btcRegimeDistribution,
         outcomesQuery: {
@@ -661,6 +716,16 @@ export async function GET(request: NextRequest): Promise<Response> {
               }
             : null,
         btcWatchSegments: canonicalAssetId === "btc" ? btcWatchSegments : null,
+        btcTrendOnlyGate:
+          canonicalAssetId === "btc"
+            ? {
+                totalSetups: decisionCounts.TRADE + decisionCounts.WATCH + decisionCounts.BLOCKED,
+                trendRegimeCount: btcRegimeCounts.TREND,
+                nonTrendRegimeCount: btcRegimeCounts.RANGE + btcRegimeCounts.MISSING,
+                tradesAllowed: btcTradesAllowedTrend,
+                tradesBlockedByRegime: btcTradesBlockedByRegime,
+              }
+            : null,
         btcRrrBucketsDebug: canonicalAssetId === "btc" ? rrrBucketDebug : null,
         btcLevelPlausibility: canonicalAssetId === "btc" ? summarizeLevelPlausibility(btcLevels) : null,
         decisions: {
@@ -841,6 +906,17 @@ function mapWatchOutcomeBuckets(buckets: Record<WatchSegmentKey, Record<string, 
     result[key] = wrap(buckets[key]);
   });
   return result;
+}
+
+function mapOutcomeBucket(bucket: Record<string, number>) {
+  const hit_tp = bucket.hit_tp ?? 0;
+  const hit_sl = bucket.hit_sl ?? 0;
+  const open = bucket.open ?? 0;
+  const expired = bucket.expired ?? 0;
+  const ambiguous = bucket.ambiguous ?? 0;
+  const evaluatedCount = hit_tp + hit_sl;
+  const winRateTpVsSl = evaluatedCount > 0 ? hit_tp / evaluatedCount : 0;
+  return { hit_tp, hit_sl, open, expired, ambiguous, evaluatedCount, winRateTpVsSl };
 }
 
 function mapBtcWatchSegments(

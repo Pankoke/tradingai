@@ -36,6 +36,7 @@ type Phase0Payload = {
   decisionDistribution?: Distribution;
   gradeDistribution?: Distribution;
   outcomesByDecision?: Record<"TRADE" | "WATCH" | "BLOCKED", OutcomeBucket>;
+  outcomesByBtcRegime?: Record<string, OutcomeBucket> | null;
   outcomesByWatchSegment?: Record<string, OutcomeBucket> | null;
   outcomesByWatchUpgradeCandidate?: OutcomeBucket | null;
   outcomesByBtcTradeRrrBucket?: Record<string, OutcomeBucket> | null;
@@ -49,6 +50,7 @@ type Phase0Payload = {
     watchSegments?: Record<string, WatchSegment> | null;
     btcWatchSegments?: Record<string, BtcWatchSegment> | null;
     btcRegimeDistribution?: { total?: number; TREND?: { count: number; pct: number }; RANGE?: { count: number; pct: number }; MISSING?: { count: number; pct: number } } | null;
+    btcTrendOnlyGate?: { totalSetups?: number; trendRegimeCount?: number; nonTrendRegimeCount?: number; tradesAllowed?: number; tradesBlockedByRegime?: number } | null;
     watchUpgradeCandidates?: WatchUpgradeCandidates | null;
     btcAlignmentBreakdown?: { total: number; top: { reason: string; count: number; pct: number }[] } | null;
     btcAlignmentCounters?: {
@@ -219,6 +221,7 @@ function renderAssetSection(label: string, data: Phase0Payload): string {
   const btcTrend = data.outcomesByBtcTradeTrendBucket;
   const btcVol = data.outcomesByBtcTradeVolBucket;
   const btcRegime = data.debugMeta?.btcRegimeDistribution;
+  const btcRegimeOutcomes = data.outcomesByBtcRegime;
 
   const lines = [
     `## ${label}`,
@@ -292,6 +295,29 @@ function renderAssetSection(label: string, data: Phase0Payload): string {
                 v.winRateTpVsSl ?? 0,
               )}`,
           ),
+          "",
+        ].join("\n")
+      : "",
+    isBtc && btcRegime
+      ? [
+          "### BTC TREND-only Gate",
+          `- Regime TREND: ${btcRegime.TREND?.count ?? 0} (${btcRegime.TREND?.pct ?? 0}%)`,
+          `- Regime RANGE: ${btcRegime.RANGE?.count ?? 0} (${btcRegime.RANGE?.pct ?? 0}%)`,
+          `- Regime MISSING: ${btcRegime.MISSING?.count ?? 0} (${btcRegime.MISSING?.pct ?? 0}%)`,
+          data.debugMeta?.btcTrendOnlyGate
+            ? `- Trades allowed (TREND): ${data.debugMeta.btcTrendOnlyGate.tradesAllowed ?? 0} | blocked by regime: ${data.debugMeta.btcTrendOnlyGate.tradesBlockedByRegime ?? 0}`
+            : "- Trades allowed (TREND): n/a",
+          "",
+        ].join("\n")
+      : "",
+    isBtc && btcRegimeOutcomes
+      ? [
+          "### BTC Outcomes by Regime (TRADE only)",
+          ...Object.entries(btcRegimeOutcomes).map(([bucket, v]) => {
+            const evaluated = v.evaluatedCount ?? ((v.hit_tp ?? 0) + (v.hit_sl ?? 0));
+            const winRate = evaluated > 0 ? (v.hit_tp ?? 0) / evaluated : 0;
+            return `- ${bucket}: eval=${evaluated} winRate=${formatPct(winRate)}`;
+          }),
           "",
         ].join("\n")
       : "",
