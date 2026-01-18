@@ -521,8 +521,10 @@ const summariesFromPayload = gold.summaries ?? btc.summaries ?? undefined;
   console.log(`Report written to ${outPath}`);
 }
 
-main().catch((err) => {
-  // eslint-disable-next-line no-console
-  console.error(err);
-  process.exit(1);
-});
+if (process.env.VITEST !== "true") {
+  main().catch((err) => {
+    // eslint-disable-next-line no-console
+    console.error(err);
+    process.exit(1);
+  });
+}
