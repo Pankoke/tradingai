@@ -31,6 +31,9 @@ type Phase0Payload = {
   outcomesByWatchSegment?: Record<string, OutcomeBucket> | null;
   outcomesByWatchUpgradeCandidate?: OutcomeBucket | null;
   outcomesByBtcTradeRrrBucket?: Record<string, OutcomeBucket> | null;
+  outcomesByBtcTradeDirection?: Record<string, OutcomeBucket> | null;
+  outcomesByBtcTradeTrendBucket?: Record<string, OutcomeBucket> | null;
+  outcomesByBtcTradeVolBucket?: Record<string, OutcomeBucket> | null;
   watchToTradeProxy?: { count: number; total: number; pct: number } | null;
   debugMeta?: {
     biasHistogram?: Record<string, BiasBucket>;
@@ -179,6 +182,9 @@ function renderAssetSection(label: string, data: Phase0Payload): string {
     | undefined;
   const btcLevels = data.debugMeta?.btcLevelPlausibility;
   const btcRrr = data.outcomesByBtcTradeRrrBucket;
+  const btcDir = data.outcomesByBtcTradeDirection;
+  const btcTrend = data.outcomesByBtcTradeTrendBucket;
+  const btcVol = data.outcomesByBtcTradeVolBucket;
 
   const lines = [
     `## ${label}`,
@@ -233,6 +239,42 @@ function renderAssetSection(label: string, data: Phase0Payload): string {
       ? [
           "### RRR Buckets (BTC TRADE Outcomes)",
           ...Object.entries(btcRrr).map(
+            ([bucket, v]) =>
+              `- ${bucket}: hit_tp=${v.hit_tp ?? 0} hit_sl=${v.hit_sl ?? 0} open=${v.open ?? 0} eval=${v.evaluatedCount ?? 0} winRate=${formatPct(
+                v.winRateTpVsSl ?? 0,
+              )}`,
+          ),
+          "",
+        ].join("\n")
+      : "",
+    isBtc && btcDir
+      ? [
+          "### BTC TRADE by Direction",
+          ...Object.entries(btcDir).map(
+            ([dir, v]) =>
+              `- ${dir}: hit_tp=${v.hit_tp ?? 0} hit_sl=${v.hit_sl ?? 0} open=${v.open ?? 0} eval=${v.evaluatedCount ?? 0} winRate=${formatPct(
+                v.winRateTpVsSl ?? 0,
+              )}`,
+          ),
+          "",
+        ].join("\n")
+      : "",
+    isBtc && btcTrend
+      ? [
+          "### BTC TRADE by Trend Bucket",
+          ...Object.entries(btcTrend).map(
+            ([bucket, v]) =>
+              `- ${bucket}: hit_tp=${v.hit_tp ?? 0} hit_sl=${v.hit_sl ?? 0} open=${v.open ?? 0} eval=${v.evaluatedCount ?? 0} winRate=${formatPct(
+                v.winRateTpVsSl ?? 0,
+              )}`,
+          ),
+          "",
+        ].join("\n")
+      : "",
+    isBtc && btcVol
+      ? [
+          "### BTC TRADE by Volatility Bucket",
+          ...Object.entries(btcVol).map(
             ([bucket, v]) =>
               `- ${bucket}: hit_tp=${v.hit_tp ?? 0} hit_sl=${v.hit_sl ?? 0} open=${v.open ?? 0} eval=${v.evaluatedCount ?? 0} winRate=${formatPct(
                 v.winRateTpVsSl ?? 0,

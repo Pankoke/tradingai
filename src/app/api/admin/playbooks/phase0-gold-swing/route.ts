@@ -104,6 +104,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       "70-79": { total: 0, byGrade: { A: 0, B: 0, NO_TRADE: 0 }, noTradeReasons: {} },
       ">=80": { total: 0, byGrade: { A: 0, B: 0, NO_TRADE: 0 }, noTradeReasons: {} },
     };
+    let btcAlignmentReasonMapped = 0;
     let minCreated: Date | null = null;
     let maxCreated: Date | null = null;
     for (const row of rows) {
@@ -128,7 +129,12 @@ export async function GET(request: NextRequest): Promise<Response> {
             b.total += 1;
             const grade = normalizeGrade((setup as { setupGrade?: string | null }).setupGrade ?? null);
             b.byGrade[grade] += 1;
-            const reason = normalizeText((setup as { noTradeReason?: unknown }).noTradeReason) ?? "n/a";
+            let reason = normalizeText((setup as { noTradeReason?: unknown }).noTradeReason) ?? "n/a";
+            if (canonicalAssetId === "btc") {
+              const mapped = mapAlignmentReason(reason);
+              if (mapped !== reason) btcAlignmentReasonMapped += 1;
+              reason = mapped;
+            }
             b.noTradeReasons[reason] = (b.noTradeReasons[reason] ?? 0) + 1;
           }
         }
@@ -283,6 +289,23 @@ export async function GET(request: NextRequest): Promise<Response> {
       WATCH: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
       BLOCKED: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
     };
+    const outcomesBtcDirectionBuckets: Record<string, Record<string, number>> = {
+      LONG: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
+      SHORT: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
+      UNKNOWN: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
+    };
+    const outcomesBtcTrendBuckets: Record<string, Record<string, number>> = {
+      "<40": { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
+      "40-49": { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
+      "50-59": { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
+      ">=60": { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
+    };
+    const outcomesBtcVolBuckets: Record<string, Record<string, number>> = {
+      LOW: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
+      MED: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
+      HIGH: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
+      MISSING: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
+    };
     const watchUpgradeCandidateOutcomes: Record<string, number> = { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 };
     const watchSegmentOutcomes: Record<WatchSegmentKey, Record<string, number>> = {
       WATCH_MEETS_REQUIREMENTS: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 },
@@ -334,6 +357,49 @@ export async function GET(request: NextRequest): Promise<Response> {
       const decisionBucket = outcomesDecisionBuckets[decisionFromOutcome] ?? outcomesDecisionBuckets.BLOCKED;
       if (decisionBucket[status] !== undefined) {
         decisionBucket[status] += 1;
+      }
+      if (decisionFromOutcome === "TRADE" && snapshotId && setupId) {
+        const setups = snapshotCache.get(snapshotId) ?? [];
+        const setup = setups.find((s) => s.id === setupId);
+        if (setup) {
+          const assetId = (setup.assetId ?? setup.symbol ?? "").toLowerCase();
+          if (assetId === "btc") {
+            const directionRaw = ((setup as { direction?: string | null }).direction ?? "").toLowerCase();
+            const directionKey = directionRaw.includes("short")
+              ? "SHORT"
+              : directionRaw.includes("long")
+                ? "LONG"
+                : "UNKNOWN";
+            const dirBucket = outcomesBtcDirectionBuckets[directionKey] ?? outcomesBtcDirectionBuckets.UNKNOWN;
+            if (dirBucket[status] !== undefined) dirBucket[status] += 1;
+
+            const trendScoreVal =
+              typeof (setup as { trendScore?: number | null }).trendScore === "number"
+                ? (setup as { trendScore?: number | null }).trendScore
+                : typeof setup.rings?.trendScore === "number"
+                  ? setup.rings.trendScore
+                  : null;
+            const trendScore: number | null = trendScoreVal ?? null;
+            let trendKey = "<40";
+            if (trendScore !== null) {
+              if (trendScore >= 60) trendKey = ">=60";
+              else if (trendScore >= 50) trendKey = "50-59";
+              else if (trendScore >= 40) trendKey = "40-49";
+            }
+            const trendBucket = outcomesBtcTrendBuckets[trendKey] ?? outcomesBtcTrendBuckets["<40"];
+            if (trendBucket[status] !== undefined) trendBucket[status] += 1;
+
+            const volLabel =
+              (((setup as { riskReward?: { volatilityLabel?: string | null } | null }).riskReward?.volatilityLabel ??
+                (setup as { volatilityLabel?: string | null }).volatilityLabel) ??
+                "")
+                .toString()
+                .toUpperCase();
+            const volKey = volLabel === "LOW" || volLabel === "MED" || volLabel === "HIGH" ? volLabel : "MISSING";
+            const volBucket = outcomesBtcVolBuckets[volKey] ?? outcomesBtcVolBuckets.MISSING;
+            if (volBucket[status] !== undefined) volBucket[status] += 1;
+          }
+        }
       }
       if (decisionFromOutcome === "WATCH") {
         watchOutcomeTotal += 1;
@@ -428,6 +494,12 @@ export async function GET(request: NextRequest): Promise<Response> {
       canonicalAssetId === "btc"
         ? bucketBtcRrrOutcomes(snapshotCache, outcomes, canonicalAssetId)
         : null;
+    const outcomesByBtcTradeDirection =
+      canonicalAssetId === "btc" ? mapGenericOutcomeBuckets(outcomesBtcDirectionBuckets) : null;
+    const outcomesByBtcTradeTrendBucket =
+      canonicalAssetId === "btc" ? mapGenericOutcomeBuckets(outcomesBtcTrendBuckets) : null;
+    const outcomesByBtcTradeVolBucket =
+      canonicalAssetId === "btc" ? mapGenericOutcomeBuckets(outcomesBtcVolBuckets) : null;
 
     return respondOk({
       meta: { assetId: canonicalAssetIdUpper, profile: "SWING", timeframe: "1D", daysBack: effectiveDays },
@@ -450,6 +522,9 @@ export async function GET(request: NextRequest): Promise<Response> {
       watchToTradeProxy,
       outcomesByWatchSegment,
       outcomesByWatchUpgradeCandidate,
+      outcomesByBtcTradeDirection,
+      outcomesByBtcTradeTrendBucket,
+      outcomesByBtcTradeVolBucket,
       outcomesByBtcTradeRrrBucket,
       debugMeta: {
         outcomesQuery: {
@@ -641,6 +716,26 @@ function mapDecisionOutcomes(buckets: Record<"TRADE" | "WATCH" | "BLOCKED", Reco
     WATCH: wrap(buckets.WATCH),
     BLOCKED: wrap(buckets.BLOCKED),
   };
+}
+
+function mapGenericOutcomeBuckets(
+  buckets: Record<string, Record<string, number>>,
+): Record<string, { hit_tp: number; hit_sl: number; open: number; expired: number; ambiguous: number; evaluatedCount: number; winRateTpVsSl: number }> {
+  const wrap = (bucket: Record<string, number>) => {
+    const hit_tp = bucket.hit_tp ?? 0;
+    const hit_sl = bucket.hit_sl ?? 0;
+    const open = bucket.open ?? 0;
+    const expired = bucket.expired ?? 0;
+    const ambiguous = bucket.ambiguous ?? 0;
+    const evaluatedCount = hit_tp + hit_sl;
+    const winRateTpVsSl = evaluatedCount > 0 ? hit_tp / evaluatedCount : 0;
+    return { hit_tp, hit_sl, open, expired, ambiguous, evaluatedCount, winRateTpVsSl };
+  };
+  const result: Record<string, { hit_tp: number; hit_sl: number; open: number; expired: number; ambiguous: number; evaluatedCount: number; winRateTpVsSl: number }> = {};
+  Object.keys(buckets).forEach((key) => {
+    result[key] = wrap(buckets[key]);
+  });
+  return result;
 }
 
 function mapWatchOutcomeBuckets(buckets: Record<WatchSegmentKey, Record<string, number>>) {
@@ -897,6 +992,13 @@ function normalizeText(value: unknown): string | null {
     return joined.length ? joined : null;
   }
   return null;
+}
+
+function mapAlignmentReason(reason: string): string {
+  const lower = reason.toLowerCase();
+  if (lower.includes("no default alignment")) return "Alignment derived (fallback)";
+  if (lower.includes("alignment derived")) return "Alignment derived (fallback)";
+  return reason;
 }
 
 /**
