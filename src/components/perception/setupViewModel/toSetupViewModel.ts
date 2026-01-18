@@ -7,6 +7,7 @@ import type { RiskRewardSummary } from "@/src/lib/engine/types";
 import { isEventModifierEnabledClient } from "@/src/lib/config/eventModifier";
 import { deriveSetupProfileFromTimeframe } from "@/src/lib/config/setupProfile";
 import { deriveSetupDecision } from "@/src/lib/decision/setupDecision";
+import { isWatchPlusGold } from "@/src/lib/decision/watchPlus";
 
 function isHomepageSetup(input: SetupSource): input is HomepageSetup {
   if ("weakSignal" in input || "eventLevel" in input) {
@@ -95,6 +96,7 @@ function mapSetup(setup: Setup, opts?: { generatedAt?: string | null }): SetupVi
   const eventLevel = modifierEnabled ? null : deriveEventLevelFromScore(setup.rings?.eventScore);
   const signalQuality = computeSignalQuality(setup);
   const decision = deriveSetupDecision(setup);
+  const watchPlus = isWatchPlusGold({ setup, decision, signalQuality });
   const meta: SetupMeta = {
     snapshotId: setup.snapshotId ?? null,
     snapshotCreatedAt: setup.snapshotCreatedAt ?? null,
@@ -126,6 +128,8 @@ function mapSetup(setup: Setup, opts?: { generatedAt?: string | null }): SetupVi
     setupDecision: decision.decision,
     decisionReasons: decision.reasons,
     decisionCategory: decision.category ?? null,
+    isWatchPlus: watchPlus.isWatchPlus,
+    watchPlusLabel: watchPlus.label ?? null,
     eventContext: setup.eventContext ?? null,
     eventModifier: setup.eventModifier ?? null,
     riskReward: setup.riskReward ?? null,
@@ -149,6 +153,7 @@ function mapHomepageSetup(setup: HomepageSetup, opts?: { generatedAt?: string | 
   const stop = parseHomepagePoint(setup.stopLoss);
   const tp = parseHomepagePoint(setup.takeProfit);
   const decision = deriveSetupDecision(setup);
+  const watchPlus = isWatchPlusGold({ setup: setup as unknown as Setup, decision, signalQuality: deriveSignalQualityFromRings(setup.rings) });
   const meta: SetupMeta = {
     snapshotId: setup.snapshotId ?? null,
     snapshotCreatedAt: setup.snapshotCreatedAt ?? null,
@@ -175,6 +180,8 @@ function mapHomepageSetup(setup: HomepageSetup, opts?: { generatedAt?: string | 
     setupDecision: decision.decision,
     decisionReasons: decision.reasons,
     decisionCategory: decision.category ?? null,
+    isWatchPlus: watchPlus.isWatchPlus,
+    watchPlusLabel: watchPlus.label ?? null,
     direction: setup.direction,
     setupPlaybookId: (setup as { setupPlaybookId?: string | null }).setupPlaybookId ?? null,
     rings: setup.rings,

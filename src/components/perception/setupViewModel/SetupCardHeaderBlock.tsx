@@ -161,8 +161,13 @@ function buildDecisionChip(setup: SetupViewModel): JSX.Element | null {
       label = "TRADE";
     }
   } else if (decision === "WATCH") {
-    tone = "border-amber-400/60 bg-amber-400/10 text-amber-100";
-    label = "WATCH";
+    if (setup.isWatchPlus) {
+      tone = "border-amber-300/80 bg-amber-300/15 text-amber-50";
+      label = "WATCH+";
+    } else {
+      tone = "border-amber-400/60 bg-amber-400/10 text-amber-100";
+      label = "WATCH";
+    }
   } else if (decision === "BLOCKED") {
     tone = "border-rose-500/60 bg-rose-500/10 text-rose-100";
     label = "BLOCKED";
@@ -257,11 +262,23 @@ function buildSourceLine(setup: SetupViewModel): string | null {
 
 function buildDecisionLine(setup: SetupViewModel): JSX.Element | null {
   if (!setup.setupDecision || setup.setupDecision === "TRADE") return null;
+
   const reasons = (setup.decisionReasons ?? []).slice(0, 2);
-  if (!reasons.length) return null;
   const tone = setup.setupDecision === "WATCH" ? "text-amber-200" : "text-rose-200";
-  return <p className={`text-xs ${tone}`}>{reasons.slice(0, 2).join(" • ")}</p>;
+
+  const lines: string[] = [];
+  if (setup.isWatchPlus) {
+    lines.push("Status: WATCH+ (Upgrade-Kandidat) - Fast TRADE: nur Trend fehlt");
+  }
+  if (reasons.length) {
+    lines.push(reasons.join(" - "));
+  }
+
+  if (!lines.length) return null;
+  return <p className={"text-xs " + tone}>{lines.join(" - ")}</p>;
 }
+
+
 
 function buildRequirementsLine(setup: SetupViewModel): JSX.Element | null {
   if (setup.setupDecision !== "WATCH") return null;

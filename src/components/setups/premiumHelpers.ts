@@ -1,6 +1,8 @@
 import type { Setup } from "@/src/lib/engine/types";
 import { filterSetupsByProfile, parseProfileFilter } from "@/src/lib/setups/profileFilter";
 import { deriveSetupDecision, getDecisionOrder } from "@/src/lib/decision/setupDecision";
+import { computeSignalQuality } from "@/src/lib/engine/signalQuality";
+import { isWatchPlusGold } from "@/src/lib/decision/watchPlus";
 
 export type SortKey = "signal_quality" | "confidence" | "risk_reward" | "direction";
 export type SortDir = "asc" | "desc";
@@ -69,6 +71,37 @@ const getConfidenceRing = (s: Setup): number | undefined => {
   return typeof ringVal === "number" ? ringVal : undefined;
 };
 
+const getTrendScore = (s: Setup): number | null =>
+  typeof s.rings?.trendScore === "number" ? s.rings.trendScore : null;
+
+const getBiasScore = (s: Setup): number | null =>
+  typeof s.biasScore === "number" ? s.biasScore : typeof s.rings?.biasScore === "number" ? s.rings.biasScore : null;
+
+const getDecisionRank = (
+  setup: Setup,
+): {
+  order: number;
+  isWatchPlus: boolean;
+  signalQualityScore: number | null;
+  decision: ReturnType<typeof deriveSetupDecision>;
+} => {
+  const decision = deriveSetupDecision(setup);
+  const signalQuality = computeSignalQuality(setup);
+  const watchPlus = isWatchPlusGold({ setup, decision, signalQuality });
+
+  let order = getDecisionOrder(decision.decision);
+  if (watchPlus.isWatchPlus && decision.decision === "WATCH") {
+    order = 1; // between TRADE (0) and the rest
+  }
+
+  return {
+    order,
+    isWatchPlus: watchPlus.isWatchPlus,
+    signalQualityScore: signalQuality?.score ?? null,
+    decision,
+  };
+};
+
 const getRrr = (s: Setup): number | undefined => (typeof s.riskReward?.rrr === "number" ? s.riskReward.rrr : undefined);
 
 const getGeneratedTime = (s: Setup): string =>
@@ -89,20 +122,32 @@ export function applySort(setups: Setup[], sort: SortKey, dir: SortDir): Setup[]
   const cloned = [...setups];
 
   return cloned.sort((a, b) => {
-    const decisionA = deriveSetupDecision(a);
-    const decisionB = deriveSetupDecision(b);
-    const decisionOrderDiff = getDecisionOrder(decisionA.decision) - getDecisionOrder(decisionB.decision);
+    const rankA = getDecisionRank(a);
+    const rankB = getDecisionRank(b);
+    const decisionOrderDiff = rankA.order - rankB.order;
     if (decisionOrderDiff !== 0) return decisionOrderDiff;
 
-    if (decisionA.decision === "TRADE" && decisionB.decision === "TRADE") {
+    if (rankA.order === 0 && rankB.order === 0) {
       const gradeOrder = (grade: Setup["setupGrade"] | null | undefined): number => {
         if (grade === "A") return 0;
         if (grade === "B") return 1;
         return 2;
       };
-      const gradeDiff = gradeOrder((a as { setupGrade?: Setup["setupGrade"] | null }).setupGrade) -
+      const gradeDiff =
+        gradeOrder((a as { setupGrade?: Setup["setupGrade"] | null }).setupGrade) -
         gradeOrder((b as { setupGrade?: Setup["setupGrade"] | null }).setupGrade);
       if (gradeDiff !== 0) return gradeDiff;
+    }
+
+    if (rankA.order === 1 && rankB.order === 1) {
+      const trendDiff = (getTrendScore(b) ?? -Infinity) - (getTrendScore(a) ?? -Infinity);
+      if (trendDiff !== 0) return trendDiff;
+      const biasDiff = (getBiasScore(b) ?? -Infinity) - (getBiasScore(a) ?? -Infinity);
+      if (biasDiff !== 0) return biasDiff;
+      const sqDiff = (rankB.signalQualityScore ?? -Infinity) - (rankA.signalQualityScore ?? -Infinity);
+      if (sqDiff !== 0) return sqDiff;
+      const confDiff = (getConfidenceRing(b) ?? -Infinity) - (getConfidenceRing(a) ?? -Infinity);
+      if (confDiff !== 0) return confDiff;
     }
 
     if (sort === "signal_quality") {

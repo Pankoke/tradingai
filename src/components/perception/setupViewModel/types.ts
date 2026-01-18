@@ -45,6 +45,8 @@ export type SetupViewModel = {
   setupDecision?: "TRADE" | "WATCH" | "BLOCKED";
   decisionReasons?: string[];
   decisionCategory?: "soft" | "hard" | null;
+  isWatchPlus?: boolean;
+  watchPlusLabel?: string | null;
   rings: Setup["rings"];
   eventContext?: Setup["eventContext"] | null;
   eventModifier?: Setup["eventModifier"] | null;

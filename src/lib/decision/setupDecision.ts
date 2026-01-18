@@ -4,7 +4,7 @@ import type { HomepageSetup } from "@/src/lib/homepage-setups";
 
 type SetupLike = Setup | HomepageSetup | (Setup & HomepageSetup) | (HomepageSetup & Setup);
 
-type DecisionResult = {
+export type DecisionResult = {
   decision: SetupDecision;
   category?: SetupDecisionCategory;
   reasons: string[];
