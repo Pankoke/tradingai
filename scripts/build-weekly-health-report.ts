@@ -12,6 +12,14 @@ type WatchSegment = {
   avgSignalQuality: number | null;
   avgConfidence: number | null;
 };
+type BtcWatchSegment = {
+  count: number;
+  pct: number;
+  avgBias: number | null;
+  avgTrend: number | null;
+  avgOrderflow: number | null;
+  avgConfidence: number | null;
+};
 type WatchUpgradeCandidates = {
   definition: Record<string, unknown>;
   totalWatchFailsTrend: number;
@@ -39,6 +47,7 @@ type Phase0Payload = {
     biasHistogram?: Record<string, BiasBucket>;
     cohortTimeRange?: { snapshotTimeMin?: string | null; snapshotTimeMax?: string | null };
     watchSegments?: Record<string, WatchSegment> | null;
+    btcWatchSegments?: Record<string, BtcWatchSegment> | null;
     watchUpgradeCandidates?: WatchUpgradeCandidates | null;
     btcAlignmentBreakdown?: { total: number; top: { reason: string; count: number; pct: number }[] } | null;
     btcAlignmentCounters?: {
@@ -169,6 +178,18 @@ function renderWatchSegments(segments?: Record<string, WatchSegment> | null, out
   return lines.join("\n");
 }
 
+function renderBtcWatchSegments(segments?: Record<string, BtcWatchSegment> | null): string {
+  if (!segments) return "";
+  const lines: string[] = ["### BTC WATCH Segments"];
+  for (const [key, seg] of Object.entries(segments)) {
+    lines.push(
+      `- ${key}: ${seg.count} (${seg.pct}%) | avg bias ${seg.avgBias ?? "n/a"} | trend ${seg.avgTrend ?? "n/a"} | orderflow ${seg.avgOrderflow ?? "n/a"} | conf ${seg.avgConfidence ?? "n/a"}`,
+    );
+  }
+  lines.push("");
+  return lines.join("\n");
+}
+
 function renderAssetSection(label: string, data: Phase0Payload): string {
   const meta = data.meta ?? {};
   const cohort = data.debugMeta?.cohortTimeRange;
@@ -201,6 +222,7 @@ function renderAssetSection(label: string, data: Phase0Payload): string {
     renderOutcomes("Outcomes BLOCKED", data.outcomesByDecision?.BLOCKED),
     renderWatchProxy(data.watchToTradeProxy ?? null),
     isGold ? renderWatchSegments(data.debugMeta?.watchSegments ?? null, data.outcomesByWatchSegment ?? null) : "",
+    isBtc ? renderBtcWatchSegments(data.debugMeta?.btcWatchSegments ?? null) : "",
     isGold && upgrade
       ? [
           "### Upgrade Candidate (WATCH_FAILS_TREND filtered)",

@@ -23,6 +23,8 @@ type BtcAlignmentStats = {
   reasons: Record<string, number>;
 };
 
+type BtcWatchSegmentKey = "WATCH_FAILS_CONFIRMATION" | "WATCH_FAILS_TREND" | "WATCH_OTHER";
+
 type BtcLevelStats = {
   count: number;
   parseErrors: number;
@@ -166,6 +168,15 @@ export async function GET(request: NextRequest): Promise<Response> {
     const btcLevels: BtcLevelStats = { count: 0, parseErrors: 0, stopPcts: [], targetPcts: [], rrrs: [] };
     let btcAlignmentDerived = 0;
     let btcAlignmentMissing = 0;
+    const btcWatchSegmentStats: Record<
+      BtcWatchSegmentKey,
+      { count: number; sumBias: number; sumTrend: number; sumOrderflow: number; sumConf: number }
+    > = {
+      WATCH_FAILS_CONFIRMATION: { count: 0, sumBias: 0, sumTrend: 0, sumOrderflow: 0, sumConf: 0 },
+      WATCH_FAILS_TREND: { count: 0, sumBias: 0, sumTrend: 0, sumOrderflow: 0, sumConf: 0 },
+      WATCH_OTHER: { count: 0, sumBias: 0, sumTrend: 0, sumOrderflow: 0, sumConf: 0 },
+    };
+    let btcWatchTotal = 0;
     let staleCount = 0;
     let fallbackCount = 0;
 
@@ -201,7 +212,30 @@ export async function GET(request: NextRequest): Promise<Response> {
             upgradeCandidatesSumConf += scores.confidence ?? 0;
           }
         }
-      } else if (canonicalAssetId === "btc" && (decision === "BLOCKED" || decision === "WATCH")) {
+      } else if (canonicalAssetId === "btc" && decision === "WATCH") {
+        const scores = resolveScores(setup);
+        const orderflowScore =
+          typeof setup.rings?.orderflowScore === "number"
+            ? setup.rings.orderflowScore
+            : typeof (setup as { orderflowScore?: number | null }).orderflowScore === "number"
+              ? ((setup as { orderflowScore?: number | null }).orderflowScore as number)
+              : null;
+        const trendOk = (scores.trend ?? -Infinity) >= 60;
+        const confirmationOk = (orderflowScore ?? -Infinity) >= 55;
+        const segment: BtcWatchSegmentKey = !trendOk
+          ? "WATCH_FAILS_TREND"
+          : confirmationOk
+            ? "WATCH_OTHER"
+            : "WATCH_FAILS_CONFIRMATION";
+        const bucket = btcWatchSegmentStats[segment];
+        bucket.count += 1;
+        bucket.sumBias += scores.bias ?? 0;
+        bucket.sumTrend += scores.trend ?? 0;
+        bucket.sumOrderflow += orderflowScore ?? 0;
+        bucket.sumConf += scores.confidence ?? 0;
+        btcWatchTotal += 1;
+      }
+      if (canonicalAssetId === "btc" && (decision === "BLOCKED" || decision === "WATCH")) {
         const reasonRaw = (setup as { noTradeReason?: unknown }).noTradeReason;
         const reasonNormalized = normalizeText(reasonRaw);
         let reason = reasonNormalized ?? "unknown";
@@ -482,6 +516,8 @@ export async function GET(request: NextRequest): Promise<Response> {
       isGoldAsset(playbookId, canonicalAssetId) && watchTotal > 0
         ? mapWatchSegments(watchSegmentStats, watchTotal)
         : null;
+    const btcWatchSegments =
+      canonicalAssetId === "btc" && btcWatchTotal > 0 ? mapBtcWatchSegments(btcWatchSegmentStats, btcWatchTotal) : null;
     const outcomesByWatchSegment =
       isGoldAsset(playbookId, canonicalAssetId) && watchOutcomeTotal > 0
         ? mapWatchOutcomeBuckets(watchSegmentOutcomes)
@@ -490,10 +526,12 @@ export async function GET(request: NextRequest): Promise<Response> {
       isGoldAsset(playbookId, canonicalAssetId) && watchOutcomeTotal > 0
         ? mapDecisionOutcomes({ TRADE: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 }, WATCH: watchUpgradeCandidateOutcomes, BLOCKED: { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0 } }).WATCH
         : null;
-    const outcomesByBtcTradeRrrBucket =
+    const outcomesByBtcTradeRrrBucketRaw =
       canonicalAssetId === "btc"
-        ? bucketBtcRrrOutcomes(snapshotCache, outcomes, canonicalAssetId)
-        : null;
+        ? bucketBtcRrrOutcomes(snapshotCache, outcomes, canonicalAssetId, outcomesDecisionBuckets)
+        : { buckets: null, debug: { rrrBucketTotalOutcomes: 0, rrrBucketDecisionMismatchSkipped: 0, rrrBucketUnbucketableSkipped: 0 } };
+    const outcomesByBtcTradeRrrBucket = outcomesByBtcTradeRrrBucketRaw?.buckets ?? null;
+    const rrrBucketDebug = outcomesByBtcTradeRrrBucketRaw?.debug ?? { rrrBucketTotalOutcomes: 0, rrrBucketDecisionMismatchSkipped: 0, rrrBucketUnbucketableSkipped: 0 };
     const outcomesByBtcTradeDirection =
       canonicalAssetId === "btc" ? mapGenericOutcomeBuckets(outcomesBtcDirectionBuckets) : null;
     const outcomesByBtcTradeTrendBucket =
@@ -528,6 +566,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       watchToTradeProxy,
       outcomesByWatchSegment,
       outcomesByWatchUpgradeCandidate,
+      btcWatchSegments,
       outcomesByBtcTradeDirection,
       outcomesByBtcTradeTrendBucket,
       outcomesByBtcTradeVolBucket,
@@ -597,6 +636,8 @@ export async function GET(request: NextRequest): Promise<Response> {
                 mapped: btcAlignmentReasonMapped,
               }
             : null,
+        btcWatchSegments: canonicalAssetId === "btc" ? btcWatchSegments : null,
+        btcRrrBucketsDebug: canonicalAssetId === "btc" ? rrrBucketDebug : null,
         btcLevelPlausibility: canonicalAssetId === "btc" ? summarizeLevelPlausibility(btcLevels) : null,
         decisions: {
           setupsCount: decisionDistribution.total,
@@ -774,6 +815,33 @@ function mapWatchOutcomeBuckets(buckets: Record<WatchSegmentKey, Record<string, 
   const result: Record<WatchSegmentKey, Record<string, number>> = {} as Record<WatchSegmentKey, Record<string, number>>;
   (Object.keys(buckets) as WatchSegmentKey[]).forEach((key) => {
     result[key] = wrap(buckets[key]);
+  });
+  return result;
+}
+
+function mapBtcWatchSegments(
+  stats: Record<BtcWatchSegmentKey, { count: number; sumBias: number; sumTrend: number; sumOrderflow: number; sumConf: number }>,
+  watchTotal: number,
+) {
+  const round1 = (val: number) => Math.round(val * 10) / 10;
+  const toAvg = (sum: number, count: number) => (count > 0 ? round1(sum / count) : null);
+  const result: Record<
+    BtcWatchSegmentKey,
+    { count: number; pct: number; avgBias: number | null; avgTrend: number | null; avgOrderflow: number | null; avgConfidence: number | null }
+  > = {} as Record<
+    BtcWatchSegmentKey,
+    { count: number; pct: number; avgBias: number | null; avgTrend: number | null; avgOrderflow: number | null; avgConfidence: number | null }
+  >;
+  (Object.keys(stats) as BtcWatchSegmentKey[]).forEach((key) => {
+    const entry = stats[key];
+    result[key] = {
+      count: entry.count,
+      pct: pct(entry.count, watchTotal),
+      avgBias: toAvg(entry.sumBias, entry.count),
+      avgTrend: toAvg(entry.sumTrend, entry.count),
+      avgOrderflow: toAvg(entry.sumOrderflow, entry.count),
+      avgConfidence: toAvg(entry.sumConf, entry.count),
+    };
   });
   return result;
 }
@@ -956,13 +1024,20 @@ function bucketBtcRrrOutcomes(
   snapshotCache: Map<string, Setup[]>,
   outcomes: unknown[],
   canonicalAssetId: string,
-): Record<string, { hit_tp: number; hit_sl: number; open: number; expired: number; ambiguous: number; evaluatedCount: number; winRateTpVsSl: number }> | null {
+  decisionBuckets: Record<"TRADE" | "WATCH" | "BLOCKED", Record<string, number>>,
+): {
+  buckets: Record<string, { hit_tp: number; hit_sl: number; open: number; expired: number; ambiguous: number; evaluatedCount: number; winRateTpVsSl: number }> | null;
+  debug: { rrrBucketTotalOutcomes: number; rrrBucketDecisionMismatchSkipped: number; rrrBucketUnbucketableSkipped: number };
+} {
   const buckets: Record<string, { hit_tp: number; hit_sl: number; open: number; expired: number; ambiguous: number; count: number }> = {
     "<1.0": { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0, count: 0 },
     "1.0-1.49": { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0, count: 0 },
     "1.5-1.99": { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0, count: 0 },
     ">=2.0": { hit_tp: 0, hit_sl: 0, open: 0, expired: 0, ambiguous: 0, count: 0 },
   };
+  let rrrBucketTotalOutcomes = 0;
+  let rrrBucketDecisionMismatchSkipped = 0;
+  let rrrBucketUnbucketableSkipped = 0;
   for (const outcome of outcomes) {
     try {
       const snapshotId = (outcome as { snapshotId?: string | null }).snapshotId;
@@ -973,9 +1048,19 @@ function bucketBtcRrrOutcomes(
       if (!setup) continue;
       const assetId = (setup.assetId ?? setup.symbol ?? "").toLowerCase();
       if (assetId !== canonicalAssetId) continue;
+      // ensure this outcome is TRADE decision (align with outcomesByDecision.TRADE)
+      const decision = deriveSetupDecision(setup).decision;
+      if (decision !== "TRADE") {
+        rrrBucketDecisionMismatchSkipped += 1;
+        continue;
+      }
       const plausibility = parseLevelPlausibility(setup);
       const rrr = plausibility.rrr;
-      if (rrr == null) continue;
+      if (rrr == null) {
+        rrrBucketUnbucketableSkipped += 1;
+        continue;
+      }
+      rrrBucketTotalOutcomes += 1;
       let bucketKey: string = "<1.0";
       if (rrr >= 2.0) bucketKey = ">=2.0";
       else if (rrr >= 1.5) bucketKey = "1.5-1.99";
@@ -996,10 +1081,13 @@ function bucketBtcRrrOutcomes(
     return { hit_tp: b.hit_tp, hit_sl: b.hit_sl, open: b.open, expired: b.expired, ambiguous: b.ambiguous, evaluatedCount, winRateTpVsSl };
   };
   return {
-    "<1.0": wrap(buckets["<1.0"]),
-    "1.0-1.49": wrap(buckets["1.0-1.49"]),
-    "1.5-1.99": wrap(buckets["1.5-1.99"]),
-    ">=2.0": wrap(buckets[">=2.0"]),
+    buckets: {
+      "<1.0": wrap(buckets["<1.0"]),
+      "1.0-1.49": wrap(buckets["1.0-1.49"]),
+      "1.5-1.99": wrap(buckets["1.5-1.99"]),
+      ">=2.0": wrap(buckets[">=2.0"]),
+    },
+    debug: { rrrBucketTotalOutcomes, rrrBucketDecisionMismatchSkipped, rrrBucketUnbucketableSkipped },
   };
 }
 

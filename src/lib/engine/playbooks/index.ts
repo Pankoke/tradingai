@@ -319,11 +319,48 @@ const indexSwingPlaybook: Playbook = {
   evaluateSetup: evaluateDefault,
 };
 
+function evaluateCryptoSwing(context: PlaybookContext): PlaybookEvaluation {
+  const { rings, orderflow } = context;
+  const biasOk = rings.biasScore >= 70;
+  const trendOk = rings.trendScore >= 60;
+  const confirmationScore =
+    typeof rings.orderflowScore === "number" ? rings.orderflowScore : typeof orderflow?.score === "number" ? orderflow.score : null;
+  const confirmationOk = (confirmationScore ?? -Infinity) >= 55;
+
+  if (biasOk && trendOk && confirmationOk) {
+    return {
+      setupGrade: "B",
+      setupType: deriveSetupType(rings),
+      gradeRationale: ["Bias strong (>=70)", "Trend supportive (>=60)", "Confirmation via orderflow (>=55)"],
+    };
+  }
+
+  if (biasOk && trendOk && !confirmationOk) {
+    return {
+      setupGrade: "NO_TRADE",
+      setupType: deriveSetupType(rings),
+      gradeRationale: ["Chop/confirmation failed (orderflow <55)"],
+      noTradeReason: "Chop/confirmation failed",
+      debugReason: "confirmation_failed",
+    };
+  }
+
+  // Fallback: alignment derived so decision layer can downgrade to WATCH instead of blocking.
+  const derivedDirection = rings.biasScore >= 50 || rings.trendScore >= 50 ? "LONG" : "SHORT";
+  return {
+    setupGrade: "NO_TRADE",
+    setupType: deriveSetupType(rings),
+    gradeRationale: [`Derived alignment ${derivedDirection}; bias/trend below defaults`],
+    noTradeReason: `Alignment derived (${derivedDirection}) from bias/trend`,
+    debugReason: "alignment_fallback",
+  };
+}
+
 const cryptoSwingPlaybook: Playbook = {
   id: CRYPTO_PLAYBOOK_ID,
   label: "Crypto Swing",
   shortLabel: "Crypto",
-  evaluateSetup: evaluateDefault,
+  evaluateSetup: evaluateCryptoSwing,
 };
 
 const fxSwingPlaybook: Playbook = {
