@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { eq, gte } from "drizzle-orm";
+import { eq, gte, or, sql } from "drizzle-orm";
 import { db } from "@/src/server/db/db";
 import { perceptionSnapshots } from "@/src/server/db/schema/perceptionSnapshots";
 import { respondFail, respondOk } from "@/src/server/http/apiResponse";
@@ -65,10 +65,38 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const effectiveDays = Number.isFinite(days) && days > 0 ? days : 30;
   const from = new Date(Date.now() - effectiveDays * 24 * 60 * 60 * 1000);
 
+  const totalSnapshotsRow = await db.select({ value: sql<number>`count(*)` }).from(perceptionSnapshots);
+  const totalSnapshotsInTable = totalSnapshotsRow[0]?.value ?? 0;
+
+  const snapshotsBySnapshotTimeRow = await db
+    .select({ value: sql<number>`count(*)` })
+    .from(perceptionSnapshots)
+    .where(gte(perceptionSnapshots.snapshotTime, from));
+  const snapshotsInWindowBySnapshotTime = snapshotsBySnapshotTimeRow[0]?.value ?? 0;
+
+  const snapshotsByCreatedAtRow = await db
+    .select({ value: sql<number>`count(*)` })
+    .from(perceptionSnapshots)
+    .where(gte(perceptionSnapshots.createdAt, from));
+  const snapshotsInWindowByCreatedAt = snapshotsByCreatedAtRow[0]?.value ?? 0;
+
+  let minSnapshotTime: Date | null = null;
+  let maxSnapshotTime: Date | null = null;
+  if (process.env.NODE_ENV !== "production") {
+    const minMaxRows = await db
+      .select({
+        min: sql<Date | null>`min(${perceptionSnapshots.snapshotTime})`,
+        max: sql<Date | null>`max(${perceptionSnapshots.snapshotTime})`,
+      })
+      .from(perceptionSnapshots);
+    minSnapshotTime = minMaxRows[0]?.min ?? null;
+    maxSnapshotTime = minMaxRows[0]?.max ?? null;
+  }
+
   const snapshots = await db
     .select()
     .from(perceptionSnapshots)
-    .where(gte(perceptionSnapshots.snapshotTime, from))
+    .where(or(gte(perceptionSnapshots.snapshotTime, from), gte(perceptionSnapshots.createdAt, from)))
     .orderBy(perceptionSnapshots.snapshotTime);
 
   let snapshotsConsidered = 0;
@@ -77,6 +105,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   let setupsUpdated = 0;
   const decisionDistribution: Record<string, number> = {};
   const updatedIds: string[] = [];
+  const sampleSetups: Array<Record<string, unknown>> = [];
 
   const labelCounts: Record<string, number> = {};
   for (const snapshot of snapshots) {
@@ -91,6 +120,31 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (!setups.length) continue;
     const result = recomputeDecisionsInSetups(setups, { assetId, timeframe });
     if (!result.consideredCount) continue;
+    if (process.env.NODE_ENV !== "production" && sampleSetups.length < 3) {
+      const relevant = setups.filter(
+        (s) =>
+          (s.assetId ?? "").toLowerCase() === assetId.toLowerCase() &&
+          ((s.timeframeUsed ?? s.timeframe ?? "") as string).toUpperCase() === timeframe,
+      );
+      for (const s of relevant) {
+        if (sampleSetups.length >= 3) break;
+        sampleSetups.push({
+          id: (s as { id?: string }).id,
+          label: snapshot.label,
+          assetId: s.assetId,
+          timeframe: (s.timeframeUsed ?? s.timeframe) ?? null,
+          direction: (s as { direction?: unknown }).direction,
+          biasScore: (s as { biasScore?: unknown }).biasScore,
+          trendScore: (s as { trendScore?: unknown }).trendScore,
+          noTradeReason: (s as { noTradeReason?: unknown }).noTradeReason,
+          gradeDebugReason: (s as { gradeDebugReason?: unknown }).gradeDebugReason,
+          setupDecision: (s as { setupDecision?: unknown }).setupDecision,
+          setupGrade: (s as { setupGrade?: unknown }).setupGrade,
+          decisionReasons: (s as { decisionReasons?: unknown }).decisionReasons,
+          keys: Object.keys(s),
+        });
+      }
+    }
     snapshotsConsidered += 1;
     setupsConsidered += result.consideredCount;
     Object.entries(result.decisionDistribution).forEach(([k, v]) => {
@@ -119,23 +173,44 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         snapshotsConsidered,
         snapshotsUpdated,
         setupsConsidered,
-      setupsUpdated,
-      decisionDistribution,
-      updatedIds: process.env.NODE_ENV === "production" ? undefined : updatedIds.slice(0, 5),
-      postCheck: await buildPostCheck({ assetId, timeframe, from, label }),
-      labelsInWindowTop: Object.fromEntries(
-        Object.entries(labelCounts)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 10),
-      ),
+        setupsUpdated,
+        decisionDistribution,
+        updatedIds: process.env.NODE_ENV === "production" ? undefined : updatedIds.slice(0, 5),
+        postCheck: await buildPostCheck({ assetId, timeframe, from, label }),
+        labelsInWindowTop: Object.fromEntries(
+          Object.entries(labelCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10),
+        ),
+        totalSnapshotsInTable,
+        snapshotsInWindowBySnapshotTime,
+        snapshotsInWindowByCreatedAt,
+        minMaxSnapshotTime:
+          process.env.NODE_ENV !== "production"
+            ? {
+                min: toIsoOrNull(minSnapshotTime),
+                max: toIsoOrNull(maxSnapshotTime),
+              }
+            : undefined,
+        sampleSetups: process.env.NODE_ENV !== "production" ? sampleSetups : undefined,
+      },
     },
-  },
-  { status: 200, headers },
+    { status: 200, headers },
   );
 }
 
 export async function GET(): Promise<NextResponse> {
   return respondFail("METHOD_NOT_ALLOWED", "Use POST for recompute-decisions", 405);
+}
+
+function toIsoOrNull(v: unknown): string | null {
+  if (!v) return null;
+  if (v instanceof Date) return v.toISOString();
+  if (typeof v === "string" || typeof v === "number") {
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  return null;
 }
 
 type PostCheckParams = {
@@ -177,7 +252,7 @@ async function buildPostCheck(params: PostCheckParams) {
           setup.noTradeReason ??
           decisionResult.reasons[0] ??
           (setup as { gradeDebugReason?: string | null }).gradeDebugReason ??
-          "unknown";
+          "Blocked (unspecified)";
         blockedReasons[reason] = (blockedReasons[reason] ?? 0) + 1;
       }
       if (decisionResult.decision === "WATCH") {

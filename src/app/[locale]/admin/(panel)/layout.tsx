@@ -6,6 +6,11 @@ import deMessages from "@/src/messages/de.json";
 import enMessages from "@/src/messages/en.json";
 import { AdminSidebar } from "@/src/components/admin/AdminSidebar";
 
+// Admin panel should never be prerendered during build because it depends on live DB/auth.
+// Force dynamic rendering to avoid build-time DB connections (e.g. Vercel build export step).
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 type Props = {
   params: Promise<{ locale: string }>;
   children: ReactNode;

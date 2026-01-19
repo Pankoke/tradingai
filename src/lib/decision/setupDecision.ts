@@ -24,6 +24,7 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
     ((setup as { assetClass?: string | null }).assetClass ??
       (setup as { asset?: { assetClass?: string | null } | null }).asset?.assetClass ??
       "")?.toLowerCase();
+  const assetId = ((setup as { assetId?: string | null }).assetId ?? "").toLowerCase();
 
   if (grade === "A" || grade === "B") {
     return { decision: "TRADE", reasons: [] };
@@ -34,6 +35,7 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
   const soft = !hard && isSoftReason(noTradeReason, gradeRationale);
 
   const reasons = buildReasons(noTradeReason, gradeRationale, gradeDebugReason);
+  const ensureReasons = (arr: string[], fallback: string) => (arr.length ? arr : [fallback]);
 
   // BTC Swing: provide deterministic fallback alignment instead of hard-blocking on missing alignment
   // Source of "No default alignment" was the default playbook evaluation (crypto swing) when no alignment was resolved.
@@ -57,7 +59,8 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
   }
 
   // Index (e.g. SPX) fallback alignment: avoid hard-blocking when alignment is missing
-  const isIndexAsset = assetClass === "index" || playbookId === "spx-swing-v0.1";
+  const indexAssetIds = new Set(["spx", "sp500", "spx500", "dax", "ndx", "nasdaq"]);
+  const isIndexAsset = assetClass === "index" || playbookId === "spx-swing-v0.1" || indexAssetIds.has(assetId);
   if (isIndexAsset && watchEnabled && !hard && alignmentMissing) {
     const directionRaw = (setup as { direction?: string | null }).direction ?? "";
     const direction =
@@ -75,14 +78,14 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
   }
 
   if (!watchEnabled) {
-    return { decision: "BLOCKED", category: hard ? "hard" : "soft", reasons };
+    return { decision: "BLOCKED", category: hard ? "hard" : "soft", reasons: ensureReasons(reasons, "Blocked (unspecified)") };
   }
 
   if (!hard && soft) {
-    return { decision: "WATCH", category: "soft", reasons };
+    return { decision: "WATCH", category: "soft", reasons: ensureReasons(reasons, "Watch (unspecified)") };
   }
 
-  return { decision: "BLOCKED", category: hard ? "hard" : "soft", reasons };
+  return { decision: "BLOCKED", category: hard ? "hard" : "soft", reasons: ensureReasons(reasons, "Blocked (unspecified)") };
 }
 
 function buildReasons(noTradeReason: string | null, gradeRationale: string[] | null, debugReason: string | null): string[] {
