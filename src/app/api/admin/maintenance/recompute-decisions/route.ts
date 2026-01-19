@@ -154,7 +154,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       decisionDistribution[k] = (decisionDistribution[k] ?? 0) + v;
     });
     updatedIds.push(...result.updatedIds);
-    if (result.changed) {
+    if (result.changed && result.updatedCount > 0) {
       snapshotsUpdated += 1;
       setupsUpdated += result.updatedCount;
       await db

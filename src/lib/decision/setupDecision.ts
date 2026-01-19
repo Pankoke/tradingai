@@ -56,10 +56,12 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
     const normalizedReasons = upstreamReasons.length ? upstreamReasons.slice(0, MAX_REASONS) : [];
     const ensureReasons = (arr: string[], fallback: string) => (arr.length ? arr : [fallback]);
     const replaceAlignmentReasons = (reasons: string[], replacement: string) => {
-      const mapped = reasons.map((r) => (r.toLowerCase().includes("no default alignment") ? replacement : r));
+      const mapped = reasons
+        .map((r) => (r.toLowerCase().includes("no default alignment") ? replacement : r))
+        .filter((r) => r && r.trim().length > 0);
       const hasMapped = mapped.some((r) => r === replacement);
       if (!hasMapped) mapped.unshift(replacement);
-      return mapped.slice(0, MAX_REASONS);
+      return Array.from(new Set(mapped)).slice(0, MAX_REASONS);
     };
     const maybeSegment =
       isIndexAsset && upstream !== "TRADE" ? deriveSpxWatchSegment(setup) : undefined;
@@ -95,7 +97,7 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
       const alignmentMention =
         normalizedReasons.some((r) => r.toLowerCase().includes("alignment")) ||
         (noTradeReason ?? "").toLowerCase().includes("alignment");
-      if (isIndexAsset && alignmentMention) {
+      if (isIndexAsset && (alignmentMention || direction)) {
         const alignmentReason = deriveIndexAlignmentReason();
         return {
           decision: "WATCH",
@@ -104,16 +106,12 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
           watchSegment: maybeSegment,
         };
       }
-      if (isIndexAsset && direction && !alignmentMention) {
-        const alignmentReason = deriveIndexAlignmentReason();
-        return {
-          decision: "WATCH",
-          category: "soft",
-          reasons: ensureReasons(replaceAlignmentReasons(normalizedReasons, alignmentReason), alignmentReason),
-          watchSegment: maybeSegment,
-        };
-      }
-      return { decision: "WATCH", category: "soft", reasons: ensureReasons(normalizedReasons, "Watch (unspecified)"), watchSegment: maybeSegment };
+      return {
+        decision: "WATCH",
+        category: "soft",
+        reasons: ensureReasons(replaceAlignmentReasons(normalizedReasons, deriveIndexAlignmentReason()), "Watch (unspecified)"),
+        watchSegment: maybeSegment,
+      };
     }
 
     // Upstream TRADE or others: stay conservative unless we have strong grade A/B

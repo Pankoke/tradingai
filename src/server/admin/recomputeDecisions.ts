@@ -33,7 +33,6 @@ export function recomputeDecisionsInSetups(
   const now = params.now ?? new Date();
   let updatedCount = 0;
   let consideredCount = 0;
-  let changed = false;
   const decisionDistribution: Record<string, number> = {};
   const updatedIds: string[] = [];
 
@@ -47,33 +46,46 @@ export function recomputeDecisionsInSetups(
     consideredCount += 1;
     const decisionResult = deriveSetupDecision(setup);
     decisionDistribution[decisionResult.decision] = (decisionDistribution[decisionResult.decision] ?? 0) + 1;
-    const updated: SetupWithDecision = {
-      ...setup,
-      setupDecision: decisionResult.decision,
-      decisionCategory: decisionResult.category ?? null,
-      decisionReasons: decisionResult.reasons,
-      watchSegment: decisionResult.watchSegment ?? null,
-      decisionUpdatedAt: now.toISOString(),
-    };
+
+    const nextDecisionReasons =
+      decisionResult.reasons && decisionResult.reasons.length > 0
+        ? decisionResult.reasons
+        : (setup.decisionReasons as string[] | null) ?? null;
+    const nextWatchSegment = decisionResult.watchSegment ?? setup.watchSegment ?? null;
+
     const before = JSON.stringify({
       setupDecision: setup.setupDecision,
       decisionCategory: setup.decisionCategory,
       decisionReasons: setup.decisionReasons,
+      watchSegment: setup.watchSegment,
     });
     const after = JSON.stringify({
-      setupDecision: updated.setupDecision,
-      decisionCategory: updated.decisionCategory,
-      decisionReasons: updated.decisionReasons,
+      setupDecision: decisionResult.decision,
+      decisionCategory: decisionResult.category ?? null,
+      decisionReasons: nextDecisionReasons,
+      watchSegment: nextWatchSegment,
     });
-    if (before !== after) {
-      updatedCount += 1;
-      changed = true;
-      if (typeof setup.id === "string") {
-        updatedIds.push(setup.id);
-      }
+
+    if (before === after) {
+      return setup;
+    }
+
+    const updated: SetupWithDecision = {
+      ...setup,
+      setupDecision: decisionResult.decision,
+      decisionCategory: decisionResult.category ?? null,
+      decisionReasons: nextDecisionReasons,
+      watchSegment: nextWatchSegment,
+      decisionUpdatedAt: now.toISOString(),
+    };
+    updatedCount += 1;
+    if (typeof setup.id === "string") {
+      updatedIds.push(setup.id);
     }
     return updated;
   });
+
+  const changed = updatedCount > 0;
 
   return { setups: updatedSetups, updatedCount, consideredCount, decisionDistribution, updatedIds, changed };
 }

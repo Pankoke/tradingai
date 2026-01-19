@@ -1258,6 +1258,17 @@ function mapAlignmentReason(reason: string): string {
   return reason;
 }
 
+function pickCanonicalReason(
+  decisionResult: { reasons?: string[] },
+  setup: Setup,
+): string | null {
+  const candidate =
+    (decisionResult.reasons ?? []).find((r) => r && r.trim().length > 0) ??
+    normalizeText((setup as { noTradeReason?: unknown }).noTradeReason) ??
+    normalizeText((setup as { gradeDebugReason?: unknown }).gradeDebugReason);
+  return candidate ?? null;
+}
+
 type SummaryInputRow = { setups: unknown; snapshotTime?: Date | null; createdAt?: Date | null; label?: string | null };
 type BuildSummaryParams = {
   rows: SummaryInputRow[];
@@ -1300,12 +1311,12 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
 
       const decisionResult = deriveSetupDecision(setup);
       decisionDistribution[decisionResult.decision] += 1;
-      const normalizedReason = normalizeText((setup as { noTradeReason?: unknown }).noTradeReason);
-      if (normalizedReason) {
+      const canonicalReason = pickCanonicalReason(decisionResult, setup);
+      if (canonicalReason) {
         if (decisionResult.decision === "BLOCKED") {
-          blockedReasons[normalizedReason] = (blockedReasons[normalizedReason] ?? 0) + 1;
+          blockedReasons[canonicalReason] = (blockedReasons[canonicalReason] ?? 0) + 1;
         } else if (decisionResult.decision === "WATCH") {
-          watchReasons[normalizedReason] = (watchReasons[normalizedReason] ?? 0) + 1;
+          watchReasons[canonicalReason] = (watchReasons[canonicalReason] ?? 0) + 1;
         }
       }
 
@@ -1342,8 +1353,8 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
       }
 
       // NO_TRADE reasons based on grade (independent of decision)
-      if (grade === "NO_TRADE" && normalizedReason) {
-        noTradeReasons[normalizedReason] = (noTradeReasons[normalizedReason] ?? 0) + 1;
+      if (grade === "NO_TRADE" && canonicalReason) {
+        noTradeReasons[canonicalReason] = (noTradeReasons[canonicalReason] ?? 0) + 1;
       }
     }
   }

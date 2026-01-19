@@ -63,4 +63,48 @@ describe("recomputeDecisionsInSetups", () => {
     expect(total).toBeGreaterThan(0);
     expect(result.updatedIds.length).toBeGreaterThan(0);
   });
+
+  it("does not modify non-matching asset/timeframe setups", () => {
+    const baseSetup = {
+      id: "s2",
+      assetId: "GOLD",
+      timeframe: "1D",
+      setupDecision: "BLOCKED",
+    };
+    const spxSetup = {
+      id: "s3",
+      assetId: "SPX",
+      timeframe: "1D",
+      direction: "Long",
+      biasScore: 80,
+      confidence: 60,
+      setupDecision: "BLOCKED",
+    };
+    const btcSetup = {
+      id: "s4",
+      assetId: "BTC",
+      timeframe: "1H",
+      setupDecision: "BLOCKED",
+    };
+
+    const setups: Array<Setup & Record<string, unknown>> = [
+      baseSetup as unknown as Setup,
+      spxSetup as unknown as Setup,
+      btcSetup as unknown as Setup,
+    ];
+
+    const result = recomputeDecisionsInSetups(structuredClone(setups), {
+      assetId: "spx",
+      timeframe: "1D",
+      now: new Date("2025-01-01T00:00:00Z"),
+    });
+
+    expect(result.consideredCount).toBe(1);
+    expect(result.updatedCount).toBe(1);
+    // non-matching entries stay byte-identical
+    expect(result.setups[0]).toEqual(baseSetup);
+    expect(result.setups[2]).toEqual(btcSetup);
+    // matching entry changed decision away from the original blocked value
+    expect((result.setups[1] as Record<string, unknown>).setupDecision).not.toBe(spxSetup.setupDecision);
+  });
 });
