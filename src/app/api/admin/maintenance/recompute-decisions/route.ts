@@ -85,6 +85,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   });
 }
 
+export async function GET(): Promise<NextResponse> {
+  return respondFail("METHOD_NOT_ALLOWED", "Use POST for recompute-decisions", 405);
+}
+
 type PostCheckParams = {
   assetId: string;
   timeframe: string;
