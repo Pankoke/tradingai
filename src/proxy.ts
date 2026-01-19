@@ -41,7 +41,10 @@ export default clerkMiddleware((auth, request) => {
   const { nextUrl } = request;
   const pathname = nextUrl.pathname;
   const adminEnabled = isAdminEnabled();
-  const adminBypassPaths = ["/api/admin/playbooks/phase0-gold-swing"];
+  const adminBypassPaths = [
+    "/api/admin/playbooks/phase0-gold-swing",
+    "/api/admin/maintenance/recompute-decisions",
+  ];
   const isBypassedAdminPath = adminBypassPaths.includes(pathname);
 
   const isAdminApi = pathname.startsWith("/api/admin");
@@ -59,6 +62,15 @@ export default clerkMiddleware((auth, request) => {
   }
 
   if (isBypassedAdminPath) {
+    return;
+  }
+
+  // Allow Bearer token (cron/admin) to bypass Clerk for admin APIs
+  const header = request.headers.get("authorization") ?? "";
+  const bearer = header.startsWith("Bearer ") ? header.slice("Bearer ".length).trim() : null;
+  const cronToken = process.env.CRON_SECRET;
+  const adminToken = process.env.ADMIN_API_TOKEN;
+  if (isAdminApi && bearer && ((cronToken && bearer === cronToken) || (adminToken && bearer === adminToken))) {
     return;
   }
 

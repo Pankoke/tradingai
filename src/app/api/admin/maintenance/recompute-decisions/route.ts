@@ -40,6 +40,8 @@ function isAuthorized(request: NextRequest): { ok: boolean; debug?: Record<strin
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const auth = isAuthorized(request);
   if (!auth.ok) {
+    const headers = new Headers();
+    headers.set("x-recompute-route", "hit");
     if (process.env.NODE_ENV !== "production" && auth.debug) {
       return NextResponse.json(
         {
@@ -47,10 +49,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           error: { code: "UNAUTHORIZED", message: "Unauthorized" },
           debug: auth.debug,
         },
-        { status: 401 },
+        { status: 401, headers },
       );
     }
-    return respondFail("UNAUTHORIZED", "Unauthorized", 401);
+    const res = respondFail("UNAUTHORIZED", "Unauthorized", 401);
+    res.headers.set("x-recompute-route", "hit");
+    return res;
   }
 
   const url = new URL(request.url);
@@ -97,22 +101,26 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
   }
 
-  return respondOk({
-    ok: true,
-    meta: {
-      assetId,
-      timeframe,
-      days: effectiveDays,
-      from: from.toISOString(),
-      snapshotsConsidered,
-      snapshotsUpdated,
-      setupsConsidered,
-      setupsUpdated,
-      decisionDistribution,
-      updatedIds: process.env.NODE_ENV === "production" ? undefined : updatedIds.slice(0, 5),
-      postCheck: await buildPostCheck({ assetId, timeframe, from, label }),
+  const headers = new Headers([["x-recompute-route", "hit"]]);
+  return NextResponse.json(
+    {
+      ok: true,
+      meta: {
+        assetId,
+        timeframe,
+        days: effectiveDays,
+        from: from.toISOString(),
+        snapshotsConsidered,
+        snapshotsUpdated,
+        setupsConsidered,
+        setupsUpdated,
+        decisionDistribution,
+        updatedIds: process.env.NODE_ENV === "production" ? undefined : updatedIds.slice(0, 5),
+        postCheck: await buildPostCheck({ assetId, timeframe, from, label }),
+      },
     },
-  });
+    { status: 200, headers },
+  );
 }
 
 export async function GET(): Promise<NextResponse> {
