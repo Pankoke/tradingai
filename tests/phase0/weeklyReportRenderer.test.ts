@@ -28,12 +28,14 @@ describe("renderAssetSummarySection", () => {
     const gold = makeSummary("gold");
     const btc = makeSummary("btc");
     const spx = makeSummary("spx");
+    const dax = makeSummary("dax");
 
-    const rendered = [gold, btc, spx].map((s) => renderAssetSummarySection(s)).join("\n");
+    const rendered = [gold, btc, spx, dax].map((s) => renderAssetSummarySection(s)).join("\n");
 
     expect(rendered).toContain("## GOLD Swing");
     expect(rendered).toContain("## BTC Swing");
     expect(rendered).toContain("## SPX Swing");
+    expect(rendered).toContain("## DAX Swing");
     expect(rendered).toContain("| TRADE_A | 1 |");
     expect(rendered).toContain("| TRADE_B | 1 |");
     expect(rendered).toContain("Volatility Buckets");

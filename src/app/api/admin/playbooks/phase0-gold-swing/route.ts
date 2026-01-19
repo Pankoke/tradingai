@@ -27,6 +27,7 @@ type SpxWatchSegmentKey =
   | "WATCH_FAILS_BIAS_ALIGNMENT"
   | "WATCH_RANGE_CONSTRUCTIVE"
   | "WATCH_OTHER";
+type IndexWatchSegmentKey = SpxWatchSegmentKey;
 
 type BtcAlignmentStats = {
   total: number;
@@ -643,7 +644,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       btcAlignmentReasonMapped += mappedCount;
     }
 
-    const summariesAssetIds = ["gold", "btc", "spx"];
+    const summariesAssetIds = ["gold", "btc", "spx", "dax"];
     const summaries = Object.fromEntries(
       summariesAssetIds.map((asset) => [
         asset,
@@ -1292,7 +1293,7 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
   const noTradeReasons: Record<string, number> = {};
   const watchReasons: Record<string, number> = {};
   const labelsUsedCounts: Record<string, number> = {};
-  const spxWatchSegments: Record<string, number> = {};
+  const indexWatchSegments: Record<string, number> = {};
 
   for (const row of rows) {
     const setups = Array.isArray((row as { setups?: unknown }).setups) ? ((row as { setups: Setup[] }).setups ?? []) : [];
@@ -1330,10 +1331,10 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
         }
       }
 
-      if (target === "spx" && decisionResult.decision === "WATCH") {
+      if ((target === "spx" || target === "dax") && decisionResult.decision === "WATCH") {
         const segment = (setup as { watchSegment?: string | null }).watchSegment ?? deriveSpxWatchSegment(setup);
         if (segment) {
-          spxWatchSegments[segment] = (spxWatchSegments[segment] ?? 0) + 1;
+          indexWatchSegments[segment] = (indexWatchSegments[segment] ?? 0) + 1;
         }
       }
 
@@ -1342,7 +1343,7 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
         regimeDistribution[regime] = (regimeDistribution[regime] ?? 0) + 1;
       }
 
-      if (target === "spx") {
+      if (target === "spx" || target === "dax") {
         const regime = deriveRegimeTag(setup);
         regimeDistribution[regime] = (regimeDistribution[regime] ?? 0) + 1;
       }
@@ -1369,14 +1370,14 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
     },
     decisionDistribution,
     gradeDistribution: gradeTotal > 0 ? gradeCounts : undefined,
-    watchSegmentsDistribution:
-      target === "gold"
-        ? Object.keys(watchSegments).length
-          ? watchSegments
-          : undefined
-        : target === "spx" && Object.keys(spxWatchSegments).length
-          ? spxWatchSegments
-          : undefined,
+      watchSegmentsDistribution:
+        target === "gold"
+          ? Object.keys(watchSegments).length
+            ? watchSegments
+            : undefined
+          : (target === "spx" || target === "dax") && Object.keys(indexWatchSegments).length
+            ? indexWatchSegments
+            : undefined,
     upgradeCandidates: Object.keys(upgradeReasons).length
       ? { total: Object.values(upgradeReasons).reduce((s, v) => s + v, 0), byReason: upgradeReasons }
       : { total: 0 },

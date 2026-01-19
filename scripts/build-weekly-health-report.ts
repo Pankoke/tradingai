@@ -490,7 +490,8 @@ const summariesFromPayload = gold.summaries ?? btc.summaries ?? undefined;
   };
   ensure("gold", gold);
   ensure("btc", btc);
-  ensure("spx", {} as Phase0Payload); // falls spx nicht geliefert wurde, leeres Summary erzeugen
+  ensure("spx", {} as Phase0Payload);
+  ensure("dax", {} as Phase0Payload);
 
   const now = new Date();
   const y = now.getUTCFullYear();
@@ -517,7 +518,7 @@ const summariesFromPayload = gold.summaries ?? btc.summaries ?? undefined;
   }
   reportLines.push("");
 
-  const assetOrder = ["gold", "btc", "spx"];
+  const assetOrder = ["gold", "btc", "spx", "dax"];
   assetOrder
     .filter((a) => summaries[a])
     .forEach((assetId) => {

@@ -64,6 +64,7 @@ const SOFT_TREND_BIAS_DELTA = 20;
 const GOLD_PLAYBOOK_ID = "gold-swing-v0.2";
 const INDEX_PLAYBOOK_ID = "index-swing-v0.1";
 const SPX_PLAYBOOK_ID = "spx-swing-v0.1";
+const DAX_PLAYBOOK_ID = "dax-swing-v0.1";
 const CRYPTO_PLAYBOOK_ID = "crypto-swing-v0.1";
 const FX_PLAYBOOK_ID = "fx-swing-v0.1";
 const GENERIC_PLAYBOOK_ID = "generic-swing-v0.1";
@@ -111,6 +112,16 @@ function matchSpxAsset(asset: PlaybookContext["asset"]): MatchResult {
   return { matched: false, reason: "no spx match" };
 }
 
+function matchDaxAsset(asset: PlaybookContext["asset"]): MatchResult {
+  const id = (asset.id ?? "").toLowerCase();
+  const symbol = (asset.symbol ?? "").toUpperCase();
+  if (id === "dax") return { matched: true, reason: "dax id" };
+  if (symbol.includes("GDAXI") || symbol.includes("DAX")) {
+    return { matched: true, reason: "dax symbol" };
+  }
+  return { matched: false, reason: "no dax match" };
+}
+
 function matchFxAsset(asset: PlaybookContext["asset"]): MatchResult {
   const symbol = (asset.symbol ?? "").toUpperCase();
   if (symbol.endsWith("=X")) return { matched: true, reason: "fx yahoo =X" };
@@ -135,6 +146,9 @@ function resolvePlaybookIdForAsset(asset: PlaybookContext["asset"], profile?: st
 
   const spx = matchSpxAsset(asset);
   if (spx.matched) return { playbook: spxSwingPlaybook, reason: spx.reason };
+
+  const dax = matchDaxAsset(asset);
+  if (dax.matched) return { playbook: daxSwingPlaybook, reason: dax.reason };
 
   const gold = matchGoldAsset(asset);
   if (gold.matched) return { playbook: goldSwingPlaybook, reason: gold.reason };
@@ -451,6 +465,13 @@ const spxSwingPlaybook: Playbook = {
   evaluateSetup: evaluateSpxSwing,
 };
 
+const daxSwingPlaybook: Playbook = {
+  id: DAX_PLAYBOOK_ID,
+  label: "DAX Swing",
+  shortLabel: "DAX",
+  evaluateSetup: evaluateSpxSwing,
+};
+
 function evaluateCryptoSwing(context: PlaybookContext): PlaybookEvaluation {
   const { rings, orderflow } = context;
   const biasOk = rings.biasScore >= 70;
@@ -527,6 +548,7 @@ const PLAYBOOK_LABELS: Record<string, { label: string; short: string }> = {
   [GOLD_PLAYBOOK_ID]: { label: "Gold Swing", short: "Gold Swing" },
   [INDEX_PLAYBOOK_ID]: { label: "Index Swing", short: "Index Swing" },
   [SPX_PLAYBOOK_ID]: { label: "SPX Swing", short: "SPX Swing" },
+  [DAX_PLAYBOOK_ID]: { label: "DAX Swing", short: "DAX Swing" },
   [CRYPTO_PLAYBOOK_ID]: { label: "Crypto Swing", short: "Crypto Swing" },
   [FX_PLAYBOOK_ID]: { label: "FX Swing", short: "FX Swing" },
   [GENERIC_PLAYBOOK_ID]: { label: "Generic Swing", short: "Generic Swing" },
