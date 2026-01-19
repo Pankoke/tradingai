@@ -458,6 +458,7 @@ const summariesFromPayload = gold.summaries ?? btc.summaries ?? undefined;
     const watchSegments = data.debugMeta?.watchSegments
       ? Object.fromEntries(Object.entries(data.debugMeta.watchSegments).map(([k, v]) => [k, v.count]))
       : undefined;
+    const defaultDecision = { TRADE: 0, WATCH: 0, BLOCKED: 0 };
     return {
       meta: { assetId, timeframe: (data.meta?.timeframe ?? "1D").toString(), sampleWindowDays, labelsUsedCounts: undefined },
       decisionDistribution: dist
@@ -466,7 +467,7 @@ const summariesFromPayload = gold.summaries ?? btc.summaries ?? undefined;
               .filter(([k]) => k !== "total")
               .map(([k, v]) => [k, typeof v === "number" ? v : (v as { count?: number }).count ?? 0]),
           )
-        : {},
+        : defaultDecision,
       gradeDistribution: grade
         ? Object.fromEntries(
             Object.entries(grade)
