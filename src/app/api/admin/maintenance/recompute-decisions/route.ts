@@ -40,8 +40,17 @@ function isAuthorized(request: NextRequest): { ok: boolean; debug?: Record<strin
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const auth = isAuthorized(request);
   if (!auth.ok) {
-    const details = process.env.NODE_ENV !== "production" ? auth.debug : undefined;
-    return respondFail("UNAUTHORIZED", "Unauthorized", 401, details);
+    if (process.env.NODE_ENV !== "production" && auth.debug) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: { code: "UNAUTHORIZED", message: "Unauthorized" },
+          debug: auth.debug,
+        },
+        { status: 401 },
+      );
+    }
+    return respondFail("UNAUTHORIZED", "Unauthorized", 401);
   }
 
   const url = new URL(request.url);
