@@ -62,6 +62,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const timeframe = (url.searchParams.get("timeframe") ?? "1D").toUpperCase();
   const days = Number.parseInt(url.searchParams.get("days") ?? "30", 10);
   const label = url.searchParams.get("label") ?? "swing";
+  const labelLower = label?.toLowerCase() ?? "";
+  const labelIsNull = labelLower === "(null)" || labelLower === "__null__";
   const effectiveDays = Number.isFinite(days) && days > 0 ? days : 30;
   const from = new Date(Date.now() - effectiveDays * 24 * 60 * 60 * 1000);
 
@@ -109,12 +111,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const labelCounts: Record<string, number> = {};
   for (const snapshot of snapshots) {
-    const key = (snapshot.label ?? "").toLowerCase();
+    const key = ((snapshot.label ?? "(null)") as string).toLowerCase();
     if (key) {
       labelCounts[key] = (labelCounts[key] ?? 0) + 1;
     }
-    const isMatchingLabel =
-      !label || (snapshot.label ?? "").toLowerCase().includes(label.toLowerCase());
+    const isMatchingLabel = labelIsNull
+      ? !snapshot.label
+      : !labelLower || (snapshot.label ?? "").toLowerCase().includes(labelLower);
     if (!isMatchingLabel) continue;
     const setups = (snapshot.setups ?? []) as Array<Setup & Record<string, unknown>>;
     if (!setups.length) continue;
@@ -176,7 +179,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         setupsUpdated,
         decisionDistribution,
         updatedIds: process.env.NODE_ENV === "production" ? undefined : updatedIds.slice(0, 5),
-        postCheck: await buildPostCheck({ assetId, timeframe, from, label }),
+        postCheck: await buildPostCheck({ assetId, timeframe, from, label, labelIsNull }),
         labelsInWindowTop: Object.fromEntries(
           Object.entries(labelCounts)
             .sort((a, b) => b[1] - a[1])
@@ -218,6 +221,7 @@ type PostCheckParams = {
   timeframe: string;
   from: Date;
   label: string | null;
+  labelIsNull?: boolean;
 };
 
 async function buildPostCheck(params: PostCheckParams) {
@@ -234,7 +238,10 @@ async function buildPostCheck(params: PostCheckParams) {
   const blockedReasons: Record<string, number> = {};
 
   for (const snapshot of snapshots) {
-    const isMatchingLabel = !params.label || (snapshot.label ?? "").toLowerCase() === params.label.toLowerCase();
+    const labelLower = params.label?.toLowerCase() ?? "";
+    const isMatchingLabel = params.labelIsNull
+      ? !snapshot.label
+      : !labelLower || (snapshot.label ?? "").toLowerCase() === labelLower;
     if (!isMatchingLabel) continue;
     const setups = (snapshot.setups ?? []) as Array<Setup & Record<string, unknown>>;
     for (const setup of setups) {
