@@ -61,5 +61,6 @@ describe("recomputeDecisionsInSetups", () => {
       (result.decisionDistribution["WATCH"] ?? 0) +
       (result.decisionDistribution["BLOCKED"] ?? 0);
     expect(total).toBeGreaterThan(0);
+    expect(result.updatedIds.length).toBeGreaterThan(0);
   });
 });

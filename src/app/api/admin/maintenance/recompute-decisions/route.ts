@@ -42,6 +42,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   let setupsConsidered = 0;
   let setupsUpdated = 0;
   const decisionDistribution: Record<string, number> = {};
+  const updatedIds: string[] = [];
 
   for (const snapshot of snapshots) {
     const isMatchingLabel = !label || (snapshot.label ?? "").toLowerCase() === label.toLowerCase();
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     Object.entries(result.decisionDistribution).forEach(([k, v]) => {
       decisionDistribution[k] = (decisionDistribution[k] ?? 0) + v;
     });
+    updatedIds.push(...result.updatedIds);
     if (result.changed) {
       snapshotsUpdated += 1;
       setupsUpdated += result.updatedCount;
@@ -77,6 +79,69 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       setupsConsidered,
       setupsUpdated,
       decisionDistribution,
+      updatedIds: process.env.NODE_ENV === "production" ? undefined : updatedIds.slice(0, 5),
+      postCheck: await buildPostCheck({ assetId, timeframe, from, label }),
     },
   });
+}
+
+type PostCheckParams = {
+  assetId: string;
+  timeframe: string;
+  from: Date;
+  label: string | null;
+};
+
+async function buildPostCheck(params: PostCheckParams) {
+  const snapshots = await db
+    .select()
+    .from(perceptionSnapshots)
+    .where(gte(perceptionSnapshots.snapshotTime, params.from))
+    .orderBy(perceptionSnapshots.snapshotTime);
+
+  let setupsInWindow = 0;
+  let stillNoDefaultAlignment = 0;
+  let stillBlocked = 0;
+  let watch = 0;
+  const blockedReasons: Record<string, number> = {};
+
+  for (const snapshot of snapshots) {
+    const isMatchingLabel = !params.label || (snapshot.label ?? "").toLowerCase() === params.label.toLowerCase();
+    if (!isMatchingLabel) continue;
+    const setups = (snapshot.setups ?? []) as Array<Setup & Record<string, unknown>>;
+    for (const setup of setups) {
+      const assetMatch = (setup.assetId ?? "").toLowerCase() === params.assetId.toLowerCase();
+      const tf = ((setup.timeframeUsed ?? setup.timeframe ?? "") as string).toUpperCase();
+      if (!assetMatch || tf !== params.timeframe) continue;
+      setupsInWindow += 1;
+      const decisionResult = deriveSetupDecision(setup);
+      if ((setup.noTradeReason ?? "").toLowerCase().includes("alignment")) {
+        stillNoDefaultAlignment += 1;
+      }
+      if (decisionResult.decision === "BLOCKED") {
+        stillBlocked += 1;
+        const reason =
+          setup.noTradeReason ??
+          decisionResult.reasons[0] ??
+          (setup as { gradeDebugReason?: string | null }).gradeDebugReason ??
+          "unknown";
+        blockedReasons[reason] = (blockedReasons[reason] ?? 0) + 1;
+      }
+      if (decisionResult.decision === "WATCH") {
+        watch += 1;
+      }
+    }
+  }
+
+  return {
+    setupsInWindow,
+    stillNoDefaultAlignment,
+    stillBlocked,
+    watch,
+    blockedReasonsTop: Object.fromEntries(
+      Object.entries(blockedReasons)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5),
+    ),
+  };
 }

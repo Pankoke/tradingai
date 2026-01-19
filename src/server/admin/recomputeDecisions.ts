@@ -12,6 +12,7 @@ export type RecomputeResult = {
   updatedCount: number;
   consideredCount: number;
   decisionDistribution: Record<string, number>;
+  updatedIds: string[];
   changed: boolean;
 };
 
@@ -33,6 +34,7 @@ export function recomputeDecisionsInSetups(
   let consideredCount = 0;
   let changed = false;
   const decisionDistribution: Record<string, number> = {};
+  const updatedIds: string[] = [];
 
   const updatedSetups = setups.map((raw) => {
     const setup = raw as SetupWithDecision;
@@ -64,9 +66,12 @@ export function recomputeDecisionsInSetups(
     if (before !== after) {
       updatedCount += 1;
       changed = true;
+      if (typeof setup.id === "string") {
+        updatedIds.push(setup.id);
+      }
     }
     return updated;
   });
 
-  return { setups: updatedSetups, updatedCount, consideredCount, decisionDistribution, changed };
+  return { setups: updatedSetups, updatedCount, consideredCount, decisionDistribution, updatedIds, changed };
 }
