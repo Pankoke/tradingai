@@ -25,6 +25,67 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
       (setup as { asset?: { assetClass?: string | null } | null }).asset?.assetClass ??
       "")?.toLowerCase();
   const assetId = ((setup as { assetId?: string | null }).assetId ?? "").toLowerCase();
+  const indexAssetIds = new Set(["spx", "sp500", "spx500", "dax", "ndx", "nasdaq"]);
+  const isIndexAsset = assetClass === "index" || playbookId === "spx-swing-v0.1" || indexAssetIds.has(assetId);
+
+  // Streamed setups (already carry a decision). Normalize to our decision layer and avoid empty reasons.
+  const upstreamDecision = (setup as { setupDecision?: string | null }).setupDecision ?? null;
+  const upstreamReasons = ((setup as { decisionReasons?: unknown }).decisionReasons as string[] | undefined) ?? [];
+  const hasUpstream = typeof upstreamDecision === "string" && upstreamDecision.length > 0;
+  if (hasUpstream) {
+    const upstream = upstreamDecision.toUpperCase();
+    const directionRaw = (setup as { direction?: string | null }).direction ?? "";
+    const direction =
+      directionRaw.toLowerCase().includes("short") || directionRaw.toLowerCase().includes("sell")
+        ? "SHORT"
+        : directionRaw.toLowerCase().includes("long") || directionRaw.toLowerCase().includes("buy")
+          ? "LONG"
+          : null;
+
+    // Normalize reasons and ensure non-empty
+    const normalizedReasons = upstreamReasons.length ? upstreamReasons.slice(0, MAX_REASONS) : [];
+    const ensureReasons = (arr: string[], fallback: string) => (arr.length ? arr : [fallback]);
+
+    // If upstream blocked but no reasons -> downgrade to WATCH soft with explanation
+    if (upstream === "BLOCKED") {
+      const alignmentMention =
+        normalizedReasons.some((r) => r.toLowerCase().includes("alignment")) ||
+        (noTradeReason ?? "").toLowerCase().includes("alignment");
+      if (isIndexAsset && alignmentMention) {
+        const fallbackDir = direction ?? (trendScore !== null && trendScore >= 50 ? "LONG" : "SHORT");
+        const alignmentReason = `Alignment derived (index fallback ${fallbackDir})`;
+        return { decision: "WATCH", category: "soft", reasons: ensureReasons([alignmentReason, ...normalizedReasons], alignmentReason) };
+      }
+      // No reasons at all -> WATCH soft
+      if (!normalizedReasons.length) {
+        return {
+          decision: "WATCH",
+          category: "soft",
+          reasons: ensureReasons(normalizedReasons, "Stream decision BLOCKED but no reasons (normalized to WATCH)"),
+        };
+      }
+      return { decision: "BLOCKED", category: "soft", reasons: ensureReasons(normalizedReasons, "Blocked (unspecified)") };
+    }
+
+    if (upstream === "WATCH") {
+      const alignmentMention =
+        normalizedReasons.some((r) => r.toLowerCase().includes("alignment")) ||
+        (noTradeReason ?? "").toLowerCase().includes("alignment");
+      if (isIndexAsset && alignmentMention) {
+        const fallbackDir = direction ?? (trendScore !== null && trendScore >= 50 ? "LONG" : "SHORT");
+        const alignmentReason = `Alignment derived (index fallback ${fallbackDir})`;
+        return { decision: "WATCH", category: "soft", reasons: ensureReasons([alignmentReason, ...normalizedReasons], alignmentReason) };
+      }
+      return { decision: "WATCH", category: "soft", reasons: ensureReasons(normalizedReasons, "Watch (unspecified)") };
+    }
+
+    // Upstream TRADE or others: stay conservative unless we have strong grade A/B
+    if (upstream === "TRADE" && (grade === "A" || grade === "B")) {
+      return { decision: "TRADE", reasons: [] };
+    }
+    // Downgrade unknown upstream trade to WATCH to stay safe in Phase-0 monitoring
+    return { decision: "WATCH", category: "soft", reasons: ensureReasons(normalizedReasons, "Stream decision TRADE normalized to WATCH") };
+  }
 
   if (grade === "A" || grade === "B") {
     return { decision: "TRADE", reasons: [] };
@@ -59,8 +120,6 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
   }
 
   // Index (e.g. SPX) fallback alignment: avoid hard-blocking when alignment is missing
-  const indexAssetIds = new Set(["spx", "sp500", "spx500", "dax", "ndx", "nasdaq"]);
-  const isIndexAsset = assetClass === "index" || playbookId === "spx-swing-v0.1" || indexAssetIds.has(assetId);
   if (isIndexAsset && watchEnabled && !hard && alignmentMissing) {
     const directionRaw = (setup as { direction?: string | null }).direction ?? "";
     const direction =

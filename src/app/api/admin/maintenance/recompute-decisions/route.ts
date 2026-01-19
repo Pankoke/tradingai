@@ -243,7 +243,15 @@ async function buildPostCheck(params: PostCheckParams) {
       if (!assetMatch || tf !== params.timeframe) continue;
       setupsInWindow += 1;
       const decisionResult = deriveSetupDecision(setup);
-      if ((setup.noTradeReason ?? "").toLowerCase().includes("alignment")) {
+      const reasonTexts = [
+        setup.noTradeReason ?? "",
+        ...(Array.isArray((setup as { decisionReasons?: unknown }).decisionReasons)
+          ? ((setup as { decisionReasons?: unknown }).decisionReasons as string[])
+          : []),
+      ]
+        .filter(Boolean)
+        .map((r) => r.toLowerCase());
+      if (reasonTexts.some((r) => r.includes("alignment"))) {
         stillNoDefaultAlignment += 1;
       }
       if (decisionResult.decision === "BLOCKED") {
