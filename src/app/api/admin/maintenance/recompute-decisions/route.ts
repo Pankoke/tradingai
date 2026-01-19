@@ -251,7 +251,7 @@ async function buildPostCheck(params: PostCheckParams) {
       ]
         .filter(Boolean)
         .map((r) => r.toLowerCase());
-      if (reasonTexts.some((r) => r.includes("alignment"))) {
+      if (reasonTexts.some((r) => r.includes("no default alignment"))) {
         stillNoDefaultAlignment += 1;
       }
       if (decisionResult.decision === "BLOCKED") {

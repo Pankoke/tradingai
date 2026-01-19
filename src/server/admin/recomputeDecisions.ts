@@ -20,6 +20,7 @@ type SetupWithDecision = Setup & {
   setupDecision?: string | null;
   decisionCategory?: string | null;
   decisionReasons?: string[] | null;
+  watchSegment?: string | null;
   decisionUpdatedAt?: string | null;
 };
 
@@ -51,6 +52,7 @@ export function recomputeDecisionsInSetups(
       setupDecision: decisionResult.decision,
       decisionCategory: decisionResult.category ?? null,
       decisionReasons: decisionResult.reasons,
+      watchSegment: decisionResult.watchSegment ?? null,
       decisionUpdatedAt: now.toISOString(),
     };
     const before = JSON.stringify({

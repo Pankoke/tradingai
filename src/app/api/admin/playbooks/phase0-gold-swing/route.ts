@@ -10,6 +10,7 @@ import { computeSignalQuality } from "@/src/lib/engine/signalQuality";
 import { deriveSetupDecision } from "@/src/lib/decision/setupDecision";
 import { deriveRegimeTag } from "@/src/lib/engine/metrics/regime";
 import type { SetupDecision } from "@/src/lib/config/watchDecision";
+import { deriveSpxWatchSegment } from "@/src/lib/decision/spxWatchSegment";
 
 type GradeKey = "A" | "B" | "NO_TRADE";
 type WatchSegmentKey =
@@ -1280,6 +1281,7 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
   const noTradeReasons: Record<string, number> = {};
   const watchReasons: Record<string, number> = {};
   const labelsUsedCounts: Record<string, number> = {};
+  const spxWatchSegments: Record<string, number> = {};
 
   for (const row of rows) {
     const setups = Array.isArray((row as { setups?: unknown }).setups) ? ((row as { setups: Setup[] }).setups ?? []) : [];
@@ -1317,6 +1319,13 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
         }
       }
 
+      if (target === "spx" && decisionResult.decision === "WATCH") {
+        const segment = (setup as { watchSegment?: string | null }).watchSegment ?? deriveSpxWatchSegment(setup);
+        if (segment) {
+          spxWatchSegments[segment] = (spxWatchSegments[segment] ?? 0) + 1;
+        }
+      }
+
       if (target === "btc") {
         const regime = deriveRegimeTag(setup);
         regimeDistribution[regime] = (regimeDistribution[regime] ?? 0) + 1;
@@ -1349,7 +1358,14 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
     },
     decisionDistribution,
     gradeDistribution: gradeTotal > 0 ? gradeCounts : undefined,
-    watchSegmentsDistribution: Object.keys(watchSegments).length ? watchSegments : undefined,
+    watchSegmentsDistribution:
+      target === "gold"
+        ? Object.keys(watchSegments).length
+          ? watchSegments
+          : undefined
+        : target === "spx" && Object.keys(spxWatchSegments).length
+          ? spxWatchSegments
+          : undefined,
     upgradeCandidates: Object.keys(upgradeReasons).length
       ? { total: Object.values(upgradeReasons).reduce((s, v) => s + v, 0), byReason: upgradeReasons }
       : { total: 0 },

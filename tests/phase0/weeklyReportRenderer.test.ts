@@ -7,6 +7,7 @@ function makeSummary(assetId: string): AssetPhase0Summary {
     meta: { assetId, timeframe: "1D", sampleWindowDays: 30, labelsUsedCounts: { morning: 2, eod: 3 } },
     decisionDistribution: { TRADE_A: 1, TRADE_B: 1, WATCH: 2, BLOCKED: 0 },
     gradeDistribution: { A: 1, B: 0, NO_TRADE: 2 },
+    watchSegmentsDistribution: assetId === "spx" ? { WATCH_VOLATILITY_HIGH: 2, WATCH_FAILS_BIAS_SOFT: 1 } : undefined,
     diagnostics:
       assetId === "spx"
         ? {
@@ -41,5 +42,7 @@ describe("renderAssetSummarySection", () => {
     expect(rendered).toContain("NO_TRADE Reasons");
     expect(rendered).toContain("Labels Used");
     expect(rendered).toContain("| eod | 3 |");
+    expect(rendered).toContain("WATCH Segments");
+    expect(rendered).toContain("WATCH_VOLATILITY_HIGH");
   });
 });
