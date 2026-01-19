@@ -74,7 +74,7 @@ type Phase0Payload = {
 };
 
 export type AssetPhase0Summary = {
-  meta: { assetId: string; timeframe: string; sampleWindowDays: number };
+  meta: { assetId: string; timeframe: string; sampleWindowDays: number; labelsUsedCounts?: Record<string, number> };
   decisionDistribution: Record<string, number>;
   gradeDistribution?: Record<string, number>;
   watchSegmentsDistribution?: Record<string, number>;
@@ -390,6 +390,12 @@ export function renderAssetSummarySection(summary: AssetPhase0Summary, label?: s
   lines.push(`## ${name} (${summary.meta.timeframe ?? "n/a"})`);
   lines.push(`- Meta: asset=${summary.meta.assetId} tf=${summary.meta.timeframe} days=${summary.meta.sampleWindowDays}`);
   lines.push("");
+  if (summary.meta.labelsUsedCounts && Object.keys(summary.meta.labelsUsedCounts).length > 0) {
+    const sortedLabels = Object.entries(summary.meta.labelsUsedCounts).sort((a, b) => b[1] - a[1]);
+    const labelTable = ["| Label | Count |", "| --- | ---: |", ...sortedLabels.map(([k, v]) => `| ${k} | ${v} |`), ""];
+    lines.push("### Labels Used");
+    lines.push(labelTable.join("\n"));
+  }
   lines.push(renderCountTable("Decision Distribution", summary.decisionDistribution));
   if (summary.gradeDistribution) lines.push(renderCountTable("Grade Distribution", summary.gradeDistribution));
   if (summary.watchSegmentsDistribution) lines.push(renderCountTable("WATCH Segments", summary.watchSegmentsDistribution));
@@ -453,7 +459,7 @@ const summariesFromPayload = gold.summaries ?? btc.summaries ?? undefined;
       ? Object.fromEntries(Object.entries(data.debugMeta.watchSegments).map(([k, v]) => [k, v.count]))
       : undefined;
     return {
-      meta: { assetId, timeframe: (data.meta?.timeframe ?? "1D").toString(), sampleWindowDays },
+      meta: { assetId, timeframe: (data.meta?.timeframe ?? "1D").toString(), sampleWindowDays, labelsUsedCounts: undefined },
       decisionDistribution: dist
         ? Object.fromEntries(
             Object.entries(dist)

@@ -4,7 +4,7 @@ import { renderAssetSummarySection } from "@/scripts/build-weekly-health-report"
 
 function makeSummary(assetId: string): AssetPhase0Summary {
   return {
-    meta: { assetId, timeframe: "1D", sampleWindowDays: 30 },
+    meta: { assetId, timeframe: "1D", sampleWindowDays: 30, labelsUsedCounts: { morning: 2, eod: 3 } },
     decisionDistribution: { TRADE_A: 1, TRADE_B: 1, WATCH: 2, BLOCKED: 0 },
     gradeDistribution: { A: 1, B: 0, NO_TRADE: 2 },
     diagnostics:
@@ -39,5 +39,7 @@ describe("renderAssetSummarySection", () => {
     expect(rendered).toContain("| low | 2 |");
     expect(rendered).toContain("Blocked Reasons");
     expect(rendered).toContain("NO_TRADE Reasons");
+    expect(rendered).toContain("Labels Used");
+    expect(rendered).toContain("| eod | 3 |");
   });
 });

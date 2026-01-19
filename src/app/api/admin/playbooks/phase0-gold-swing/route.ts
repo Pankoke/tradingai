@@ -41,7 +41,7 @@ type AssetDiagnostics = {
 };
 
 type AssetPhase0Summary = {
-  meta: { assetId: string; timeframe: string; sampleWindowDays: number };
+  meta: { assetId: string; timeframe: string; sampleWindowDays: number; labelsUsedCounts?: Record<string, number> };
   decisionDistribution: Record<SetupDecision, number>;
   gradeDistribution?: Record<GradeKey, number>;
   watchSegmentsDistribution?: Record<string, number>;
@@ -123,7 +123,8 @@ export async function GET(request: NextRequest): Promise<Response> {
       .select({
         setups: perceptionSnapshots.setups,
         snapshotTime: perceptionSnapshots.snapshotTime,
-        createdAt: perceptionSnapshots.snapshotTime,
+        createdAt: perceptionSnapshots.createdAt,
+        label: perceptionSnapshots.label,
       })
       .from(perceptionSnapshots)
       .where(gte(perceptionSnapshots.snapshotTime, from));
@@ -1256,7 +1257,7 @@ function mapAlignmentReason(reason: string): string {
   return reason;
 }
 
-type SummaryInputRow = { setups: unknown; snapshotTime?: Date | null; createdAt?: Date | null };
+type SummaryInputRow = { setups: unknown; snapshotTime?: Date | null; createdAt?: Date | null; label?: string | null };
 type BuildSummaryParams = {
   rows: SummaryInputRow[];
   assetId: string;
@@ -1278,6 +1279,7 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
   const blockedReasons: Record<string, number> = {};
   const noTradeReasons: Record<string, number> = {};
   const watchReasons: Record<string, number> = {};
+  const labelsUsedCounts: Record<string, number> = {};
 
   for (const row of rows) {
     const setups = Array.isArray((row as { setups?: unknown }).setups) ? ((row as { setups: Setup[] }).setups ?? []) : [];
@@ -1288,6 +1290,8 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
       const setupPlaybookId = (setup.setupPlaybookId ?? "").toLowerCase();
       const matchesPlaybook = playbookId ? setupPlaybookId === playbookId.toLowerCase() : true;
       if (asset !== targetUpper || profile !== "SWING" || timeframe !== "1D" || !matchesPlaybook) continue;
+      const labelKey = ((row as { label?: string | null }).label ?? "(null)").toString();
+      labelsUsedCounts[labelKey] = (labelsUsedCounts[labelKey] ?? 0) + 1;
 
       const grade = normalizeGrade((setup as { setupGrade?: string | null }).setupGrade ?? null);
       gradeCounts[grade] += 1;
@@ -1337,7 +1341,12 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
 
   const gradeTotal = gradeCounts.A + gradeCounts.B + gradeCounts.NO_TRADE;
   const summary: AssetPhase0Summary = {
-    meta: { assetId: target, timeframe: "1D", sampleWindowDays },
+    meta: {
+      assetId: target,
+      timeframe: "1D",
+      sampleWindowDays,
+      labelsUsedCounts: Object.keys(labelsUsedCounts).length ? labelsUsedCounts : undefined,
+    },
     decisionDistribution,
     gradeDistribution: gradeTotal > 0 ? gradeCounts : undefined,
     watchSegmentsDistribution: Object.keys(watchSegments).length ? watchSegments : undefined,
