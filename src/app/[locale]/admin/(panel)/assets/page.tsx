@@ -3,6 +3,10 @@ import { deleteAssetAction } from "@/src/app/[locale]/admin/(panel)/assets/actio
 import { getAllAssets } from "@/src/server/repositories/assetRepository";
 import type { Locale } from "@/i18n";
 
+// Avoid static prerender failures against live DB during build
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 type Props = {
   params: Promise<{ locale: string }>;
 };

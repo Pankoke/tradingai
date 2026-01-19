@@ -3,6 +3,9 @@ import { deleteAssetAction, updateAssetAction } from "@/src/app/[locale]/admin/(
 import { getAssetById } from "@/src/server/repositories/assetRepository";
 import type { Locale } from "@/i18n";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 type Props = {
   params: { locale: string; id: string };
 };

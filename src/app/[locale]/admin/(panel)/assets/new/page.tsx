@@ -1,6 +1,9 @@
 import { createAssetAction } from "@/src/app/[locale]/admin/(panel)/assets/actions";
 import type { Locale } from "@/i18n";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 type Props = {
   params: { locale: string };
 };
