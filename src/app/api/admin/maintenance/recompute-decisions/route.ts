@@ -78,8 +78,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const decisionDistribution: Record<string, number> = {};
   const updatedIds: string[] = [];
 
+  const labelCounts: Record<string, number> = {};
   for (const snapshot of snapshots) {
-    const isMatchingLabel = !label || (snapshot.label ?? "").toLowerCase() === label.toLowerCase();
+    const key = (snapshot.label ?? "").toLowerCase();
+    if (key) {
+      labelCounts[key] = (labelCounts[key] ?? 0) + 1;
+    }
+    const isMatchingLabel =
+      !label || (snapshot.label ?? "").toLowerCase().includes(label.toLowerCase());
     if (!isMatchingLabel) continue;
     const setups = (snapshot.setups ?? []) as Array<Setup & Record<string, unknown>>;
     if (!setups.length) continue;
@@ -113,13 +119,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         snapshotsConsidered,
         snapshotsUpdated,
         setupsConsidered,
-        setupsUpdated,
-        decisionDistribution,
-        updatedIds: process.env.NODE_ENV === "production" ? undefined : updatedIds.slice(0, 5),
-        postCheck: await buildPostCheck({ assetId, timeframe, from, label }),
-      },
+      setupsUpdated,
+      decisionDistribution,
+      updatedIds: process.env.NODE_ENV === "production" ? undefined : updatedIds.slice(0, 5),
+      postCheck: await buildPostCheck({ assetId, timeframe, from, label }),
+      labelsInWindowTop: Object.fromEntries(
+        Object.entries(labelCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10),
+      ),
     },
-    { status: 200, headers },
+  },
+  { status: 200, headers },
   );
 }
 
