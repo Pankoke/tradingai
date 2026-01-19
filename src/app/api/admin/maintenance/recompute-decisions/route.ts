@@ -6,21 +6,42 @@ import { perceptionSnapshots } from "@/src/server/db/schema/perceptionSnapshots"
 import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 import { recomputeDecisionsInSetups } from "@/src/server/admin/recomputeDecisions";
 import type { Setup } from "@/src/lib/engine/types";
+import { deriveSetupDecision } from "@/src/lib/decision/setupDecision";
 
-const CRON_SECRET = process.env.CRON_SECRET;
-const ADMIN_TOKEN = process.env.ADMIN_API_TOKEN;
+export const runtime = "nodejs";
 
-function isAuthorized(request: NextRequest): boolean {
+function isAuthorized(request: NextRequest): { ok: boolean; debug?: Record<string, unknown> } {
+  const cronSecret = process.env.CRON_SECRET;
+  const adminToken = process.env.ADMIN_API_TOKEN;
   const header = request.headers.get("authorization") ?? "";
   const bearer = header.startsWith("Bearer ") ? header.slice("Bearer ".length).trim() : null;
-  if (ADMIN_TOKEN && bearer === ADMIN_TOKEN) return true;
-  if (!CRON_SECRET) return false;
-  return bearer === CRON_SECRET;
+  const usedAdmin = !!adminToken && bearer === adminToken;
+  const usedCron = !!cronSecret && bearer === cronSecret;
+  if (usedAdmin || usedCron) return { ok: true };
+
+  if (process.env.NODE_ENV !== "production") {
+    return {
+      ok: false,
+      debug: {
+        hasCronSecret: Boolean(cronSecret),
+        hasAdminToken: Boolean(adminToken),
+        cronSecretLen: cronSecret?.length ?? 0,
+        adminTokenLen: adminToken?.length ?? 0,
+        authHeaderPresent: header.length > 0,
+        bearerPresent: Boolean(bearer),
+        bearerLen: bearer?.length ?? 0,
+      },
+    };
+  }
+
+  return { ok: false };
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  if (!isAuthorized(request)) {
-    return respondFail("UNAUTHORIZED", "Unauthorized", 401);
+  const auth = isAuthorized(request);
+  if (!auth.ok) {
+    const details = process.env.NODE_ENV !== "production" ? auth.debug : undefined;
+    return respondFail("UNAUTHORIZED", "Unauthorized", 401, details);
   }
 
   const url = new URL(request.url);
