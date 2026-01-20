@@ -23,4 +23,31 @@ describe("BTC reason hygiene", () => {
     const reasons = summary.noTradeReasonsDistribution ?? {};
     expect(Object.keys(reasons)).not.toContain("crypto hyphen USD");
   });
+
+  it("does not emit index fallback or 'No default alignment' for crypto alignment gaps", () => {
+    const setup: Setup = {
+      assetId: "btc",
+      assetClass: "crypto",
+      profile: "SWING",
+      timeframeUsed: "1D",
+      setupPlaybookId: "crypto-swing-v0.1",
+      setupDecision: "BLOCKED",
+      decisionReasons: ["No default alignment"],
+      direction: "Short",
+      setupGrade: "NO_TRADE",
+    } as unknown as Setup;
+
+    const summary = buildPhase0SummaryForAsset({
+      rows: [{ setups: [setup], snapshotTime: new Date(), createdAt: new Date(), label: "test" }],
+      assetId: "btc",
+      sampleWindowDays: 30,
+      playbookId: null,
+    });
+
+    const reasons = summary.watchReasonsDistribution ?? summary.noTradeReasonsDistribution ?? {};
+    const reasonKeys = Object.keys(reasons);
+    expect(reasonKeys.some((r) => r.toLowerCase().includes("index fallback"))).toBe(false);
+    expect(reasonKeys).not.toContain("No default alignment");
+    expect(reasonKeys.some((r) => r === "Alignment unavailable (crypto)")).toBe(true);
+  });
 });

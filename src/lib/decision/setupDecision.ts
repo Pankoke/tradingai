@@ -28,7 +28,9 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
       "")?.toLowerCase();
   const assetId = ((setup as { assetId?: string | null }).assetId ?? "").toLowerCase();
   const indexAssetIds = new Set(["spx", "sp500", "spx500", "dax", "ndx", "nasdaq", "dow", "djia"]);
+  const cryptoAssetIds = new Set(["btc", "eth"]);
   const isIndexAsset = assetClass === "index" || playbookId === "spx-swing-v0.1" || indexAssetIds.has(assetId);
+  const isCryptoAsset = assetClass === "crypto" || playbookId === "crypto-swing-v0.1" || cryptoAssetIds.has(assetId);
 
   // Streamed setups (already carry a decision). Normalize to our decision layer and avoid empty reasons.
   const upstreamDecision = (setup as { setupDecision?: string | null }).setupDecision ?? null;
@@ -48,6 +50,7 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
     const fallbackDir = direction ?? (trendFallback || biasFallback ? "LONG" : "SHORT");
     return `Alignment derived (index fallback ${fallbackDir})`;
   };
+  const deriveCryptoAlignmentReason = (): string => "Alignment unavailable (crypto)";
 
   const prependSegment = (reasons: string[], segment?: string | null): string[] => {
     const list = [...reasons];
@@ -79,7 +82,7 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
       const alignmentMention =
         normalizedReasons.some((r) => r.toLowerCase().includes("alignment")) ||
         (noTradeReason ?? "").toLowerCase().includes("alignment");
-      if (isIndexAsset && alignmentMention) {
+      if (isIndexAsset && (alignmentMention || direction)) {
         const alignmentReason = deriveIndexAlignmentReason();
         const mergedReasons = ensureReasons(
           prependSegment(replaceAlignmentReasons(normalizedReasons, alignmentReason), maybeSegment),
@@ -87,12 +90,14 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
         );
         return { decision: "WATCH", category: "soft", reasons: mergedReasons, watchSegment: maybeSegment };
       }
-      if (isIndexAsset && direction && !alignmentMention) {
-        const alignmentReason = deriveIndexAlignmentReason();
-        const mergedReasons = ensureReasons(
-          prependSegment(replaceAlignmentReasons(normalizedReasons, alignmentReason), maybeSegment),
-          alignmentReason,
-        );
+      if (isCryptoAsset && alignmentMention) {
+        const alignmentReason = deriveCryptoAlignmentReason();
+        const mergedReasons = ensureReasons(replaceAlignmentReasons(normalizedReasons, alignmentReason), alignmentReason);
+        return { decision: "WATCH", category: "soft", reasons: mergedReasons, watchSegment: maybeSegment };
+      }
+      if (isCryptoAsset && direction && !alignmentMention) {
+        const alignmentReason = deriveCryptoAlignmentReason();
+        const mergedReasons = ensureReasons(replaceAlignmentReasons(normalizedReasons, alignmentReason), alignmentReason);
         return { decision: "WATCH", category: "soft", reasons: mergedReasons, watchSegment: maybeSegment };
       }
       // No reasons at all -> WATCH soft
@@ -121,11 +126,20 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
           watchSegment: maybeSegment,
         };
       }
+      if (isCryptoAsset && alignmentMention) {
+        const alignmentReason = deriveCryptoAlignmentReason();
+        return {
+          decision: "WATCH",
+          category: "soft",
+          reasons: ensureReasons(replaceAlignmentReasons(normalizedReasons, alignmentReason), alignmentReason),
+          watchSegment: maybeSegment,
+        };
+      }
       const withSegment = prependSegment(normalizedReasons, maybeSegment);
       return {
         decision: "WATCH",
         category: "soft",
-        reasons: ensureReasons(replaceAlignmentReasons(withSegment, deriveIndexAlignmentReason()), "Watch (unspecified)"),
+        reasons: ensureReasons(withSegment, "Watch (unspecified)"),
         watchSegment: maybeSegment,
       };
     }
@@ -154,18 +168,8 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
   // Here we derive a fallback direction so the decision becomes WATCH (soft) rather than BLOCKED.
   const isCryptoSwing = playbookId === "crypto-swing-v0.1";
   const alignmentMissing = (noTradeReason ?? "").toLowerCase().includes("alignment");
-  if (isCryptoSwing && watchEnabled && !hard && (alignmentMissing || !noTradeReason)) {
-    const directionRaw = (setup as { direction?: string | null }).direction ?? "";
-    const direction =
-      directionRaw.toLowerCase().includes("short") || directionRaw.toLowerCase().includes("sell")
-        ? "SHORT"
-        : directionRaw.toLowerCase().includes("long") || directionRaw.toLowerCase().includes("buy")
-          ? "LONG"
-          : null;
-    const trendFallback = trendScore !== null && trendScore >= 50;
-    const biasFallback = biasScore !== null && biasScore >= 70;
-    const fallbackDir = direction ?? (trendFallback || biasFallback ? "LONG" : "SHORT");
-    const alignmentReason = `Alignment derived (fallback ${fallbackDir})`;
+  if ((isCryptoSwing || isCryptoAsset) && watchEnabled && !hard && (alignmentMissing || !noTradeReason)) {
+    const alignmentReason = deriveCryptoAlignmentReason();
     const mergedReasons = buildReasons(alignmentReason, gradeRationale, gradeDebugReason);
     return { decision: "WATCH", category: "soft", reasons: mergedReasons };
   }
