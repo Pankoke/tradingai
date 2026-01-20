@@ -494,6 +494,13 @@ const summariesFromPayload = gold.summaries ?? btc.summaries ?? undefined;
   ensure("spx", {} as Phase0Payload);
   ensure("dax", {} as Phase0Payload);
   ensure("ndx", {} as Phase0Payload);
+  ensure("dow", {} as Phase0Payload);
+
+  if (process.env.NODE_ENV !== "production") {
+    const keys = Object.keys(summariesFromPayload ?? {});
+    // eslint-disable-next-line no-console
+    console.log(`Phase0 summaries received: ${keys.join(",")}`);
+  }
 
   const now = new Date();
   const y = now.getUTCFullYear();
