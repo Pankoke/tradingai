@@ -4,6 +4,7 @@ export const watchEnabledPlaybookIds = new Set<string>([
   "spx-swing-v0.1",
   "dax-swing-v0.1",
   "ndx-swing-v0.1",
+  "dow-swing-v0.1",
 ]);
 
 export const hardReasonKeywords = ["event", "knockout", "conflict", "stale", "missing", "invalid", "rrr"];
@@ -15,6 +16,7 @@ export const tradeRequirementsByPlaybook: Record<string, string[]> = {
   "spx-swing-v0.1": ["Bias >= 70", "Trend >= 60", "Signalqualitaet >= 55", "Confidence >= 55"],
   "dax-swing-v0.1": ["Bias >= 70", "Trend >= 60", "Signalqualitaet >= 55", "Confidence >= 55"],
   "ndx-swing-v0.1": ["Bias >= 70", "Trend >= 60", "Signalqualitaet >= 55", "Confidence >= 55"],
+  "dow-swing-v0.1": ["Bias >= 70", "Trend >= 60", "Signalqualitaet >= 55", "Confidence >= 55"],
 };
 
 export type SetupDecision = "TRADE" | "WATCH" | "BLOCKED";

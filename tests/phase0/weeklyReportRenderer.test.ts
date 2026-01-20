@@ -8,7 +8,7 @@ function makeSummary(assetId: string): AssetPhase0Summary {
     decisionDistribution: { TRADE_A: 1, TRADE_B: 1, WATCH: 2, BLOCKED: 0 },
     gradeDistribution: { A: 1, B: 0, NO_TRADE: 2 },
     watchSegmentsDistribution:
-      assetId === "spx" || assetId === "dax" || assetId === "ndx"
+      assetId === "spx" || assetId === "dax" || assetId === "ndx" || assetId === "dow"
         ? { WATCH_VOLATILITY_HIGH: 2, WATCH_FAILS_BIAS_SOFT: 1 }
         : undefined,
     diagnostics:
@@ -33,14 +33,16 @@ describe("renderAssetSummarySection", () => {
   const spx = makeSummary("spx");
   const dax = makeSummary("dax");
   const ndx = makeSummary("ndx");
+  const dow = makeSummary("dow");
 
-  const rendered = [gold, btc, spx, dax, ndx].map((s) => renderAssetSummarySection(s)).join("\n");
+  const rendered = [gold, btc, spx, dax, ndx, dow].map((s) => renderAssetSummarySection(s)).join("\n");
 
   expect(rendered).toContain("## GOLD Swing");
   expect(rendered).toContain("## BTC Swing");
   expect(rendered).toContain("## SPX Swing");
   expect(rendered).toContain("## DAX Swing");
   expect(rendered).toContain("## NDX Swing");
+  expect(rendered).toContain("## DOW Swing");
     expect(rendered).toContain("| TRADE_A | 1 |");
     expect(rendered).toContain("| TRADE_B | 1 |");
     expect(rendered).toContain("Volatility Buckets");

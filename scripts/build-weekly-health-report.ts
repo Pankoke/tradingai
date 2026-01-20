@@ -520,7 +520,7 @@ const summariesFromPayload = gold.summaries ?? btc.summaries ?? undefined;
   }
   reportLines.push("");
 
-  const assetOrder = ["gold", "btc", "spx", "dax", "ndx"];
+  const assetOrder = ["gold", "btc", "spx", "dax", "ndx", "dow"];
   assetOrder
     .filter((a) => summaries[a])
     .forEach((assetId) => {

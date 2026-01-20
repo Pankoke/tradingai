@@ -66,6 +66,7 @@ const INDEX_PLAYBOOK_ID = "index-swing-v0.1";
 const SPX_PLAYBOOK_ID = "spx-swing-v0.1";
 const DAX_PLAYBOOK_ID = "dax-swing-v0.1";
 const NDX_PLAYBOOK_ID = "ndx-swing-v0.1";
+const DOW_PLAYBOOK_ID = "dow-swing-v0.1";
 const CRYPTO_PLAYBOOK_ID = "crypto-swing-v0.1";
 const FX_PLAYBOOK_ID = "fx-swing-v0.1";
 const GENERIC_PLAYBOOK_ID = "generic-swing-v0.1";
@@ -133,6 +134,16 @@ function matchNdxAsset(asset: PlaybookContext["asset"]): MatchResult {
   return { matched: false, reason: "no ndx match" };
 }
 
+function matchDowAsset(asset: PlaybookContext["asset"]): MatchResult {
+  const id = (asset.id ?? "").toLowerCase();
+  const symbol = (asset.symbol ?? "").toUpperCase();
+  if (id === "dow") return { matched: true, reason: "dow id" };
+  if (symbol.includes("DJI") || symbol.includes("DOW")) {
+    return { matched: true, reason: "dow symbol" };
+  }
+  return { matched: false, reason: "no dow match" };
+}
+
 function matchFxAsset(asset: PlaybookContext["asset"]): MatchResult {
   const symbol = (asset.symbol ?? "").toUpperCase();
   if (symbol.endsWith("=X")) return { matched: true, reason: "fx yahoo =X" };
@@ -163,6 +174,9 @@ function resolvePlaybookIdForAsset(asset: PlaybookContext["asset"], profile?: st
 
   const ndx = matchNdxAsset(asset);
   if (ndx.matched) return { playbook: ndxSwingPlaybook, reason: ndx.reason };
+
+  const dow = matchDowAsset(asset);
+  if (dow.matched) return { playbook: dowSwingPlaybook, reason: dow.reason };
 
   const gold = matchGoldAsset(asset);
   if (gold.matched) return { playbook: goldSwingPlaybook, reason: gold.reason };
@@ -493,6 +507,13 @@ const ndxSwingPlaybook: Playbook = {
   evaluateSetup: evaluateSpxSwing,
 };
 
+const dowSwingPlaybook: Playbook = {
+  id: DOW_PLAYBOOK_ID,
+  label: "DOW Swing",
+  shortLabel: "DOW",
+  evaluateSetup: evaluateSpxSwing,
+};
+
 function evaluateCryptoSwing(context: PlaybookContext): PlaybookEvaluation {
   const { rings, orderflow } = context;
   const biasOk = rings.biasScore >= 70;
@@ -571,6 +592,7 @@ const PLAYBOOK_LABELS: Record<string, { label: string; short: string }> = {
   [SPX_PLAYBOOK_ID]: { label: "SPX Swing", short: "SPX Swing" },
   [DAX_PLAYBOOK_ID]: { label: "DAX Swing", short: "DAX Swing" },
   [NDX_PLAYBOOK_ID]: { label: "NDX Swing", short: "NDX Swing" },
+  [DOW_PLAYBOOK_ID]: { label: "DOW Swing", short: "DOW Swing" },
   [CRYPTO_PLAYBOOK_ID]: { label: "Crypto Swing", short: "Crypto Swing" },
   [FX_PLAYBOOK_ID]: { label: "FX Swing", short: "FX Swing" },
   [GENERIC_PLAYBOOK_ID]: { label: "Generic Swing", short: "Generic Swing" },

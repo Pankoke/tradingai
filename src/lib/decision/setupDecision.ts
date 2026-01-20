@@ -27,7 +27,7 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
       (setup as { asset?: { assetClass?: string | null } | null }).asset?.assetClass ??
       "")?.toLowerCase();
   const assetId = ((setup as { assetId?: string | null }).assetId ?? "").toLowerCase();
-  const indexAssetIds = new Set(["spx", "sp500", "spx500", "dax", "ndx", "nasdaq"]);
+  const indexAssetIds = new Set(["spx", "sp500", "spx500", "dax", "ndx", "nasdaq", "dow", "djia"]);
   const isIndexAsset = assetClass === "index" || playbookId === "spx-swing-v0.1" || indexAssetIds.has(assetId);
 
   // Streamed setups (already carry a decision). Normalize to our decision layer and avoid empty reasons.
