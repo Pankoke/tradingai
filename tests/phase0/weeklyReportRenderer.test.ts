@@ -67,5 +67,6 @@ describe("renderAssetSummarySection", () => {
   expect(rendered).toContain("WATCH_FAILS_BIAS_SOFT");
   expect(rendered).toContain("DOW Swing");
   expect(rendered).toContain("WATCH_FAILS_BIAS");
+  expect(rendered.toLowerCase()).not.toContain("no default alignment");
   });
 });

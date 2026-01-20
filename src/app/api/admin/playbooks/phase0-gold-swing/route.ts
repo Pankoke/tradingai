@@ -1253,8 +1253,15 @@ function normalizeText(value: unknown): string | null {
   return null;
 }
 
-function mapAlignmentReason(reason: string): string {
+function isFxSetup(setup: Setup): boolean {
+  const assetId = ((setup as { assetId?: string | null }).assetId ?? "").toLowerCase();
+  const assetClass = ((setup as { assetClass?: string | null }).assetClass ?? "").toLowerCase();
+  return assetClass === "fx" || ["eurusd", "gbpusd", "usdjpy", "eurjpy", "audusd"].includes(assetId);
+}
+
+function mapAlignmentReason(reason: string, setup?: Setup): string {
   const lower = reason.toLowerCase();
+  if (setup && isFxSetup(setup) && lower.includes("alignment")) return "Alignment unavailable (fx)";
   if (lower.includes("no default alignment")) return "Alignment derived (fallback)";
   if (lower.includes("alignment derived")) return "Alignment derived (fallback)";
   if (lower.includes("alignment unavailable (fx)")) return "Alignment unavailable (fx)";
@@ -1279,7 +1286,9 @@ function pickCanonicalReason(
   decisionResult: { reasons?: string[] },
   setup: Setup,
 ): string | null {
-  const reasons = (decisionResult.reasons ?? []).filter((r) => r && r.trim().length > 0 && !isUnhelpfulReason(r));
+  const reasons = (decisionResult.reasons ?? [])
+    .map((r) => mapAlignmentReason(r, setup))
+    .filter((r) => r && r.trim().length > 0 && !isUnhelpfulReason(r));
   const nonAlignment = reasons.find((r) => !isAlignmentDerivedReason(r));
   const fallbackAlignment = reasons.find((r) => isAlignmentDerivedReason(r));
   const noTrade = normalizeText((setup as { noTradeReason?: unknown }).noTradeReason);

@@ -27,7 +27,8 @@ describe("USDJPY reason hygiene", () => {
     const keys = Object.keys(reasons);
     expect(keys.some((r) => r.toLowerCase().includes("index fallback"))).toBe(false);
     expect(keys.some((r) => r.toLowerCase().includes("crypto"))).toBe(false);
-    expect(keys).not.toContain("No default alignment");
+    expect(keys.some((r) => r.toLowerCase().includes("no default alignment"))).toBe(false);
+    expect(keys.some((r) => r.toLowerCase().includes("alignment unavailable (fx)")) || keys.some((r) => r.toLowerCase().includes("watch"))).toBe(true);
     expect(keys.length).toBeGreaterThan(0);
   });
 });
