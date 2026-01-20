@@ -2,6 +2,7 @@ import { watchEnabledPlaybookIds, hardReasonKeywords, softReasonKeywords, type S
 import type { Setup } from "@/src/lib/engine/types";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import { deriveSpxWatchSegment } from "@/src/lib/decision/spxWatchSegment";
+import { deriveFxWatchSegment } from "@/src/lib/decision/fxWatchSegment";
 
 type SetupLike = Setup | HomepageSetup | (Setup & HomepageSetup) | (HomepageSetup & Setup);
 
@@ -103,15 +104,14 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
         const mergedReasons = ensureReasons(replaceAlignmentReasons(normalizedReasons, alignmentReason), alignmentReason);
         return { decision: "WATCH", category: "soft", reasons: mergedReasons, watchSegment: maybeSegment };
       }
-      if (isFxAsset && alignmentMention) {
+      if (isFxAsset && (alignmentMention || direction)) {
         const alignmentReason = deriveFxAlignmentReason();
-        const mergedReasons = ensureReasons(replaceAlignmentReasons(normalizedReasons, alignmentReason), alignmentReason);
-        return { decision: "WATCH", category: "soft", reasons: mergedReasons, watchSegment: maybeSegment };
-      }
-      if (isFxAsset && direction && !alignmentMention) {
-        const alignmentReason = deriveFxAlignmentReason();
-        const mergedReasons = ensureReasons(replaceAlignmentReasons(normalizedReasons, alignmentReason), alignmentReason);
-        return { decision: "WATCH", category: "soft", reasons: mergedReasons, watchSegment: maybeSegment };
+        const fxSegment = maybeSegment ?? deriveFxWatchSegment(setup);
+        const mergedReasons = ensureReasons(
+          prependSegment(replaceAlignmentReasons(normalizedReasons, alignmentReason), fxSegment),
+          alignmentReason,
+        );
+        return { decision: "WATCH", category: "soft", reasons: mergedReasons, watchSegment: fxSegment };
       }
       // No reasons at all -> WATCH soft
       if (!normalizedReasons.length) {
@@ -150,21 +150,34 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
       }
       if (isFxAsset && alignmentMention) {
         const alignmentReason = deriveFxAlignmentReason();
+        const fxSegment = maybeSegment ?? deriveFxWatchSegment(setup);
         return {
           decision: "WATCH",
           category: "soft",
-          reasons: ensureReasons(replaceAlignmentReasons(normalizedReasons, alignmentReason), alignmentReason),
-          watchSegment: maybeSegment,
+          reasons: ensureReasons(prependSegment(replaceAlignmentReasons(normalizedReasons, alignmentReason), fxSegment), alignmentReason),
+          watchSegment: fxSegment,
         };
       }
-      const withSegment = prependSegment(normalizedReasons, maybeSegment);
+    if (isFxAsset) {
+      const fxSegment = maybeSegment ?? deriveFxWatchSegment(setup);
+      const withSegment = prependSegment(normalizedReasons, fxSegment);
+      const alignmentReason = deriveFxAlignmentReason();
+      const cleaned = replaceAlignmentReasons(withSegment, alignmentReason);
       return {
         decision: "WATCH",
         category: "soft",
-        reasons: ensureReasons(withSegment, "Watch (unspecified)"),
-        watchSegment: maybeSegment,
+        reasons: ensureReasons(cleaned, "Watch (unspecified)"),
+        watchSegment: fxSegment,
       };
     }
+    const withSegment = prependSegment(normalizedReasons, maybeSegment);
+    return {
+      decision: "WATCH",
+      category: "soft",
+      reasons: ensureReasons(withSegment, "Watch (unspecified)"),
+      watchSegment: maybeSegment,
+    };
+  }
 
     // Upstream TRADE or others: stay conservative unless we have strong grade A/B
     if (upstream === "TRADE" && (grade === "A" || grade === "B")) {
@@ -198,8 +211,9 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
 
   if (isFxAsset && watchEnabled && !hard && (alignmentMissing || !noTradeReason)) {
     const alignmentReason = deriveFxAlignmentReason();
-    const mergedReasons = buildReasons(alignmentReason, gradeRationale, gradeDebugReason);
-    return { decision: "WATCH", category: "soft", reasons: mergedReasons };
+    const segment = deriveFxWatchSegment(setup);
+    const mergedReasons = prependSegment(buildReasons(alignmentReason, gradeRationale, gradeDebugReason), segment);
+    return { decision: "WATCH", category: "soft", reasons: mergedReasons, watchSegment: segment };
   }
 
   // Index (e.g. SPX) fallback alignment: avoid hard-blocking when alignment is missing
@@ -221,7 +235,7 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
   }
 
   if (!hard && soft) {
-    const watchSegment = isIndexAsset ? deriveSpxWatchSegment(setup) : undefined;
+    const watchSegment = isIndexAsset ? deriveSpxWatchSegment(setup) : isFxAsset ? deriveFxWatchSegment(setup) : undefined;
     const watchReasons = prependSegment(reasons, watchSegment);
     return { decision: "WATCH", category: "soft", reasons: ensureReasons(watchReasons, "Watch (unspecified)"), watchSegment };
   }

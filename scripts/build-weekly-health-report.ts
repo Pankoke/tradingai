@@ -491,6 +491,7 @@ const summariesFromPayload = gold.summaries ?? btc.summaries ?? undefined;
   };
   ensure("gold", gold);
   ensure("btc", btc);
+  ensure("eurusd", {} as Phase0Payload);
   ensure("spx", {} as Phase0Payload);
   ensure("dax", {} as Phase0Payload);
   ensure("ndx", {} as Phase0Payload);

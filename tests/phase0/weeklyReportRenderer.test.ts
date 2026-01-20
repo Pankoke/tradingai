@@ -10,7 +10,9 @@ function makeSummary(assetId: string): AssetPhase0Summary {
     watchSegmentsDistribution:
       assetId === "spx" || assetId === "dax" || assetId === "ndx" || assetId === "dow"
         ? { WATCH_VOLATILITY_HIGH: 2, WATCH_FAILS_BIAS_SOFT: 1 }
-        : undefined,
+        : assetId === "eurusd"
+          ? { WATCH_FAILS_BIAS: 2, WATCH_FAILS_CONFIDENCE: 1 }
+          : undefined,
     diagnostics:
       assetId === "spx"
         ? {
@@ -58,5 +60,6 @@ describe("renderAssetSummarySection", () => {
   expect(rendered).toContain("DAX Swing");
   expect(rendered).toContain("WATCH_FAILS_BIAS_SOFT");
   expect(rendered).toContain("DOW Swing");
+  expect(rendered).toContain("WATCH_FAILS_BIAS");
   });
 });

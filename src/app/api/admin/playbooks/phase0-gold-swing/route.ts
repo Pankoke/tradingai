@@ -11,6 +11,7 @@ import { deriveSetupDecision } from "@/src/lib/decision/setupDecision";
 import { deriveRegimeTag } from "@/src/lib/engine/metrics/regime";
 import type { SetupDecision } from "@/src/lib/config/watchDecision";
 import { deriveSpxWatchSegment } from "@/src/lib/decision/spxWatchSegment";
+import { deriveFxWatchSegment } from "@/src/lib/decision/fxWatchSegment";
 
 type GradeKey = "A" | "B" | "NO_TRADE";
 type WatchSegmentKey =
@@ -1256,13 +1257,14 @@ function mapAlignmentReason(reason: string): string {
   const lower = reason.toLowerCase();
   if (lower.includes("no default alignment")) return "Alignment derived (fallback)";
   if (lower.includes("alignment derived")) return "Alignment derived (fallback)";
+  if (lower.includes("alignment unavailable (fx)")) return "Alignment unavailable (fx)";
   return reason;
 }
 
 function isAlignmentDerivedReason(reason: string | null | undefined): boolean {
   if (!reason) return false;
   const lower = reason.toLowerCase();
-  return lower.includes("alignment derived");
+  return lower.includes("alignment derived") || lower.includes("alignment unavailable");
 }
 
 function isUnhelpfulReason(reason: string | null | undefined): boolean {
@@ -1314,6 +1316,7 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
   const watchReasons: Record<string, number> = {};
   const labelsUsedCounts: Record<string, number> = {};
   const indexWatchSegments: Record<string, number> = {};
+  const fxWatchSegments: Record<string, number> = {};
 
   for (const row of rows) {
     const setups = Array.isArray((row as { setups?: unknown }).setups) ? ((row as { setups: Setup[] }).setups ?? []) : [];
@@ -1358,6 +1361,13 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
         }
       }
 
+      if (target === "eurusd" && decisionResult.decision === "WATCH") {
+        const segment = (setup as { watchSegment?: string | null }).watchSegment ?? deriveFxWatchSegment(setup);
+        if (segment) {
+          fxWatchSegments[segment] = (fxWatchSegments[segment] ?? 0) + 1;
+        }
+      }
+
       if (target === "btc") {
         const regime = deriveRegimeTag(setup);
         regimeDistribution[regime] = (regimeDistribution[regime] ?? 0) + 1;
@@ -1390,13 +1400,15 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
     },
     decisionDistribution,
     gradeDistribution: gradeTotal > 0 ? gradeCounts : undefined,
-      watchSegmentsDistribution:
-        target === "gold"
-          ? Object.keys(watchSegments).length
-            ? watchSegments
-            : undefined
-          : (target === "spx" || target === "dax" || target === "ndx" || target === "dow") && Object.keys(indexWatchSegments).length
-            ? indexWatchSegments
+    watchSegmentsDistribution:
+      target === "gold"
+        ? Object.keys(watchSegments).length
+          ? watchSegments
+          : undefined
+        : (target === "spx" || target === "dax" || target === "ndx" || target === "dow") && Object.keys(indexWatchSegments).length
+          ? indexWatchSegments
+          : target === "eurusd" && Object.keys(fxWatchSegments).length
+            ? fxWatchSegments
             : undefined,
     upgradeCandidates: Object.keys(upgradeReasons).length
       ? { total: Object.values(upgradeReasons).reduce((s, v) => s + v, 0), byReason: upgradeReasons }
