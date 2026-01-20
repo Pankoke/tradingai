@@ -65,6 +65,7 @@ const GOLD_PLAYBOOK_ID = "gold-swing-v0.2";
 const INDEX_PLAYBOOK_ID = "index-swing-v0.1";
 const SPX_PLAYBOOK_ID = "spx-swing-v0.1";
 const DAX_PLAYBOOK_ID = "dax-swing-v0.1";
+const NDX_PLAYBOOK_ID = "ndx-swing-v0.1";
 const CRYPTO_PLAYBOOK_ID = "crypto-swing-v0.1";
 const FX_PLAYBOOK_ID = "fx-swing-v0.1";
 const GENERIC_PLAYBOOK_ID = "generic-swing-v0.1";
@@ -122,6 +123,16 @@ function matchDaxAsset(asset: PlaybookContext["asset"]): MatchResult {
   return { matched: false, reason: "no dax match" };
 }
 
+function matchNdxAsset(asset: PlaybookContext["asset"]): MatchResult {
+  const id = (asset.id ?? "").toLowerCase();
+  const symbol = (asset.symbol ?? "").toUpperCase();
+  if (id === "ndx") return { matched: true, reason: "ndx id" };
+  if (symbol.includes("NDX") || symbol.includes("NASDAQ 100") || symbol.includes("NAS100")) {
+    return { matched: true, reason: "ndx symbol" };
+  }
+  return { matched: false, reason: "no ndx match" };
+}
+
 function matchFxAsset(asset: PlaybookContext["asset"]): MatchResult {
   const symbol = (asset.symbol ?? "").toUpperCase();
   if (symbol.endsWith("=X")) return { matched: true, reason: "fx yahoo =X" };
@@ -149,6 +160,9 @@ function resolvePlaybookIdForAsset(asset: PlaybookContext["asset"], profile?: st
 
   const dax = matchDaxAsset(asset);
   if (dax.matched) return { playbook: daxSwingPlaybook, reason: dax.reason };
+
+  const ndx = matchNdxAsset(asset);
+  if (ndx.matched) return { playbook: ndxSwingPlaybook, reason: ndx.reason };
 
   const gold = matchGoldAsset(asset);
   if (gold.matched) return { playbook: goldSwingPlaybook, reason: gold.reason };
@@ -472,6 +486,13 @@ const daxSwingPlaybook: Playbook = {
   evaluateSetup: evaluateSpxSwing,
 };
 
+const ndxSwingPlaybook: Playbook = {
+  id: NDX_PLAYBOOK_ID,
+  label: "NDX Swing",
+  shortLabel: "NDX",
+  evaluateSetup: evaluateSpxSwing,
+};
+
 function evaluateCryptoSwing(context: PlaybookContext): PlaybookEvaluation {
   const { rings, orderflow } = context;
   const biasOk = rings.biasScore >= 70;
@@ -549,6 +570,7 @@ const PLAYBOOK_LABELS: Record<string, { label: string; short: string }> = {
   [INDEX_PLAYBOOK_ID]: { label: "Index Swing", short: "Index Swing" },
   [SPX_PLAYBOOK_ID]: { label: "SPX Swing", short: "SPX Swing" },
   [DAX_PLAYBOOK_ID]: { label: "DAX Swing", short: "DAX Swing" },
+  [NDX_PLAYBOOK_ID]: { label: "NDX Swing", short: "NDX Swing" },
   [CRYPTO_PLAYBOOK_ID]: { label: "Crypto Swing", short: "Crypto Swing" },
   [FX_PLAYBOOK_ID]: { label: "FX Swing", short: "FX Swing" },
   [GENERIC_PLAYBOOK_ID]: { label: "Generic Swing", short: "Generic Swing" },

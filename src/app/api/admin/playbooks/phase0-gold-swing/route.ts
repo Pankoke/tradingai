@@ -644,7 +644,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       btcAlignmentReasonMapped += mappedCount;
     }
 
-    const summariesAssetIds = ["gold", "btc", "spx", "dax"];
+    const summariesAssetIds = ["gold", "btc", "spx", "dax", "ndx"];
     const summaries = Object.fromEntries(
       summariesAssetIds.map((asset) => [
         asset,
@@ -1341,7 +1341,7 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
         }
       }
 
-      if ((target === "spx" || target === "dax") && decisionResult.decision === "WATCH") {
+      if ((target === "spx" || target === "dax" || target === "ndx") && decisionResult.decision === "WATCH") {
         const segment = (setup as { watchSegment?: string | null }).watchSegment ?? deriveSpxWatchSegment(setup);
         if (segment) {
           indexWatchSegments[segment] = (indexWatchSegments[segment] ?? 0) + 1;
@@ -1353,7 +1353,7 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
         regimeDistribution[regime] = (regimeDistribution[regime] ?? 0) + 1;
       }
 
-      if (target === "spx" || target === "dax") {
+      if (target === "spx" || target === "dax" || target === "ndx") {
         const regime = deriveRegimeTag(setup);
         regimeDistribution[regime] = (regimeDistribution[regime] ?? 0) + 1;
       }
@@ -1385,7 +1385,7 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
           ? Object.keys(watchSegments).length
             ? watchSegments
             : undefined
-          : (target === "spx" || target === "dax") && Object.keys(indexWatchSegments).length
+          : (target === "spx" || target === "dax" || target === "ndx") && Object.keys(indexWatchSegments).length
             ? indexWatchSegments
             : undefined,
     upgradeCandidates: Object.keys(upgradeReasons).length

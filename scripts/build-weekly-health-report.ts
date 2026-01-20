@@ -493,6 +493,7 @@ const summariesFromPayload = gold.summaries ?? btc.summaries ?? undefined;
   ensure("btc", btc);
   ensure("spx", {} as Phase0Payload);
   ensure("dax", {} as Phase0Payload);
+  ensure("ndx", {} as Phase0Payload);
 
   const now = new Date();
   const y = now.getUTCFullYear();
@@ -519,7 +520,7 @@ const summariesFromPayload = gold.summaries ?? btc.summaries ?? undefined;
   }
   reportLines.push("");
 
-  const assetOrder = ["gold", "btc", "spx", "dax"];
+  const assetOrder = ["gold", "btc", "spx", "dax", "ndx"];
   assetOrder
     .filter((a) => summaries[a])
     .forEach((assetId) => {
