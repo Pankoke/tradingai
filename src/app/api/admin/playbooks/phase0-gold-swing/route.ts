@@ -645,7 +645,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       btcAlignmentReasonMapped += mappedCount;
     }
 
-    const summariesAssetIds = ["gold", "btc", "spx", "dax", "ndx", "dow", "eurusd"];
+const summariesAssetIds = ["gold", "btc", "spx", "dax", "ndx", "dow", "eurusd", "gbpusd", "usdjpy", "eurjpy"];
     const summaries = Object.fromEntries(
       summariesAssetIds.map((asset) => [
         asset,
@@ -1361,7 +1361,7 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
         }
       }
 
-      if (target === "eurusd" && decisionResult.decision === "WATCH") {
+      if ((target === "eurusd" || target === "gbpusd" || target === "usdjpy" || target === "eurjpy") && decisionResult.decision === "WATCH") {
         const segment = (setup as { watchSegment?: string | null }).watchSegment ?? deriveFxWatchSegment(setup);
         if (segment) {
           fxWatchSegments[segment] = (fxWatchSegments[segment] ?? 0) + 1;
@@ -1407,7 +1407,7 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
           : undefined
         : (target === "spx" || target === "dax" || target === "ndx" || target === "dow") && Object.keys(indexWatchSegments).length
           ? indexWatchSegments
-          : target === "eurusd" && Object.keys(fxWatchSegments).length
+          : (target === "eurusd" || target === "gbpusd" || target === "usdjpy" || target === "eurjpy") && Object.keys(fxWatchSegments).length
             ? fxWatchSegments
             : undefined,
     upgradeCandidates: Object.keys(upgradeReasons).length

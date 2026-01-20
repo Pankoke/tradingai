@@ -10,7 +10,7 @@ function makeSummary(assetId: string): AssetPhase0Summary {
     watchSegmentsDistribution:
       assetId === "spx" || assetId === "dax" || assetId === "ndx" || assetId === "dow"
         ? { WATCH_VOLATILITY_HIGH: 2, WATCH_FAILS_BIAS_SOFT: 1 }
-        : assetId === "eurusd"
+        : assetId === "eurusd" || assetId === "gbpusd" || assetId === "usdjpy" || assetId === "eurjpy"
           ? { WATCH_FAILS_BIAS: 2, WATCH_FAILS_CONFIDENCE: 1 }
           : undefined,
     diagnostics:
@@ -33,16 +33,22 @@ describe("renderAssetSummarySection", () => {
   const gold = makeSummary("gold");
   const btc = makeSummary("btc");
   const eurusd = makeSummary("eurusd");
+  const gbpusd = makeSummary("gbpusd");
+  const usdjpy = makeSummary("usdjpy");
+  const eurjpy = makeSummary("eurjpy");
   const spx = makeSummary("spx");
   const dax = makeSummary("dax");
   const ndx = makeSummary("ndx");
   const dow = makeSummary("dow");
 
-  const rendered = [gold, btc, eurusd, spx, dax, ndx, dow].map((s) => renderAssetSummarySection(s)).join("\n");
+  const rendered = [gold, btc, eurusd, gbpusd, usdjpy, eurjpy, spx, dax, ndx, dow].map((s) => renderAssetSummarySection(s)).join("\n");
 
   expect(rendered).toContain("## GOLD Swing");
   expect(rendered).toContain("## BTC Swing");
   expect(rendered).toContain("## EURUSD Swing");
+  expect(rendered).toContain("## GBPUSD Swing");
+  expect(rendered).toContain("## USDJPY Swing");
+  expect(rendered).toContain("## EURJPY Swing");
   expect(rendered).toContain("## SPX Swing");
   expect(rendered).toContain("## DAX Swing");
   expect(rendered).toContain("## NDX Swing");

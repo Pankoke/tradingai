@@ -68,6 +68,9 @@ const DAX_PLAYBOOK_ID = "dax-swing-v0.1";
 const NDX_PLAYBOOK_ID = "ndx-swing-v0.1";
 const DOW_PLAYBOOK_ID = "dow-swing-v0.1";
 const EURUSD_PLAYBOOK_ID = "eurusd-swing-v0.1";
+const GBPUSD_PLAYBOOK_ID = "gbpusd-swing-v0.1";
+const USDJPY_PLAYBOOK_ID = "usdjpy-swing-v0.1";
+const EURJPY_PLAYBOOK_ID = "eurjpy-swing-v0.1";
 const CRYPTO_PLAYBOOK_ID = "crypto-swing-v0.1";
 const FX_PLAYBOOK_ID = "fx-swing-v0.1";
 const GENERIC_PLAYBOOK_ID = "generic-swing-v0.1";
@@ -191,6 +194,15 @@ function resolvePlaybookIdForAsset(asset: PlaybookContext["asset"], profile?: st
   const fxSpecific = (asset.id ?? "").toLowerCase();
   if (fxSpecific === "eurusd") {
     return { playbook: eurusdSwingPlaybook, reason: "eurusd id" };
+  }
+  if (fxSpecific === "gbpusd") {
+    return { playbook: gbpusdSwingPlaybook, reason: "gbpusd id" };
+  }
+  if (fxSpecific === "usdjpy") {
+    return { playbook: usdjpySwingPlaybook, reason: "usdjpy id" };
+  }
+  if (fxSpecific === "eurjpy") {
+    return { playbook: eurjpySwingPlaybook, reason: "eurjpy id" };
   }
 
   const fx = matchFxAsset(asset);
@@ -585,6 +597,27 @@ const eurusdSwingPlaybook: Playbook = {
   evaluateSetup: evaluateDefault,
 };
 
+const gbpusdSwingPlaybook: Playbook = {
+  id: GBPUSD_PLAYBOOK_ID,
+  label: "GBPUSD Swing",
+  shortLabel: "GBPUSD",
+  evaluateSetup: evaluateDefault,
+};
+
+const usdjpySwingPlaybook: Playbook = {
+  id: USDJPY_PLAYBOOK_ID,
+  label: "USDJPY Swing",
+  shortLabel: "USDJPY",
+  evaluateSetup: evaluateDefault,
+};
+
+const eurjpySwingPlaybook: Playbook = {
+  id: EURJPY_PLAYBOOK_ID,
+  label: "EURJPY Swing",
+  shortLabel: "EURJPY",
+  evaluateSetup: evaluateDefault,
+};
+
 const fxSwingPlaybook: Playbook = {
   id: FX_PLAYBOOK_ID,
   label: "FX Swing",
@@ -607,6 +640,9 @@ const PLAYBOOK_LABELS: Record<string, { label: string; short: string }> = {
   [NDX_PLAYBOOK_ID]: { label: "NDX Swing", short: "NDX Swing" },
   [DOW_PLAYBOOK_ID]: { label: "DOW Swing", short: "DOW Swing" },
   [EURUSD_PLAYBOOK_ID]: { label: "EURUSD Swing", short: "EURUSD Swing" },
+  [GBPUSD_PLAYBOOK_ID]: { label: "GBPUSD Swing", short: "GBPUSD Swing" },
+  [USDJPY_PLAYBOOK_ID]: { label: "USDJPY Swing", short: "USDJPY Swing" },
+  [EURJPY_PLAYBOOK_ID]: { label: "EURJPY Swing", short: "EURJPY Swing" },
   [CRYPTO_PLAYBOOK_ID]: { label: "Crypto Swing", short: "Crypto Swing" },
   [FX_PLAYBOOK_ID]: { label: "FX Swing", short: "FX Swing" },
   [GENERIC_PLAYBOOK_ID]: { label: "Generic Swing", short: "Generic Swing" },

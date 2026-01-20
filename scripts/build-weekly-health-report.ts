@@ -496,6 +496,9 @@ const summariesFromPayload = gold.summaries ?? btc.summaries ?? undefined;
   ensure("dax", {} as Phase0Payload);
   ensure("ndx", {} as Phase0Payload);
   ensure("dow", {} as Phase0Payload);
+  ensure("gbpusd", {} as Phase0Payload);
+  ensure("usdjpy", {} as Phase0Payload);
+  ensure("eurjpy", {} as Phase0Payload);
 
   if (process.env.NODE_ENV !== "production") {
     const keys = Object.keys(summariesFromPayload ?? {});
@@ -528,7 +531,7 @@ const summariesFromPayload = gold.summaries ?? btc.summaries ?? undefined;
   }
   reportLines.push("");
 
-  const assetOrder = ["gold", "btc", "eurusd", "spx", "dax", "ndx", "dow"];
+  const assetOrder = ["gold", "btc", "eurusd", "gbpusd", "usdjpy", "eurjpy", "spx", "dax", "ndx", "dow"];
   assetOrder
     .filter((a) => summaries[a])
     .forEach((assetId) => {
