@@ -3,6 +3,7 @@ import type { Setup } from "@/src/lib/engine/types";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import { deriveSpxWatchSegment } from "@/src/lib/decision/spxWatchSegment";
 import { deriveFxWatchSegment } from "@/src/lib/decision/fxWatchSegment";
+import { deriveFxAlignment, type FxAlignment } from "@/src/lib/decision/fxAlignment";
 
 type SetupLike = Setup | HomepageSetup | (Setup & HomepageSetup) | (HomepageSetup & Setup);
 
@@ -14,6 +15,32 @@ export type DecisionResult = {
 };
 
 const MAX_REASONS = 3;
+
+const fxAssetIds = new Set(["eurusd", "gbpusd", "usdjpy", "eurjpy", "audusd"]);
+const cryptoAssetIds = new Set(["btc", "eth"]);
+const indexAssetIds = new Set(["spx", "sp500", "spx500", "dax", "ndx", "nasdaq", "dow", "djia"]);
+
+const ensureReasons = (arr: string[], fallback: string) => (arr.length ? arr : [fallback]);
+
+const sanitizeFxReasons = (list: string[]): string[] => {
+  const mapped = list.map((r) => {
+    const lower = r.toLowerCase();
+    if (lower.includes("no default alignment")) return "Alignment unavailable (fx)";
+    if (lower.includes("alignment derived")) return "Alignment unavailable (fx)";
+    if (lower.includes("index fallback")) return "Alignment unavailable (fx)";
+    if (lower.includes("crypto hyphen usd")) return "";
+    if (lower.includes("alignment unavailable (crypto)")) return "Alignment unavailable (fx)";
+    return r;
+  });
+  return Array.from(new Set(mapped.filter((r) => r && r.trim().length > 0))).slice(0, MAX_REASONS);
+};
+
+const buildFxAlignmentReason = (alignment: FxAlignment | null): string => {
+  if (alignment === "LONG") return "Alignment fx LONG";
+  if (alignment === "SHORT") return "Alignment fx SHORT";
+  if (alignment === "NEUTRAL") return "Alignment fx neutral";
+  return "Alignment unavailable (fx)";
+};
 
 export function deriveSetupDecision(setup: SetupLike): DecisionResult {
   const grade = (setup as { setupGrade?: string | null }).setupGrade ?? null;
@@ -28,9 +55,6 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
       (setup as { asset?: { assetClass?: string | null } | null }).asset?.assetClass ??
       "")?.toLowerCase();
   const assetId = ((setup as { assetId?: string | null }).assetId ?? "").toLowerCase();
-  const indexAssetIds = new Set(["spx", "sp500", "spx500", "dax", "ndx", "nasdaq", "dow", "djia"]);
-  const cryptoAssetIds = new Set(["btc", "eth"]);
-  const fxAssetIds = new Set(["eurusd", "gbpusd", "usdjpy", "eurjpy", "audusd"]);
   const isIndexAsset = assetClass === "index" || playbookId === "spx-swing-v0.1" || indexAssetIds.has(assetId);
   const isCryptoAsset = assetClass === "crypto" || playbookId === "crypto-swing-v0.1" || cryptoAssetIds.has(assetId);
   const isFxAsset = assetClass === "fx" || fxAssetIds.has(assetId) || playbookId === "fx-swing-v0.1";
@@ -46,6 +70,7 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
       : directionRaw.toLowerCase().includes("long") || directionRaw.toLowerCase().includes("buy")
         ? "LONG"
         : null;
+  const fxAlignment: FxAlignment | null = isFxAsset ? deriveFxAlignment(setup) : null;
 
   const deriveIndexAlignmentReason = (): string => {
     const trendFallback = trendScore !== null && trendScore >= 50;
@@ -54,7 +79,6 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
     return `Alignment derived (index fallback ${fallbackDir})`;
   };
   const deriveCryptoAlignmentReason = (): string => "Alignment unavailable (crypto)";
-  const deriveFxAlignmentReason = (): string => "Alignment unavailable (fx)";
 
   const prependSegment = (reasons: string[], segment?: string | null): string[] => {
     const list = [...reasons];
@@ -68,50 +92,54 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
     const upstream = upstreamDecision.toUpperCase();
 
     // Normalize reasons and ensure non-empty
-    const normalizedReasons = upstreamReasons.length ? upstreamReasons.slice(0, MAX_REASONS) : [];
-    const ensureReasons = (arr: string[], fallback: string) => (arr.length ? arr : [fallback]);
+    const normalizedReasons = upstreamReasons.length
+      ? upstreamReasons.filter((r) => typeof r === "string" && r.trim().length > 0).slice(0, MAX_REASONS)
+      : [];
     const replaceAlignmentReasons = (reasons: string[], replacement: string) => {
       const mapped = reasons
-        .map((r) => (r.toLowerCase().includes("no default alignment") ? replacement : r))
+        .map((r) => (r.toLowerCase().includes("alignment") ? replacement : r))
         .filter((r) => r && r.trim().length > 0);
       const hasMapped = mapped.some((r) => r === replacement);
       if (!hasMapped) mapped.unshift(replacement);
       return Array.from(new Set(mapped)).slice(0, MAX_REASONS);
     };
-    const maybeSegment =
-      isIndexAsset && upstream !== "TRADE" ? deriveSpxWatchSegment(setup) : undefined;
+    const indexSegment = isIndexAsset && upstream !== "TRADE" ? deriveSpxWatchSegment(setup) : undefined;
+    const fxSegment = isFxAsset && upstream !== "TRADE" ? deriveFxWatchSegment(setup) : undefined;
+    const applyFxWatch = (alignmentMention: boolean): DecisionResult => {
+      const alignmentReason = buildFxAlignmentReason(fxAlignment);
+      const withSegment = prependSegment(
+        alignmentMention ? replaceAlignmentReasons(normalizedReasons, alignmentReason) : normalizedReasons,
+        fxSegment,
+      );
+      const sanitized = sanitizeFxReasons(ensureReasons(withSegment, alignmentReason));
+      return { decision: "WATCH", category: "soft", reasons: sanitized, watchSegment: fxSegment };
+    };
 
     // If upstream blocked but no reasons -> downgrade to WATCH soft with explanation
     if (upstream === "BLOCKED") {
       const alignmentMention =
         normalizedReasons.some((r) => r.toLowerCase().includes("alignment")) ||
         (noTradeReason ?? "").toLowerCase().includes("alignment");
+      if (isFxAsset) {
+        return applyFxWatch(alignmentMention);
+      }
       if (isIndexAsset && (alignmentMention || direction)) {
         const alignmentReason = deriveIndexAlignmentReason();
         const mergedReasons = ensureReasons(
-          prependSegment(replaceAlignmentReasons(normalizedReasons, alignmentReason), maybeSegment),
+          prependSegment(replaceAlignmentReasons(normalizedReasons, alignmentReason), indexSegment),
           alignmentReason,
         );
-        return { decision: "WATCH", category: "soft", reasons: mergedReasons, watchSegment: maybeSegment };
+        return { decision: "WATCH", category: "soft", reasons: mergedReasons, watchSegment: indexSegment };
       }
       if (isCryptoAsset && alignmentMention) {
         const alignmentReason = deriveCryptoAlignmentReason();
         const mergedReasons = ensureReasons(replaceAlignmentReasons(normalizedReasons, alignmentReason), alignmentReason);
-        return { decision: "WATCH", category: "soft", reasons: mergedReasons, watchSegment: maybeSegment };
+        return { decision: "WATCH", category: "soft", reasons: mergedReasons, watchSegment: indexSegment };
       }
       if (isCryptoAsset && direction && !alignmentMention) {
         const alignmentReason = deriveCryptoAlignmentReason();
         const mergedReasons = ensureReasons(replaceAlignmentReasons(normalizedReasons, alignmentReason), alignmentReason);
-        return { decision: "WATCH", category: "soft", reasons: mergedReasons, watchSegment: maybeSegment };
-      }
-      if (isFxAsset && (alignmentMention || direction)) {
-        const alignmentReason = deriveFxAlignmentReason();
-        const fxSegment = maybeSegment ?? deriveFxWatchSegment(setup);
-        const mergedReasons = ensureReasons(
-          prependSegment(replaceAlignmentReasons(normalizedReasons, alignmentReason), fxSegment),
-          alignmentReason,
-        );
-        return { decision: "WATCH", category: "soft", reasons: mergedReasons, watchSegment: fxSegment };
+        return { decision: "WATCH", category: "soft", reasons: mergedReasons, watchSegment: indexSegment };
       }
       // No reasons at all -> WATCH soft
       if (!normalizedReasons.length) {
@@ -119,7 +147,7 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
           decision: "WATCH",
           category: "soft",
           reasons: ensureReasons(normalizedReasons, "Stream decision BLOCKED but no reasons (normalized to WATCH)"),
-          watchSegment: maybeSegment,
+          watchSegment: indexSegment ?? fxSegment,
         };
       }
       return { decision: "BLOCKED", category: "soft", reasons: ensureReasons(normalizedReasons, "Blocked: missing decision reasons") };
@@ -129,14 +157,17 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
       const alignmentMention =
         normalizedReasons.some((r) => r.toLowerCase().includes("alignment")) ||
         (noTradeReason ?? "").toLowerCase().includes("alignment");
+      if (isFxAsset) {
+        return applyFxWatch(alignmentMention);
+      }
       if (isIndexAsset && (alignmentMention || direction)) {
         const alignmentReason = deriveIndexAlignmentReason();
-        const withSegment = prependSegment(normalizedReasons, maybeSegment);
+        const withSegment = prependSegment(normalizedReasons, indexSegment);
         return {
           decision: "WATCH",
           category: "soft",
           reasons: ensureReasons(replaceAlignmentReasons(withSegment, alignmentReason), alignmentReason),
-          watchSegment: maybeSegment,
+          watchSegment: indexSegment,
         };
       }
       if (isCryptoAsset && alignmentMention) {
@@ -145,39 +176,17 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
           decision: "WATCH",
           category: "soft",
           reasons: ensureReasons(replaceAlignmentReasons(normalizedReasons, alignmentReason), alignmentReason),
-          watchSegment: maybeSegment,
+          watchSegment: indexSegment,
         };
       }
-      if (isFxAsset && alignmentMention) {
-        const alignmentReason = deriveFxAlignmentReason();
-        const fxSegment = maybeSegment ?? deriveFxWatchSegment(setup);
-        return {
-          decision: "WATCH",
-          category: "soft",
-          reasons: ensureReasons(prependSegment(replaceAlignmentReasons(normalizedReasons, alignmentReason), fxSegment), alignmentReason),
-          watchSegment: fxSegment,
-        };
-      }
-    if (isFxAsset) {
-      const fxSegment = maybeSegment ?? deriveFxWatchSegment(setup);
-      const withSegment = prependSegment(normalizedReasons, fxSegment);
-      const alignmentReason = deriveFxAlignmentReason();
-      const cleaned = replaceAlignmentReasons(withSegment, alignmentReason);
+      const withSegment = prependSegment(normalizedReasons, indexSegment);
       return {
         decision: "WATCH",
         category: "soft",
-        reasons: ensureReasons(cleaned, "Watch (unspecified)"),
-        watchSegment: fxSegment,
+        reasons: ensureReasons(withSegment, "Watch (unspecified)"),
+        watchSegment: indexSegment,
       };
     }
-    const withSegment = prependSegment(normalizedReasons, maybeSegment);
-    return {
-      decision: "WATCH",
-      category: "soft",
-      reasons: ensureReasons(withSegment, "Watch (unspecified)"),
-      watchSegment: maybeSegment,
-    };
-  }
 
     // Upstream TRADE or others: stay conservative unless we have strong grade A/B
     if (upstream === "TRADE" && (grade === "A" || grade === "B")) {
@@ -195,23 +204,10 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
   const hard = isHardKo(setup);
   const soft = !hard && isSoftReason(noTradeReason, gradeRationale);
 
-  const sanitizeFxReasons = (list: string[]): string[] => {
-    const mapped = list.map((r) => {
-      const lower = r.toLowerCase();
-      if (lower.includes("no default alignment")) return "Alignment unavailable (fx)";
-      if (lower.includes("alignment derived")) return "Alignment unavailable (fx)";
-      if (lower.includes("index fallback")) return "Alignment unavailable (fx)";
-      if (lower.includes("crypto hyphen usd")) return "";
-      return r;
-    });
-    return Array.from(new Set(mapped.filter((r) => r && r.trim().length > 0))).slice(0, MAX_REASONS);
-  };
-
   let reasons = buildReasons(noTradeReason, gradeRationale, gradeDebugReason);
   if (isFxAsset) {
     reasons = sanitizeFxReasons(reasons);
   }
-  const ensureReasons = (arr: string[], fallback: string) => (arr.length ? arr : [fallback]);
 
   // BTC Swing: provide deterministic fallback alignment instead of hard-blocking on missing alignment
   // Source of "No default alignment" was the default playbook evaluation (crypto swing) when no alignment was resolved.
@@ -224,11 +220,12 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
     return { decision: "WATCH", category: "soft", reasons: mergedReasons };
   }
 
-  if (isFxAsset && watchEnabled && !hard && (alignmentMissing || !noTradeReason)) {
-    const alignmentReason = deriveFxAlignmentReason();
+  if (isFxAsset && watchEnabled && !hard && (alignmentMissing || !noTradeReason || fxAlignment !== null)) {
     const segment = deriveFxWatchSegment(setup);
+    const alignmentReason = buildFxAlignmentReason(fxAlignment);
     const mergedReasons = prependSegment(buildReasons(alignmentReason, gradeRationale, gradeDebugReason), segment);
-    return { decision: "WATCH", category: "soft", reasons: mergedReasons, watchSegment: segment };
+    const sanitized = sanitizeFxReasons(mergedReasons);
+    return { decision: "WATCH", category: "soft", reasons: ensureReasons(sanitized, "Watch (unspecified)"), watchSegment: segment };
   }
 
   // Index (e.g. SPX) fallback alignment: avoid hard-blocking when alignment is missing
@@ -251,8 +248,23 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
 
   if (!hard && soft) {
     const watchSegment = isIndexAsset ? deriveSpxWatchSegment(setup) : isFxAsset ? deriveFxWatchSegment(setup) : undefined;
-    const watchReasons = prependSegment(reasons, watchSegment);
+    let watchReasons = prependSegment(reasons, watchSegment);
+    if (isFxAsset) {
+      const alignmentReason = buildFxAlignmentReason(fxAlignment);
+      watchReasons = sanitizeFxReasons(prependSegment(watchReasons, watchSegment));
+      watchReasons = ensureReasons(watchReasons, alignmentReason);
+    }
     return { decision: "WATCH", category: "soft", reasons: ensureReasons(watchReasons, "Watch (unspecified)"), watchSegment };
+  }
+
+  if (isFxAsset) {
+    const alignmentReason = buildFxAlignmentReason(fxAlignment);
+    const sanitized = sanitizeFxReasons(reasons);
+    return {
+      decision: "BLOCKED",
+      category: hard ? "hard" : "soft",
+      reasons: ensureReasons(sanitized, alignmentReason),
+    };
   }
 
   return { decision: "BLOCKED", category: hard ? "hard" : "soft", reasons: ensureReasons(reasons, "Blocked: missing decision reasons") };

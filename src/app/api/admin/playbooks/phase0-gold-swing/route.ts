@@ -1261,7 +1261,12 @@ function isFxSetup(setup: Setup): boolean {
 
 function mapAlignmentReason(reason: string, setup?: Setup): string {
   const lower = reason.toLowerCase();
-  if (setup && isFxSetup(setup) && lower.includes("alignment")) return "Alignment unavailable (fx)";
+  if (setup && isFxSetup(setup)) {
+    if (lower.includes("alignment fx")) return reason;
+    if (lower.includes("alignment unavailable (fx)")) return "Alignment unavailable (fx)";
+    if (lower.includes("no default alignment")) return "Alignment unavailable (fx)";
+    if (lower.includes("alignment derived")) return "Alignment unavailable (fx)";
+  }
   if (lower.includes("no default alignment")) return "Alignment derived (fallback)";
   if (lower.includes("alignment derived")) return "Alignment derived (fallback)";
   if (lower.includes("alignment unavailable (fx)")) return "Alignment unavailable (fx)";
