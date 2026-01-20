@@ -13,6 +13,10 @@ function makeSummary(assetId: string): AssetPhase0Summary {
         : assetId === "eurusd" || assetId === "gbpusd" || assetId === "usdjpy" || assetId === "eurjpy"
           ? { WATCH_FAILS_BIAS: 2, WATCH_FAILS_CONFIDENCE: 1 }
           : undefined,
+    alignmentDistribution:
+      assetId === "eurusd" || assetId === "gbpusd" || assetId === "usdjpy" || assetId === "eurjpy"
+        ? { LONG: 2, SHORT: 1, NEUTRAL: 0 }
+        : undefined,
     diagnostics:
       assetId === "spx"
         ? {
@@ -67,6 +71,8 @@ describe("renderAssetSummarySection", () => {
   expect(rendered).toContain("WATCH_FAILS_BIAS_SOFT");
   expect(rendered).toContain("DOW Swing");
   expect(rendered).toContain("WATCH_FAILS_BIAS");
+  expect(rendered).toContain("FX Alignment Distribution");
+  expect(rendered).toContain("| LONG | 2 |");
   expect(rendered.toLowerCase()).not.toContain("no default alignment");
   });
 });

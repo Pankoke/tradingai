@@ -8,6 +8,7 @@ import { listOutcomesForWindow } from "@/src/server/repositories/setupOutcomeRep
 import { getSnapshotById } from "@/src/server/repositories/perceptionSnapshotRepository";
 import { computeSignalQuality } from "@/src/lib/engine/signalQuality";
 import { deriveSetupDecision } from "@/src/lib/decision/setupDecision";
+import { deriveFxAlignment } from "@/src/lib/decision/fxAlignment";
 import { deriveRegimeTag } from "@/src/lib/engine/metrics/regime";
 import type { SetupDecision } from "@/src/lib/config/watchDecision";
 import { deriveSpxWatchSegment } from "@/src/lib/decision/spxWatchSegment";
@@ -43,11 +44,14 @@ type AssetDiagnostics = {
   notes?: string[];
 };
 
+type FxAlignment = "LONG" | "SHORT" | "NEUTRAL";
+
 type AssetPhase0Summary = {
   meta: { assetId: string; timeframe: string; sampleWindowDays: number; labelsUsedCounts?: Record<string, number> };
   decisionDistribution: Record<SetupDecision, number>;
   gradeDistribution?: Record<GradeKey, number>;
   watchSegmentsDistribution?: Record<string, number>;
+  alignmentDistribution?: Record<string, number>;
   upgradeCandidates?: { total: number; byReason?: Record<string, number> };
   regimeDistribution?: Record<string, number>;
   diagnostics?: AssetDiagnostics;
@@ -1331,6 +1335,7 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
   const labelsUsedCounts: Record<string, number> = {};
   const indexWatchSegments: Record<string, number> = {};
   const fxWatchSegments: Record<string, number> = {};
+  const fxAlignmentDistribution: Record<FxAlignment, number> = { LONG: 0, SHORT: 0, NEUTRAL: 0 };
 
   for (const row of rows) {
     const setups = Array.isArray((row as { setups?: unknown }).setups) ? ((row as { setups: Setup[] }).setups ?? []) : [];
@@ -1375,10 +1380,16 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
         }
       }
 
-      if ((target === "eurusd" || target === "gbpusd" || target === "usdjpy" || target === "eurjpy") && decisionResult.decision === "WATCH") {
-        const segment = (setup as { watchSegment?: string | null }).watchSegment ?? deriveFxWatchSegment(setup);
-        if (segment) {
-          fxWatchSegments[segment] = (fxWatchSegments[segment] ?? 0) + 1;
+      if (target === "eurusd" || target === "gbpusd" || target === "usdjpy" || target === "eurjpy") {
+        if (decisionResult.decision === "WATCH") {
+          const segment = (setup as { watchSegment?: string | null }).watchSegment ?? deriveFxWatchSegment(setup);
+          if (segment) {
+            fxWatchSegments[segment] = (fxWatchSegments[segment] ?? 0) + 1;
+          }
+        }
+        const fxAlignment = deriveFxAlignment(setup);
+        if (fxAlignment) {
+          fxAlignmentDistribution[fxAlignment] = (fxAlignmentDistribution[fxAlignment] ?? 0) + 1;
         }
       }
 
@@ -1424,6 +1435,11 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
           : (target === "eurusd" || target === "gbpusd" || target === "usdjpy" || target === "eurjpy") && Object.keys(fxWatchSegments).length
             ? fxWatchSegments
             : undefined,
+    alignmentDistribution:
+      (target === "eurusd" || target === "gbpusd" || target === "usdjpy" || target === "eurjpy") &&
+      Object.values(fxAlignmentDistribution).some((v) => v > 0)
+        ? fxAlignmentDistribution
+        : undefined,
     upgradeCandidates: Object.keys(upgradeReasons).length
       ? { total: Object.values(upgradeReasons).reduce((s, v) => s + v, 0), byReason: upgradeReasons }
       : { total: 0 },

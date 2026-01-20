@@ -78,6 +78,7 @@ export type AssetPhase0Summary = {
   decisionDistribution: Record<string, number>;
   gradeDistribution?: Record<string, number>;
   watchSegmentsDistribution?: Record<string, number>;
+  alignmentDistribution?: Record<string, number>;
   upgradeCandidates?: { total: number; byReason?: Record<string, number> };
   regimeDistribution?: Record<string, number>;
   diagnostics?: {
@@ -399,6 +400,7 @@ export function renderAssetSummarySection(summary: AssetPhase0Summary, label?: s
   lines.push(renderCountTable("Decision Distribution", summary.decisionDistribution));
   if (summary.gradeDistribution) lines.push(renderCountTable("Grade Distribution", summary.gradeDistribution));
   if (summary.watchSegmentsDistribution) lines.push(renderCountTable("WATCH Segments", summary.watchSegmentsDistribution));
+  if (summary.alignmentDistribution) lines.push(renderCountTable("FX Alignment Distribution", summary.alignmentDistribution));
   if (summary.upgradeCandidates) {
     lines.push("### WATCH+ / Upgrade Candidates");
     lines.push(`- total: ${summary.upgradeCandidates.total}`);
