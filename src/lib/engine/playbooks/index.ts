@@ -67,6 +67,7 @@ const SPX_PLAYBOOK_ID = "spx-swing-v0.1";
 const DAX_PLAYBOOK_ID = "dax-swing-v0.1";
 const NDX_PLAYBOOK_ID = "ndx-swing-v0.1";
 const DOW_PLAYBOOK_ID = "dow-swing-v0.1";
+const EURUSD_PLAYBOOK_ID = "eurusd-swing-v0.1";
 const CRYPTO_PLAYBOOK_ID = "crypto-swing-v0.1";
 const FX_PLAYBOOK_ID = "fx-swing-v0.1";
 const GENERIC_PLAYBOOK_ID = "generic-swing-v0.1";
@@ -186,6 +187,11 @@ function resolvePlaybookIdForAsset(asset: PlaybookContext["asset"], profile?: st
 
   const crypto = matchCryptoAsset(asset);
   if (crypto.matched) return { playbook: cryptoSwingPlaybook, reason: crypto.reason };
+
+  const fxSpecific = (asset.id ?? "").toLowerCase();
+  if (fxSpecific === "eurusd") {
+    return { playbook: eurusdSwingPlaybook, reason: "eurusd id" };
+  }
 
   const fx = matchFxAsset(asset);
   if (fx.matched) return { playbook: fxSwingPlaybook, reason: fx.reason };
@@ -572,6 +578,13 @@ const cryptoSwingPlaybook: Playbook = {
   evaluateSetup: evaluateCryptoSwing,
 };
 
+const eurusdSwingPlaybook: Playbook = {
+  id: EURUSD_PLAYBOOK_ID,
+  label: "EURUSD Swing",
+  shortLabel: "EURUSD",
+  evaluateSetup: evaluateDefault,
+};
+
 const fxSwingPlaybook: Playbook = {
   id: FX_PLAYBOOK_ID,
   label: "FX Swing",
@@ -593,6 +606,7 @@ const PLAYBOOK_LABELS: Record<string, { label: string; short: string }> = {
   [DAX_PLAYBOOK_ID]: { label: "DAX Swing", short: "DAX Swing" },
   [NDX_PLAYBOOK_ID]: { label: "NDX Swing", short: "NDX Swing" },
   [DOW_PLAYBOOK_ID]: { label: "DOW Swing", short: "DOW Swing" },
+  [EURUSD_PLAYBOOK_ID]: { label: "EURUSD Swing", short: "EURUSD Swing" },
   [CRYPTO_PLAYBOOK_ID]: { label: "Crypto Swing", short: "Crypto Swing" },
   [FX_PLAYBOOK_ID]: { label: "FX Swing", short: "FX Swing" },
   [GENERIC_PLAYBOOK_ID]: { label: "Generic Swing", short: "Generic Swing" },

@@ -644,7 +644,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       btcAlignmentReasonMapped += mappedCount;
     }
 
-    const summariesAssetIds = ["gold", "btc", "spx", "dax", "ndx", "dow"];
+    const summariesAssetIds = ["gold", "btc", "spx", "dax", "ndx", "dow", "eurusd"];
     const summaries = Object.fromEntries(
       summariesAssetIds.map((asset) => [
         asset,
