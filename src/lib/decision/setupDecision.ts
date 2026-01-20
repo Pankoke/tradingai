@@ -49,6 +49,14 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
     return `Alignment derived (index fallback ${fallbackDir})`;
   };
 
+  const prependSegment = (reasons: string[], segment?: string | null): string[] => {
+    const list = [...reasons];
+    if (segment && segment.trim().length > 0 && !list.includes(segment)) {
+      list.unshift(segment);
+    }
+    return list.slice(0, MAX_REASONS);
+  };
+
   if (hasUpstream) {
     const upstream = upstreamDecision.toUpperCase();
 
@@ -73,12 +81,18 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
         (noTradeReason ?? "").toLowerCase().includes("alignment");
       if (isIndexAsset && alignmentMention) {
         const alignmentReason = deriveIndexAlignmentReason();
-        const mergedReasons = ensureReasons(replaceAlignmentReasons(normalizedReasons, alignmentReason), alignmentReason);
+        const mergedReasons = ensureReasons(
+          prependSegment(replaceAlignmentReasons(normalizedReasons, alignmentReason), maybeSegment),
+          alignmentReason,
+        );
         return { decision: "WATCH", category: "soft", reasons: mergedReasons, watchSegment: maybeSegment };
       }
       if (isIndexAsset && direction && !alignmentMention) {
         const alignmentReason = deriveIndexAlignmentReason();
-        const mergedReasons = ensureReasons(replaceAlignmentReasons(normalizedReasons, alignmentReason), alignmentReason);
+        const mergedReasons = ensureReasons(
+          prependSegment(replaceAlignmentReasons(normalizedReasons, alignmentReason), maybeSegment),
+          alignmentReason,
+        );
         return { decision: "WATCH", category: "soft", reasons: mergedReasons, watchSegment: maybeSegment };
       }
       // No reasons at all -> WATCH soft
@@ -99,17 +113,19 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
         (noTradeReason ?? "").toLowerCase().includes("alignment");
       if (isIndexAsset && (alignmentMention || direction)) {
         const alignmentReason = deriveIndexAlignmentReason();
+        const withSegment = prependSegment(normalizedReasons, maybeSegment);
         return {
           decision: "WATCH",
           category: "soft",
-          reasons: ensureReasons(replaceAlignmentReasons(normalizedReasons, alignmentReason), alignmentReason),
+          reasons: ensureReasons(replaceAlignmentReasons(withSegment, alignmentReason), alignmentReason),
           watchSegment: maybeSegment,
         };
       }
+      const withSegment = prependSegment(normalizedReasons, maybeSegment);
       return {
         decision: "WATCH",
         category: "soft",
-        reasons: ensureReasons(replaceAlignmentReasons(normalizedReasons, deriveIndexAlignmentReason()), "Watch (unspecified)"),
+        reasons: ensureReasons(replaceAlignmentReasons(withSegment, deriveIndexAlignmentReason()), "Watch (unspecified)"),
         watchSegment: maybeSegment,
       };
     }
@@ -160,8 +176,11 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
     const biasFallback = biasScore !== null && biasScore >= 60;
     const fallbackDir = direction ?? (trendFallback || biasFallback ? "LONG" : "SHORT");
     const alignmentReason = `Alignment derived (index fallback ${fallbackDir})`;
-    const mergedReasons = buildReasons(alignmentReason, gradeRationale, gradeDebugReason);
     const watchSegment = deriveSpxWatchSegment(setup);
+    const mergedReasons = prependSegment(
+      buildReasons(alignmentReason, gradeRationale, gradeDebugReason),
+      watchSegment,
+    );
     return { decision: "WATCH", category: "soft", reasons: mergedReasons, watchSegment };
   }
 
@@ -171,7 +190,8 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
 
   if (!hard && soft) {
     const watchSegment = isIndexAsset ? deriveSpxWatchSegment(setup) : undefined;
-    return { decision: "WATCH", category: "soft", reasons: ensureReasons(reasons, "Watch (unspecified)"), watchSegment };
+    const watchReasons = prependSegment(reasons, watchSegment);
+    return { decision: "WATCH", category: "soft", reasons: ensureReasons(watchReasons, "Watch (unspecified)"), watchSegment };
   }
 
   return { decision: "BLOCKED", category: hard ? "hard" : "soft", reasons: ensureReasons(reasons, "Blocked (unspecified)") };

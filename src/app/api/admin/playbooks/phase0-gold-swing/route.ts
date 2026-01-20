@@ -1259,12 +1259,22 @@ function mapAlignmentReason(reason: string): string {
   return reason;
 }
 
+function isAlignmentDerivedReason(reason: string | null | undefined): boolean {
+  if (!reason) return false;
+  const lower = reason.toLowerCase();
+  return lower.includes("alignment derived");
+}
+
 function pickCanonicalReason(
   decisionResult: { reasons?: string[] },
   setup: Setup,
 ): string | null {
+  const reasons = (decisionResult.reasons ?? []).filter((r) => r && r.trim().length > 0);
+  const nonAlignment = reasons.find((r) => !isAlignmentDerivedReason(r));
+  const fallbackAlignment = reasons.find((r) => isAlignmentDerivedReason(r));
   const candidate =
-    (decisionResult.reasons ?? []).find((r) => r && r.trim().length > 0) ??
+    nonAlignment ??
+    fallbackAlignment ??
     normalizeText((setup as { noTradeReason?: unknown }).noTradeReason) ??
     normalizeText((setup as { gradeDebugReason?: unknown }).gradeDebugReason);
   return candidate ?? null;

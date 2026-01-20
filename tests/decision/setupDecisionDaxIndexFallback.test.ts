@@ -22,8 +22,8 @@ describe("deriveSetupDecision - DAX index fallback", () => {
 
     expect(result.decision).toBe("WATCH");
     expect(result.category).toBe("soft");
-    expect(result.reasons[0]).toContain("Alignment derived (index fallback");
-    expect(result.reasons[0].toLowerCase()).toContain("short");
+    expect(result.reasons.some((r) => r.includes("Alignment derived (index fallback"))).toBe(true);
+    expect(result.reasons.join(" ").toLowerCase()).toContain("short");
     expect(result.watchSegment).toBeDefined();
   });
 });
