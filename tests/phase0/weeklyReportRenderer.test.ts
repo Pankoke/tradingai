@@ -51,9 +51,10 @@ describe("renderAssetSummarySection", () => {
     expect(rendered).toContain("NO_TRADE Reasons");
     expect(rendered).toContain("Labels Used");
     expect(rendered).toContain("| eod | 3 |");
-    expect(rendered).toContain("WATCH Segments");
-    expect(rendered).toContain("WATCH_VOLATILITY_HIGH");
-    expect(rendered).toContain("DAX Swing");
-    expect(rendered).toContain("WATCH_FAILS_BIAS_SOFT");
+  expect(rendered).toContain("WATCH Segments");
+  expect(rendered).toContain("WATCH_VOLATILITY_HIGH");
+  expect(rendered).toContain("DAX Swing");
+  expect(rendered).toContain("WATCH_FAILS_BIAS_SOFT");
+  expect(rendered).toContain("DOW Swing");
   });
 });

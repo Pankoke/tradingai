@@ -104,7 +104,7 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
           watchSegment: maybeSegment,
         };
       }
-      return { decision: "BLOCKED", category: "soft", reasons: ensureReasons(normalizedReasons, "Blocked (unspecified)") };
+      return { decision: "BLOCKED", category: "soft", reasons: ensureReasons(normalizedReasons, "Blocked: missing decision reasons") };
     }
 
     if (upstream === "WATCH") {
@@ -185,7 +185,7 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
   }
 
   if (!watchEnabled) {
-    return { decision: "BLOCKED", category: hard ? "hard" : "soft", reasons: ensureReasons(reasons, "Blocked (unspecified)") };
+    return { decision: "BLOCKED", category: hard ? "hard" : "soft", reasons: ensureReasons(reasons, "Blocked: missing decision reasons") };
   }
 
   if (!hard && soft) {
@@ -194,7 +194,7 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
     return { decision: "WATCH", category: "soft", reasons: ensureReasons(watchReasons, "Watch (unspecified)"), watchSegment };
   }
 
-  return { decision: "BLOCKED", category: hard ? "hard" : "soft", reasons: ensureReasons(reasons, "Blocked (unspecified)") };
+  return { decision: "BLOCKED", category: hard ? "hard" : "soft", reasons: ensureReasons(reasons, "Blocked: missing decision reasons") };
 }
 
 function buildReasons(noTradeReason: string | null, gradeRationale: string[] | null, debugReason: string | null): string[] {

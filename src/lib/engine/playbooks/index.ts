@@ -155,7 +155,7 @@ function matchFxAsset(asset: PlaybookContext["asset"]): MatchResult {
 function matchCryptoAsset(asset: PlaybookContext["asset"]): MatchResult {
   const symbol = (asset.symbol ?? "").toUpperCase();
   if (symbol.includes("=X")) return { matched: false, reason: "yahoo fx - skip crypto" };
-  if (symbol.includes("-USD")) return { matched: true, reason: "crypto hyphen USD" };
+  if (symbol.includes("-USD")) return { matched: true, reason: "crypto usd pair (routing)" };
   if (symbol.endsWith("USDT") || symbol.endsWith("USD")) return { matched: true, reason: "crypto USD/USDT tail" };
   return { matched: false, reason: "no crypto match" };
 }

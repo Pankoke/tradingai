@@ -1265,18 +1265,28 @@ function isAlignmentDerivedReason(reason: string | null | undefined): boolean {
   return lower.includes("alignment derived");
 }
 
+function isUnhelpfulReason(reason: string | null | undefined): boolean {
+  if (!reason) return false;
+  const lower = reason.toLowerCase();
+  if (lower.includes("crypto hyphen usd")) return true;
+  if (lower.includes("routing")) return true;
+  return false;
+}
+
 function pickCanonicalReason(
   decisionResult: { reasons?: string[] },
   setup: Setup,
 ): string | null {
-  const reasons = (decisionResult.reasons ?? []).filter((r) => r && r.trim().length > 0);
+  const reasons = (decisionResult.reasons ?? []).filter((r) => r && r.trim().length > 0 && !isUnhelpfulReason(r));
   const nonAlignment = reasons.find((r) => !isAlignmentDerivedReason(r));
   const fallbackAlignment = reasons.find((r) => isAlignmentDerivedReason(r));
+  const noTrade = normalizeText((setup as { noTradeReason?: unknown }).noTradeReason);
+  const debug = normalizeText((setup as { gradeDebugReason?: unknown }).gradeDebugReason);
   const candidate =
     nonAlignment ??
     fallbackAlignment ??
-    normalizeText((setup as { noTradeReason?: unknown }).noTradeReason) ??
-    normalizeText((setup as { gradeDebugReason?: unknown }).gradeDebugReason);
+    (noTrade && !isUnhelpfulReason(noTrade) ? noTrade : null) ??
+    (debug && !isUnhelpfulReason(debug) ? debug : null);
   return candidate ?? null;
 }
 
@@ -1341,7 +1351,7 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
         }
       }
 
-      if ((target === "spx" || target === "dax" || target === "ndx") && decisionResult.decision === "WATCH") {
+      if ((target === "spx" || target === "dax" || target === "ndx" || target === "dow") && decisionResult.decision === "WATCH") {
         const segment = (setup as { watchSegment?: string | null }).watchSegment ?? deriveSpxWatchSegment(setup);
         if (segment) {
           indexWatchSegments[segment] = (indexWatchSegments[segment] ?? 0) + 1;
@@ -1353,7 +1363,7 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
         regimeDistribution[regime] = (regimeDistribution[regime] ?? 0) + 1;
       }
 
-      if (target === "spx" || target === "dax" || target === "ndx") {
+      if (target === "spx" || target === "dax" || target === "ndx" || target === "dow") {
         const regime = deriveRegimeTag(setup);
         regimeDistribution[regime] = (regimeDistribution[regime] ?? 0) + 1;
       }
@@ -1385,7 +1395,7 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
           ? Object.keys(watchSegments).length
             ? watchSegments
             : undefined
-          : (target === "spx" || target === "dax" || target === "ndx") && Object.keys(indexWatchSegments).length
+          : (target === "spx" || target === "dax" || target === "ndx" || target === "dow") && Object.keys(indexWatchSegments).length
             ? indexWatchSegments
             : undefined,
     upgradeCandidates: Object.keys(upgradeReasons).length
