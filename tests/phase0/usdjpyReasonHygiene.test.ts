@@ -23,8 +23,12 @@ describe("USDJPY reason hygiene", () => {
       playbookId: null,
     });
 
-    const reasons = summary.watchReasonsDistribution ?? summary.noTradeReasonsDistribution ?? summary.blockedReasonsDistribution ?? {};
-    const keys = Object.keys(reasons);
+    const mergedReasons = {
+      ...(summary.watchReasonsDistribution ?? {}),
+      ...(summary.noTradeReasonsDistribution ?? {}),
+      ...(summary.blockedReasonsDistribution ?? {}),
+    };
+    const keys = Object.keys(mergedReasons);
     expect(keys.some((r) => r.toLowerCase().includes("index fallback"))).toBe(false);
     expect(keys.some((r) => r.toLowerCase().includes("crypto"))).toBe(false);
     expect(keys.some((r) => r.toLowerCase().includes("no default alignment"))).toBe(false);

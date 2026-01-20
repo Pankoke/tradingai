@@ -195,7 +195,22 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
   const hard = isHardKo(setup);
   const soft = !hard && isSoftReason(noTradeReason, gradeRationale);
 
-  const reasons = buildReasons(noTradeReason, gradeRationale, gradeDebugReason);
+  const sanitizeFxReasons = (list: string[]): string[] => {
+    const mapped = list.map((r) => {
+      const lower = r.toLowerCase();
+      if (lower.includes("no default alignment")) return "Alignment unavailable (fx)";
+      if (lower.includes("alignment derived")) return "Alignment unavailable (fx)";
+      if (lower.includes("index fallback")) return "Alignment unavailable (fx)";
+      if (lower.includes("crypto hyphen usd")) return "";
+      return r;
+    });
+    return Array.from(new Set(mapped.filter((r) => r && r.trim().length > 0))).slice(0, MAX_REASONS);
+  };
+
+  let reasons = buildReasons(noTradeReason, gradeRationale, gradeDebugReason);
+  if (isFxAsset) {
+    reasons = sanitizeFxReasons(reasons);
+  }
   const ensureReasons = (arr: string[], fallback: string) => (arr.length ? arr : [fallback]);
 
   // BTC Swing: provide deterministic fallback alignment instead of hard-blocking on missing alignment
