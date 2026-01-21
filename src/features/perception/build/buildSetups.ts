@@ -23,6 +23,7 @@ import type { SetupProfile } from "@/src/lib/config/setupProfile";
 import { computeSignalQuality } from "@/src/lib/engine/signalQuality";
 import { resolvePlaybookWithReason } from "@/src/lib/engine/playbooks";
 import { deriveSetupProfileFromTimeframe } from "@/src/lib/config/setupProfile";
+import type { SetupGrade } from "@/src/lib/engine/types";
 
 export type PerceptionSnapshotEngineResult = PerceptionSnapshot;
 
@@ -63,6 +64,15 @@ function createId(prefix: string): string {
 }
 
 export type SnapshotBuildSource = "ui" | "admin" | "cron" | "cron_intraday";
+
+export function derivePersistedDecision(setup: Setup, evaluation: { setupType?: string | null }): string {
+  const fromSetup = (setup as { setupDecision?: string | null }).setupDecision;
+  if (fromSetup && typeof fromSetup === "string") return fromSetup.toUpperCase();
+  const setupType = evaluation.setupType ?? (setup as { setupType?: string | null }).setupType;
+  if (setupType && typeof setupType === "string") return setupType.toUpperCase();
+  if ((setup as { noTradeReason?: string | null }).noTradeReason) return "NO_TRADE";
+  return "UNKNOWN";
+}
 
 export async function buildAndStorePerceptionSnapshot(
   params: BuildParams = {},
@@ -223,6 +233,20 @@ export async function buildAndStorePerceptionSnapshot(
           }
         : setup.sentiment;
 
+    const persistedDecision = derivePersistedDecision(setup, { setupType: evaluation.setupType ?? null });
+    const persistedAlignment =
+      (setup as { alignment?: string | null }).alignment ??
+      (setup as { derivedAlignment?: string | null }).derivedAlignment ??
+      null;
+    const persistedReasons =
+      (setup as { decisionReasons?: string[] | null }).decisionReasons ??
+      (setup as { gradeRationale?: string[] | null }).gradeRationale ??
+      null;
+    const persistedSegment =
+      (setup as { watchSegment?: string | null }).watchSegment ??
+      (setup as { fxWatchSegment?: string | null }).fxWatchSegment ??
+      null;
+
     updatedSetups.push({
       ...setup,
       rings,
@@ -236,6 +260,13 @@ export async function buildAndStorePerceptionSnapshot(
       profile,
       setupPlaybookId: playbook.id,
       gradeDebugReason: evaluation.debugReason ?? playbookReason,
+      // Persisted dimension copies (source-of-truth for Phase-1)
+      playbookId: playbook.id,
+      grade: evaluation.setupGrade as SetupGrade | null,
+      decision: persistedDecision,
+      alignment: persistedAlignment,
+      decisionReasons: persistedReasons ?? undefined,
+      watchSegment: persistedSegment ?? undefined,
     });
   }
 

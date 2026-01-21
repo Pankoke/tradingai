@@ -1,0 +1,1391 @@
+{
+  "version": "v1",
+  "generatedAt": "2026-01-21T11:53:18.977Z",
+  "params": {
+    "days": 30,
+    "timeframes": [
+      "1d",
+      "1w"
+    ],
+    "labels": [
+      "eod",
+      "us_open",
+      "morning",
+      "(null)"
+    ]
+  },
+  "overall": {
+    "setupsTotal": 2809,
+    "outcomesTotal": 663,
+    "matchedOutcomes": 663,
+    "unmatchedOutcomes": 0,
+    "joinRate": 1
+  },
+  "byKey": [
+    {
+      "key": {
+        "assetId": "btc",
+        "timeframe": "1d",
+        "label": "(null)"
+      },
+      "setupsTotal": 21,
+      "snapshotsTotal": 21,
+      "outcomesTotal": 12,
+      "matchedOutcomes": 12,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "btc",
+        "timeframe": "1d",
+        "label": "eod"
+      },
+      "setupsTotal": 27,
+      "snapshotsTotal": 27,
+      "outcomesTotal": 15,
+      "matchedOutcomes": 15,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "btc",
+        "timeframe": "1d",
+        "label": "morning"
+      },
+      "setupsTotal": 21,
+      "snapshotsTotal": 21,
+      "outcomesTotal": 11,
+      "matchedOutcomes": 11,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "btc",
+        "timeframe": "1d",
+        "label": "us_open"
+      },
+      "setupsTotal": 27,
+      "snapshotsTotal": 27,
+      "outcomesTotal": 13,
+      "matchedOutcomes": 13,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "btc",
+        "timeframe": "1w",
+        "label": "(null)"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "btc",
+        "timeframe": "1w",
+        "label": "eod"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "btc",
+        "timeframe": "1w",
+        "label": "morning"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "btc",
+        "timeframe": "1w",
+        "label": "us_open"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "dax",
+        "timeframe": "1d",
+        "label": "(null)"
+      },
+      "setupsTotal": 29,
+      "snapshotsTotal": 29,
+      "outcomesTotal": 12,
+      "matchedOutcomes": 12,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "dax",
+        "timeframe": "1d",
+        "label": "eod"
+      },
+      "setupsTotal": 37,
+      "snapshotsTotal": 37,
+      "outcomesTotal": 15,
+      "matchedOutcomes": 15,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "dax",
+        "timeframe": "1d",
+        "label": "morning"
+      },
+      "setupsTotal": 29,
+      "snapshotsTotal": 29,
+      "outcomesTotal": 11,
+      "matchedOutcomes": 11,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "dax",
+        "timeframe": "1d",
+        "label": "us_open"
+      },
+      "setupsTotal": 35,
+      "snapshotsTotal": 35,
+      "outcomesTotal": 13,
+      "matchedOutcomes": 13,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "dax",
+        "timeframe": "1w",
+        "label": "(null)"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "dax",
+        "timeframe": "1w",
+        "label": "eod"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "dax",
+        "timeframe": "1w",
+        "label": "morning"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "dax",
+        "timeframe": "1w",
+        "label": "us_open"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "dow",
+        "timeframe": "1d",
+        "label": "(null)"
+      },
+      "setupsTotal": 28,
+      "snapshotsTotal": 28,
+      "outcomesTotal": 12,
+      "matchedOutcomes": 12,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "dow",
+        "timeframe": "1d",
+        "label": "eod"
+      },
+      "setupsTotal": 36,
+      "snapshotsTotal": 36,
+      "outcomesTotal": 15,
+      "matchedOutcomes": 15,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "dow",
+        "timeframe": "1d",
+        "label": "morning"
+      },
+      "setupsTotal": 28,
+      "snapshotsTotal": 28,
+      "outcomesTotal": 11,
+      "matchedOutcomes": 11,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "dow",
+        "timeframe": "1d",
+        "label": "us_open"
+      },
+      "setupsTotal": 33,
+      "snapshotsTotal": 33,
+      "outcomesTotal": 13,
+      "matchedOutcomes": 13,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "dow",
+        "timeframe": "1w",
+        "label": "(null)"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "dow",
+        "timeframe": "1w",
+        "label": "eod"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "dow",
+        "timeframe": "1w",
+        "label": "morning"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "dow",
+        "timeframe": "1w",
+        "label": "us_open"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "eth",
+        "timeframe": "1d",
+        "label": "(null)"
+      },
+      "setupsTotal": 30,
+      "snapshotsTotal": 30,
+      "outcomesTotal": 12,
+      "matchedOutcomes": 12,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "eth",
+        "timeframe": "1d",
+        "label": "eod"
+      },
+      "setupsTotal": 37,
+      "snapshotsTotal": 37,
+      "outcomesTotal": 15,
+      "matchedOutcomes": 15,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "eth",
+        "timeframe": "1d",
+        "label": "morning"
+      },
+      "setupsTotal": 30,
+      "snapshotsTotal": 30,
+      "outcomesTotal": 11,
+      "matchedOutcomes": 11,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "eth",
+        "timeframe": "1d",
+        "label": "us_open"
+      },
+      "setupsTotal": 35,
+      "snapshotsTotal": 35,
+      "outcomesTotal": 13,
+      "matchedOutcomes": 13,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "eth",
+        "timeframe": "1w",
+        "label": "(null)"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "eth",
+        "timeframe": "1w",
+        "label": "eod"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "eth",
+        "timeframe": "1w",
+        "label": "morning"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "eth",
+        "timeframe": "1w",
+        "label": "us_open"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "eurjpy",
+        "timeframe": "1d",
+        "label": "(null)"
+      },
+      "setupsTotal": 30,
+      "snapshotsTotal": 30,
+      "outcomesTotal": 12,
+      "matchedOutcomes": 12,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "eurjpy",
+        "timeframe": "1d",
+        "label": "eod"
+      },
+      "setupsTotal": 37,
+      "snapshotsTotal": 37,
+      "outcomesTotal": 15,
+      "matchedOutcomes": 15,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "eurjpy",
+        "timeframe": "1d",
+        "label": "morning"
+      },
+      "setupsTotal": 30,
+      "snapshotsTotal": 30,
+      "outcomesTotal": 11,
+      "matchedOutcomes": 11,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "eurjpy",
+        "timeframe": "1d",
+        "label": "us_open"
+      },
+      "setupsTotal": 35,
+      "snapshotsTotal": 35,
+      "outcomesTotal": 13,
+      "matchedOutcomes": 13,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "eurjpy",
+        "timeframe": "1w",
+        "label": "(null)"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "eurjpy",
+        "timeframe": "1w",
+        "label": "eod"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "eurjpy",
+        "timeframe": "1w",
+        "label": "morning"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "eurjpy",
+        "timeframe": "1w",
+        "label": "us_open"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "eurusd",
+        "timeframe": "1d",
+        "label": "(null)"
+      },
+      "setupsTotal": 30,
+      "snapshotsTotal": 30,
+      "outcomesTotal": 12,
+      "matchedOutcomes": 12,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "eurusd",
+        "timeframe": "1d",
+        "label": "eod"
+      },
+      "setupsTotal": 37,
+      "snapshotsTotal": 37,
+      "outcomesTotal": 15,
+      "matchedOutcomes": 15,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "eurusd",
+        "timeframe": "1d",
+        "label": "morning"
+      },
+      "setupsTotal": 30,
+      "snapshotsTotal": 30,
+      "outcomesTotal": 11,
+      "matchedOutcomes": 11,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "eurusd",
+        "timeframe": "1d",
+        "label": "us_open"
+      },
+      "setupsTotal": 35,
+      "snapshotsTotal": 35,
+      "outcomesTotal": 13,
+      "matchedOutcomes": 13,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "eurusd",
+        "timeframe": "1w",
+        "label": "(null)"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "eurusd",
+        "timeframe": "1w",
+        "label": "eod"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "eurusd",
+        "timeframe": "1w",
+        "label": "morning"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "eurusd",
+        "timeframe": "1w",
+        "label": "us_open"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "gbpusd",
+        "timeframe": "1d",
+        "label": "(null)"
+      },
+      "setupsTotal": 30,
+      "snapshotsTotal": 30,
+      "outcomesTotal": 12,
+      "matchedOutcomes": 12,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "gbpusd",
+        "timeframe": "1d",
+        "label": "eod"
+      },
+      "setupsTotal": 37,
+      "snapshotsTotal": 37,
+      "outcomesTotal": 15,
+      "matchedOutcomes": 15,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "gbpusd",
+        "timeframe": "1d",
+        "label": "morning"
+      },
+      "setupsTotal": 30,
+      "snapshotsTotal": 30,
+      "outcomesTotal": 11,
+      "matchedOutcomes": 11,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "gbpusd",
+        "timeframe": "1d",
+        "label": "us_open"
+      },
+      "setupsTotal": 35,
+      "snapshotsTotal": 35,
+      "outcomesTotal": 13,
+      "matchedOutcomes": 13,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "gbpusd",
+        "timeframe": "1w",
+        "label": "(null)"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "gbpusd",
+        "timeframe": "1w",
+        "label": "eod"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "gbpusd",
+        "timeframe": "1w",
+        "label": "morning"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "gbpusd",
+        "timeframe": "1w",
+        "label": "us_open"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "gold",
+        "timeframe": "1d",
+        "label": "(null)"
+      },
+      "setupsTotal": 38,
+      "snapshotsTotal": 38,
+      "outcomesTotal": 12,
+      "matchedOutcomes": 12,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "gold",
+        "timeframe": "1d",
+        "label": "eod"
+      },
+      "setupsTotal": 37,
+      "snapshotsTotal": 37,
+      "outcomesTotal": 15,
+      "matchedOutcomes": 15,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "gold",
+        "timeframe": "1d",
+        "label": "morning"
+      },
+      "setupsTotal": 30,
+      "snapshotsTotal": 30,
+      "outcomesTotal": 11,
+      "matchedOutcomes": 11,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "gold",
+        "timeframe": "1d",
+        "label": "us_open"
+      },
+      "setupsTotal": 35,
+      "snapshotsTotal": 35,
+      "outcomesTotal": 13,
+      "matchedOutcomes": 13,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "gold",
+        "timeframe": "1w",
+        "label": "(null)"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "gold",
+        "timeframe": "1w",
+        "label": "eod"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "gold",
+        "timeframe": "1w",
+        "label": "morning"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "gold",
+        "timeframe": "1w",
+        "label": "us_open"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "ndx",
+        "timeframe": "1d",
+        "label": "(null)"
+      },
+      "setupsTotal": 28,
+      "snapshotsTotal": 28,
+      "outcomesTotal": 12,
+      "matchedOutcomes": 12,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "ndx",
+        "timeframe": "1d",
+        "label": "eod"
+      },
+      "setupsTotal": 36,
+      "snapshotsTotal": 36,
+      "outcomesTotal": 15,
+      "matchedOutcomes": 15,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "ndx",
+        "timeframe": "1d",
+        "label": "morning"
+      },
+      "setupsTotal": 28,
+      "snapshotsTotal": 28,
+      "outcomesTotal": 11,
+      "matchedOutcomes": 11,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "ndx",
+        "timeframe": "1d",
+        "label": "us_open"
+      },
+      "setupsTotal": 33,
+      "snapshotsTotal": 33,
+      "outcomesTotal": 13,
+      "matchedOutcomes": 13,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "ndx",
+        "timeframe": "1w",
+        "label": "(null)"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "ndx",
+        "timeframe": "1w",
+        "label": "eod"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "ndx",
+        "timeframe": "1w",
+        "label": "morning"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "ndx",
+        "timeframe": "1w",
+        "label": "us_open"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "silver",
+        "timeframe": "1d",
+        "label": "(null)"
+      },
+      "setupsTotal": 30,
+      "snapshotsTotal": 30,
+      "outcomesTotal": 12,
+      "matchedOutcomes": 12,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "silver",
+        "timeframe": "1d",
+        "label": "eod"
+      },
+      "setupsTotal": 37,
+      "snapshotsTotal": 37,
+      "outcomesTotal": 15,
+      "matchedOutcomes": 15,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "silver",
+        "timeframe": "1d",
+        "label": "morning"
+      },
+      "setupsTotal": 30,
+      "snapshotsTotal": 30,
+      "outcomesTotal": 11,
+      "matchedOutcomes": 11,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "silver",
+        "timeframe": "1d",
+        "label": "us_open"
+      },
+      "setupsTotal": 35,
+      "snapshotsTotal": 35,
+      "outcomesTotal": 13,
+      "matchedOutcomes": 13,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "silver",
+        "timeframe": "1w",
+        "label": "(null)"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "silver",
+        "timeframe": "1w",
+        "label": "eod"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "silver",
+        "timeframe": "1w",
+        "label": "morning"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "silver",
+        "timeframe": "1w",
+        "label": "us_open"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "spx",
+        "timeframe": "1d",
+        "label": "(null)"
+      },
+      "setupsTotal": 28,
+      "snapshotsTotal": 28,
+      "outcomesTotal": 12,
+      "matchedOutcomes": 12,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "spx",
+        "timeframe": "1d",
+        "label": "eod"
+      },
+      "setupsTotal": 36,
+      "snapshotsTotal": 36,
+      "outcomesTotal": 15,
+      "matchedOutcomes": 15,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "spx",
+        "timeframe": "1d",
+        "label": "morning"
+      },
+      "setupsTotal": 28,
+      "snapshotsTotal": 28,
+      "outcomesTotal": 11,
+      "matchedOutcomes": 11,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "spx",
+        "timeframe": "1d",
+        "label": "us_open"
+      },
+      "setupsTotal": 33,
+      "snapshotsTotal": 33,
+      "outcomesTotal": 13,
+      "matchedOutcomes": 13,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "spx",
+        "timeframe": "1w",
+        "label": "(null)"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "spx",
+        "timeframe": "1w",
+        "label": "eod"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "spx",
+        "timeframe": "1w",
+        "label": "morning"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "spx",
+        "timeframe": "1w",
+        "label": "us_open"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "usdjpy",
+        "timeframe": "1d",
+        "label": "(null)"
+      },
+      "setupsTotal": 30,
+      "snapshotsTotal": 30,
+      "outcomesTotal": 12,
+      "matchedOutcomes": 12,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "usdjpy",
+        "timeframe": "1d",
+        "label": "eod"
+      },
+      "setupsTotal": 37,
+      "snapshotsTotal": 37,
+      "outcomesTotal": 15,
+      "matchedOutcomes": 15,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "usdjpy",
+        "timeframe": "1d",
+        "label": "morning"
+      },
+      "setupsTotal": 30,
+      "snapshotsTotal": 30,
+      "outcomesTotal": 11,
+      "matchedOutcomes": 11,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "usdjpy",
+        "timeframe": "1d",
+        "label": "us_open"
+      },
+      "setupsTotal": 35,
+      "snapshotsTotal": 35,
+      "outcomesTotal": 13,
+      "matchedOutcomes": 13,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "usdjpy",
+        "timeframe": "1w",
+        "label": "(null)"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "usdjpy",
+        "timeframe": "1w",
+        "label": "eod"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "usdjpy",
+        "timeframe": "1w",
+        "label": "morning"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "usdjpy",
+        "timeframe": "1w",
+        "label": "us_open"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1d",
+        "label": "(null)"
+      },
+      "setupsTotal": 30,
+      "snapshotsTotal": 30,
+      "outcomesTotal": 12,
+      "matchedOutcomes": 12,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1d",
+        "label": "eod"
+      },
+      "setupsTotal": 37,
+      "snapshotsTotal": 37,
+      "outcomesTotal": 15,
+      "matchedOutcomes": 15,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1d",
+        "label": "morning"
+      },
+      "setupsTotal": 30,
+      "snapshotsTotal": 30,
+      "outcomesTotal": 11,
+      "matchedOutcomes": 11,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1d",
+        "label": "us_open"
+      },
+      "setupsTotal": 35,
+      "snapshotsTotal": 35,
+      "outcomesTotal": 13,
+      "matchedOutcomes": 13,
+      "unmatchedOutcomes": 0,
+      "joinRate": 1
+    },
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1w",
+        "label": "(null)"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1w",
+        "label": "eod"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1w",
+        "label": "morning"
+      },
+      "setupsTotal": 20,
+      "snapshotsTotal": 20,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1w",
+        "label": "us_open"
+      },
+      "setupsTotal": 24,
+      "snapshotsTotal": 24,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    }
+  ],
+  "unmatchedSamples": [],
+  "matchedSampleIds": [
+    "5941f522-b82a-4326-a394-4c50758e1c8e__btc-trend_breakout",
+    "033442b0-015c-4e4a-b42e-d22ce7593c98__dax-trend_breakout",
+    "8aaa7019-4fea-4305-a4d5-cc37bac4787f__ndx-mean_reversion_overshoot",
+    "59e56a73-540e-479a-92ea-179b6d134ae4__gold-trend_pullback",
+    "b07becd6-c4b3-4219-b518-2919a8840d40__eurjpy-range_compression",
+    "b07becd6-c4b3-4219-b518-2919a8840d40__dow-momentum_strong",
+    "b07becd6-c4b3-4219-b518-2919a8840d40__wti-trend_pullback",
+    "b07becd6-c4b3-4219-b518-2919a8840d40__gbpusd-trend_breakout",
+    "b07becd6-c4b3-4219-b518-2919a8840d40__spx-trend_pullback",
+    "b07becd6-c4b3-4219-b518-2919a8840d40__eurusd-momentum_strong"
+  ]
+}

@@ -368,6 +368,12 @@ export const setupSchema = z.object({
   gradeRationale: z.array(z.string()).max(3).optional(),
   noTradeReason: z.string().optional().nullable(),
   gradeDebugReason: z.string().optional(),
+  playbookId: z.string().optional().nullable(),
+  grade: setupGradeEnum.optional().nullable(),
+  decision: z.string().optional().nullable(),
+  alignment: z.string().optional().nullable(),
+  decisionReasons: z.array(z.string()).optional().nullable(),
+  watchSegment: z.string().optional().nullable(),
 });
 
 export type Setup = z.infer<typeof setupSchema>;

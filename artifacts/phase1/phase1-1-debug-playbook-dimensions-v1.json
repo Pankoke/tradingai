@@ -1,0 +1,34 @@
+{
+  "generatedAt": "2026-01-21T13-02-50.984Z",
+  "input": "G:\\tradingai\\artifacts\\phase1\\swing-outcome-analysis-latest-v1.json",
+  "assets": [
+    "wti",
+    "silver"
+  ],
+  "summaries": [
+    {
+      "assetId": "wti",
+      "playbookCounts": {
+        "generic-swing-v0.1": 51
+      },
+      "decisions": {
+        "unknown": 51
+      },
+      "grades": {
+        "no_trade": 51
+      }
+    },
+    {
+      "assetId": "silver",
+      "playbookCounts": {
+        "generic-swing-v0.1": 51
+      },
+      "decisions": {
+        "unknown": 51
+      },
+      "grades": {
+        "no_trade": 51
+      }
+    }
+  ]
+}
