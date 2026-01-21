@@ -4,7 +4,7 @@ Date: generated after fixing profile guard (see `src/lib/engine/playbooks/index.
 
 ### Registry (src/lib/engine/playbooks/index.ts)
 - Asset-specific: `gold-swing-v0.2`, `spx-swing-v0.1`, `dax-swing-v0.1`, `ndx-swing-v0.1`, `dow-swing-v0.1`, `eurusd-swing-v0.1`, `gbpusd-swing-v0.1`, `usdjpy-swing-v0.1`, `eurjpy-swing-v0.1`.
-- Class-level: `index-swing-v0.1`, `crypto-swing-v0.1`, `fx-swing-v0.1`, `generic-swing-v0.1`.
+- Class-level: `index-swing-v0.1`, `crypto-swing-v0.1`, `fx-swing-v0.1`, `metals-swing-v0.1`, `energy-swing-v0.1`, `generic-swing-v0.1`.
 - Resolver inputs: `asset.id/symbol/name` plus optional `profile` string. Rings/levels are only used by playbooks after routing.
 
 ### Resolver logic (key points)
@@ -21,7 +21,7 @@ Date: generated after fixing profile guard (see `src/lib/engine/playbooks/index.
 ### Current audit highlights (after guard + resolver reorder)
 - 1D swing labels (eod/us_open/morning/(null)) route to asset FX playbooks (eurusd/gbpusd/usdjpy/eurjpy) and index-specific playbooks; gold/crypto unchanged.
 - 1W swing labels now resolve to their asset playbooks (gold/index/FX/crypto) instead of generic. Intraday still uses `generic-swing-v0.1 | non-swing profile` (intended).
-- WTI/Silver still fall back to `generic-swing-v0.1` (no dedicated class playbook yet).
+- WTI now routes to `energy-swing-v0.1`, Silver to `metals-swing-v0.1` for swing timeframes. Intraday remains generic by design.
 
 ### Missing coverage / next steps
 - Weekly (1W) setups: decide whether to treat as swing; if yes, adjust resolver to treat weekly profiles as swing-default.

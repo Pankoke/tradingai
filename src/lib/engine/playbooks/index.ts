@@ -71,6 +71,8 @@ const EURUSD_PLAYBOOK_ID = "eurusd-swing-v0.1";
 const GBPUSD_PLAYBOOK_ID = "gbpusd-swing-v0.1";
 const USDJPY_PLAYBOOK_ID = "usdjpy-swing-v0.1";
 const EURJPY_PLAYBOOK_ID = "eurjpy-swing-v0.1";
+const METALS_PLAYBOOK_ID = "metals-swing-v0.1";
+const ENERGY_PLAYBOOK_ID = "energy-swing-v0.1";
 const CRYPTO_PLAYBOOK_ID = "crypto-swing-v0.1";
 const FX_PLAYBOOK_ID = "fx-swing-v0.1";
 const GENERIC_PLAYBOOK_ID = "generic-swing-v0.1";
@@ -156,6 +158,22 @@ function matchFxAsset(asset: PlaybookContext["asset"]): MatchResult {
   return { matched: false, reason: "no fx match" };
 }
 
+function matchMetalsAsset(asset: PlaybookContext["asset"]): MatchResult {
+  const id = (asset.id ?? "").toLowerCase();
+  const symbol = (asset.symbol ?? "").toUpperCase();
+  if (id === "silver") return { matched: true, reason: "silver id" };
+  if (symbol.includes("XAG") || symbol.includes("SILVER")) return { matched: true, reason: "silver symbol" };
+  return { matched: false, reason: "no metals match" };
+}
+
+function matchEnergyAsset(asset: PlaybookContext["asset"]): MatchResult {
+  const id = (asset.id ?? "").toLowerCase();
+  const symbol = (asset.symbol ?? "").toUpperCase();
+  if (id === "wti") return { matched: true, reason: "wti id" };
+  if (symbol.includes("WTI") || symbol.startsWith("CL")) return { matched: true, reason: "wti symbol" };
+  return { matched: false, reason: "no energy match" };
+}
+
 function matchCryptoAsset(asset: PlaybookContext["asset"]): MatchResult {
   const symbol = (asset.symbol ?? "").toUpperCase();
   if (symbol.includes("=X")) return { matched: false, reason: "yahoo fx - skip crypto" };
@@ -186,6 +204,12 @@ function resolvePlaybookIdForAsset(asset: PlaybookContext["asset"], profile?: st
 
   const gold = matchGoldAsset(asset);
   if (gold.matched) return { playbook: goldSwingPlaybook, reason: gold.reason };
+
+  const metals = matchMetalsAsset(asset);
+  if (metals.matched) return { playbook: metalsSwingPlaybook, reason: metals.reason };
+
+  const energy = matchEnergyAsset(asset);
+  if (energy.matched) return { playbook: energySwingPlaybook, reason: energy.reason };
 
   const index = matchIndexAsset(asset);
   if (index.matched) return { playbook: indexSwingPlaybook, reason: index.reason };
@@ -627,6 +651,20 @@ const fxSwingPlaybook: Playbook = {
   evaluateSetup: evaluateDefault,
 };
 
+const metalsSwingPlaybook: Playbook = {
+  id: METALS_PLAYBOOK_ID,
+  label: "Metals Swing",
+  shortLabel: "Metals",
+  evaluateSetup: evaluateDefault,
+};
+
+const energySwingPlaybook: Playbook = {
+  id: ENERGY_PLAYBOOK_ID,
+  label: "Energy Swing",
+  shortLabel: "Energy",
+  evaluateSetup: evaluateDefault,
+};
+
 const genericSwingPlaybook: Playbook = {
   id: GENERIC_PLAYBOOK_ID,
   label: "Generic Swing",
@@ -645,6 +683,8 @@ const PLAYBOOK_LABELS: Record<string, { label: string; short: string }> = {
   [GBPUSD_PLAYBOOK_ID]: { label: "GBPUSD Swing", short: "GBPUSD Swing" },
   [USDJPY_PLAYBOOK_ID]: { label: "USDJPY Swing", short: "USDJPY Swing" },
   [EURJPY_PLAYBOOK_ID]: { label: "EURJPY Swing", short: "EURJPY Swing" },
+  [METALS_PLAYBOOK_ID]: { label: "Metals Swing", short: "Metals Swing" },
+  [ENERGY_PLAYBOOK_ID]: { label: "Energy Swing", short: "Energy Swing" },
   [CRYPTO_PLAYBOOK_ID]: { label: "Crypto Swing", short: "Crypto Swing" },
   [FX_PLAYBOOK_ID]: { label: "FX Swing", short: "FX Swing" },
   [GENERIC_PLAYBOOK_ID]: { label: "Generic Swing", short: "Generic Swing" },

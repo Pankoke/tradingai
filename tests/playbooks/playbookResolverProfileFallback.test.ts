@@ -26,4 +26,15 @@ describe("playbook resolver profile handling", () => {
     expect(resolvedIntraday.playbook.id).toBe("generic-swing-v0.1");
     expect(resolvedIntraday.reason).toBe("non-swing profile");
   });
+
+  it("routes metals and energy assets to class playbooks (not generic) for swing profiles", () => {
+    const silver = makeAsset("silver", "XAGUSD");
+    const wti = makeAsset("wti", "CL=F");
+
+    const resolvedSilver = resolvePlaybookWithReason(silver, "swing");
+    expect(resolvedSilver.playbook.id).toBe("metals-swing-v0.1");
+
+    const resolvedWti = resolvePlaybookWithReason(wti, "swing");
+    expect(resolvedWti.playbook.id).toBe("energy-swing-v0.1");
+  });
 });
