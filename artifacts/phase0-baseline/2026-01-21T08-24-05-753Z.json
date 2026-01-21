@@ -1,0 +1,355 @@
+{
+  "fetchedAt": "2026-01-21T08:24:05.751Z",
+  "baseUrl": "http://localhost:3000",
+  "windowDays": 30,
+  "summaryKeys": [
+    "gold",
+    "btc",
+    "spx",
+    "dax",
+    "ndx",
+    "dow",
+    "eurusd",
+    "gbpusd",
+    "usdjpy",
+    "eurjpy"
+  ],
+  "assets": {
+    "gold": {
+      "decisionDistribution": {
+        "TRADE": 17,
+        "WATCH": 84,
+        "BLOCKED": 32
+      },
+      "gradeDistribution": {
+        "A": 2,
+        "B": 15,
+        "NO_TRADE": 116
+      },
+      "watchSegmentsDistribution": {
+        "WATCH_FAILS_BIAS": 34,
+        "WATCH_FAILS_TREND": 49,
+        "WATCH_FAILS_ONLY_CONFIDENCE": 1
+      },
+      "blockedReasonsTop": {
+        "Blocked: missing decision reasons": 22,
+        "Bias too weak (<70)": 8,
+        "Hard knockout: tb_conflict+of_negative": 1,
+        "Orderflow negative": 1
+      },
+      "noTradeReasonsTop": {
+        "Bias too weak (<70)": 54,
+        "Bias too weak (<80)": 29,
+        "Blocked: missing decision reasons": 22,
+        "Trend too weak (<50)": 9,
+        "Hard knockout: tb_conflict+of_negative": 1
+      },
+      "watchReasonsTop": {
+        "Bias too weak (<70)": 46,
+        "Bias too weak (<80)": 29,
+        "Trend too weak (<50)": 9
+      }
+    },
+    "btc": {
+      "decisionDistribution": {
+        "TRADE": 20,
+        "WATCH": 69,
+        "BLOCKED": 0
+      },
+      "gradeDistribution": {
+        "A": 0,
+        "B": 20,
+        "NO_TRADE": 69
+      },
+      "noTradeReasonsTop": {
+        "Alignment unavailable (crypto)": 46,
+        "Blocked: missing decision reasons": 22,
+        "no gold match": 1
+      },
+      "watchReasonsTop": {
+        "Alignment unavailable (crypto)": 46,
+        "Blocked: missing decision reasons": 22,
+        "no gold match": 1
+      }
+    },
+    "spx": {
+      "decisionDistribution": {
+        "TRADE": 0,
+        "WATCH": 115,
+        "BLOCKED": 3
+      },
+      "gradeDistribution": {
+        "A": 0,
+        "B": 0,
+        "NO_TRADE": 118
+      },
+      "watchSegmentsDistribution": {
+        "WATCH_FAILS_BIAS_SOFT": 90,
+        "WATCH_EVENT_RISK_HIGH": 24,
+        "WATCH_FAILS_BIAS_NEAR": 1
+      },
+      "blockedReasonsTop": {
+        "Regime range/chop (trend confirmation missing)": 3
+      },
+      "noTradeReasonsTop": {
+        "WATCH_FAILS_BIAS_SOFT": 90,
+        "WATCH_EVENT_RISK_HIGH": 24,
+        "Regime range/chop (trend confirmation missing)": 3,
+        "WATCH_FAILS_BIAS_NEAR": 1
+      },
+      "watchReasonsTop": {
+        "WATCH_FAILS_BIAS_SOFT": 90,
+        "WATCH_EVENT_RISK_HIGH": 24,
+        "WATCH_FAILS_BIAS_NEAR": 1
+      }
+    },
+    "dax": {
+      "decisionDistribution": {
+        "TRADE": 27,
+        "WATCH": 93,
+        "BLOCKED": 3
+      },
+      "gradeDistribution": {
+        "A": 0,
+        "B": 27,
+        "NO_TRADE": 96
+      },
+      "watchSegmentsDistribution": {
+        "WATCH_OTHER": 23,
+        "WATCH_FAILS_CONFIDENCE": 24,
+        "WATCH_FAILS_BIAS_NEAR": 16,
+        "WATCH_EVENT_RISK_HIGH": 16,
+        "WATCH_FAILS_BIAS_SOFT": 14
+      },
+      "blockedReasonsTop": {
+        "Regime range/chop (trend confirmation missing)": 3
+      },
+      "noTradeReasonsTop": {
+        "WATCH_FAILS_CONFIDENCE": 24,
+        "WATCH_OTHER": 23,
+        "WATCH_FAILS_BIAS_NEAR": 16,
+        "WATCH_EVENT_RISK_HIGH": 16,
+        "WATCH_FAILS_BIAS_SOFT": 14
+      },
+      "watchReasonsTop": {
+        "WATCH_FAILS_CONFIDENCE": 24,
+        "WATCH_OTHER": 23,
+        "WATCH_FAILS_BIAS_NEAR": 16,
+        "WATCH_EVENT_RISK_HIGH": 16,
+        "WATCH_FAILS_BIAS_SOFT": 14
+      }
+    },
+    "ndx": {
+      "decisionDistribution": {
+        "TRADE": 8,
+        "WATCH": 107,
+        "BLOCKED": 3
+      },
+      "gradeDistribution": {
+        "A": 0,
+        "B": 8,
+        "NO_TRADE": 110
+      },
+      "watchSegmentsDistribution": {
+        "WATCH_FAILS_BIAS_SOFT": 38,
+        "WATCH_FAILS_BIAS_NEAR": 41,
+        "WATCH_EVENT_RISK_HIGH": 23,
+        "WATCH_FAILS_CONFIDENCE": 4,
+        "WATCH_OTHER": 1
+      },
+      "blockedReasonsTop": {
+        "Regime range/chop (trend confirmation missing)": 3
+      },
+      "noTradeReasonsTop": {
+        "WATCH_FAILS_BIAS_NEAR": 41,
+        "WATCH_FAILS_BIAS_SOFT": 38,
+        "WATCH_EVENT_RISK_HIGH": 23,
+        "WATCH_FAILS_CONFIDENCE": 4,
+        "Regime range/chop (trend confirmation missing)": 3
+      },
+      "watchReasonsTop": {
+        "WATCH_FAILS_BIAS_NEAR": 41,
+        "WATCH_FAILS_BIAS_SOFT": 38,
+        "WATCH_EVENT_RISK_HIGH": 23,
+        "WATCH_FAILS_CONFIDENCE": 4,
+        "WATCH_OTHER": 1
+      }
+    },
+    "dow": {
+      "decisionDistribution": {
+        "TRADE": 8,
+        "WATCH": 107,
+        "BLOCKED": 3
+      },
+      "gradeDistribution": {
+        "A": 0,
+        "B": 8,
+        "NO_TRADE": 110
+      },
+      "watchSegmentsDistribution": {
+        "WATCH_FAILS_BIAS_SOFT": 65,
+        "WATCH_EVENT_RISK_HIGH": 24,
+        "WATCH_FAILS_CONFIDENCE": 1,
+        "WATCH_OTHER": 4,
+        "WATCH_FAILS_BIAS_NEAR": 13
+      },
+      "blockedReasonsTop": {
+        "Regime range/chop (trend confirmation missing)": 3
+      },
+      "noTradeReasonsTop": {
+        "WATCH_FAILS_BIAS_SOFT": 65,
+        "WATCH_EVENT_RISK_HIGH": 24,
+        "WATCH_FAILS_BIAS_NEAR": 13,
+        "WATCH_OTHER": 4,
+        "Regime range/chop (trend confirmation missing)": 3
+      },
+      "watchReasonsTop": {
+        "WATCH_FAILS_BIAS_SOFT": 65,
+        "WATCH_EVENT_RISK_HIGH": 24,
+        "WATCH_FAILS_BIAS_NEAR": 13,
+        "WATCH_OTHER": 4,
+        "WATCH_FAILS_CONFIDENCE": 1
+      }
+    },
+    "eurusd": {
+      "decisionDistribution": {
+        "TRADE": 20,
+        "WATCH": 105,
+        "BLOCKED": 0
+      },
+      "gradeDistribution": {
+        "A": 0,
+        "B": 20,
+        "NO_TRADE": 105
+      },
+      "watchSegmentsDistribution": {
+        "WATCH_FAILS_CONFIDENCE": 34,
+        "WATCH_OTHER": 9,
+        "WATCH_EVENT_RISK_HIGH": 21,
+        "WATCH_FAILS_BIAS": 41
+      },
+      "alignmentDistribution": {
+        "LONG": 89,
+        "SHORT": 36,
+        "NEUTRAL": 0
+      },
+      "noTradeReasonsTop": {
+        "WATCH_FAILS_BIAS": 41,
+        "WATCH_FAILS_CONFIDENCE": 34,
+        "WATCH_EVENT_RISK_HIGH": 21,
+        "WATCH_OTHER": 9
+      },
+      "watchReasonsTop": {
+        "WATCH_FAILS_BIAS": 41,
+        "WATCH_FAILS_CONFIDENCE": 34,
+        "WATCH_EVENT_RISK_HIGH": 21,
+        "WATCH_OTHER": 9
+      }
+    },
+    "gbpusd": {
+      "decisionDistribution": {
+        "TRADE": 0,
+        "WATCH": 125,
+        "BLOCKED": 0
+      },
+      "gradeDistribution": {
+        "A": 0,
+        "B": 0,
+        "NO_TRADE": 125
+      },
+      "watchSegmentsDistribution": {
+        "WATCH_FAILS_BIAS": 86,
+        "WATCH_EVENT_RISK_HIGH": 29,
+        "WATCH_FAILS_CONFIDENCE": 7,
+        "WATCH_OTHER": 3
+      },
+      "alignmentDistribution": {
+        "LONG": 36,
+        "SHORT": 89,
+        "NEUTRAL": 0
+      },
+      "noTradeReasonsTop": {
+        "WATCH_FAILS_BIAS": 86,
+        "WATCH_EVENT_RISK_HIGH": 29,
+        "WATCH_FAILS_CONFIDENCE": 7,
+        "WATCH_OTHER": 3
+      },
+      "watchReasonsTop": {
+        "WATCH_FAILS_BIAS": 86,
+        "WATCH_EVENT_RISK_HIGH": 29,
+        "WATCH_FAILS_CONFIDENCE": 7,
+        "WATCH_OTHER": 3
+      }
+    },
+    "usdjpy": {
+      "decisionDistribution": {
+        "TRADE": 1,
+        "WATCH": 124,
+        "BLOCKED": 0
+      },
+      "gradeDistribution": {
+        "A": 0,
+        "B": 1,
+        "NO_TRADE": 124
+      },
+      "watchSegmentsDistribution": {
+        "WATCH_FAILS_CONFIDENCE": 25,
+        "WATCH_OTHER": 38,
+        "WATCH_FAILS_BIAS": 33,
+        "WATCH_EVENT_RISK_HIGH": 28
+      },
+      "alignmentDistribution": {
+        "LONG": 89,
+        "SHORT": 36,
+        "NEUTRAL": 0
+      },
+      "noTradeReasonsTop": {
+        "WATCH_OTHER": 38,
+        "WATCH_FAILS_BIAS": 33,
+        "WATCH_EVENT_RISK_HIGH": 28,
+        "WATCH_FAILS_CONFIDENCE": 25
+      },
+      "watchReasonsTop": {
+        "WATCH_OTHER": 38,
+        "WATCH_FAILS_BIAS": 33,
+        "WATCH_EVENT_RISK_HIGH": 28,
+        "WATCH_FAILS_CONFIDENCE": 25
+      }
+    },
+    "eurjpy": {
+      "decisionDistribution": {
+        "TRADE": 0,
+        "WATCH": 125,
+        "BLOCKED": 0
+      },
+      "gradeDistribution": {
+        "A": 0,
+        "B": 0,
+        "NO_TRADE": 125
+      },
+      "watchSegmentsDistribution": {
+        "WATCH_FAILS_BIAS": 79,
+        "WATCH_EVENT_RISK_HIGH": 29,
+        "WATCH_OTHER": 10,
+        "WATCH_FAILS_CONFIDENCE": 7
+      },
+      "alignmentDistribution": {
+        "LONG": 36,
+        "SHORT": 89,
+        "NEUTRAL": 0
+      },
+      "noTradeReasonsTop": {
+        "WATCH_FAILS_BIAS": 79,
+        "WATCH_EVENT_RISK_HIGH": 29,
+        "WATCH_OTHER": 10,
+        "WATCH_FAILS_CONFIDENCE": 7
+      },
+      "watchReasonsTop": {
+        "WATCH_FAILS_BIAS": 79,
+        "WATCH_EVENT_RISK_HIGH": 29,
+        "WATCH_OTHER": 10,
+        "WATCH_FAILS_CONFIDENCE": 7
+      }
+    }
+  }
+}
