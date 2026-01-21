@@ -169,7 +169,7 @@ export async function buildAndStorePerceptionSnapshot(
         : ringAiSummary;
 
     const profile = setup.profile ?? deriveSetupProfileFromTimeframe(setup.timeframe);
-    const { playbook, reason: playbookReason } = resolvePlaybookWithReason(
+    let { playbook, reason: playbookReason } = resolvePlaybookWithReason(
       {
         id: assetId,
         symbol: setup.symbol,
@@ -177,6 +177,29 @@ export async function buildAndStorePerceptionSnapshot(
       },
       profile,
     );
+    // Safety: ensure swing WTI/Silver do not persist generic playbook if resolver ever falls back.
+    if (
+      playbook.id === "generic-swing-v0.1" &&
+      profile &&
+      profile.toUpperCase() !== "INTRADAY"
+    ) {
+      const aid = assetId.toLowerCase();
+      if (aid === "wti") {
+        const { playbook: energyPlaybook } = resolvePlaybookWithReason(
+          { id: "wti", symbol: setup.symbol, name: symbolToAsset.get(setup.symbol)?.name },
+          profile,
+        );
+        playbook = energyPlaybook;
+        playbookReason = `${playbookReason}; forced energy-swing for wti`;
+      } else if (aid === "silver") {
+        const { playbook: metalsPlaybook } = resolvePlaybookWithReason(
+          { id: "silver", symbol: setup.symbol, name: symbolToAsset.get(setup.symbol)?.name },
+          profile,
+        );
+        playbook = metalsPlaybook;
+        playbookReason = `${playbookReason}; forced metals-swing for silver`;
+      }
+    }
     const signalQuality = computeSignalQuality({ ...setup, rings, profile });
     const evaluation = playbook.evaluateSetup({
       asset: { id: assetId, symbol: setup.symbol, name: symbolToAsset.get(setup.symbol)?.name },
