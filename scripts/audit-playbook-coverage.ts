@@ -1,4 +1,8 @@
-import "dotenv/config";
+import { config } from "dotenv";
+import "tsconfig-paths/register";
+
+config();
+config({ path: ".env.local", override: false });
 import { format } from "node:util";
 
 import { and, gte } from "drizzle-orm";
@@ -129,4 +133,3 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
-
