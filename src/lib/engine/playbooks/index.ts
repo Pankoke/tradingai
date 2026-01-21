@@ -166,7 +166,9 @@ function matchCryptoAsset(asset: PlaybookContext["asset"]): MatchResult {
 
 function resolvePlaybookIdForAsset(asset: PlaybookContext["asset"], profile?: string | null): PlaybookResolution {
   const profileKey = (profile ?? "").toLowerCase();
-  if (!profileKey.includes("swing")) {
+  const nonSwingPatterns = ["intraday", "daytrade", "day_trade", "scalp", "scalping", "shortterm", "short_term"];
+  // Default to swing when profile is empty; only route to generic when profile explicitly signals a non-swing profile.
+  if (profileKey.length > 0 && nonSwingPatterns.some((pat) => profileKey.includes(pat))) {
     return { playbook: genericSwingPlaybook, reason: "non-swing profile" };
   }
 
@@ -188,9 +190,6 @@ function resolvePlaybookIdForAsset(asset: PlaybookContext["asset"], profile?: st
   const index = matchIndexAsset(asset);
   if (index.matched) return { playbook: indexSwingPlaybook, reason: index.reason };
 
-  const crypto = matchCryptoAsset(asset);
-  if (crypto.matched) return { playbook: cryptoSwingPlaybook, reason: crypto.reason };
-
   const fxSpecific = (asset.id ?? "").toLowerCase();
   if (fxSpecific === "eurusd") {
     return { playbook: eurusdSwingPlaybook, reason: "eurusd id" };
@@ -204,6 +203,9 @@ function resolvePlaybookIdForAsset(asset: PlaybookContext["asset"], profile?: st
   if (fxSpecific === "eurjpy") {
     return { playbook: eurjpySwingPlaybook, reason: "eurjpy id" };
   }
+
+  const crypto = matchCryptoAsset(asset);
+  if (crypto.matched) return { playbook: cryptoSwingPlaybook, reason: crypto.reason };
 
   const fx = matchFxAsset(asset);
   if (fx.matched) return { playbook: fxSwingPlaybook, reason: fx.reason };
