@@ -11,6 +11,8 @@
     "test:watch": "vitest",
     "test:weekly-report": "vitest tests/phase0/weeklyReportRenderer.test.ts",
     "audit:assets": "ts-node --project scripts/tsconfig.scripts.json scripts/audit-generated-assets.ts",
+    "audit:playbooks": "ts-node --project scripts/tsconfig.scripts.json scripts/audit-playbook-coverage.ts",
+    "phase0:baseline": "ts-node --project scripts/tsconfig.scripts.json scripts/capture-phase0-baseline.ts",
     "postinstall": "patch-package",
     "dev:ring-summaries": "ts-node --project scripts/tsconfig.scripts.json scripts/dev/printRingSummaries.ts",
     "backfill:1d": "ts-node --project scripts/tsconfig.scripts.json -r dotenv/config -r tsconfig-paths/register src/scripts/backfillDailyCandles.ts",
