@@ -1,29 +1,47 @@
-# Phase-0 Freeze Baseline
+# Phase-0 Freeze Baseline (Option A, final)
 
-Goal: capture a stable monitoring baseline before making policy changes. No logic changes are applied; we only observe.
+Monitoring-only baseline, keine Policy-Lockerungen. Ziel: belegbare, reproduzierbare Checks für Swing-Coverage und FX-Alignment.
 
-## What to run
+## Phase-0 Ziel & Invarianten
+- Swing 1D/1W: kein `generic-swing-v0.1`, kein Reason `fallback generic`.
+- Intraday 1H: `generic-swing-v0.1 | non-swing profile` ist erlaubt (intended).
+- WTI -> `energy-swing-v0.1`, Silver -> `metals-swing-v0.1` (Swing-Routing).
+- FX (eurusd/gbpusd/usdjpy/eurjpy): alignmentDistribution (LONG/SHORT/NEUTRAL) muss im Phase-0 Payload/Baseline sichtbar sein.
 
-```bash
-# Audit playbook coverage (last 30d by default)
-npm run audit:playbooks
+## Step 1 (Option B) – Verifikation Swing-Coverage clean
+**Acceptance Criteria**
+- Swing timeframes (1D/1W) & Labels (eod/us_open/morning/(null)): kein `generic-swing-v0.1` / `fallback generic`.
+- Intraday 1H: generic/non-swing erlaubt.
+- WTI -> `energy-swing-v0.1`, Silver -> `metals-swing-v0.1`.
+- FX alignmentDistribution vorhanden und >0 für alle FX-Assets.
 
-# Capture baseline JSON from Phase-0 endpoint (uses BASE_URL / CRON_SECRET if set)
-npm run phase0:baseline
+**Ergebnis (Stand 2026-01-21)**
+- Baseline: `artifacts/phase0-baseline/2026-01-21T09-31-26-330Z.json`
+- Verify: `artifacts/coverage/verify-swing-coverage-clean-v2.json`, `artifacts/coverage/verify-swing-coverage-clean-v2.md`
+- Summary: `artifacts/coverage/verification-summary-v2.md`
+- Fakten: Violations 0; wtiOk true; silverOk true; fxAlignmentPresent true.
 
-# (optional) build weekly report locally
-npm run phase0:report
-```
+## Reproduzierbarkeit / Commands
+- Audit 30d: `npm run audit:playbooks` -> `artifacts/coverage/audit-playbooks-l30-v1.txt` (UTF-16LE)
+- Audit 60d: `npm run audit:playbooks -- 60` -> `artifacts/coverage/audit-playbooks-l60-v1.txt`
+- Baseline: `npm run phase0:baseline` -> schreibt unter `artifacts/phase0-baseline/<timestamp>.json`
+- Verify: `npx ts-node --project scripts/tsconfig.scripts.json scripts/verify-swing-coverage-clean.ts` -> erzeugt verify-swing-coverage-clean-v2.{json,md}
+- Tests (optional, targeted):
+  - `npx vitest tests/playbooks/playbookResolverProfileFallback.test.ts`
+  - `npx vitest tests/coverage/verifySwingCoverageFxAlignmentFlag.test.ts`
 
-## What to check
-- Phase-0 endpoint returns summaries for all active assets (gold, btc, spx, dax, ndx, dow, eurusd, gbpusd, usdjpy, eurjpy, fx peers).
-- Weekly report renders all asset sections.
-- FX: no “No default alignment”; reasons are non-empty; FX alignment distribution is present when data exists.
-- No unexpected BLOCKED spikes without hard reasons.
+Erwartung: Swing-Violations 0; wtiOk/silverOk true; fxAlignmentPresent true; Intraday weiter generic/non-swing.
 
-## Inputs / Auth
-- Requires `CRON_SECRET` (or `ADMIN_API_TOKEN`) in environment; `BASE_URL` defaults to `http://localhost:3000` if unset.
+## Artefakte / Snapshots
+- `artifacts/coverage/audit-playbooks-l30-v1.txt`, `artifacts/coverage/audit-playbooks-l60-v1.txt`
+- `artifacts/phase0-baseline/2026-01-21T09-31-26-330Z.json`
+- `artifacts/coverage/verify-swing-coverage-clean-v2.{json,md}`
+- `artifacts/coverage/verification-summary-v2.md`
 
-## Outputs
-- Baseline JSON is written to `artifacts/phase0-baseline/<timestamp>.json`.
-- Audit table is printed to console for quick coverage review.
+## Out of Scope / bewusst später
+- Intraday Playbooks/Resolver (bleibt generic für 1H).
+- CI-Guard (noch nicht aktiviert; könnte auf verify-Script aufsetzen).
+- Tuning Metals/Energy (nutzen aktuell `evaluateDefault`).
+
+## Nächste Schritte (kurz)
+- Optional: weitere Asset-Klassen/Playbooks ergänzen (z.B. weitere Commodities/Energy) oder Phase-1 Outcome-Analysen.

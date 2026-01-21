@@ -1,0 +1,151 @@
+{
+  "source": "audit",
+  "days": 30,
+  "activeAssets": [
+    {
+      "assetId": "btc",
+      "count": 504,
+      "latestSnapshot": "2026-01-21T08:40:18.620Z",
+      "hasSwingData": true,
+      "swingClean": true,
+      "swingPlaybooks": [
+        "crypto-swing-v0.1"
+      ],
+      "violations": []
+    },
+    {
+      "assetId": "dax",
+      "count": 218,
+      "latestSnapshot": "2026-01-21T06:45:43.894Z",
+      "hasSwingData": true,
+      "swingClean": true,
+      "swingPlaybooks": [
+        "dax-swing-v0.1"
+      ],
+      "violations": []
+    },
+    {
+      "assetId": "dow",
+      "count": 213,
+      "latestSnapshot": "2026-01-21T06:45:43.894Z",
+      "hasSwingData": true,
+      "swingClean": true,
+      "swingPlaybooks": [
+        "dow-swing-v0.1"
+      ],
+      "violations": []
+    },
+    {
+      "assetId": "eth",
+      "count": 362,
+      "latestSnapshot": "2026-01-21T06:45:43.894Z",
+      "hasSwingData": true,
+      "swingClean": true,
+      "swingPlaybooks": [
+        "crypto-swing-v0.1"
+      ],
+      "violations": []
+    },
+    {
+      "assetId": "eurjpy",
+      "count": 220,
+      "latestSnapshot": "2026-01-21T06:45:43.894Z",
+      "hasSwingData": true,
+      "swingClean": true,
+      "swingPlaybooks": [
+        "eurjpy-swing-v0.1"
+      ],
+      "violations": []
+    },
+    {
+      "assetId": "eurusd",
+      "count": 220,
+      "latestSnapshot": "2026-01-21T06:45:43.894Z",
+      "hasSwingData": true,
+      "swingClean": true,
+      "swingPlaybooks": [
+        "eurusd-swing-v0.1"
+      ],
+      "violations": []
+    },
+    {
+      "assetId": "gbpusd",
+      "count": 220,
+      "latestSnapshot": "2026-01-21T06:45:43.894Z",
+      "hasSwingData": true,
+      "swingClean": true,
+      "swingPlaybooks": [
+        "gbpusd-swing-v0.1"
+      ],
+      "violations": []
+    },
+    {
+      "assetId": "gold",
+      "count": 538,
+      "latestSnapshot": "2026-01-21T08:40:18.620Z",
+      "hasSwingData": true,
+      "swingClean": true,
+      "swingPlaybooks": [
+        "gold-swing-v0.2"
+      ],
+      "violations": []
+    },
+    {
+      "assetId": "ndx",
+      "count": 213,
+      "latestSnapshot": "2026-01-21T06:45:43.894Z",
+      "hasSwingData": true,
+      "swingClean": true,
+      "swingPlaybooks": [
+        "ndx-swing-v0.1"
+      ],
+      "violations": []
+    },
+    {
+      "assetId": "silver",
+      "count": 220,
+      "latestSnapshot": "2026-01-21T06:45:43.894Z",
+      "hasSwingData": true,
+      "swingClean": true,
+      "swingPlaybooks": [
+        "metals-swing-v0.1"
+      ],
+      "violations": []
+    },
+    {
+      "assetId": "spx",
+      "count": 213,
+      "latestSnapshot": "2026-01-21T06:45:43.894Z",
+      "hasSwingData": true,
+      "swingClean": true,
+      "swingPlaybooks": [
+        "spx-swing-v0.1"
+      ],
+      "violations": []
+    },
+    {
+      "assetId": "usdjpy",
+      "count": 220,
+      "latestSnapshot": "2026-01-21T06:45:43.894Z",
+      "hasSwingData": true,
+      "swingClean": true,
+      "swingPlaybooks": [
+        "usdjpy-swing-v0.1"
+      ],
+      "violations": []
+    },
+    {
+      "assetId": "wti",
+      "count": 220,
+      "latestSnapshot": "2026-01-21T06:45:43.894Z",
+      "hasSwingData": true,
+      "swingClean": true,
+      "swingPlaybooks": [
+        "energy-swing-v0.1"
+      ],
+      "violations": []
+    }
+  ],
+  "missingSwingCoverage": [],
+  "activeButNoSwingData": []
+}
