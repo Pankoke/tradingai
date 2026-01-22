@@ -1,7 +1,10 @@
 import { NextRequest } from "next/server";
 import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 import { buildAndStorePerceptionSnapshot } from "@/src/features/perception/build/buildSetups";
-import { getSnapshotByTime } from "@/src/server/repositories/perceptionSnapshotRepository";
+import {
+  deleteSnapshotsByDayAndLabel,
+  findSnapshotByDayAndLabel,
+} from "@/src/server/repositories/perceptionSnapshotRepository";
 import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
 
 function isAuthorized(request: Request): boolean {
@@ -36,55 +39,71 @@ export async function POST(request: NextRequest | Request): Promise<Response> {
   let rebuilt = 0;
   const startedAt = Date.now();
   let goldSetupsTotal = 0;
+  const labels: Array<"morning" | "us_open" | "eod" | null> = ["morning", "us_open", "eod", null];
+  const labelTimes: Record<"morning" | "us_open" | "eod" | "null", number> = {
+    morning: 7, // UTC 07:00 -> deriveSnapshotLabel => morning
+    us_open: 12, // UTC 12:00 -> us_open
+    eod: 17, // UTC 17:00 -> eod
+    null: 0,
+  };
+
   const offsets = Array.from({ length: days + 1 }, (_, idx) => idx);
   const orderedOffsets = recentFirst ? offsets : offsets.reverse();
   for (const offset of orderedOffsets) {
     if (built >= limit) break;
-    const date = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-    date.setUTCDate(date.getUTCDate() - offset);
-    const existing = await getSnapshotByTime({ snapshotTime: date });
-    if (existing && !force) {
-      skipped += 1;
-      continue;
-    }
-    if (dryRun) {
-      built += 1;
-      if (existing) {
-        rebuilt += 1;
+    for (const label of labels) {
+      if (built >= limit) break;
+      const date = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+      date.setUTCDate(date.getUTCDate() - offset);
+      const hourKey = label === null ? "null" : label;
+      const snapshotTime = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), labelTimes[hourKey]));
+
+      const existing = await findSnapshotByDayAndLabel({ day: snapshotTime, label });
+      if (existing && !force) {
+        skipped += 1;
+        continue;
       }
-      continue;
-    }
-    const result = await buildAndStorePerceptionSnapshot({
-      snapshotTime: date,
-      allowSync: false,
-      profiles: ["SWING"],
-      source: "cron",
-      assetFilter,
-      snapshotId: existing?.snapshot.id,
-    });
-    built += 1;
-    if (existing) {
-      rebuilt += 1;
-    }
-    if (debug) {
-      const goldIds = new Set(["GC=F", "XAUUSD", "XAUUSD=X", "GOLD", "gold"]);
-      const setups = result.setups ?? [];
-      const byAsset = setups.reduce<Record<string, number>>((acc, s) => {
-        const key = s.assetId ?? s.symbol ?? "unknown";
-        acc[key] = (acc[key] ?? 0) + 1;
-        return acc;
-      }, {});
-      const goldCount = setups.filter((s) => goldIds.has((s.assetId ?? s.symbol ?? "").toUpperCase())).length;
-      goldSetupsTotal += goldCount;
-      console.log("[backfill-swing-debug]", {
-        snapshot: date.toISOString(),
-        assetsUsed: Array.from(new Set(setups.map((s) => s.assetId ?? s.symbol))).slice(0, 20),
-        setupsBuiltTotal: setups.length,
-        setupsBuiltByAsset: Object.entries(byAsset)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 10),
-        goldSetups: goldCount,
+      if (dryRun) {
+        built += 1;
+        if (existing) rebuilt += 1;
+        continue;
+      }
+      if (force && existing) {
+        await deleteSnapshotsByDayAndLabel({ day: snapshotTime, label });
+      }
+
+      const result = await buildAndStorePerceptionSnapshot({
+        snapshotTime,
+        allowSync: false,
+        profiles: ["SWING"],
+        source: "cron",
+        assetFilter,
+        snapshotId: undefined,
       });
+      built += 1;
+      if (existing) rebuilt += 1;
+
+      if (debug) {
+        const goldIds = new Set(["GC=F", "XAUUSD", "XAUUSD=X", "GOLD", "gold"]);
+        const setups = result.setups ?? [];
+        const byAsset = setups.reduce<Record<string, number>>((acc, s) => {
+          const key = s.assetId ?? s.symbol ?? "unknown";
+          acc[key] = (acc[key] ?? 0) + 1;
+          return acc;
+        }, {});
+        const goldCount = setups.filter((s) => goldIds.has((s.assetId ?? s.symbol ?? "").toUpperCase())).length;
+        goldSetupsTotal += goldCount;
+        console.log("[backfill-swing-debug]", {
+          snapshot: snapshotTime.toISOString(),
+          label,
+          assetsUsed: Array.from(new Set(setups.map((s) => s.assetId ?? s.symbol))).slice(0, 20),
+          setupsBuiltTotal: setups.length,
+          setupsBuiltByAsset: Object.entries(byAsset)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10),
+          goldSetups: goldCount,
+        });
+      }
     }
   }
 

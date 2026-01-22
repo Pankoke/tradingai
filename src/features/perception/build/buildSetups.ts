@@ -74,6 +74,21 @@ export function derivePersistedDecision(setup: Setup, evaluation: { setupType?: 
   return "UNKNOWN";
 }
 
+export function normalizeProfileForTimeframe(profile: string | undefined | null, timeframe: string | undefined | null): SetupProfile {
+  const derived = deriveSetupProfileFromTimeframe(timeframe);
+  if (!profile) return derived;
+  const normalized = profile.toString().toLowerCase();
+  const nonSwingPatterns = ["intraday", "daytrade", "day_trade", "scalp", "scalping", "shortterm", "short_term"];
+  // If timeframe implies swing/position but the incoming profile looks non-swing, trust the timeframe-derived profile.
+  if (nonSwingPatterns.some((pat) => normalized.includes(pat)) && derived !== "INTRADAY") {
+    return derived;
+  }
+  if (normalized === "intraday" || normalized === "swing" || normalized === "position") {
+    return normalized.toUpperCase() as SetupProfile;
+  }
+  return derived;
+}
+
 export async function buildAndStorePerceptionSnapshot(
   params: BuildParams = {},
 ): Promise<PerceptionSnapshotWithItems> {
@@ -168,7 +183,7 @@ export async function buildAndStorePerceptionSnapshot(
           })
         : ringAiSummary;
 
-    const profile = setup.profile ?? deriveSetupProfileFromTimeframe(setup.timeframe);
+    const profile = normalizeProfileForTimeframe(setup.profile, setup.timeframe);
     let { playbook, reason: playbookReason } = resolvePlaybookWithReason(
       {
         id: assetId,

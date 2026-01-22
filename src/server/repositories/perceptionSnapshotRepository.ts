@@ -112,6 +112,63 @@ export async function getSnapshotByTime(params: {
   return { snapshot, items, setups };
 }
 
+export async function findSnapshotByDayAndLabel(params: {
+  day: Date;
+  label?: string | null;
+}): Promise<PerceptionSnapshotWithItems | undefined> {
+  const start = new Date(Date.UTC(params.day.getUTCFullYear(), params.day.getUTCMonth(), params.day.getUTCDate(), 0, 0, 0, 0));
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 1);
+
+  const [snapshot] = await db
+    .select()
+    .from(perceptionSnapshots)
+    .where(
+      and(
+        gte(perceptionSnapshots.snapshotTime, start),
+        lt(perceptionSnapshots.snapshotTime, end),
+        params.label == null ? sql`1=1` : eq(perceptionSnapshots.label, params.label),
+      ),
+    )
+    .orderBy(desc(perceptionSnapshots.snapshotTime))
+    .limit(1);
+
+  if (!snapshot) return undefined;
+  const items = await loadSnapshotItems(snapshot.id);
+  const setups = normalizeSetups((snapshot.setups ?? []) as Setup[]);
+  return { snapshot, items, setups };
+}
+
+export async function deleteSnapshotsByDayAndLabel(params: {
+  day: Date;
+  label?: string | null;
+}): Promise<{ deletedSnapshots: number; deletedItems: number }> {
+  const start = new Date(Date.UTC(params.day.getUTCFullYear(), params.day.getUTCMonth(), params.day.getUTCDate(), 0, 0, 0, 0));
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 1);
+
+  const whereClause = and(
+    gte(perceptionSnapshots.snapshotTime, start),
+    lt(perceptionSnapshots.snapshotTime, end),
+    params.label == null ? sql`1=1` : eq(perceptionSnapshots.label, params.label),
+  );
+
+  const snapshotsToDelete = await db
+    .select({ id: perceptionSnapshots.id })
+    .from(perceptionSnapshots)
+    .where(whereClause);
+  const snapshotIds = snapshotsToDelete.map((s) => s.id);
+  if (snapshotIds.length === 0) {
+    return { deletedSnapshots: 0, deletedItems: 0 };
+  }
+
+  await db.transaction(async (tx) => {
+    await tx.delete(perceptionSnapshotItems).where(sql`${perceptionSnapshotItems.snapshotId} = ANY(${snapshotIds})`);
+    await tx.delete(perceptionSnapshots).where(sql`${perceptionSnapshots.id} = ANY(${snapshotIds})`);
+  });
+  return { deletedSnapshots: snapshotIds.length, deletedItems: snapshotIds.length };
+}
+
 export async function insertSnapshotWithItems(params: {
   snapshot: PerceptionSnapshotInput;
   items: PerceptionSnapshotItemInput[];
