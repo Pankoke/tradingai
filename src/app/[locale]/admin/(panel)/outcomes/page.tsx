@@ -20,6 +20,7 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
   const showNoTradeType = query.showNoTradeType === "1";
 
   const stats = await loadOutcomeStats({ days, assetId, playbookId });
+  const playbookFilters = buildPlaybookFilters(stats.availablePlaybooks);
 
   return (
     <div className="space-y-6">
@@ -48,21 +49,19 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
           ))}
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
-          {["", "gold-swing-v0.2", "index-swing-v0.1", "crypto-swing-v0.1", "fx-swing-v0.1", "generic-swing-v0.1"].map(
-            (pb) => (
-              <Link
-                key={pb || "all"}
-                href={`/${locale}/admin/outcomes?days=${days}${assetId ? `&assetId=${assetId}` : ""}${
-                  pb ? `&playbookId=${pb}` : ""
-                }${showNoTradeType ? "&showNoTradeType=1" : ""}`}
-                className={`rounded-full px-3 py-1 font-semibold ${
-                  pb === (playbookId ?? "") ? "bg-slate-200 text-slate-900" : "bg-slate-800 text-slate-200"
-                }`}
-              >
-                {pb || "Alle Playbooks"}
-              </Link>
-            ),
-          )}
+          {playbookFilters.map((pb) => (
+            <Link
+              key={pb.value || "all"}
+              href={`/${locale}/admin/outcomes?days=${days}${assetId ? `&assetId=${assetId}` : ""}${
+                pb.value ? `&playbookId=${pb.value}` : ""
+              }${showNoTradeType ? "&showNoTradeType=1" : ""}`}
+              className={`rounded-full px-3 py-1 font-semibold ${
+                pb.value === (playbookId ?? "") ? "bg-slate-200 text-slate-900" : "bg-slate-800 text-slate-200"
+              }`}
+            >
+              {pb.label}
+            </Link>
+          ))}
         </div>
         <OutcomesExportButtons
           days={days}
@@ -160,6 +159,21 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
         </section>
       ) : null}
 
+      {process.env.NODE_ENV !== "production" && stats.debug ? (
+        <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 text-xs text-slate-300">
+          <h2 className="text-sm font-semibold text-white">Debug (dev only)</h2>
+          <div className="mt-2 grid gap-1 md:grid-cols-2">
+            <div>days: {stats.debug.days}</div>
+            <div>assetId: {stats.debug.assetId ?? "all"}</div>
+            <div>playbookId: {stats.debug.playbookId ?? "all"}</div>
+            <div>
+              profile/timeframe: {stats.debug.profile}/{stats.debug.timeframe}
+            </div>
+            <div>rowsConsidered: {stats.debug.rowsConsidered}</div>
+          </div>
+        </section>
+      ) : null}
+
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-white">Kuerzlich evaluierte Setups</h2>
         <div className="text-xs text-slate-400">
@@ -249,4 +263,24 @@ function Metric({ label, value }: { label: React.ReactNode; value: string }) {
 function formatRate(value: number | null): string {
   if (value === null || Number.isNaN(value)) return "-";
   return `${Math.round(value * 100)}%`;
+}
+
+function buildPlaybookFilters(available: string[]): Array<{ value: string; label: string }> {
+  const generic = "generic-swing-v0.1";
+  const deduped = Array.from(new Set(available));
+  const nonGeneric = deduped.filter((p) => p !== generic).sort();
+  const hasGeneric = deduped.includes(generic);
+  const chips: Array<{ value: string; label: string }> = [{ value: "", label: "Alle Playbooks" }];
+  nonGeneric.forEach((p) => chips.push({ value: p, label: p }));
+  if (hasGeneric) {
+    chips.push({ value: generic, label: `${generic} (legacy)` });
+  }
+  if (chips.length === 1) {
+    // fallback: old static list to avoid empty UI
+    ["gold-swing-v0.2", "index-swing-v0.1", "crypto-swing-v0.1", "fx-swing-v0.1"].forEach((p) =>
+      chips.push({ value: p, label: p }),
+    );
+    chips.push({ value: generic, label: `${generic} (legacy)` });
+  }
+  return chips;
 }

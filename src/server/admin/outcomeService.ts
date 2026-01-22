@@ -19,7 +19,16 @@ export type OutcomeStats = {
   expiredShare: number | null;
   ambiguousShare: number | null;
   invalidRate: number | null;
+  availablePlaybooks: string[];
   noTradeReasonCounts?: Record<string, number>;
+  debug?: {
+    days: number;
+    assetId?: string;
+    playbookId?: string;
+    profile: string;
+    timeframe: string;
+    rowsConsidered: number;
+  };
   recent: Array<
     SetupOutcomeRow & {
       assetSymbol?: string;
@@ -65,6 +74,13 @@ export async function loadOutcomeStats(params: { days?: number; assetId?: string
     playbookId: params.playbookId,
   });
   const cohort = rows.filter((row) => (row.outcomeStatus as OutcomeStatus) !== "invalid");
+  const availablePlaybooks = Array.from(
+    new Set(
+      cohort
+        .map((row) => row.playbookId)
+        .filter((pb): pb is string => typeof pb === "string" && pb.trim().length > 0),
+    ),
+  );
 
   const initBucket = (): Record<OutcomeStatus, number> => ({
     open: 0,
@@ -162,6 +178,15 @@ export async function loadOutcomeStats(params: { days?: number; assetId?: string
     ambiguousShare,
     invalidRate,
     noTradeReasonCounts: Object.keys(noTradeReasonCounts).length ? noTradeReasonCounts : undefined,
+    availablePlaybooks,
+    debug: {
+      days,
+      assetId: params.assetId,
+      playbookId: params.playbookId,
+      profile: "SWING",
+      timeframe: "1D",
+      rowsConsidered: cohort.length,
+    },
     recent,
   };
 }
