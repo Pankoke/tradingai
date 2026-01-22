@@ -1,0 +1,188 @@
+{
+  "version": "v1",
+  "generatedAt": "2026-01-22T18:00:20.222Z",
+  "params": {
+    "days": 30,
+    "minClosed": 20,
+    "timeframes": [
+      "1d",
+      "1w"
+    ],
+    "labels": [
+      "eod",
+      "us_open",
+      "morning",
+      "(null)"
+    ]
+  },
+  "totals": {
+    "outcomesTotal": 5,
+    "closedCount": 0,
+    "openCount": 5,
+    "tpCount": 0,
+    "slCount": 0,
+    "expiredCount": 0,
+    "ambiguousCount": 0,
+    "invalidCount": 0,
+    "unknownCount": 0,
+    "winrateTpSl": null,
+    "closeRate": 0,
+    "statusCounts": {
+      "TP": 0,
+      "SL": 0,
+      "EXPIRED": 0,
+      "AMBIGUOUS": 0,
+      "INVALID": 0,
+      "OPEN": 5,
+      "UNKNOWN": 0
+    }
+  },
+  "buckets": [
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "energy-swing-v0.1",
+        "grade": "b",
+        "decisionBucket": "UNKNOWN"
+      },
+      "outcomesTotal": 2,
+      "closedCount": 0,
+      "openCount": 2,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "unknownCount": 0,
+      "winrateTpSl": null,
+      "closeRate": 0,
+      "flags": {
+        "tooFewClosed": true,
+        "mostlyOpen": true
+      },
+      "statusCounts": {
+        "TP": 0,
+        "SL": 0,
+        "EXPIRED": 0,
+        "AMBIGUOUS": 0,
+        "INVALID": 0,
+        "OPEN": 2,
+        "UNKNOWN": 0
+      }
+    },
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "energy-swing-v0.1",
+        "grade": "b",
+        "decisionBucket": "UNKNOWN"
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "openCount": 1,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "unknownCount": 0,
+      "winrateTpSl": null,
+      "closeRate": 0,
+      "flags": {
+        "tooFewClosed": true,
+        "mostlyOpen": true
+      },
+      "statusCounts": {
+        "TP": 0,
+        "SL": 0,
+        "EXPIRED": 0,
+        "AMBIGUOUS": 0,
+        "INVALID": 0,
+        "OPEN": 1,
+        "UNKNOWN": 0
+      }
+    },
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "energy-swing-v0.1",
+        "grade": "b",
+        "decisionBucket": "UNKNOWN"
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "openCount": 1,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "unknownCount": 0,
+      "winrateTpSl": null,
+      "closeRate": 0,
+      "flags": {
+        "tooFewClosed": true,
+        "mostlyOpen": true
+      },
+      "statusCounts": {
+        "TP": 0,
+        "SL": 0,
+        "EXPIRED": 0,
+        "AMBIGUOUS": 0,
+        "INVALID": 0,
+        "OPEN": 1,
+        "UNKNOWN": 0
+      }
+    },
+    {
+      "key": {
+        "assetId": "silver",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "metals-swing-v0.1",
+        "grade": "b",
+        "decisionBucket": "UNKNOWN"
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "openCount": 1,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "unknownCount": 0,
+      "winrateTpSl": null,
+      "closeRate": 0,
+      "flags": {
+        "tooFewClosed": true,
+        "mostlyOpen": true
+      },
+      "statusCounts": {
+        "TP": 0,
+        "SL": 0,
+        "EXPIRED": 0,
+        "AMBIGUOUS": 0,
+        "INVALID": 0,
+        "OPEN": 1,
+        "UNKNOWN": 0
+      }
+    }
+  ],
+  "insights": {
+    "topWinrate": [],
+    "bottomWinrate": [],
+    "openHeavy": []
+  },
+  "notes": [
+    "Winrate = tp/(tp+sl) if tp+sl>0 else null",
+    "Closed = TP+SL+Expired+Ambiguous+Invalid",
+    "Open = OPEN+UNKNOWN"
+  ]
+}
