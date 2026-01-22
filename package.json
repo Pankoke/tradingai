@@ -15,6 +15,7 @@
     "phase0:baseline": "ts-node --project scripts/tsconfig.scripts.json scripts/capture-phase0-baseline.ts",
     "phase1:join-stats": "ts-node --project scripts/tsconfig.scripts.json scripts/phase1/join-stats.ts",
     "phase1:analyze:swing": "ts-node --project scripts/tsconfig.scripts.json scripts/phase1/swing-outcome-analysis.ts",
+    "phase1:performance:swing": "ts-node --project scripts/tsconfig.scripts.json scripts/phase1/swing-performance-breakdown.ts",
     "postinstall": "patch-package",
     "dev:ring-summaries": "ts-node --project scripts/tsconfig.scripts.json scripts/dev/printRingSummaries.ts",
     "backfill:1d": "ts-node --project scripts/tsconfig.scripts.json -r dotenv/config -r tsconfig-paths/register src/scripts/backfillDailyCandles.ts",
