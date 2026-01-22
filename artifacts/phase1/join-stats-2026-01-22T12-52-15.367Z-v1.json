@@ -1,0 +1,67 @@
+{
+  "version": "v1",
+  "generatedAt": "2026-01-22T12:52:15.361Z",
+  "params": {
+    "days": 60,
+    "timeframes": [
+      "1d",
+      "1w"
+    ],
+    "labels": [
+      "eod",
+      "us_open",
+      "morning",
+      "(null)"
+    ]
+  },
+  "overall": {
+    "setupsTotal": 3,
+    "outcomesTotal": 0,
+    "matchedOutcomes": 0,
+    "unmatchedOutcomes": 0,
+    "joinRate": 0
+  },
+  "byKey": [
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1d",
+        "label": "eod"
+      },
+      "setupsTotal": 1,
+      "snapshotsTotal": 1,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1d",
+        "label": "morning"
+      },
+      "setupsTotal": 1,
+      "snapshotsTotal": 1,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    },
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1d",
+        "label": "us_open"
+      },
+      "setupsTotal": 1,
+      "snapshotsTotal": 1,
+      "outcomesTotal": 0,
+      "matchedOutcomes": 0,
+      "unmatchedOutcomes": 0,
+      "joinRate": 0
+    }
+  ],
+  "unmatchedSamples": [],
+  "matchedSampleIds": []
+}

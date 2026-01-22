@@ -1,0 +1,61 @@
+{
+  "version": "v1",
+  "generatedAt": "2026-01-22T11:13:06.339Z",
+  "params": {
+    "days": 60,
+    "timeframes": [
+      "1d",
+      "1w"
+    ],
+    "labels": [
+      "eod",
+      "us_open",
+      "morning",
+      "(null)"
+    ]
+  },
+  "availability": {
+    "playbookId": false,
+    "decision": false,
+    "grade": false,
+    "alignment": false,
+    "reasons": false,
+    "segments": false,
+    "outcomeStatus": false,
+    "tpSl": false
+  },
+  "overall": {
+    "outcomesTotal": 0,
+    "closedCount": 0,
+    "tpCount": 0,
+    "slCount": 0,
+    "expiredCount": 0,
+    "ambiguousCount": 0,
+    "invalidCount": 0,
+    "winrateDefinition": "unavailable"
+  },
+  "byKey": [],
+  "notes": [],
+  "samples": {
+    "matchedSampleIds": []
+  },
+  "dimensionSourceCounts": {
+    "playbookId": {
+      "persisted": 0,
+      "derived": 0,
+      "missing": 0
+    },
+    "decision": {
+      "persisted": 0,
+      "derived": 0,
+      "missing": 0
+    },
+    "grade": {
+      "persisted": 0,
+      "derived": 0,
+      "missing": 0
+    }
+  },
+  "fallbackUsedCount": 0,
+  "allowDerivedPlaybookFallback": false
+}

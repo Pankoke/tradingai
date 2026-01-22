@@ -16,6 +16,11 @@ Definitionen:
 - joinRate = matched_outcomes / outcomesTotal (im Zeitfenster, Label/TF-Filter).
 - Swing-Filter: timeframes {1d,1w}, Labels {eod, us_open, morning, (null)}.
 
+Phase-1 Outcomes (Analyzer):
+- Quelle: `setup_outcomes.outcome_status` (keine *_hit_at Felder).
+- Mapping (case-insensitive): TP (`hit_tp`/`tp`), SL (`hit_sl`/`sl`/`stopped`), EXPIRED (`expired`), AMBIGUOUS (`ambiguous`), INVALID (`invalid`), OPEN (`open`/`pending`/`none`), UNKNOWN (alles andere/null).
+- Closed = TP+SL+Expired+Ambiguous+Invalid; Open = OPEN+UNKNOWN.
+- Winrate: tp/(tp+sl) wenn tp+sl>0, sonst n/a. CloseRate = closed/outcomesTotal.
 Empfohlene Go/No-Go Schwelle:
 - joinRateSwing ≥ 0.95 (informativ, kein Hard-Fail in 1.0).
 

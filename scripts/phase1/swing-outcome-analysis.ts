@@ -42,13 +42,18 @@ type Availability = {
 type KPI = {
   outcomesTotal: number;
   closedCount?: number;
+  openCount?: number;
   tpCount?: number;
   slCount?: number;
   expiredCount?: number;
   ambiguousCount?: number;
   invalidCount?: number;
+  unknownCount?: number;
+  winrateTpSl?: number;
   winrate?: number;
-  winrateDefinition: "tp/closed" | "tp/(tp+sl)" | "unavailable";
+  winrateDefinition: "tp/(tp+sl)" | "unavailable";
+  closeRate?: number;
+  statusCounts?: Record<string, number>;
 };
 
 type ByKey = KPI & {
@@ -91,6 +96,16 @@ const SL_STATUSES = new Set(["hit_sl", "sl", "stopped"]);
 const EXPIRED_STATUSES = new Set(["expired"]);
 const AMBIG_STATUSES = new Set(["ambiguous"]);
 const INVALID_STATUSES = new Set(["invalid"]);
+const OPEN_STATUSES = new Set(["open", "pending", "none"]);
+
+type OutcomeClass =
+  | "TP"
+  | "SL"
+  | "EXPIRED"
+  | "AMBIGUOUS"
+  | "INVALID"
+  | "OPEN"
+  | "UNKNOWN";
 
 function fallbackPlaybookId(assetId: string): string | null {
   const id = assetId.toLowerCase();
@@ -164,6 +179,18 @@ function normTf(tf: string | null | undefined): string {
 
 function safeArray<T>(v: unknown): T[] {
   return Array.isArray(v) ? (v as T[]) : [];
+}
+
+export function mapOutcomeStatus(statusRaw: string | null | undefined): OutcomeClass {
+  if (!statusRaw) return "UNKNOWN";
+  const status = statusRaw.toLowerCase();
+  if (TP_STATUSES.has(status)) return "TP";
+  if (SL_STATUSES.has(status)) return "SL";
+  if (EXPIRED_STATUSES.has(status)) return "EXPIRED";
+  if (AMBIG_STATUSES.has(status)) return "AMBIGUOUS";
+  if (INVALID_STATUSES.has(status)) return "INVALID";
+  if (OPEN_STATUSES.has(status)) return "OPEN";
+  return "UNKNOWN";
 }
 
 type Meta = {
@@ -387,24 +414,41 @@ function aggregate(
 
     current.outcomesTotal += 1;
 
-    const status = row.outcomeStatus?.toLowerCase() ?? null;
-    if (status) {
-      availability.outcomeStatus = true;
-      if (TP_STATUSES.has(status)) {
+    const statusClass = mapOutcomeStatus(row.outcomeStatus);
+    current.statusCounts = current.statusCounts ?? {};
+    current.statusCounts[statusClass] = (current.statusCounts[statusClass] ?? 0) + 1;
+    availability.outcomeStatus = availability.outcomeStatus || statusClass !== "UNKNOWN";
+
+    switch (statusClass) {
+      case "TP":
         availability.tpSl = true;
         current.tpCount = (current.tpCount ?? 0) + 1;
         current.closedCount = (current.closedCount ?? 0) + 1;
-      } else if (SL_STATUSES.has(status)) {
+        break;
+      case "SL":
         availability.tpSl = true;
         current.slCount = (current.slCount ?? 0) + 1;
         current.closedCount = (current.closedCount ?? 0) + 1;
-      } else if (EXPIRED_STATUSES.has(status)) {
+        break;
+      case "EXPIRED":
         current.expiredCount = (current.expiredCount ?? 0) + 1;
-      } else if (AMBIG_STATUSES.has(status)) {
+        current.closedCount = (current.closedCount ?? 0) + 1;
+        break;
+      case "AMBIGUOUS":
         current.ambiguousCount = (current.ambiguousCount ?? 0) + 1;
-      } else if (INVALID_STATUSES.has(status)) {
+        current.closedCount = (current.closedCount ?? 0) + 1;
+        break;
+      case "INVALID":
         current.invalidCount = (current.invalidCount ?? 0) + 1;
-      }
+        current.closedCount = (current.closedCount ?? 0) + 1;
+        break;
+      case "OPEN":
+        current.openCount = (current.openCount ?? 0) + 1;
+        break;
+      case "UNKNOWN":
+      default:
+        current.unknownCount = (current.unknownCount ?? 0) + 1;
+        break;
     }
 
     if (reasons.length) {
@@ -437,19 +481,32 @@ function aggregate(
   const byKey = Array.from(statsMap.values()).map((s) => {
     const tp = s.tpCount ?? 0;
     const sl = s.slCount ?? 0;
-    const closed = s.closedCount ?? tp + sl;
+    const expired = s.expiredCount ?? 0;
+    const ambiguous = s.ambiguousCount ?? 0;
+    const invalid = s.invalidCount ?? 0;
+    const closed = s.closedCount ?? tp + sl + expired + ambiguous + invalid;
+    const openCount = s.openCount ?? 0;
+    const unknownCount = s.unknownCount ?? 0;
+    const closeRate =
+      s.outcomesTotal > 0 ? Number(((closed / s.outcomesTotal) * 1.0).toFixed(4)) : undefined;
     let winrateDefinition: KPI["winrateDefinition"] = "unavailable";
     let winrate: number | undefined;
-    if (closed > 0) {
+    let winrateTpSl: number | undefined;
+    if (tp + sl > 0) {
       winrateDefinition = "tp/(tp+sl)";
-      if (tp + sl > 0) {
-        winrate = Number((tp / (tp + sl)).toFixed(4));
-      }
+      winrate = Number((tp / (tp + sl)).toFixed(4));
+      winrateTpSl = winrate;
     }
+    const statusCounts = s.statusCounts ?? {};
     return {
       ...s,
       closedCount: closed,
+      openCount,
+      unknownCount,
+      closeRate,
       winrate,
+      winrateTpSl,
+      statusCounts,
       winrateDefinition,
     };
   });
@@ -463,6 +520,8 @@ function aggregate(
       acc.ambiguousCount += curr.ambiguousCount ?? 0;
       acc.invalidCount += curr.invalidCount ?? 0;
       acc.closedCount += curr.closedCount ?? 0;
+      acc.openCount += curr.openCount ?? 0;
+      acc.unknownCount += curr.unknownCount ?? 0;
       return acc;
     },
     {
@@ -473,6 +532,8 @@ function aggregate(
       ambiguousCount: 0,
       invalidCount: 0,
       closedCount: 0,
+      openCount: 0,
+      unknownCount: 0,
     },
   );
 
@@ -507,13 +568,20 @@ function aggregate(
     overall: {
       outcomesTotal: totals.outcomesTotal,
       closedCount: totals.closedCount,
+      openCount: totals.openCount,
+      unknownCount: totals.unknownCount,
       tpCount: totals.tpCount,
       slCount: totals.slCount,
       expiredCount: totals.expiredCount,
       ambiguousCount: totals.ambiguousCount,
       invalidCount: totals.invalidCount,
       winrate: overallWinrate,
+      winrateTpSl: overallWinrate,
       winrateDefinition: overallWinrateDefinition,
+      closeRate:
+        totals.outcomesTotal > 0
+          ? Number(((totals.closedCount / totals.outcomesTotal) * 1.0).toFixed(4))
+          : undefined,
     },
     byKey: byKey.sort((a, b) =>
       `${a.key.assetId}|${a.key.timeframe}|${a.key.label}`.localeCompare(
@@ -541,18 +609,20 @@ export function renderMarkdown(report: Report): string {
   lines.push("");
   lines.push("## Overall");
   lines.push(
-    `- outcomesTotal: ${report.overall.outcomesTotal}\n- closed: ${report.overall.closedCount ?? 0}\n- tp: ${report.overall.tpCount ?? 0}\n- sl: ${report.overall.slCount ?? 0}\n- expired: ${report.overall.expiredCount ?? 0}\n- ambiguous: ${report.overall.ambiguousCount ?? 0}\n- invalid: ${report.overall.invalidCount ?? 0}\n- winrate: ${report.overall.winrate ?? "n/a"} (${report.overall.winrateDefinition})`,
+    `- outcomesTotal: ${report.overall.outcomesTotal}\n- closed: ${report.overall.closedCount ?? 0} | open: ${report.overall.openCount ?? 0} | unknown: ${report.overall.unknownCount ?? 0}\n- tp: ${report.overall.tpCount ?? 0} | sl: ${report.overall.slCount ?? 0} | expired: ${report.overall.expiredCount ?? 0} | ambiguous: ${report.overall.ambiguousCount ?? 0} | invalid: ${report.overall.invalidCount ?? 0}\n- winrate tp/(tp+sl): ${report.overall.winrateTpSl ?? "n/a"}\n- closeRate: ${report.overall.closeRate ?? "n/a"}`,
   );
   lines.push(`- fallbackUsedCount: ${report.fallbackUsedCount}`);
   lines.push("");
+  lines.push("Status Legend: TP, SL, EXPIRED, AMBIGUOUS, INVALID, OPEN, UNKNOWN");
+  lines.push("");
   lines.push("## By Asset/Timeframe/Label/Decision");
   lines.push(
-    "| Asset | TF | Label | Playbook | Decision | Grade | Outcomes | TP | SL | Winrate |",
+    "| Asset | TF | Label | Playbook | Decision | Grade | Outcomes | TP | SL | Winrate tp/(tp+sl) | CloseRate |",
   );
-  lines.push("| --- | --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: |");
+  lines.push("| --- | --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |");
   for (const row of report.byKey) {
     lines.push(
-      `| ${row.key.assetId} | ${row.key.timeframe} | ${row.key.label} | ${row.key.playbookId} | ${row.key.decision} | ${row.key.grade} | ${row.outcomesTotal} | ${row.tpCount ?? 0} | ${row.slCount ?? 0} | ${row.winrate ?? "n/a"} |`,
+      `| ${row.key.assetId} | ${row.key.timeframe} | ${row.key.label} | ${row.key.playbookId} | ${row.key.decision} | ${row.key.grade} | ${row.outcomesTotal} | ${row.tpCount ?? 0} | ${row.slCount ?? 0} | ${row.winrateTpSl ?? "n/a"} | ${row.closeRate ?? "n/a"} |`,
     );
   }
   if (report.notes.length) {

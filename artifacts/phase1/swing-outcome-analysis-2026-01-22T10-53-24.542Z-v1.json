@@ -1,0 +1,5531 @@
+{
+  "version": "v1",
+  "generatedAt": "2026-01-22T10:53:24.535Z",
+  "params": {
+    "days": 60,
+    "timeframes": [
+      "1d",
+      "1w"
+    ],
+    "labels": [
+      "eod",
+      "us_open",
+      "morning",
+      "(null)"
+    ]
+  },
+  "availability": {
+    "playbookId": true,
+    "decision": true,
+    "grade": true,
+    "alignment": false,
+    "reasons": true,
+    "segments": true,
+    "outcomeStatus": true,
+    "tpSl": true
+  },
+  "overall": {
+    "outcomesTotal": 1354,
+    "closedCount": 647,
+    "tpCount": 187,
+    "slCount": 460,
+    "expiredCount": 110,
+    "ambiguousCount": 5,
+    "invalidCount": 0,
+    "winrate": 0.289,
+    "winrateDefinition": "tp/(tp+sl)"
+  },
+  "byKey": [
+    {
+      "key": {
+        "assetId": "btc",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "crypto-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 9,
+      "closedCount": 7,
+      "tpCount": 5,
+      "slCount": 2,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.7143,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "Alignment unavailable (crypto)",
+          "count": 9
+        },
+        {
+          "reason": "crypto hyphen USD",
+          "count": 9
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "btc",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "crypto-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 3,
+      "closedCount": 3,
+      "tpCount": 1,
+      "slCount": 2,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.3333,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "btc",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "crypto-swing-v0.1",
+        "decision": "unknown",
+        "grade": "unknown",
+        "alignment": null
+      },
+      "outcomesTotal": 16,
+      "closedCount": 12,
+      "tpCount": 12,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 1,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "btc",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "crypto-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 10,
+      "closedCount": 9,
+      "tpCount": 3,
+      "slCount": 6,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.3333,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "Alignment unavailable (crypto)",
+          "count": 10
+        },
+        {
+          "reason": "crypto hyphen USD",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "btc",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "crypto-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 5,
+      "closedCount": 5,
+      "tpCount": 2,
+      "slCount": 3,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.4,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "btc",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "crypto-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 8,
+      "closedCount": 7,
+      "tpCount": 5,
+      "slCount": 2,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.7143,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "Alignment unavailable (crypto)",
+          "count": 8
+        },
+        {
+          "reason": "crypto hyphen USD",
+          "count": 8
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "btc",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "crypto-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 4,
+      "closedCount": 4,
+      "tpCount": 2,
+      "slCount": 2,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.5,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "btc",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "crypto-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 7,
+      "closedCount": 6,
+      "tpCount": 4,
+      "slCount": 2,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.6667,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "Alignment unavailable (crypto)",
+          "count": 7
+        },
+        {
+          "reason": "crypto hyphen USD",
+          "count": 7
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "btc",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "crypto-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 8,
+      "closedCount": 7,
+      "tpCount": 2,
+      "slCount": 5,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.2857,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "dax",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "index-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 14,
+      "closedCount": 3,
+      "tpCount": 0,
+      "slCount": 3,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "WATCH_OTHER",
+          "count": 4
+        },
+        {
+          "reason": "Alignment derived (index fallback LONG)",
+          "count": 8
+        },
+        {
+          "reason": "index caret symbol",
+          "count": 14
+        },
+        {
+          "reason": "WATCH_FAILS_CONFIDENCE",
+          "count": 4
+        },
+        {
+          "reason": "WATCH_FAILS_BIAS_SOFT",
+          "count": 3
+        },
+        {
+          "reason": "Alignment derived (index fallback SHORT)",
+          "count": 6
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 3
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_OTHER",
+          "count": 4
+        },
+        {
+          "segment": "WATCH_FAILS_CONFIDENCE",
+          "count": 4
+        },
+        {
+          "segment": "WATCH_FAILS_BIAS_SOFT",
+          "count": 3
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "dax",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "index-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 4,
+      "closedCount": 2,
+      "tpCount": 0,
+      "slCount": 2,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "dax",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "dax-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        },
+        {
+          "reason": "Alignment derived (index fallback SHORT)",
+          "count": 1
+        },
+        {
+          "reason": "spx:WATCH_FAILS_BIAS_ALIGNMENT",
+          "count": 1
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "dax",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "dax-swing-v0.1",
+        "decision": "unknown",
+        "grade": "unknown",
+        "alignment": null
+      },
+      "outcomesTotal": 16,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable"
+    },
+    {
+      "key": {
+        "assetId": "dax",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "dax-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 1,
+      "tpCount": 0,
+      "slCount": 1,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "Regime range/chop (trend confirmation missing)",
+          "count": 1
+        },
+        {
+          "reason": "spx:WATCH_RANGE_CONSTRUCTIVE",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "dax",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "index-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 18,
+      "closedCount": 3,
+      "tpCount": 0,
+      "slCount": 3,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_CONFIDENCE",
+          "count": 7
+        },
+        {
+          "reason": "Alignment derived (index fallback LONG)",
+          "count": 10
+        },
+        {
+          "reason": "index caret symbol",
+          "count": 16
+        },
+        {
+          "reason": "WATCH_OTHER",
+          "count": 2
+        },
+        {
+          "reason": "WATCH_FAILS_BIAS_NEAR",
+          "count": 1
+        },
+        {
+          "reason": "WATCH_FAILS_BIAS_SOFT",
+          "count": 4
+        },
+        {
+          "reason": "Alignment derived (index fallback SHORT)",
+          "count": 8
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 4
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_CONFIDENCE",
+          "count": 7
+        },
+        {
+          "segment": "WATCH_OTHER",
+          "count": 2
+        },
+        {
+          "segment": "WATCH_FAILS_BIAS_NEAR",
+          "count": 1
+        },
+        {
+          "segment": "WATCH_FAILS_BIAS_SOFT",
+          "count": 4
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "dax",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "index-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 6,
+      "closedCount": 3,
+      "tpCount": 0,
+      "slCount": 3,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "dax",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "dax-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS_SOFT",
+          "count": 1
+        },
+        {
+          "reason": "Alignment derived (index fallback SHORT)",
+          "count": 1
+        },
+        {
+          "reason": "spx:WATCH_FAILS_BIAS_ALIGNMENT",
+          "count": 1
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS_SOFT",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "dax",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "index-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 12,
+      "closedCount": 3,
+      "tpCount": 0,
+      "slCount": 3,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_CONFIDENCE",
+          "count": 3
+        },
+        {
+          "reason": "Alignment derived (index fallback LONG)",
+          "count": 6
+        },
+        {
+          "reason": "index caret symbol",
+          "count": 12
+        },
+        {
+          "reason": "WATCH_OTHER",
+          "count": 3
+        },
+        {
+          "reason": "WATCH_FAILS_BIAS_SOFT",
+          "count": 3
+        },
+        {
+          "reason": "Alignment derived (index fallback SHORT)",
+          "count": 6
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 3
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_CONFIDENCE",
+          "count": 3
+        },
+        {
+          "segment": "WATCH_OTHER",
+          "count": 3
+        },
+        {
+          "segment": "WATCH_FAILS_BIAS_SOFT",
+          "count": 3
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "dax",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "index-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 6,
+      "closedCount": 2,
+      "tpCount": 0,
+      "slCount": 2,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "dax",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "dax-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        },
+        {
+          "reason": "Alignment derived (index fallback SHORT)",
+          "count": 1
+        },
+        {
+          "reason": "spx:WATCH_FAILS_BIAS_ALIGNMENT",
+          "count": 1
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "dax",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "dax-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 1,
+      "tpCount": 0,
+      "slCount": 1,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "Regime range/chop (trend confirmation missing)",
+          "count": 1
+        },
+        {
+          "reason": "spx:WATCH_RANGE_CONSTRUCTIVE",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "dax",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "index-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 9,
+      "closedCount": 4,
+      "tpCount": 0,
+      "slCount": 4,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "dax",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "index-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 13,
+      "closedCount": 4,
+      "tpCount": 0,
+      "slCount": 4,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_CONFIDENCE",
+          "count": 2
+        },
+        {
+          "reason": "Alignment derived (index fallback LONG)",
+          "count": 7
+        },
+        {
+          "reason": "index caret symbol",
+          "count": 11
+        },
+        {
+          "reason": "WATCH_OTHER",
+          "count": 4
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 4
+        },
+        {
+          "reason": "WATCH_FAILS_BIAS_SOFT",
+          "count": 3
+        },
+        {
+          "reason": "Alignment derived (index fallback SHORT)",
+          "count": 6
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_CONFIDENCE",
+          "count": 2
+        },
+        {
+          "segment": "WATCH_OTHER",
+          "count": 4
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 4
+        },
+        {
+          "segment": "WATCH_FAILS_BIAS_SOFT",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "dax",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "dax-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 2,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "Regime range/chop (trend confirmation missing)",
+          "count": 2
+        },
+        {
+          "reason": "spx:WATCH_RANGE_CONSTRUCTIVE",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "dow",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "index-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 16,
+      "closedCount": 9,
+      "tpCount": 0,
+      "slCount": 9,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS_SOFT",
+          "count": 8
+        },
+        {
+          "reason": "Alignment derived (index fallback SHORT)",
+          "count": 12
+        },
+        {
+          "reason": "index caret symbol",
+          "count": 16
+        },
+        {
+          "reason": "WATCH_FAILS_BIAS_NEAR",
+          "count": 2
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 5
+        },
+        {
+          "reason": "WATCH_OTHER",
+          "count": 1
+        },
+        {
+          "reason": "Alignment derived (index fallback LONG)",
+          "count": 4
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS_SOFT",
+          "count": 8
+        },
+        {
+          "segment": "WATCH_FAILS_BIAS_NEAR",
+          "count": 2
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 5
+        },
+        {
+          "segment": "WATCH_OTHER",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "dow",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "dow-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "Regime range/chop (trend confirmation missing)",
+          "count": 1
+        },
+        {
+          "reason": "spx:WATCH_RANGE_CONSTRUCTIVE",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "dow",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "dow-swing-v0.1",
+        "decision": "unknown",
+        "grade": "unknown",
+        "alignment": null
+      },
+      "outcomesTotal": 16,
+      "closedCount": 10,
+      "tpCount": 0,
+      "slCount": 10,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "dow",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "index-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 2,
+      "closedCount": 2,
+      "tpCount": 0,
+      "slCount": 2,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "dow",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "index-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 21,
+      "closedCount": 10,
+      "tpCount": 0,
+      "slCount": 10,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS_SOFT",
+          "count": 10
+        },
+        {
+          "reason": "Alignment derived (index fallback SHORT)",
+          "count": 15
+        },
+        {
+          "reason": "index caret symbol",
+          "count": 21
+        },
+        {
+          "reason": "WATCH_FAILS_BIAS_NEAR",
+          "count": 2
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 7
+        },
+        {
+          "reason": "WATCH_OTHER",
+          "count": 1
+        },
+        {
+          "reason": "Alignment derived (index fallback LONG)",
+          "count": 6
+        },
+        {
+          "reason": "WATCH_FAILS_CONFIDENCE",
+          "count": 1
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS_SOFT",
+          "count": 10
+        },
+        {
+          "segment": "WATCH_FAILS_BIAS_NEAR",
+          "count": 2
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 7
+        },
+        {
+          "segment": "WATCH_OTHER",
+          "count": 1
+        },
+        {
+          "segment": "WATCH_FAILS_CONFIDENCE",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "dow",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "dow-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "Regime range/chop (trend confirmation missing)",
+          "count": 1
+        },
+        {
+          "reason": "spx:WATCH_RANGE_CONSTRUCTIVE",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "dow",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "index-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 2,
+      "closedCount": 2,
+      "tpCount": 0,
+      "slCount": 2,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "dow",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "index-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 16,
+      "closedCount": 9,
+      "tpCount": 0,
+      "slCount": 9,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS_SOFT",
+          "count": 8
+        },
+        {
+          "reason": "Alignment derived (index fallback SHORT)",
+          "count": 12
+        },
+        {
+          "reason": "index caret symbol",
+          "count": 16
+        },
+        {
+          "reason": "WATCH_FAILS_BIAS_NEAR",
+          "count": 2
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 5
+        },
+        {
+          "reason": "WATCH_OTHER",
+          "count": 1
+        },
+        {
+          "reason": "Alignment derived (index fallback LONG)",
+          "count": 4
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS_SOFT",
+          "count": 8
+        },
+        {
+          "segment": "WATCH_FAILS_BIAS_NEAR",
+          "count": 2
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 5
+        },
+        {
+          "segment": "WATCH_OTHER",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "dow",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "dow-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "Regime range/chop (trend confirmation missing)",
+          "count": 1
+        },
+        {
+          "reason": "spx:WATCH_RANGE_CONSTRUCTIVE",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "dow",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "index-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 2,
+      "closedCount": 2,
+      "tpCount": 0,
+      "slCount": 2,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "dow",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "index-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 19,
+      "closedCount": 9,
+      "tpCount": 0,
+      "slCount": 9,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS_SOFT",
+          "count": 9
+        },
+        {
+          "reason": "Alignment derived (index fallback SHORT)",
+          "count": 15
+        },
+        {
+          "reason": "index caret symbol",
+          "count": 19
+        },
+        {
+          "reason": "WATCH_FAILS_BIAS_NEAR",
+          "count": 2
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 7
+        },
+        {
+          "reason": "WATCH_OTHER",
+          "count": 1
+        },
+        {
+          "reason": "Alignment derived (index fallback LONG)",
+          "count": 4
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS_SOFT",
+          "count": 9
+        },
+        {
+          "segment": "WATCH_FAILS_BIAS_NEAR",
+          "count": 2
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 7
+        },
+        {
+          "segment": "WATCH_OTHER",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "dow",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "dow-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "Regime range/chop (trend confirmation missing)",
+          "count": 1
+        },
+        {
+          "reason": "spx:WATCH_RANGE_CONSTRUCTIVE",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "dow",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "index-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 2,
+      "closedCount": 2,
+      "tpCount": 0,
+      "slCount": 2,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "eth",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "crypto-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 17,
+      "closedCount": 17,
+      "tpCount": 14,
+      "slCount": 3,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.8235,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "Alignment unavailable (crypto)",
+          "count": 17
+        },
+        {
+          "reason": "crypto hyphen USD",
+          "count": 15
+        },
+        {
+          "reason": "Regime range/chop (trend confirmation missing)",
+          "count": 2
+        },
+        {
+          "reason": "regime:RANGE",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "eth",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "crypto-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 3,
+      "closedCount": 3,
+      "tpCount": 0,
+      "slCount": 3,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "eth",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "crypto-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "Regime range/chop (trend confirmation missing)",
+          "count": 1
+        },
+        {
+          "reason": "regime:RANGE",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "eth",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "crypto-swing-v0.1",
+        "decision": "unknown",
+        "grade": "unknown",
+        "alignment": null
+      },
+      "outcomesTotal": 16,
+      "closedCount": 14,
+      "tpCount": 13,
+      "slCount": 1,
+      "expiredCount": 0,
+      "ambiguousCount": 1,
+      "invalidCount": 0,
+      "winrate": 0.9286,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "eth",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "crypto-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 19,
+      "closedCount": 19,
+      "tpCount": 14,
+      "slCount": 5,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.7368,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "Alignment unavailable (crypto)",
+          "count": 19
+        },
+        {
+          "reason": "crypto hyphen USD",
+          "count": 17
+        },
+        {
+          "reason": "Regime range/chop (trend confirmation missing)",
+          "count": 2
+        },
+        {
+          "reason": "regime:RANGE",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "eth",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "crypto-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 5,
+      "closedCount": 5,
+      "tpCount": 0,
+      "slCount": 5,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "eth",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "crypto-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "Regime range/chop (trend confirmation missing)",
+          "count": 1
+        },
+        {
+          "reason": "regime:RANGE",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "eth",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "crypto-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 16,
+      "closedCount": 15,
+      "tpCount": 11,
+      "slCount": 4,
+      "expiredCount": 0,
+      "ambiguousCount": 1,
+      "invalidCount": 0,
+      "winrate": 0.7333,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "Alignment unavailable (crypto)",
+          "count": 16
+        },
+        {
+          "reason": "crypto hyphen USD",
+          "count": 14
+        },
+        {
+          "reason": "Regime range/chop (trend confirmation missing)",
+          "count": 2
+        },
+        {
+          "reason": "regime:RANGE",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "eth",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "crypto-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 4,
+      "closedCount": 4,
+      "tpCount": 0,
+      "slCount": 4,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "eth",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "crypto-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "Regime range/chop (trend confirmation missing)",
+          "count": 1
+        },
+        {
+          "reason": "regime:RANGE",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "eth",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "crypto-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 16,
+      "closedCount": 15,
+      "tpCount": 11,
+      "slCount": 4,
+      "expiredCount": 0,
+      "ambiguousCount": 1,
+      "invalidCount": 0,
+      "winrate": 0.7333,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "Alignment unavailable (crypto)",
+          "count": 16
+        },
+        {
+          "reason": "crypto hyphen USD",
+          "count": 13
+        },
+        {
+          "reason": "Regime range/chop (trend confirmation missing)",
+          "count": 2
+        },
+        {
+          "reason": "regime:RANGE",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "eth",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "crypto-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 7,
+      "closedCount": 7,
+      "tpCount": 1,
+      "slCount": 6,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.1429,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "eth",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "crypto-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "Regime range/chop (trend confirmation missing)",
+          "count": 1
+        },
+        {
+          "reason": "regime:RANGE",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "eurjpy",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "fx-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 20,
+      "closedCount": 6,
+      "tpCount": 0,
+      "slCount": 6,
+      "expiredCount": 1,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS",
+          "count": 11
+        },
+        {
+          "reason": "Alignment fx SHORT",
+          "count": 12
+        },
+        {
+          "reason": "fx yahoo =X",
+          "count": 18
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 6
+        },
+        {
+          "reason": "WATCH_FAILS_CONFIDENCE",
+          "count": 1
+        },
+        {
+          "reason": "WATCH_OTHER",
+          "count": 2
+        },
+        {
+          "reason": "Alignment fx LONG",
+          "count": 8
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS",
+          "count": 11
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 6
+        },
+        {
+          "segment": "WATCH_FAILS_CONFIDENCE",
+          "count": 1
+        },
+        {
+          "segment": "WATCH_OTHER",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "eurjpy",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "eurjpy-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        },
+        {
+          "reason": "Alignment fx LONG",
+          "count": 1
+        },
+        {
+          "reason": "Derived alignment LONG; bias/trend below defaults",
+          "count": 1
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "eurjpy",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "eurjpy-swing-v0.1",
+        "decision": "unknown",
+        "grade": "unknown",
+        "alignment": null
+      },
+      "outcomesTotal": 16,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 5,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable"
+    },
+    {
+      "key": {
+        "assetId": "eurjpy",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "fx-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 24,
+      "closedCount": 10,
+      "tpCount": 0,
+      "slCount": 10,
+      "expiredCount": 1,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS",
+          "count": 12
+        },
+        {
+          "reason": "Alignment fx SHORT",
+          "count": 15
+        },
+        {
+          "reason": "fx yahoo =X",
+          "count": 22
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 7
+        },
+        {
+          "reason": "WATCH_FAILS_CONFIDENCE",
+          "count": 2
+        },
+        {
+          "reason": "WATCH_OTHER",
+          "count": 3
+        },
+        {
+          "reason": "Alignment fx LONG",
+          "count": 9
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS",
+          "count": 12
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 7
+        },
+        {
+          "segment": "WATCH_FAILS_CONFIDENCE",
+          "count": 2
+        },
+        {
+          "segment": "WATCH_OTHER",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "eurjpy",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "eurjpy-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_OTHER",
+          "count": 1
+        },
+        {
+          "reason": "Alignment fx LONG",
+          "count": 1
+        },
+        {
+          "reason": "Derived alignment LONG; bias/trend below defaults",
+          "count": 1
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_OTHER",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "eurjpy",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "fx-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 20,
+      "closedCount": 8,
+      "tpCount": 0,
+      "slCount": 8,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS",
+          "count": 10
+        },
+        {
+          "reason": "Alignment fx SHORT",
+          "count": 12
+        },
+        {
+          "reason": "fx yahoo =X",
+          "count": 18
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 6
+        },
+        {
+          "reason": "WATCH_FAILS_CONFIDENCE",
+          "count": 2
+        },
+        {
+          "reason": "WATCH_OTHER",
+          "count": 2
+        },
+        {
+          "reason": "Alignment fx LONG",
+          "count": 8
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS",
+          "count": 10
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 6
+        },
+        {
+          "segment": "WATCH_FAILS_CONFIDENCE",
+          "count": 2
+        },
+        {
+          "segment": "WATCH_OTHER",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "eurjpy",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "eurjpy-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        },
+        {
+          "reason": "Alignment fx LONG",
+          "count": 1
+        },
+        {
+          "reason": "Derived alignment LONG; bias/trend below defaults",
+          "count": 1
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "eurjpy",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "fx-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 23,
+      "closedCount": 9,
+      "tpCount": 0,
+      "slCount": 9,
+      "expiredCount": 1,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS",
+          "count": 11
+        },
+        {
+          "reason": "Alignment fx SHORT",
+          "count": 15
+        },
+        {
+          "reason": "fx yahoo =X",
+          "count": 20
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 8
+        },
+        {
+          "reason": "WATCH_FAILS_CONFIDENCE",
+          "count": 2
+        },
+        {
+          "reason": "WATCH_OTHER",
+          "count": 2
+        },
+        {
+          "reason": "Alignment fx LONG",
+          "count": 8
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS",
+          "count": 11
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 8
+        },
+        {
+          "segment": "WATCH_FAILS_CONFIDENCE",
+          "count": 2
+        },
+        {
+          "segment": "WATCH_OTHER",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "eurjpy",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "eurjpy-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        },
+        {
+          "reason": "Alignment fx LONG",
+          "count": 1
+        },
+        {
+          "reason": "Derived alignment LONG; bias/trend below defaults",
+          "count": 1
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "eurusd",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "fx-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 16,
+      "closedCount": 1,
+      "tpCount": 0,
+      "slCount": 1,
+      "expiredCount": 5,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS",
+          "count": 8
+        },
+        {
+          "reason": "Alignment fx LONG",
+          "count": 12
+        },
+        {
+          "reason": "fx yahoo =X",
+          "count": 15
+        },
+        {
+          "reason": "WATCH_FAILS_CONFIDENCE",
+          "count": 3
+        },
+        {
+          "reason": "WATCH_OTHER",
+          "count": 1
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 4
+        },
+        {
+          "reason": "Alignment fx SHORT",
+          "count": 4
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS",
+          "count": 8
+        },
+        {
+          "segment": "WATCH_FAILS_CONFIDENCE",
+          "count": 3
+        },
+        {
+          "segment": "WATCH_OTHER",
+          "count": 1
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "eurusd",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "eurusd-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        },
+        {
+          "reason": "Alignment fx SHORT",
+          "count": 1
+        },
+        {
+          "reason": "Derived alignment LONG; bias/trend below defaults",
+          "count": 1
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "eurusd",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "eurusd-swing-v0.1",
+        "decision": "unknown",
+        "grade": "unknown",
+        "alignment": null
+      },
+      "outcomesTotal": 16,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 5,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable"
+    },
+    {
+      "key": {
+        "assetId": "eurusd",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "fx-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 4,
+      "closedCount": 3,
+      "tpCount": 0,
+      "slCount": 3,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "eurusd",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "fx-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 21,
+      "closedCount": 2,
+      "tpCount": 0,
+      "slCount": 2,
+      "expiredCount": 9,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS",
+          "count": 11
+        },
+        {
+          "reason": "Alignment fx LONG",
+          "count": 15
+        },
+        {
+          "reason": "fx yahoo =X",
+          "count": 20
+        },
+        {
+          "reason": "WATCH_FAILS_CONFIDENCE",
+          "count": 3
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 5
+        },
+        {
+          "reason": "WATCH_OTHER",
+          "count": 2
+        },
+        {
+          "reason": "Alignment fx SHORT",
+          "count": 6
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS",
+          "count": 11
+        },
+        {
+          "segment": "WATCH_FAILS_CONFIDENCE",
+          "count": 3
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 5
+        },
+        {
+          "segment": "WATCH_OTHER",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "eurusd",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "eurusd-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS",
+          "count": 1
+        },
+        {
+          "reason": "Alignment fx SHORT",
+          "count": 1
+        },
+        {
+          "reason": "Derived alignment LONG; bias/trend below defaults",
+          "count": 1
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "eurusd",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "fx-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 3,
+      "closedCount": 3,
+      "tpCount": 0,
+      "slCount": 3,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "eurusd",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "fx-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 16,
+      "closedCount": 1,
+      "tpCount": 0,
+      "slCount": 1,
+      "expiredCount": 5,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS",
+          "count": 8
+        },
+        {
+          "reason": "Alignment fx LONG",
+          "count": 12
+        },
+        {
+          "reason": "fx yahoo =X",
+          "count": 14
+        },
+        {
+          "reason": "WATCH_FAILS_CONFIDENCE",
+          "count": 3
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 4
+        },
+        {
+          "reason": "WATCH_OTHER",
+          "count": 1
+        },
+        {
+          "reason": "Alignment fx SHORT",
+          "count": 4
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS",
+          "count": 8
+        },
+        {
+          "segment": "WATCH_FAILS_CONFIDENCE",
+          "count": 3
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 4
+        },
+        {
+          "segment": "WATCH_OTHER",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "eurusd",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "eurusd-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        },
+        {
+          "reason": "Alignment fx SHORT",
+          "count": 1
+        },
+        {
+          "reason": "Derived alignment LONG; bias/trend below defaults",
+          "count": 1
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "eurusd",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "fx-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 4,
+      "closedCount": 2,
+      "tpCount": 0,
+      "slCount": 2,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "eurusd",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "fx-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 19,
+      "closedCount": 1,
+      "tpCount": 0,
+      "slCount": 1,
+      "expiredCount": 7,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS",
+          "count": 10
+        },
+        {
+          "reason": "Alignment fx LONG",
+          "count": 15
+        },
+        {
+          "reason": "fx yahoo =X",
+          "count": 17
+        },
+        {
+          "reason": "WATCH_FAILS_CONFIDENCE",
+          "count": 2
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 6
+        },
+        {
+          "reason": "WATCH_OTHER",
+          "count": 1
+        },
+        {
+          "reason": "Alignment fx SHORT",
+          "count": 4
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS",
+          "count": 10
+        },
+        {
+          "segment": "WATCH_FAILS_CONFIDENCE",
+          "count": 2
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 6
+        },
+        {
+          "segment": "WATCH_OTHER",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "eurusd",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "eurusd-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        },
+        {
+          "reason": "Alignment fx SHORT",
+          "count": 1
+        },
+        {
+          "reason": "Derived alignment LONG; bias/trend below defaults",
+          "count": 1
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "eurusd",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "fx-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 4,
+      "closedCount": 1,
+      "tpCount": 0,
+      "slCount": 1,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "gbpusd",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "fx-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 20,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 6,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS",
+          "count": 12
+        },
+        {
+          "reason": "Alignment fx SHORT",
+          "count": 12
+        },
+        {
+          "reason": "fx yahoo =X",
+          "count": 20
+        },
+        {
+          "reason": "WATCH_FAILS_CONFIDENCE",
+          "count": 2
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 6
+        },
+        {
+          "reason": "Alignment fx LONG",
+          "count": 8
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS",
+          "count": 12
+        },
+        {
+          "segment": "WATCH_FAILS_CONFIDENCE",
+          "count": 2
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 6
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "gbpusd",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "gbpusd-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        },
+        {
+          "reason": "Alignment fx LONG",
+          "count": 1
+        },
+        {
+          "reason": "Derived alignment SHORT; bias/trend below defaults",
+          "count": 1
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "gbpusd",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "gbpusd-swing-v0.1",
+        "decision": "unknown",
+        "grade": "unknown",
+        "alignment": null
+      },
+      "outcomesTotal": 16,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 6,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable"
+    },
+    {
+      "key": {
+        "assetId": "gbpusd",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "fx-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 24,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 10,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS",
+          "count": 15
+        },
+        {
+          "reason": "Alignment fx SHORT",
+          "count": 15
+        },
+        {
+          "reason": "fx yahoo =X",
+          "count": 24
+        },
+        {
+          "reason": "WATCH_FAILS_CONFIDENCE",
+          "count": 2
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 7
+        },
+        {
+          "reason": "Alignment fx LONG",
+          "count": 9
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS",
+          "count": 15
+        },
+        {
+          "segment": "WATCH_FAILS_CONFIDENCE",
+          "count": 2
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 7
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "gbpusd",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "gbpusd-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS",
+          "count": 1
+        },
+        {
+          "reason": "Alignment fx LONG",
+          "count": 1
+        },
+        {
+          "reason": "Derived alignment SHORT; bias/trend below defaults",
+          "count": 1
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "gbpusd",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "fx-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 20,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 6,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS",
+          "count": 11
+        },
+        {
+          "reason": "Alignment fx SHORT",
+          "count": 12
+        },
+        {
+          "reason": "fx yahoo =X",
+          "count": 20
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 6
+        },
+        {
+          "reason": "WATCH_OTHER",
+          "count": 2
+        },
+        {
+          "reason": "WATCH_FAILS_CONFIDENCE",
+          "count": 1
+        },
+        {
+          "reason": "Alignment fx LONG",
+          "count": 8
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS",
+          "count": 11
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 6
+        },
+        {
+          "segment": "WATCH_OTHER",
+          "count": 2
+        },
+        {
+          "segment": "WATCH_FAILS_CONFIDENCE",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "gbpusd",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "gbpusd-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        },
+        {
+          "reason": "Alignment fx LONG",
+          "count": 1
+        },
+        {
+          "reason": "Derived alignment SHORT; bias/trend below defaults",
+          "count": 1
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "gbpusd",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "fx-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 23,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 8,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS",
+          "count": 12
+        },
+        {
+          "reason": "Alignment fx SHORT",
+          "count": 15
+        },
+        {
+          "reason": "fx yahoo =X",
+          "count": 23
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 8
+        },
+        {
+          "reason": "WATCH_FAILS_CONFIDENCE",
+          "count": 2
+        },
+        {
+          "reason": "Alignment fx LONG",
+          "count": 8
+        },
+        {
+          "reason": "WATCH_OTHER",
+          "count": 1
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS",
+          "count": 12
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 8
+        },
+        {
+          "segment": "WATCH_FAILS_CONFIDENCE",
+          "count": 2
+        },
+        {
+          "segment": "WATCH_OTHER",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "gbpusd",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "gbpusd-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        },
+        {
+          "reason": "Alignment fx LONG",
+          "count": 1
+        },
+        {
+          "reason": "Derived alignment SHORT; bias/trend below defaults",
+          "count": 1
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "gold",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "gold-swing-v0.2",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 17,
+      "closedCount": 13,
+      "tpCount": 6,
+      "slCount": 7,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.4615,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "Bias too weak (<80)",
+          "count": 5
+        },
+        {
+          "reason": "base:bias+trend",
+          "count": 7
+        },
+        {
+          "reason": "Bias too weak (<70)",
+          "count": 12
+        },
+        {
+          "reason": "base:bias+trend+signalQuality",
+          "count": 2
+        },
+        {
+          "reason": "base:bias+signalQuality",
+          "count": 8
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "gold",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "gold-swing-v0.2",
+        "decision": "unknown",
+        "grade": "unknown",
+        "alignment": null
+      },
+      "outcomesTotal": 16,
+      "closedCount": 15,
+      "tpCount": 0,
+      "slCount": 15,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "gold",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "gold-swing-v0.2",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 2,
+      "closedCount": 2,
+      "tpCount": 1,
+      "slCount": 1,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.5,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "gold",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "gold-swing-v0.2",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 2,
+      "closedCount": 2,
+      "tpCount": 1,
+      "slCount": 1,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.5,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "Bias too weak (<70)",
+          "count": 2
+        },
+        {
+          "reason": "base:bias+trend+signalQuality",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "gold",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "gold-swing-v0.2",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 20,
+      "closedCount": 16,
+      "tpCount": 7,
+      "slCount": 9,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.4375,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "Bias too weak (<80)",
+          "count": 6
+        },
+        {
+          "reason": "base:bias",
+          "count": 7
+        },
+        {
+          "reason": "Bias too weak (<70)",
+          "count": 14
+        },
+        {
+          "reason": "base:bias+trend",
+          "count": 8
+        },
+        {
+          "reason": "base:bias+trend+signalQuality",
+          "count": 2
+        },
+        {
+          "reason": "base:bias+signalQuality",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "gold",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "gold-swing-v0.2",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 3,
+      "closedCount": 2,
+      "tpCount": 2,
+      "slCount": 0,
+      "expiredCount": 1,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 1,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "gold",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "gold-swing-v0.2",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 2,
+      "closedCount": 2,
+      "tpCount": 1,
+      "slCount": 1,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.5,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "Bias too weak (<70)",
+          "count": 2
+        },
+        {
+          "reason": "base:bias+signalQuality",
+          "count": 1
+        },
+        {
+          "reason": "base:bias+trend",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "gold",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "gold-swing-v0.2",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 18,
+      "closedCount": 12,
+      "tpCount": 5,
+      "slCount": 7,
+      "expiredCount": 1,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.4167,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "Bias too weak (<80)",
+          "count": 5
+        },
+        {
+          "reason": "base:bias+trend+signalQuality",
+          "count": 4
+        },
+        {
+          "reason": "base:bias+trend",
+          "count": 4
+        },
+        {
+          "reason": "Bias too weak (<70)",
+          "count": 11
+        },
+        {
+          "reason": "base:bias+signalQuality",
+          "count": 8
+        },
+        {
+          "reason": "Trend too weak (<50)",
+          "count": 2
+        },
+        {
+          "reason": "base:trend",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "gold",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "gold-swing-v0.2",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 3,
+      "closedCount": 3,
+      "tpCount": 2,
+      "slCount": 1,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.6667,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "Bias too weak (<70)",
+          "count": 2
+        },
+        {
+          "reason": "base:bias+trend+signalQuality",
+          "count": 1
+        },
+        {
+          "reason": "base:bias+trend",
+          "count": 1
+        },
+        {
+          "reason": "Hard knockout: tb_conflict+of_negative",
+          "count": 1
+        },
+        {
+          "reason": "hard:tb_conflict+of_negative",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "gold",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "gold-swing-v0.2",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 6,
+      "closedCount": 4,
+      "tpCount": 4,
+      "slCount": 0,
+      "expiredCount": 2,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 1,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "gold",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "gold-swing-v0.2",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 16,
+      "closedCount": 12,
+      "tpCount": 4,
+      "slCount": 8,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.3333,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "Bias too weak (<80)",
+          "count": 5
+        },
+        {
+          "reason": "base:bias+trend",
+          "count": 4
+        },
+        {
+          "reason": "base:bias",
+          "count": 2
+        },
+        {
+          "reason": "Bias too weak (<70)",
+          "count": 10
+        },
+        {
+          "reason": "base:bias+signalQuality",
+          "count": 6
+        },
+        {
+          "reason": "base:bias+trend+signalQuality",
+          "count": 3
+        },
+        {
+          "reason": "Trend too weak (<50)",
+          "count": 1
+        },
+        {
+          "reason": "base:trend",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "gold",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "gold-swing-v0.2",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 2,
+      "closedCount": 2,
+      "tpCount": 1,
+      "slCount": 1,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.5,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "Bias too weak (<70)",
+          "count": 2
+        },
+        {
+          "reason": "base:bias+signalQuality",
+          "count": 1
+        },
+        {
+          "reason": "base:bias+trend",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "ndx",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "index-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 17,
+      "closedCount": 5,
+      "tpCount": 0,
+      "slCount": 5,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS_SOFT",
+          "count": 4
+        },
+        {
+          "reason": "Alignment derived (index fallback LONG)",
+          "count": 11
+        },
+        {
+          "reason": "index caret symbol",
+          "count": 17
+        },
+        {
+          "reason": "WATCH_FAILS_BIAS_NEAR",
+          "count": 7
+        },
+        {
+          "reason": "WATCH_FAILS_CONFIDENCE",
+          "count": 1
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 5
+        },
+        {
+          "reason": "Alignment derived (index fallback SHORT)",
+          "count": 6
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS_SOFT",
+          "count": 4
+        },
+        {
+          "segment": "WATCH_FAILS_BIAS_NEAR",
+          "count": 7
+        },
+        {
+          "segment": "WATCH_FAILS_CONFIDENCE",
+          "count": 1
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "ndx",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "index-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 1,
+      "tpCount": 0,
+      "slCount": 1,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "ndx",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "ndx-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "Regime range/chop (trend confirmation missing)",
+          "count": 1
+        },
+        {
+          "reason": "spx:WATCH_RANGE_CONSTRUCTIVE",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "ndx",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "ndx-swing-v0.1",
+        "decision": "unknown",
+        "grade": "unknown",
+        "alignment": null
+      },
+      "outcomesTotal": 16,
+      "closedCount": 10,
+      "tpCount": 10,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 1,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "ndx",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "index-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 22,
+      "closedCount": 6,
+      "tpCount": 0,
+      "slCount": 6,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_CONFIDENCE",
+          "count": 3
+        },
+        {
+          "reason": "Alignment derived (index fallback LONG)",
+          "count": 14
+        },
+        {
+          "reason": "index caret symbol",
+          "count": 22
+        },
+        {
+          "reason": "WATCH_FAILS_BIAS_NEAR",
+          "count": 7
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 7
+        },
+        {
+          "reason": "WATCH_FAILS_BIAS_SOFT",
+          "count": 4
+        },
+        {
+          "reason": "Alignment derived (index fallback SHORT)",
+          "count": 8
+        },
+        {
+          "reason": "WATCH_OTHER",
+          "count": 1
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_CONFIDENCE",
+          "count": 3
+        },
+        {
+          "segment": "WATCH_FAILS_BIAS_NEAR",
+          "count": 7
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 7
+        },
+        {
+          "segment": "WATCH_FAILS_BIAS_SOFT",
+          "count": 4
+        },
+        {
+          "segment": "WATCH_OTHER",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "ndx",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "index-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 1,
+      "tpCount": 0,
+      "slCount": 1,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "ndx",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "ndx-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "Regime range/chop (trend confirmation missing)",
+          "count": 1
+        },
+        {
+          "reason": "spx:WATCH_RANGE_CONSTRUCTIVE",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "ndx",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "index-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 2,
+      "closedCount": 1,
+      "tpCount": 0,
+      "slCount": 1,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "ndx",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "index-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 16,
+      "closedCount": 5,
+      "tpCount": 0,
+      "slCount": 5,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS_NEAR",
+          "count": 7
+        },
+        {
+          "reason": "Alignment derived (index fallback LONG)",
+          "count": 10
+        },
+        {
+          "reason": "index caret symbol",
+          "count": 16
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 5
+        },
+        {
+          "reason": "WATCH_FAILS_BIAS_SOFT",
+          "count": 4
+        },
+        {
+          "reason": "Alignment derived (index fallback SHORT)",
+          "count": 6
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS_NEAR",
+          "count": 7
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 5
+        },
+        {
+          "segment": "WATCH_FAILS_BIAS_SOFT",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "ndx",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "ndx-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "Regime range/chop (trend confirmation missing)",
+          "count": 1
+        },
+        {
+          "reason": "spx:WATCH_RANGE_CONSTRUCTIVE",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "ndx",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "index-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 17,
+      "closedCount": 6,
+      "tpCount": 0,
+      "slCount": 6,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS_NEAR",
+          "count": 7
+        },
+        {
+          "reason": "Alignment derived (index fallback LONG)",
+          "count": 11
+        },
+        {
+          "reason": "index caret symbol",
+          "count": 17
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 6
+        },
+        {
+          "reason": "WATCH_FAILS_BIAS_SOFT",
+          "count": 4
+        },
+        {
+          "reason": "Alignment derived (index fallback SHORT)",
+          "count": 6
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS_NEAR",
+          "count": 7
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 6
+        },
+        {
+          "segment": "WATCH_FAILS_BIAS_SOFT",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "ndx",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "index-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 4,
+      "closedCount": 2,
+      "tpCount": 0,
+      "slCount": 2,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "ndx",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "ndx-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "Regime range/chop (trend confirmation missing)",
+          "count": 1
+        },
+        {
+          "reason": "spx:WATCH_RANGE_CONSTRUCTIVE",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "silver",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "generic-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 13,
+      "closedCount": 13,
+      "tpCount": 3,
+      "slCount": 10,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.2308,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "No default alignment",
+          "count": 13
+        },
+        {
+          "reason": "fallback generic",
+          "count": 13
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "silver",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "metals-swing-v0.1",
+        "decision": "pullback_continuation",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 12,
+      "closedCount": 10,
+      "tpCount": 0,
+      "slCount": 10,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "silver",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "metals-swing-v0.1",
+        "decision": "range_bias",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 5,
+      "closedCount": 5,
+      "tpCount": 0,
+      "slCount": 5,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "Alignment derived (LONG) from bias/trend",
+          "count": 5
+        },
+        {
+          "reason": "Derived alignment LONG; bias/trend below defaults",
+          "count": 5
+        },
+        {
+          "reason": "silver id",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "silver",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "metals-swing-v0.1",
+        "decision": "range_bias",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 1,
+      "tpCount": 0,
+      "slCount": 1,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "silver",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "metals-swing-v0.1",
+        "decision": "unknown",
+        "grade": "unknown",
+        "alignment": null
+      },
+      "outcomesTotal": 16,
+      "closedCount": 14,
+      "tpCount": 14,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 1,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "silver",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "generic-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 8,
+      "closedCount": 7,
+      "tpCount": 4,
+      "slCount": 3,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.5714,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "silver",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "generic-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 17,
+      "closedCount": 17,
+      "tpCount": 3,
+      "slCount": 14,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.1765,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "No default alignment",
+          "count": 17
+        },
+        {
+          "reason": "fallback generic",
+          "count": 17
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "silver",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "metals-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 1,
+      "tpCount": 0,
+      "slCount": 1,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "silver",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "generic-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 8,
+      "closedCount": 8,
+      "tpCount": 3,
+      "slCount": 5,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.375,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "silver",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "generic-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 13,
+      "closedCount": 11,
+      "tpCount": 2,
+      "slCount": 9,
+      "expiredCount": 0,
+      "ambiguousCount": 2,
+      "invalidCount": 0,
+      "winrate": 0.1818,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "No default alignment",
+          "count": 13
+        },
+        {
+          "reason": "fallback generic",
+          "count": 13
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "silver",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "generic-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 8,
+      "closedCount": 8,
+      "tpCount": 4,
+      "slCount": 4,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.5,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "silver",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "metals-swing-v0.1",
+        "decision": "pullback_continuation",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable"
+    },
+    {
+      "key": {
+        "assetId": "silver",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "generic-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 16,
+      "closedCount": 16,
+      "tpCount": 4,
+      "slCount": 12,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.25,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "No default alignment",
+          "count": 16
+        },
+        {
+          "reason": "fallback generic",
+          "count": 16
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "silver",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "generic-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 7,
+      "closedCount": 7,
+      "tpCount": 3,
+      "slCount": 4,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.4286,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "silver",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "metals-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 1,
+      "tpCount": 0,
+      "slCount": 1,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "spx",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "index-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 18,
+      "closedCount": 8,
+      "tpCount": 0,
+      "slCount": 8,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS_SOFT",
+          "count": 13
+        },
+        {
+          "reason": "Alignment derived (index fallback SHORT)",
+          "count": 12
+        },
+        {
+          "reason": "index caret symbol",
+          "count": 18
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 5
+        },
+        {
+          "reason": "Alignment derived (index fallback LONG)",
+          "count": 6
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS_SOFT",
+          "count": 13
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "spx",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "spx-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "Regime range/chop (trend confirmation missing)",
+          "count": 1
+        },
+        {
+          "reason": "spx:WATCH_RANGE_CONSTRUCTIVE",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "spx",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "spx-swing-v0.1",
+        "decision": "unknown",
+        "grade": "unknown",
+        "alignment": null
+      },
+      "outcomesTotal": 16,
+      "closedCount": 10,
+      "tpCount": 0,
+      "slCount": 10,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "spx",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "index-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 22,
+      "closedCount": 8,
+      "tpCount": 0,
+      "slCount": 8,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS_SOFT",
+          "count": 14
+        },
+        {
+          "reason": "Alignment derived (index fallback SHORT)",
+          "count": 15
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 7
+        },
+        {
+          "reason": "Alignment derived (index fallback LONG)",
+          "count": 7
+        },
+        {
+          "reason": "WATCH_FAILS_BIAS_NEAR",
+          "count": 1
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS_SOFT",
+          "count": 14
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 7
+        },
+        {
+          "segment": "WATCH_FAILS_BIAS_NEAR",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "spx",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "spx-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "Regime range/chop (trend confirmation missing)",
+          "count": 1
+        },
+        {
+          "reason": "spx:WATCH_RANGE_CONSTRUCTIVE",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "spx",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "spx-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 1,
+      "tpCount": 0,
+      "slCount": 1,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS_SOFT",
+          "count": 1
+        },
+        {
+          "reason": "Alignment derived (index fallback LONG)",
+          "count": 1
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS_SOFT",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "spx",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "index-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 18,
+      "closedCount": 8,
+      "tpCount": 0,
+      "slCount": 8,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS_SOFT",
+          "count": 13
+        },
+        {
+          "reason": "Alignment derived (index fallback SHORT)",
+          "count": 12
+        },
+        {
+          "reason": "index caret symbol",
+          "count": 18
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 5
+        },
+        {
+          "reason": "Alignment derived (index fallback LONG)",
+          "count": 6
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS_SOFT",
+          "count": 13
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "spx",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "spx-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "Regime range/chop (trend confirmation missing)",
+          "count": 1
+        },
+        {
+          "reason": "spx:WATCH_RANGE_CONSTRUCTIVE",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "spx",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "index-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 21,
+      "closedCount": 8,
+      "tpCount": 0,
+      "slCount": 8,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS_SOFT",
+          "count": 14
+        },
+        {
+          "reason": "Alignment derived (index fallback SHORT)",
+          "count": 15
+        },
+        {
+          "reason": "index caret symbol",
+          "count": 20
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 7
+        },
+        {
+          "reason": "Alignment derived (index fallback LONG)",
+          "count": 6
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS_SOFT",
+          "count": 14
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 7
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "spx",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "spx-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "Regime range/chop (trend confirmation missing)",
+          "count": 1
+        },
+        {
+          "reason": "spx:WATCH_RANGE_CONSTRUCTIVE",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "usdjpy",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "fx-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 20,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 5,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_OTHER",
+          "count": 6
+        },
+        {
+          "reason": "Alignment fx LONG",
+          "count": 12
+        },
+        {
+          "reason": "fx yahoo =X",
+          "count": 18
+        },
+        {
+          "reason": "WATCH_FAILS_CONFIDENCE",
+          "count": 3
+        },
+        {
+          "reason": "WATCH_FAILS_BIAS",
+          "count": 5
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 6
+        },
+        {
+          "reason": "Alignment fx SHORT",
+          "count": 8
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_OTHER",
+          "count": 6
+        },
+        {
+          "segment": "WATCH_FAILS_CONFIDENCE",
+          "count": 3
+        },
+        {
+          "segment": "WATCH_FAILS_BIAS",
+          "count": 5
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 6
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "usdjpy",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "usdjpy-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        },
+        {
+          "reason": "Alignment fx SHORT",
+          "count": 1
+        },
+        {
+          "reason": "Derived alignment SHORT; bias/trend below defaults",
+          "count": 1
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "usdjpy",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "usdjpy-swing-v0.1",
+        "decision": "unknown",
+        "grade": "unknown",
+        "alignment": null
+      },
+      "outcomesTotal": 16,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 5,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable"
+    },
+    {
+      "key": {
+        "assetId": "usdjpy",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "fx-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 24,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 9,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_CONFIDENCE",
+          "count": 7
+        },
+        {
+          "reason": "Alignment fx LONG",
+          "count": 15
+        },
+        {
+          "reason": "fx yahoo =X",
+          "count": 22
+        },
+        {
+          "reason": "WATCH_OTHER",
+          "count": 3
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 7
+        },
+        {
+          "reason": "WATCH_FAILS_BIAS",
+          "count": 7
+        },
+        {
+          "reason": "Alignment fx SHORT",
+          "count": 9
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_CONFIDENCE",
+          "count": 7
+        },
+        {
+          "segment": "WATCH_OTHER",
+          "count": 3
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 7
+        },
+        {
+          "segment": "WATCH_FAILS_BIAS",
+          "count": 7
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "usdjpy",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "usdjpy-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_BIAS",
+          "count": 1
+        },
+        {
+          "reason": "Alignment fx SHORT",
+          "count": 1
+        },
+        {
+          "reason": "Derived alignment SHORT; bias/trend below defaults",
+          "count": 1
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_BIAS",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "usdjpy",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "fx-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 20,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 5,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_OTHER",
+          "count": 5
+        },
+        {
+          "reason": "Alignment fx LONG",
+          "count": 12
+        },
+        {
+          "reason": "fx yahoo =X",
+          "count": 18
+        },
+        {
+          "reason": "WATCH_FAILS_CONFIDENCE",
+          "count": 3
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 6
+        },
+        {
+          "reason": "WATCH_FAILS_BIAS",
+          "count": 6
+        },
+        {
+          "reason": "Alignment fx SHORT",
+          "count": 8
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_OTHER",
+          "count": 5
+        },
+        {
+          "segment": "WATCH_FAILS_CONFIDENCE",
+          "count": 3
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 6
+        },
+        {
+          "segment": "WATCH_FAILS_BIAS",
+          "count": 6
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "usdjpy",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "usdjpy-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        },
+        {
+          "reason": "Alignment fx SHORT",
+          "count": 1
+        },
+        {
+          "reason": "Derived alignment SHORT; bias/trend below defaults",
+          "count": 1
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "usdjpy",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "fx-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 22,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 7,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_FAILS_CONFIDENCE",
+          "count": 3
+        },
+        {
+          "reason": "Alignment fx LONG",
+          "count": 14
+        },
+        {
+          "reason": "fx yahoo =X",
+          "count": 19
+        },
+        {
+          "reason": "WATCH_OTHER",
+          "count": 6
+        },
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 7
+        },
+        {
+          "reason": "WATCH_FAILS_BIAS",
+          "count": 6
+        },
+        {
+          "reason": "Alignment fx SHORT",
+          "count": 8
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_FAILS_CONFIDENCE",
+          "count": 3
+        },
+        {
+          "segment": "WATCH_OTHER",
+          "count": 6
+        },
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 7
+        },
+        {
+          "segment": "WATCH_FAILS_BIAS",
+          "count": 6
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "usdjpy",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "usdjpy-swing-v0.1",
+        "decision": "watch",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable",
+      "topReasons": [
+        {
+          "reason": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        },
+        {
+          "reason": "Alignment fx SHORT",
+          "count": 1
+        },
+        {
+          "reason": "Derived alignment SHORT; bias/trend below defaults",
+          "count": 1
+        }
+      ],
+      "topSegments": [
+        {
+          "segment": "WATCH_EVENT_RISK_HIGH",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "usdjpy",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "fx-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable"
+    },
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "generic-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 13,
+      "closedCount": 12,
+      "tpCount": 0,
+      "slCount": 12,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "No default alignment",
+          "count": 13
+        },
+        {
+          "reason": "fallback generic",
+          "count": 13
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "energy-swing-v0.1",
+        "decision": "unknown",
+        "grade": "unknown",
+        "alignment": null
+      },
+      "outcomesTotal": 16,
+      "closedCount": 8,
+      "tpCount": 2,
+      "slCount": 6,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.25,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "generic-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 8,
+      "closedCount": 3,
+      "tpCount": 0,
+      "slCount": 3,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1d",
+        "label": "(null)",
+        "playbookId": "energy-swing-v0.1",
+        "decision": "pullback_continuation",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable"
+    },
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "generic-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 18,
+      "closedCount": 16,
+      "tpCount": 0,
+      "slCount": 16,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "No default alignment",
+          "count": 18
+        },
+        {
+          "reason": "fallback generic",
+          "count": 18
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "generic-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 7,
+      "closedCount": 3,
+      "tpCount": 0,
+      "slCount": 3,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1d",
+        "label": "eod",
+        "playbookId": "energy-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable"
+    },
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "generic-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 13,
+      "closedCount": 12,
+      "tpCount": 0,
+      "slCount": 12,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "No default alignment",
+          "count": 13
+        },
+        {
+          "reason": "fallback generic",
+          "count": 13
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "generic-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 8,
+      "closedCount": 3,
+      "tpCount": 0,
+      "slCount": 3,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1d",
+        "label": "morning",
+        "playbookId": "energy-swing-v0.1",
+        "decision": "pullback_continuation",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable"
+    },
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "generic-swing-v0.1",
+        "decision": "blocked",
+        "grade": "no_trade",
+        "alignment": null
+      },
+      "outcomesTotal": 16,
+      "closedCount": 15,
+      "tpCount": 1,
+      "slCount": 14,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0.0667,
+      "winrateDefinition": "tp/(tp+sl)",
+      "topReasons": [
+        {
+          "reason": "No default alignment",
+          "count": 16
+        },
+        {
+          "reason": "fallback generic",
+          "count": 16
+        }
+      ]
+    },
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "generic-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 7,
+      "closedCount": 4,
+      "tpCount": 0,
+      "slCount": 4,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrate": 0,
+      "winrateDefinition": "tp/(tp+sl)"
+    },
+    {
+      "key": {
+        "assetId": "wti",
+        "timeframe": "1d",
+        "label": "us_open",
+        "playbookId": "energy-swing-v0.1",
+        "decision": "trade",
+        "grade": "b",
+        "alignment": null
+      },
+      "outcomesTotal": 1,
+      "closedCount": 0,
+      "tpCount": 0,
+      "slCount": 0,
+      "expiredCount": 0,
+      "ambiguousCount": 0,
+      "invalidCount": 0,
+      "winrateDefinition": "unavailable"
+    }
+  ],
+  "notes": [],
+  "samples": {
+    "matchedSampleIds": [
+      "5941f522-b82a-4326-a394-4c50758e1c8e__btc-trend_breakout",
+      "b07becd6-c4b3-4219-b518-2919a8840d40__wti-trend_pullback",
+      "af426b28-a137-4b00-8f02-237e54d2ddd7__btc-trend_breakout",
+      "af426b28-a137-4b00-8f02-237e54d2ddd7__eth-mean_reversion_overshoot",
+      "af426b28-a137-4b00-8f02-237e54d2ddd7__wti-trend_pullback",
+      "30f36101-8140-4db9-b75c-546e0ae3512e__gold-trend_pullback",
+      "59e56a73-540e-479a-92ea-179b6d134ae4__gold-trend_pullback",
+      "b07becd6-c4b3-4219-b518-2919a8840d40__silver-mean_reversion_overshoot",
+      "af426b28-a137-4b00-8f02-237e54d2ddd7__gold-trend_pullback",
+      "033442b0-015c-4e4a-b42e-d22ce7593c98__dax-trend_breakout"
+    ]
+  },
+  "dimensionSourceCounts": {
+    "playbookId": {
+      "persisted": 1354,
+      "derived": 0,
+      "missing": 0
+    },
+    "decision": {
+      "persisted": 1146,
+      "derived": 0,
+      "missing": 208
+    },
+    "grade": {
+      "persisted": 1146,
+      "derived": 0,
+      "missing": 208
+    }
+  },
+  "fallbackUsedCount": 0,
+  "allowDerivedPlaybookFallback": false
+}
