@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { z } from "zod";
-import { ReportSchema } from "@/src/app/[locale]/admin/playbooks/schema";
-import { aggregatePlaybooks } from "@/src/app/[locale]/admin/playbooks/page";
+import type { OutcomeReport } from "@/src/app/[locale]/admin/(panel)/playbooks/lib";
+import { aggregatePlaybooks } from "@/src/app/[locale]/admin/(panel)/playbooks/lib";
 
-const sample: z.infer<typeof ReportSchema> = {
+const sample: OutcomeReport = {
   version: "v1",
   generatedAt: "2026-01-01T00:00:00Z",
   params: { days: 30, timeframes: ["1d"], labels: ["eod"] },
@@ -75,6 +74,6 @@ describe("Playbook aggregation", () => {
     expect(energy?.slCount).toBe(1);
     expect(energy?.winrate).toBe(0.5);
     expect(gold?.winrate).toBe(1);
-    expect(rows[0].playbookId).toBe("energy-swing-v0.1"); // closed desc
+    expect(rows[0]?.playbookId).toBe("energy-swing-v0.1"); // closed desc
   });
 });
