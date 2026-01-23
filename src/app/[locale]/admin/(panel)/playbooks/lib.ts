@@ -23,8 +23,31 @@ export type AggregateFilters = {
 
 export async function loadLatestOutcomeReport(): Promise<OutcomeReport | null> {
   const candidates = buildPhase1Candidates("swing-outcome-analysis");
-  const loaded = await loadPhase1Artifact(candidates, (value) => OutcomeReportSchema.parse(value));
+  const loaded = await loadPhase1Artifact(candidates, (value) => OutcomeReportSchema.parse(normalizeOpenCounts(value)));
   return loaded?.data ?? null;
+}
+
+function normalizeOpenCounts(value: unknown): unknown {
+  if (!value || typeof value !== "object") return value;
+  const clone = structuredClone(value) as any;
+  if (clone.overall && typeof clone.overall.openCount !== "number" && typeof clone.overall.closedCount === "number" && typeof clone.overall.outcomesTotal === "number") {
+    clone.overall.openCount = clone.overall.outcomesTotal - clone.overall.closedCount;
+  }
+  if (Array.isArray(clone.byKey)) {
+    clone.byKey = clone.byKey.map((row: any) => {
+      if (
+        row &&
+        typeof row === "object" &&
+        typeof row.openCount !== "number" &&
+        typeof row.closedCount === "number" &&
+        typeof row.outcomesTotal === "number"
+      ) {
+        return { ...row, openCount: row.outcomesTotal - row.closedCount };
+      }
+      return row;
+    });
+  }
+  return clone;
 }
 
 export function aggregatePlaybooks(report: OutcomeReport, filters: AggregateFilters): PlaybookAggregate[] {
