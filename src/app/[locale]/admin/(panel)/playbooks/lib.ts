@@ -1,6 +1,6 @@
 import path from "node:path";
-import { readFile } from "node:fs/promises";
 import { OutcomeReportSchema, type OutcomeReport } from "./schema";
+import { buildPhase1Candidates, loadPhase1Artifact } from "@/lib/artifacts/storage";
 
 export type PlaybookAggregate = {
   playbookId: string;
@@ -22,22 +22,9 @@ export type AggregateFilters = {
 };
 
 export async function loadLatestOutcomeReport(): Promise<OutcomeReport | null> {
-  const base = path.join(process.cwd(), "artifacts", "phase1");
-  const candidates = [
-    path.join(base, "swing-outcome-analysis-latest-v2.json"),
-    path.join(base, "swing-outcome-analysis-latest-v1.json"),
-  ];
-
-  for (const file of candidates) {
-    try {
-      const raw = await readFile(file, "utf-8");
-      const parsed = OutcomeReportSchema.parse(JSON.parse(raw));
-      return parsed;
-    } catch (err) {
-      // try next candidate
-    }
-  }
-  return null;
+  const candidates = buildPhase1Candidates("swing-outcome-analysis");
+  const loaded = await loadPhase1Artifact(candidates, (value) => OutcomeReportSchema.parse(value));
+  return loaded?.data ?? null;
 }
 
 export function aggregatePlaybooks(report: OutcomeReport, filters: AggregateFilters): PlaybookAggregate[] {

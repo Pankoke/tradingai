@@ -1,0 +1,76 @@
+name: Phase1 Blob Artifacts
+
+on:
+  schedule:
+    - cron: "30 6 * * *" # daily
+    - cron: "0 7 * * 1"  # weekly deep
+  workflow_dispatch:
+
+concurrency:
+  group: phase1-blob-artifacts
+  cancel-in-progress: false
+
+env:
+  BASE_URL: ${{ secrets.BASE_URL || vars.BASE_URL }}
+  CRON_SECRET: ${{ secrets.CRON_SECRET }}
+  BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Resolve window params
+        id: params
+        run: |
+          cron="${{ github.event.schedule }}"
+          if [ "$cron" = "0 7 * * 1" ]; then
+            echo "mode=weekly" >> $GITHUB_OUTPUT
+            echo "days=365" >> $GITHUB_OUTPUT
+            echo "limit=5000" >> $GITHUB_OUTPUT
+          else
+            echo "mode=daily" >> $GITHUB_OUTPUT
+            echo "days=180" >> $GITHUB_OUTPUT
+            echo "limit=1500" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Outcomes backfill (Swing)
+        run: |
+          if [ -z "$BASE_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "Missing BASE_URL or CRON_SECRET" >&2
+            exit 1
+          fi
+          CLEAN_BASE="${BASE_URL%/}"
+          URL="${CLEAN_BASE}/api/cron/outcomes/backfill?daysBack=${{ steps.params.outputs.days }}&limitSetups=${{ steps.params.outputs.limit }}"
+          echo "Calling $URL"
+          curl -sS -X POST "$URL" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            --fail
+
+      - name: Build join-stats artifact
+        run: npm run phase1:join-stats -- --days=${{ steps.params.outputs.days }}
+
+      - name: Build swing-outcome-analysis artifact
+        run: npm run phase1:analyze:swing -- --days=${{ steps.params.outputs.days }}
+
+      - name: Upload artifacts to Vercel Blob
+        run: npx ts-node --project scripts/tsconfig.scripts.json scripts/phase1/upload-phase1-artifacts-to-blob.ts
+
+      - name: Upload debug artifact (optional)
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase1-artifacts-${{ steps.params.outputs.mode }}
+          path: artifacts/phase1/*.json
+          if-no-files-found: warn

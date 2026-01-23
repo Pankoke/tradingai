@@ -1,59 +1,38 @@
 import path from "node:path";
-import { readFile } from "node:fs/promises";
 import { OutcomeReportSchema } from "../../playbooks/schema";
 import { JoinStatsSchema, type JoinStats, type OutcomeReport } from "./schema";
+import { buildPhase1Candidates, loadPhase1Artifact } from "@/lib/artifacts/storage";
 
-type LoadOutcomeResult = { report: OutcomeReport; filename: string } | null;
-type LoadJoinResult = { join: JoinStats; filename: string } | null;
+type LoadOutcomeResult = { report: OutcomeReport; filename: string; source: string } | null;
+type LoadJoinResult = { join: JoinStats; filename: string; source: string } | null;
 
 export async function loadLatestOutcomeReport(): Promise<LoadOutcomeResult> {
-  const base = path.join(process.cwd(), "artifacts", "phase1");
-  const candidates = [
-    "swing-outcome-analysis-latest-v2.json",
-    "swing-outcome-analysis-latest-v1.json",
-  ].map((file) => path.join(base, file));
-
-  for (const file of candidates) {
-    try {
-      const raw = await readFile(file, "utf-8");
-      const parsed = OutcomeReportSchema.parse(JSON.parse(raw));
-      return { report: parsed, filename: path.basename(file) };
-    } catch {
-      // try next
-    }
-  }
-  return null;
+  const candidates = buildPhase1Candidates("swing-outcome-analysis");
+  const loaded = await loadPhase1Artifact(candidates, (value) => OutcomeReportSchema.parse(value));
+  if (!loaded) return null;
+  return { report: loaded.data, filename: loaded.location, source: loaded.source };
 }
 
 export async function loadLatestJoinStats(): Promise<LoadJoinResult> {
-  const base = path.join(process.cwd(), "artifacts", "phase1");
-  const candidates = [
-    path.join(base, "join-stats-latest-v1.json"),
-    // fallback: pick the newest join-stats-*.json if latest is missing
-    ...(await listJoinStatFiles(base)),
-  ];
+  const baseCandidates = buildPhase1Candidates("join-stats");
+  // allow fallback to any dated join-stats-*.json when latest keys missing
+  const fsDir = path.join(process.cwd(), "artifacts", "phase1");
+  const datedFs: { fsPath: string }[] = await listJoinStatFiles(fsDir);
+  const candidates = [...baseCandidates, ...datedFs];
 
-  for (const file of candidates) {
-    try {
-      const raw = await readFile(file, "utf-8");
-      const parsed = JoinStatsSchema.parse(JSON.parse(raw));
-      return { join: parsed, filename: path.basename(file) };
-    } catch {
-      // try next
-    }
-  }
-  return null;
+  const loaded = await loadPhase1Artifact(candidates, (value) => JoinStatsSchema.parse(value));
+  if (!loaded) return null;
+  return { join: loaded.data, filename: loaded.location, source: loaded.source };
 }
 
-async function listJoinStatFiles(base: string): Promise<string[]> {
+async function listJoinStatFiles(baseDir: string): Promise<{ fsPath: string }[]> {
   try {
     const { readdir } = await import("node:fs/promises");
-    const files = await readdir(base);
+    const files = await readdir(baseDir);
     return files
       .filter((f) => f.startsWith("join-stats-") && f.endsWith(".json"))
-      .map((f) => path.join(base, f))
-      .sort()
-      .reverse();
+      .map((f) => ({ fsPath: path.join(baseDir, f) }))
+      .sort((a, b) => b.fsPath.localeCompare(a.fsPath));
   } catch {
     return [];
   }
