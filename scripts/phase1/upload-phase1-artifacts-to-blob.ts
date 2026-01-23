@@ -28,7 +28,7 @@ async function main() {
       const data = await readFile(full);
       const key = `phase1/${spec.name}/${filename}`;
       const res = await put(key, data, {
-        access: "private",
+        access: "public",
         contentType: "application/json",
         token,
       });

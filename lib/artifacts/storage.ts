@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { get } from "@vercel/blob";
+import { head } from "@vercel/blob";
 
 export type ArtifactSource = "blob" | "fs";
 
@@ -18,7 +18,7 @@ export type ArtifactCandidate = {
 
 async function readBlobJson(key: string, token: string): Promise<unknown | null> {
   try {
-    const blob = await get(key, { token });
+    const blob = await head(key, { token });
     if (!blob?.downloadUrl) return null;
     const res = await fetch(blob.downloadUrl);
     if (!res.ok) return null;
@@ -39,7 +39,6 @@ async function readFsJson(fsPath: string): Promise<unknown | null> {
 
 /**
  * Load an artifact trying Blob first (if token + key present), falling back to fs.
- * Returns the first successfully parsed candidate.
  */
 export async function loadPhase1Artifact<T>(
   candidates: ArtifactCandidate[],
@@ -53,24 +52,14 @@ export async function loadPhase1Artifact<T>(
       tried.push(`blob:${cand.blobKey}`);
       const fromBlob = await readBlobJson(cand.blobKey, token);
       if (fromBlob !== null) {
-        return {
-          data: parser(fromBlob),
-          source: "blob",
-          location: cand.blobKey,
-          tried,
-        };
+        return { data: parser(fromBlob), source: "blob", location: cand.blobKey, tried };
       }
     }
     if (cand.fsPath) {
       tried.push(`fs:${cand.fsPath}`);
       const fromFs = await readFsJson(cand.fsPath);
       if (fromFs !== null) {
-        return {
-          data: parser(fromFs),
-          source: "fs",
-          location: cand.fsPath,
-          tried,
-        };
+        return { data: parser(fromFs), source: "fs", location: cand.fsPath, tried };
       }
     }
   }
@@ -94,6 +83,5 @@ export function phase1BlobCandidates(baseName: string): ArtifactCandidate[] {
 }
 
 export function buildPhase1Candidates(baseName: string): ArtifactCandidate[] {
-  // try blob first (v2 -> v1), then fs (v2 -> v1)
   return [...phase1BlobCandidates(baseName), ...phase1FsCandidates(baseName)];
 }

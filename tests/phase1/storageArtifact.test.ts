@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loadPhase1Artifact, type ArtifactLoadResult } from "@/src/lib/artifacts/storage";
+import { loadPhase1Artifact, type ArtifactLoadResult } from "@/lib/artifacts/storage";
 import { writeFile, mkdtemp } from "node:fs/promises";
 import path from "node:path";
 import { tmpdir } from "node:os";

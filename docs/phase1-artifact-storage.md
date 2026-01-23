@@ -4,7 +4,7 @@
 - **Storage**: Vercel Blob, private, Keys:
   - `phase1/swing-outcome-analysis/latest-v2.json` (Fallback: latest-v1)
   - `phase1/join-stats/latest-v1.json`
-- **Loader**: `src/lib/artifacts/storage.ts`
+- **Loader**: `lib/artifacts/storage.ts`
   - versucht Blob (mit `BLOB_READ_WRITE_TOKEN`) zuerst, fÃ¤llt auf `artifacts/phase1` im Repo zurÃ¼ck (Dev/Local).
 - **Upload**: `scripts/phase1/upload-phase1-artifacts-to-blob.ts`
   - liest lokale `artifacts/phase1/*latest*.json`, lÃ¤dt sie nach Blob
