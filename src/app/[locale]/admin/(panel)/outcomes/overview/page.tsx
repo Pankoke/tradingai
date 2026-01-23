@@ -17,7 +17,7 @@ type PageProps = {
 };
 
 export default async function OutcomesOverviewPage({ params, searchParams }: PageProps) {
-  const locale = params.locale as Locale;
+  const locale = (params.locale as Locale | undefined) ?? "en";
   const query = searchParams ?? {};
   const timeframe = (query.timeframe ?? "all").toLowerCase();
   const label = (query.label ?? "all").toLowerCase();

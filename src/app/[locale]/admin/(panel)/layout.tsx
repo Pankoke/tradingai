@@ -18,7 +18,7 @@ type Props = {
 
 export default async function AdminPanelLayout({ params, children }: Props) {
   const resolvedParams = await params;
-  const locale = resolvedParams.locale as Locale;
+  const locale = (resolvedParams.locale as Locale | undefined) ?? "en";
   await requireAdminSessionOrRedirect(locale);
   const messages = locale === "de" ? deMessages : enMessages;
   const navItems = [
@@ -30,6 +30,7 @@ export default async function AdminPanelLayout({ params, children }: Props) {
     { href: `/${locale}/admin/playbooks/thresholds`, label: "Playbook Thresholds" },
     { href: `/${locale}/admin/outcomes`, label: "Outcomes" },
     { href: `/${locale}/admin/outcomes/overview`, label: "Outcomes Overview" },
+    { href: `/${locale}/admin/outcomes/diagnostics`, label: "Outcomes Diagnostics" },
     { href: `/${locale}/admin/outcomes/engine-health`, label: "Engine Health" },
     { href: `/${locale}/admin/monitoring/reports`, label: "Health Reports" },
     { href: `/${locale}/admin/ops`, label: messages["admin.nav.ops"] },

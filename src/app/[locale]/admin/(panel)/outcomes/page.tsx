@@ -5,44 +5,64 @@ import { InfoTooltip } from "@/src/components/admin/InfoTooltip";
 import { OutcomesExportButtons } from "@/src/components/admin/OutcomesExportButtons";
 
 type PageProps = {
-  params: Promise<{ locale: string }>;
-  searchParams?: Promise<{ days?: string; assetId?: string; playbookId?: string; showNoTradeType?: string }>;
+  params: { locale: string };
+  searchParams?: { days?: string; assetId?: string; playbookId?: string; showNoTradeType?: string; includeAllGrades?: string; includeNoTrade?: string };
 };
 
 const ALLOWED_DAYS = ["7", "30", "90", "180", "365", "730"];
 
 export default async function OutcomesPage({ params, searchParams }: PageProps) {
-  const locale = (await params).locale as Locale;
-  const query = (await searchParams) ?? {};
+  const locale = (params.locale as Locale | undefined) ?? "en";
+  const query = searchParams ?? {};
   const days = ALLOWED_DAYS.includes(query.days ?? "") ? Number(query.days) : 30;
   const assetId = query.assetId;
   const playbookId = query.playbookId;
   const showNoTradeType = query.showNoTradeType === "1";
+  const includeAllGrades = query.includeAllGrades === "1";
+  const includeNoTrade = query.includeNoTrade === "1";
 
   const stats = await loadOutcomeStats({ days, assetId, playbookId });
   const playbookFilters = buildPlaybookFilters(stats.availablePlaybooks);
 
+  const recentFiltered = stats.recent.filter((row) => {
+    const tradeable = row.setupGrade === "A" || row.setupGrade === "B";
+    const isNoTrade = row.setupGrade === "NO_TRADE";
+    if (!includeAllGrades && !tradeable) return false;
+    if (!includeNoTrade && isNoTrade) return false;
+    return true;
+  });
+
   return (
     <div className="space-y-6">
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-white">Outcomes</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-white">Outcomes Explorer (DB)</h1>
         <p className="text-sm text-slate-300">
-          Read-only Outcome Tracking fǬr SWING / 1D. Fenster: letzte {days} Tage{assetId ? `, Asset: ${assetId}` : ""}.
+          DB-getrieben, Swing 1D, limit 300 rows. Fenster: letzte {days} Tage{assetId ? `, Asset: ${assetId}` : ""}. Für Gesamt-KPIs siehe artefakt-first
+          Seiten (Overview/Diagnostics).
         </p>
         <div className="rounded-md bg-slate-900/60 p-3 text-xs text-slate-200">
-          KPIs beziehen sich auf handelbare Setups (Grade A/B). NO_TRADE ist eine bewusste Filter-Entscheidung und kein
-          negatives Outcome. Win-Rate misst nur TP vs SL, Expired/Open zeigen Reife des Beobachtungsfensters.
+          Standard: handelbare Grade A/B. Toggles erlauben alle Grades bzw. NO_TRADE. Win-Rate misst nur TP vs SL, Expired/Open zeigen Reife des
+          Beobachtungsfensters.
+        </div>
+        <div className="flex flex-wrap gap-3 text-xs text-emerald-300">
+          <Link href={`/${locale}/admin/outcomes/overview`} className="hover:underline">
+            Outcomes Overview (Artefakt)
+          </Link>
+          <Link href={`/${locale}/admin/outcomes/diagnostics`} className="hover:underline">
+            Diagnostics (Artefakt)
+          </Link>
+          <Link href={`/${locale}/admin/playbooks`} className="hover:underline">
+            Playbooks Overview
+          </Link>
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
           {ALLOWED_DAYS.map((value) => (
             <Link
               key={value}
-              href={`/${locale}/admin/outcomes?days=${value}${assetId ? `&assetId=${assetId}` : ""}${
-                playbookId ? `&playbookId=${playbookId}` : ""
-              }${showNoTradeType ? "&showNoTradeType=1" : ""}`}
-              className={`rounded-full px-3 py-1 font-semibold ${
-                Number(value) === days ? "bg-slate-200 text-slate-900" : "bg-slate-800 text-slate-200"
-              }`}
+              href={`/${locale}/admin/outcomes?days=${value}${assetId ? `&assetId=${assetId}` : ""}${playbookId ? `&playbookId=${playbookId}` : ""}${
+                showNoTradeType ? "&showNoTradeType=1" : ""
+              }${includeAllGrades ? "&includeAllGrades=1" : ""}${includeNoTrade ? "&includeNoTrade=1" : ""}`}
+              className={`rounded-full px-3 py-1 font-semibold ${Number(value) === days ? "bg-slate-200 text-slate-900" : "bg-slate-800 text-slate-200"}`}
             >
               {value} Tage
             </Link>
@@ -52,9 +72,9 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
           {playbookFilters.map((pb) => (
             <Link
               key={pb.value || "all"}
-              href={`/${locale}/admin/outcomes?days=${days}${assetId ? `&assetId=${assetId}` : ""}${
-                pb.value ? `&playbookId=${pb.value}` : ""
-              }${showNoTradeType ? "&showNoTradeType=1" : ""}`}
+              href={`/${locale}/admin/outcomes?days=${days}${assetId ? `&assetId=${assetId}` : ""}${pb.value ? `&playbookId=${pb.value}` : ""}${
+                showNoTradeType ? "&showNoTradeType=1" : ""
+              }${includeAllGrades ? "&includeAllGrades=1" : ""}${includeNoTrade ? "&includeNoTrade=1" : ""}`}
               className={`rounded-full px-3 py-1 font-semibold ${
                 pb.value === (playbookId ?? "") ? "bg-slate-200 text-slate-900" : "bg-slate-800 text-slate-200"
               }`}
@@ -63,6 +83,24 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
             </Link>
           ))}
         </div>
+        <div className="flex flex-wrap gap-2 text-xs">
+          <Link
+            href={`/${locale}/admin/outcomes?days=${days}${assetId ? `&assetId=${assetId}` : ""}${playbookId ? `&playbookId=${playbookId}` : ""}${
+              showNoTradeType ? "&showNoTradeType=1" : ""
+            }${includeAllGrades ? "" : "&includeAllGrades=1"}${includeNoTrade ? "&includeNoTrade=1" : ""}`}
+            className={`rounded bg-slate-800 px-3 py-1 font-semibold ${includeAllGrades ? "text-emerald-300" : "text-slate-200"} hover:bg-slate-700`}
+          >
+            {includeAllGrades ? "Grades: A/B + weitere (an)" : "Grades: nur A/B (default)"}
+          </Link>
+          <Link
+            href={`/${locale}/admin/outcomes?days=${days}${assetId ? `&assetId=${assetId}` : ""}${playbookId ? `&playbookId=${playbookId}` : ""}${
+              showNoTradeType ? "&showNoTradeType=1" : ""
+            }${includeAllGrades ? "&includeAllGrades=1" : ""}${includeNoTrade ? "" : "&includeNoTrade=1"}`}
+            className={`rounded bg-slate-800 px-3 py-1 font-semibold ${includeNoTrade ? "text-emerald-300" : "text-slate-200"} hover:bg-slate-700`}
+          >
+            {includeNoTrade ? "NO_TRADE einblenden (an)" : "NO_TRADE ausblenden (default)"}
+          </Link>
+        </div>
         <OutcomesExportButtons
           days={days}
           assetId={assetId}
@@ -70,22 +108,31 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
           showNoTradeType={showNoTradeType}
           locale={locale}
         />
+        <div className="text-xs text-slate-400">
+          Export nutzt aktuell nur Backend-Filter (days/asset/playbook). Grade/NO_TRADE Toggles betreffen die Anzeige, nicht den Export.
+        </div>
       </header>
 
       <section className="grid gap-4 md:grid-cols-2">
         <Card title="Outcome Distribution (per Grade)">
           <div className="space-y-2 text-sm text-slate-200">
-            {Object.entries(stats.byGrade).map(([grade, bucket]) => (
-              <div key={grade} className="rounded bg-slate-900/60 px-3 py-2">
-                <div className="flex justify-between text-xs uppercase text-slate-400">
-                  <span>Grade {grade}</span>
-                  <span>
-                    TP:{bucket.hit_tp} / SL:{bucket.hit_sl} / Exp:{bucket.expired} / Amb:{bucket.ambiguous} / Open:
-                    {bucket.open}
-                  </span>
+            {Object.entries(stats.byGrade)
+              .filter(([grade]) => {
+                if (!includeAllGrades && !(grade === "A" || grade === "B")) return false;
+                if (!includeNoTrade && grade === "NO_TRADE") return false;
+                return true;
+              })
+              .map(([grade, bucket]) => (
+                <div key={grade} className="rounded bg-slate-900/60 px-3 py-2">
+                  <div className="flex justify-between text-xs uppercase text-slate-400">
+                    <span>Grade {grade}</span>
+                    <span>
+                      TP:{bucket.hit_tp} / SL:{bucket.hit_sl} / Exp:{bucket.expired} / Amb:{bucket.ambiguous} / Open:
+                      {bucket.open}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         </Card>
         <Card title="Rates">
@@ -129,11 +176,11 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
                   <span>Samples</span>
                   <InfoTooltip
                     label="Samples"
-                    text="Anzahl Outcomes im Fenster. Beinhaltet A/B-Setups; NO_TRADE wird separat im Grade-Bucket gezeigt."
+                    text="Anzahl Outcomes aus der DB im Fenster. 'loaded' = geladene rows, 'shown' berücksichtigt Anzeige-Toggles."
                   />
                 </div>
               }
-              value={`${Object.values(stats.totals).reduce((a, b) => a + b, 0)}`}
+              value={`loaded: ${stats.recent.length} | shown: ${recentFiltered.length}`}
             />
           </div>
         </Card>
@@ -170,21 +217,22 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
               profile/timeframe: {stats.debug.profile}/{stats.debug.timeframe}
             </div>
             <div>rowsConsidered: {stats.debug.rowsConsidered}</div>
+            <div>rowsLoaded: {stats.recent.length}</div>
           </div>
         </section>
       ) : null}
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-white">Kuerzlich evaluierte Setups</h2>
+        <h2 className="text-lg font-semibold text-white">Kuerzlich evaluierte Setups (DB)</h2>
         <div className="text-xs text-slate-400">
-          SetupType beschreibt das Marktregime (z. B. Range vs Pullback). Handelbarkeit wird über Grade entschieden.
-          Deshalb kann ein Setup als range_bias markiert sein und trotzdem NO_TRADE sein (z. B. Trend &lt; 50).
+          SetupType beschreibt das Marktregime (z. B. Range vs Pullback). Handelbarkeit wird über Grade entschieden. Deshalb kann ein Setup als range_bias
+          markiert sein und trotzdem NO_TRADE sein (z. B. Trend &lt; 50).
         </div>
         <div className="text-xs">
           <Link
             href={`/${locale}/admin/outcomes?days=${days}${assetId ? `&assetId=${assetId}` : ""}${
               playbookId ? `&playbookId=${playbookId}` : ""
-            }${showNoTradeType ? "" : "&showNoTradeType=1"}`}
+            }${showNoTradeType ? "" : "&showNoTradeType=1"}${includeAllGrades ? "&includeAllGrades=1" : ""}${includeNoTrade ? "&includeNoTrade=1" : ""}`}
             className="rounded bg-slate-800 px-3 py-1 font-semibold text-slate-200 hover:bg-slate-700"
           >
             {showNoTradeType ? "SetupType auch bei NO_TRADE anzeigen (an)" : "SetupType bei NO_TRADE anzeigen"}
@@ -207,7 +255,7 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
-              {stats.recent.map((row) => (
+              {recentFiltered.map((row) => (
                 <tr key={`${row.snapshotId}-${row.setupId}`} className="hover:bg-slate-900/50">
                   <td className="px-3 py-2">
                     {row.evaluatedAt ? row.evaluatedAt.toISOString().slice(0, 19).replace("T", " ") : "-"}
