@@ -31,6 +31,7 @@ async function main() {
         access: "public",
         contentType: "application/json",
         token,
+        allowOverwrite: true,
       });
       uploads.push({ key: res.pathname, size: data.byteLength });
       // only upload the first available file per spec to avoid redundant overwrites
