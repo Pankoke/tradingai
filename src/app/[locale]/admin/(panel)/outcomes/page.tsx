@@ -3,17 +3,28 @@ import type { Locale } from "@/i18n";
 import { loadOutcomeStats } from "@/src/server/admin/outcomeService";
 import { InfoTooltip } from "@/src/components/admin/InfoTooltip";
 import { OutcomesExportButtons } from "@/src/components/admin/OutcomesExportButtons";
+import { Filters } from "./Filters";
+import { buildHref } from "./href";
 
 type PageProps = {
-  params: { locale: string };
-  searchParams?: { days?: string; assetId?: string; playbookId?: string; showNoTradeType?: string; includeAllGrades?: string; includeNoTrade?: string };
+  params: Promise<{ locale: string }>;
+  searchParams?: Promise<{
+    days?: string;
+    assetId?: string;
+    playbookId?: string;
+    showNoTradeType?: string;
+    includeAllGrades?: string;
+    includeNoTrade?: string;
+  }>;
 };
 
 const ALLOWED_DAYS = ["7", "30", "90", "180", "365", "730"];
 
 export default async function OutcomesPage({ params, searchParams }: PageProps) {
-  const locale = (params.locale as Locale | undefined) ?? "en";
-  const query = searchParams ?? {};
+  const resolvedParams = await params;
+  const locale = (resolvedParams.locale as Locale | undefined) ?? "en";
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const query = resolvedSearchParams;
   const days = ALLOWED_DAYS.includes(query.days ?? "") ? Number(query.days) : 30;
   const assetId = query.assetId;
   const playbookId = query.playbookId;
@@ -55,52 +66,16 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
             Playbooks Overview
           </Link>
         </div>
-        <div className="flex flex-wrap gap-2 text-xs">
-          {ALLOWED_DAYS.map((value) => (
-            <Link
-              key={value}
-              href={`/${locale}/admin/outcomes?days=${value}${assetId ? `&assetId=${assetId}` : ""}${playbookId ? `&playbookId=${playbookId}` : ""}${
-                showNoTradeType ? "&showNoTradeType=1" : ""
-              }${includeAllGrades ? "&includeAllGrades=1" : ""}${includeNoTrade ? "&includeNoTrade=1" : ""}`}
-              className={`rounded-full px-3 py-1 font-semibold ${Number(value) === days ? "bg-slate-200 text-slate-900" : "bg-slate-800 text-slate-200"}`}
-            >
-              {value} Tage
-            </Link>
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-2 text-xs">
-          {playbookFilters.map((pb) => (
-            <Link
-              key={pb.value || "all"}
-              href={`/${locale}/admin/outcomes?days=${days}${assetId ? `&assetId=${assetId}` : ""}${pb.value ? `&playbookId=${pb.value}` : ""}${
-                showNoTradeType ? "&showNoTradeType=1" : ""
-              }${includeAllGrades ? "&includeAllGrades=1" : ""}${includeNoTrade ? "&includeNoTrade=1" : ""}`}
-              className={`rounded-full px-3 py-1 font-semibold ${
-                pb.value === (playbookId ?? "") ? "bg-slate-200 text-slate-900" : "bg-slate-800 text-slate-200"
-              }`}
-            >
-              {pb.label}
-            </Link>
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-2 text-xs">
-          <Link
-            href={`/${locale}/admin/outcomes?days=${days}${assetId ? `&assetId=${assetId}` : ""}${playbookId ? `&playbookId=${playbookId}` : ""}${
-              showNoTradeType ? "&showNoTradeType=1" : ""
-            }${includeAllGrades ? "" : "&includeAllGrades=1"}${includeNoTrade ? "&includeNoTrade=1" : ""}`}
-            className={`rounded bg-slate-800 px-3 py-1 font-semibold ${includeAllGrades ? "text-emerald-300" : "text-slate-200"} hover:bg-slate-700`}
-          >
-            {includeAllGrades ? "Grades: A/B + weitere (an)" : "Grades: nur A/B (default)"}
-          </Link>
-          <Link
-            href={`/${locale}/admin/outcomes?days=${days}${assetId ? `&assetId=${assetId}` : ""}${playbookId ? `&playbookId=${playbookId}` : ""}${
-              showNoTradeType ? "&showNoTradeType=1" : ""
-            }${includeAllGrades ? "&includeAllGrades=1" : ""}${includeNoTrade ? "" : "&includeNoTrade=1"}`}
-            className={`rounded bg-slate-800 px-3 py-1 font-semibold ${includeNoTrade ? "text-emerald-300" : "text-slate-200"} hover:bg-slate-700`}
-          >
-            {includeNoTrade ? "NO_TRADE einblenden (an)" : "NO_TRADE ausblenden (default)"}
-          </Link>
-        </div>
+        <Filters
+          locale={locale}
+          days={days}
+          assetId={assetId}
+          playbookId={playbookId}
+          playbookFilters={playbookFilters}
+          showNoTradeType={showNoTradeType}
+          includeAllGrades={includeAllGrades}
+          includeNoTrade={includeNoTrade}
+        />
         <OutcomesExportButtons
           days={days}
           assetId={assetId}
@@ -186,7 +161,7 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
         </Card>
       </section>
 
-      {stats.noTradeReasonCounts ? (
+      {includeNoTrade && stats.noTradeReasonCounts ? (
         <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-white">Top-KOs (NO_TRADE)</h2>
@@ -230,9 +205,15 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
         </div>
         <div className="text-xs">
           <Link
-            href={`/${locale}/admin/outcomes?days=${days}${assetId ? `&assetId=${assetId}` : ""}${
-              playbookId ? `&playbookId=${playbookId}` : ""
-            }${showNoTradeType ? "" : "&showNoTradeType=1"}${includeAllGrades ? "&includeAllGrades=1" : ""}${includeNoTrade ? "&includeNoTrade=1" : ""}`}
+            href={buildHref({
+              locale,
+              days,
+              assetId,
+              playbookId,
+              showNoTradeType: !showNoTradeType || undefined,
+              includeAllGrades,
+              includeNoTrade,
+            })}
             className="rounded bg-slate-800 px-3 py-1 font-semibold text-slate-200 hover:bg-slate-700"
           >
             {showNoTradeType ? "SetupType auch bei NO_TRADE anzeigen (an)" : "SetupType bei NO_TRADE anzeigen"}
