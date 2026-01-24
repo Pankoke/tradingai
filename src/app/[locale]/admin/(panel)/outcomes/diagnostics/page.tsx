@@ -1,6 +1,13 @@
 import Link from "next/link";
 import type { Locale } from "@/i18n";
-import { loadLatestOutcomeReport, loadLatestJoinStats, computeMissingDims, computeStalenessMinutes, computeMostlyOpenShare } from "./lib";
+import type { ArtifactMeta } from "@/lib/artifacts/storage";
+import {
+  loadLatestOutcomeReport,
+  loadLatestJoinStats,
+  computeMissingDims,
+  computeStalenessMinutes,
+  computeMostlyOpenShare,
+} from "./lib";
 import { OutcomesIntro } from "@/src/components/admin/OutcomesIntro";
 
 type PageProps = {
@@ -45,29 +52,39 @@ export default async function OutcomesDiagnosticsPage({ params }: PageProps) {
             items: [
               "Artefakt-first Diagnostics: Outcome-Analyse + Join-Stats (Phase-1).",
               "Health-KPIs: joinRate, missing dimensions, mostly-open Anteil, Staleness.",
-              "Runbook fÃ¼r Analyzer/Join-Stats/Backfill/Cron-Aufrufe.",
+              "Runbook für Analyzer/Join-Stats/Backfill/Cron-Aufrufe.",
             ],
           },
           {
             heading: "Wichtige Eigenschaften",
             items: [
               "Liest statische Artefakte aus artifacts/phase1; kann stale sein.",
-              "Keine DB-Live-Queries; Filters sind im Artefakt fix kodiert (z. B. days=60).",
-              "Nicht fÃ¼r Einzel-Outcome-Drilldowns (dafÃ¼r Explorer), nicht fÃ¼r Performance-KPIs (dafÃ¼r Overview/Playbooks).",
+              "Keine DB-Live-Queries; Filter sind im Artefakt fix kodiert (z. B. days=60).",
+              "Nicht für Einzel-Outcome-Drilldowns (dafür Explorer), nicht für Performance-KPIs (dafür Overview/Playbooks).",
             ],
           },
           {
             heading: "Wann nutzen?",
             items: [
-              "Pipeline-Gesundheit prÃ¼fen (Join-Rate, Missing Playbook/Decision/Grade).",
-              "Abweichungen erklÃ¤ren (z. B. nur wenige Playbooks sichtbar).",
+              "Pipeline-Gesundheit prüfen (Join-Rate, Missing Playbook/Decision/Grade).",
+              "Abweichungen erklären (z. B. nur wenige Playbooks sichtbar).",
               "Runbook-Kommandos schnell kopieren.",
             ],
           },
         ]}
       />
+      <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-200 space-y-2">
+        <h2 className="text-sm font-semibold text-white">Warum weichen Zahlen ab?</h2>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>Diagnostics/Overview nutzen Artefakte (1D/1W, evtl. anderes Label-Fenster) und keine DB-Live-Queries.</li>
+          <li>Explorer ist DB-driven (Swing 1D, Limit 300, Anzeige-Toggles) und kann andere Samples zeigen.</li>
+          <li>Viele offene Outcomes → winrate n/a, closeRate niedrig; minClosed kann Playbooks ausblenden.</li>
+        </ul>
+      </section>
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold text-white">Outcomes Diagnostics (Swing)</h1>
+        <MetaBox label="Outcome Artefakt" meta={outcome.meta} />
+        <MetaBox label="Join-Stats Artefakt" meta={join.meta} />
         <p className="text-sm text-slate-300">
           Artefakt-first: liest statische JSONs aus <code>artifacts/phase1/</code>. Daten können stale sein. Für frische
           Daten: Analyzer + Join-Stats erneut laufen lassen.
@@ -86,30 +103,39 @@ export default async function OutcomesDiagnosticsPage({ params }: PageProps) {
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">
-        <KpiCard title="Join" lines={[
-          `joinRate: ${formatPct(join.join.overall.joinRate)}`,
-          `matched: ${join.join.overall.matched ?? 0}`,
-          `unmatched: ${join.join.overall.unmatched ?? 0}`,
-          `stale: ${stalenessJoin === null ? "n/a" : `${stalenessJoin} min`}`,
-          `file: ${join.filename}`,
-        ]}/>
-        <KpiCard title="Outcome Totals" lines={[
-          `outcomes: ${outcome.report.overall.outcomesTotal}`,
-          `closed: ${outcome.report.overall.closedCount}`,
-          `open: ${outcome.report.overall.openCount}`,
-          `tp: ${outcome.report.overall.tpCount} / sl: ${outcome.report.overall.slCount}`,
-          `winrate tp/(tp+sl): ${formatPct(winrate(outcome.report.overall.tpCount, outcome.report.overall.slCount))}`,
-          `closeRate: ${formatPct(outcome.report.overall.closeRate ?? null)}`,
-          `mostlyOpenShare: ${formatPct(openShare)}`,
-          `stale: ${stalenessOutcome === null ? "n/a" : `${stalenessOutcome} min`}`,
-          `file: ${outcome.filename}`,
-        ]}/>
-        <KpiCard title="Integrity" lines={[
-          `fallbackUsedCount: ${miss.fallbackUsed ?? 0}`,
-          `missing playbookId: ${miss.missingPlaybook}`,
-          `missing decision: ${miss.missingDecision}`,
-          `missing grade: ${miss.missingGrade}`,
-        ]}/>
+        <KpiCard
+          title="Join"
+          lines={[
+            `joinRate: ${formatPct(join.join.overall.joinRate)}`,
+            `matched: ${join.join.overall.matched ?? 0}`,
+            `unmatched: ${join.join.overall.unmatched ?? 0}`,
+            `stale: ${stalenessJoin === null ? "n/a" : `${stalenessJoin} min`}`,
+            `source: ${join.meta.source} | key: ${join.meta.artifactId}`,
+          ]}
+        />
+        <KpiCard
+          title="Outcome Totals"
+          lines={[
+            `outcomes: ${outcome.report.overall.outcomesTotal}`,
+            `closed: ${outcome.report.overall.closedCount}`,
+            `open: ${outcome.report.overall.openCount}`,
+            `tp: ${outcome.report.overall.tpCount} / sl: ${outcome.report.overall.slCount}`,
+            `winrate tp/(tp+sl): ${formatPct(winrate(outcome.report.overall.tpCount, outcome.report.overall.slCount))}`,
+            `closeRate: ${formatPct(outcome.report.overall.closeRate ?? null)}`,
+            `mostlyOpenShare: ${formatPct(openShare)}`,
+            `stale: ${stalenessOutcome === null ? "n/a" : `${stalenessOutcome} min`}`,
+            `source: ${outcome.meta.source} | key: ${outcome.meta.artifactId}`,
+          ]}
+        />
+        <KpiCard
+          title="Integrity"
+          lines={[
+            `fallbackUsedCount: ${miss.fallbackUsed ?? 0}`,
+            `missing playbookId: ${miss.missingPlaybook}`,
+            `missing decision: ${miss.missingDecision}`,
+            `missing grade: ${miss.missingGrade}`,
+          ]}
+        />
       </section>
 
       <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 shadow-sm space-y-2">
@@ -159,7 +185,7 @@ export default async function OutcomesDiagnosticsPage({ params }: PageProps) {
         </section>
       )}
 
-      <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 shadow-sm space-y-2">
+      <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 shadow-sm">
         <h2 className="text-sm font-semibold text-white">Runbook (Copy/Paste)</h2>
         <RunbookBlock
           title="1) Outcome-Analyse"
@@ -243,6 +269,25 @@ function RunbookBlock({ title, command, when, effect }: { title: string; command
   );
 }
 
+function MetaBox({ label, meta }: { label: string; meta: ArtifactMeta }) {
+  return (
+    <div className="rounded border border-slate-800 bg-slate-900/70 p-3 text-xs text-slate-300 space-y-1">
+      <div className="font-semibold text-white">{label}</div>
+      <div className="flex flex-wrap gap-3">
+        <span>source: {meta.source}</span>
+        <span>artifact: {meta.artifactId}</span>
+        <span>
+          version: {meta.pickedVersion ?? "n/a"}
+          {meta.fallbackReason ? ` (fallback: ${meta.fallbackReason})` : ""}
+        </span>
+        {meta.byteSize ? <span>size: {meta.byteSize} bytes</span> : null}
+        <span>loadedAt: {meta.loadedAt}</span>
+        {meta.generatedAt ? <span>generatedAt: {meta.generatedAt}</span> : null}
+      </div>
+    </div>
+  );
+}
+
 function formatPct(value: number | null | undefined): string {
   if (value === null || value === undefined || Number.isNaN(value)) return "n/a";
   return `${Math.round(value * 100)}%`;
@@ -252,3 +297,4 @@ function winrate(tp: number, sl: number): number | null {
   const denom = tp + sl;
   return denom > 0 ? tp / denom : null;
 }
+

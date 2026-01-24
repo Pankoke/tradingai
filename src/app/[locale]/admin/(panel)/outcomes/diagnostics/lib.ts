@@ -1,16 +1,16 @@
 import path from "node:path";
 import { OutcomeReportSchema } from "../../playbooks/schema";
 import { JoinStatsSchema, type JoinStats, type OutcomeReport } from "./schema";
-import { buildPhase1Candidates, loadPhase1Artifact } from "@/lib/artifacts/storage";
+import { buildPhase1Candidates, loadPhase1Artifact, type ArtifactLoadResult } from "@/lib/artifacts/storage";
 
-type LoadOutcomeResult = { report: OutcomeReport; filename: string; source: string } | null;
-type LoadJoinResult = { join: JoinStats; filename: string; source: string } | null;
+type LoadOutcomeResult = { report: OutcomeReport; meta: ArtifactLoadResult<OutcomeReport>["meta"] } | null;
+type LoadJoinResult = { join: JoinStats; meta: ArtifactLoadResult<JoinStats>["meta"] } | null;
 
 export async function loadLatestOutcomeReport(): Promise<LoadOutcomeResult> {
   const candidates = buildPhase1Candidates("swing-outcome-analysis");
   const loaded = await loadPhase1Artifact(candidates, (value) => OutcomeReportSchema.parse(normalizeOpenCounts(value)));
   if (!loaded) return null;
-  return { report: loaded.data, filename: loaded.location, source: loaded.source };
+  return { report: loaded.data, meta: loaded.meta };
 }
 
 export async function loadLatestJoinStats(): Promise<LoadJoinResult> {
@@ -22,7 +22,7 @@ export async function loadLatestJoinStats(): Promise<LoadJoinResult> {
 
   const loaded = await loadPhase1Artifact(candidates, (value) => JoinStatsSchema.parse(value));
   if (!loaded) return null;
-  return { join: loaded.data, filename: loaded.location, source: loaded.source };
+  return { join: loaded.data, meta: loaded.meta };
 }
 
 function normalizeOpenCounts(value: unknown): unknown {

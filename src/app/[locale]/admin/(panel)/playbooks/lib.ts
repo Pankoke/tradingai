@@ -1,6 +1,6 @@
 import path from "node:path";
 import { OutcomeReportSchema, type OutcomeReport } from "./schema";
-import { buildPhase1Candidates, loadPhase1Artifact } from "@/lib/artifacts/storage";
+import { buildPhase1Candidates, loadPhase1Artifact, type ArtifactLoadResult } from "@/lib/artifacts/storage";
 
 export type PlaybookAggregate = {
   playbookId: string;
@@ -21,10 +21,13 @@ export type AggregateFilters = {
   includeOpenOnly: boolean;
 };
 
-export async function loadLatestOutcomeReport(): Promise<OutcomeReport | null> {
+export type OutcomeReportWithMeta = { report: OutcomeReport; meta: ArtifactLoadResult<OutcomeReport>["meta"] };
+
+export async function loadLatestOutcomeReport(): Promise<OutcomeReportWithMeta | null> {
   const candidates = buildPhase1Candidates("swing-outcome-analysis");
   const loaded = await loadPhase1Artifact(candidates, (value) => OutcomeReportSchema.parse(normalizeOpenCounts(value)));
-  return loaded?.data ?? null;
+  if (!loaded) return null;
+  return { report: loaded.data, meta: loaded.meta };
 }
 
 function normalizeOpenCounts(value: unknown): unknown {

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Locale } from "@/i18n";
+import type { ArtifactMeta } from "@/lib/artifacts/storage";
 import { aggregatePlaybooks, loadLatestOutcomeReport } from "./lib";
 
 const allowedDays = ["30", "60", "180"];
@@ -18,8 +19,8 @@ export default async function PlaybooksOverviewPage({ params, searchParams }: Pa
   const includeOpenOnly = query.includeOpenOnly === "1";
   const days = allowedDays.includes(query.days ?? "") ? query.days! : "60";
 
-  const report = await loadLatestOutcomeReport();
-  if (!report) {
+  const loaded = await loadLatestOutcomeReport();
+  if (!loaded) {
     return (
       <div className="space-y-3">
         <h1 className="text-2xl font-semibold text-white">Playbooks Overview (Swing)</h1>
@@ -29,6 +30,8 @@ export default async function PlaybooksOverviewPage({ params, searchParams }: Pa
       </div>
     );
   }
+
+  const { report, meta } = loaded;
 
   const rows = aggregatePlaybooks(report, {
     timeframe: timeframeFilter,
@@ -41,9 +44,7 @@ export default async function PlaybooksOverviewPage({ params, searchParams }: Pa
     <div className="space-y-6">
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold text-white">Playbooks Overview (Swing)</h1>
-        <p className="text-sm text-slate-300">
-          Artefakt: swing-outcome-analysis-latest (version {report.version}), generatedAt {report.generatedAt}, window {report.params.days} Tage.
-        </p>
+        <MetaBox meta={meta} report={report} />
         <div className="flex flex-wrap gap-2 text-xs">
           {allowedDays.map((d) => (
             <Link
@@ -174,6 +175,26 @@ function SummaryMetric({ label, value }: { label: string; value: number | string
   );
 }
 
+function MetaBox({ meta, report }: { meta: ArtifactMeta; report: { generatedAt?: string; params?: { days?: number } } }) {
+  return (
+    <div className="rounded border border-slate-800 bg-slate-900/70 p-3 text-xs text-slate-300 space-y-1">
+      <div className="font-semibold text-white">Data Source</div>
+      <div className="flex flex-wrap gap-4">
+        <span>source: {meta.source}</span>
+        <span>artifact: {meta.artifactId}</span>
+        <span>
+          version: {meta.pickedVersion ?? "n/a"}
+          {meta.fallbackReason ? ` (fallback: ${meta.fallbackReason})` : ""}
+        </span>
+        <span>generatedAt: {report.generatedAt ?? "n/a"}</span>
+        <span>loadedAt: {meta.loadedAt}</span>
+        {report.params?.days ? <span>window: {report.params.days} Tage</span> : null}
+        {meta.byteSize ? <span>size: {meta.byteSize} bytes</span> : null}
+      </div>
+    </div>
+  );
+}
+
 function formatRate(tp: number, sl: number): string {
   const denom = tp + sl;
   if (denom <= 0) return "n/a";
@@ -184,3 +205,4 @@ function formatRateFromValue(value: number | null | undefined): string {
   if (value === null || value === undefined || Number.isNaN(value)) return "-";
   return `${Math.round(value * 100)}%`;
 }
+

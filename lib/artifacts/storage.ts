@@ -1,14 +1,23 @@
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { head } from "@vercel/blob";
 
 export type ArtifactSource = "blob" | "fs";
 
+export type ArtifactMeta = {
+  source: ArtifactSource;
+  artifactId: string;
+  tried: string[];
+  pickedVersion?: string;
+  fallbackReason?: string;
+  loadedAt: string;
+  generatedAt?: string;
+  byteSize?: number | null;
+};
+
 export type ArtifactLoadResult<T> = {
   data: T;
-  source: ArtifactSource;
-  location: string;
-  tried: string[];
+  meta: ArtifactMeta;
 };
 
 export type ArtifactCandidate = {
@@ -16,13 +25,15 @@ export type ArtifactCandidate = {
   fsPath?: string;
 };
 
-async function readBlobJson(key: string, token: string): Promise<unknown | null> {
+async function readBlobJson(key: string, token: string): Promise<{ value: unknown; size?: number } | null> {
   try {
     const blob = await head(key, { token });
     if (!blob?.downloadUrl) return null;
     const res = await fetch(blob.downloadUrl);
     if (!res.ok) return null;
-    return await res.json();
+    const value = await res.json();
+    const size = typeof blob.size === "number" ? blob.size : undefined;
+    return { value, size };
   } catch {
     return null;
   }
@@ -47,24 +58,69 @@ export async function loadPhase1Artifact<T>(
   const tried: string[] = [];
   const token = process.env.BLOB_READ_WRITE_TOKEN;
 
-  for (const cand of candidates) {
+  for (let idx = 0; idx < candidates.length; idx += 1) {
+    const cand = candidates[idx];
     if (token && cand.blobKey) {
       tried.push(`blob:${cand.blobKey}`);
       const fromBlob = await readBlobJson(cand.blobKey, token);
       if (fromBlob !== null) {
-        return { data: parser(fromBlob), source: "blob", location: cand.blobKey, tried };
+        const parsed = parser(fromBlob.value);
+        const meta: ArtifactMeta = {
+          source: "blob",
+          artifactId: cand.blobKey,
+          tried,
+          pickedVersion: pickVersion(cand.blobKey),
+          fallbackReason: idx > 0 ? "earlier candidates unavailable" : undefined,
+          loadedAt: new Date().toISOString(),
+          generatedAt: getGeneratedAt(fromBlob.value),
+          byteSize: fromBlob.size ?? null,
+        };
+        return { data: parsed, meta };
       }
     }
     if (cand.fsPath) {
       tried.push(`fs:${cand.fsPath}`);
       const fromFs = await readFsJson(cand.fsPath);
       if (fromFs !== null) {
-        return { data: parser(fromFs), source: "fs", location: cand.fsPath, tried };
+        const size = await statSafe(cand.fsPath);
+        const parsed = parser(fromFs);
+        const meta: ArtifactMeta = {
+          source: "fs",
+          artifactId: cand.fsPath,
+          tried,
+          pickedVersion: pickVersion(cand.fsPath),
+          fallbackReason: idx > 0 ? "earlier candidates unavailable" : undefined,
+          loadedAt: new Date().toISOString(),
+          generatedAt: getGeneratedAt(fromFs),
+          byteSize: size,
+        };
+        return { data: parsed, meta };
       }
     }
   }
 
   return null;
+}
+
+function pickVersion(id: string | undefined): string | undefined {
+  if (!id) return undefined;
+  const match = id.match(/latest-(v[0-9]+)/);
+  return match ? match[1] : undefined;
+}
+
+function getGeneratedAt(val: unknown): string | undefined {
+  if (!val || typeof val !== "object" || Array.isArray(val)) return undefined;
+  const maybe = (val as { generatedAt?: unknown }).generatedAt;
+  return typeof maybe === "string" ? maybe : undefined;
+}
+
+async function statSafe(fsPath: string): Promise<number | null> {
+  try {
+    const s = await stat(fsPath);
+    return typeof s.size === "number" ? s.size : null;
+  } catch {
+    return null;
+  }
 }
 
 export function phase1FsCandidates(baseName: string): ArtifactCandidate[] {

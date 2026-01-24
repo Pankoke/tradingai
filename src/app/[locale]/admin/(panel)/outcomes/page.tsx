@@ -62,17 +62,17 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
           {
             heading: "Wichtige Eigenschaften",
             items: [
-              "Totals = DB-Counts (same filter), ignorieren Anzeige-Toggles fÃ¼r Grades/NO_TRADE.",
+              "Totals = DB-Counts (same filter), ignorieren Anzeige-Toggles f�r Grades/NO_TRADE.",
               "Tabelle kann von Totals abweichen (Limit, Anzeige-Toggles).",
-              "Nur Swing 1D; fÃ¼r 1W oder Gesamt-KPIs Artefakt-Seiten nutzen.",
+              "Nur Swing 1D; f�r 1W oder Gesamt-KPIs Artefakt-Seiten nutzen.",
             ],
           },
           {
             heading: "Wann nutzen?",
             items: [
               "Drilldown auf einzelne Outcomes im aktuellen Fenster.",
-              "Schneller Health-Check fÃ¼r konkrete Playbooks/Assets.",
-              "Nicht als Performance-Gesamtaussage verwenden â€“ dafÃ¼r Overview/Diagnostics.",
+              "Schneller Health-Check f�r konkrete Playbooks/Assets.",
+              "Nicht als Performance-Gesamtaussage verwenden � daf�r Overview/Diagnostics.",
             ],
           },
         ]}
@@ -80,7 +80,7 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight text-white">Outcomes Explorer (DB)</h1>
         <p className="text-sm text-slate-300">
-          DB-getrieben, Swing 1D, limit 300 rows. Fenster: letzte {days} Tage{assetId ? `, Asset: ${assetId}` : ""}. Für Gesamt-KPIs siehe artefakt-first
+          DB-getrieben, Swing 1D, limit 300 rows. Fenster: letzte {days} Tage{assetId ? `, Asset: ${assetId}` : ""}. f�r Gesamt-KPIs siehe artefakt-first
           Seiten (Overview/Diagnostics).
         </p>
         <div className="rounded-md bg-slate-900/60 p-3 text-xs text-slate-200">
@@ -150,7 +150,7 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
                   <span>Win-Rate (TP vs SL)</span>
                   <InfoTooltip
                     label="Win-Rate"
-                    text="TP / (TP+SL) für Grade A/B. OPEN, EXPIRED, AMBIGUOUS und NO_TRADE sind nicht enthalten."
+                    text="TP / (TP+SL) f�r Grade A/B. OPEN, EXPIRED, AMBIGUOUS und NO_TRADE sind nicht enthalten."
                   />
                 </div>
               }
@@ -162,7 +162,7 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
                   <span>Expired Anteil</span>
                   <InfoTooltip
                     label="Expired"
-                    text="Expired / (TP+SL+Expired). Misst Timing-Qualität, kein Signalfehler."
+                    text="Expired / (TP+SL+Expired). Misst Timing-Qualit�t, kein Signalfehler."
                   />
                 </div>
               }
@@ -172,7 +172,7 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
               label={
                 <div className="flex items-center gap-1">
                   <span>Ambiguous Anteil</span>
-                  <InfoTooltip label="Ambiguous" text="TP und SL im selben Candle. Zählt nicht in die Win-Rate." />
+                  <InfoTooltip label="Ambiguous" text="TP und SL im selben Candle. Z�hlt nicht in die Win-Rate." />
                 </div>
               }
               value={formatRate(stats.ambiguousShare)}
@@ -183,7 +183,7 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
                   <span>Samples</span>
                   <InfoTooltip
                     label="Samples"
-                    text="Anzahl Outcomes aus der DB im Fenster. 'loaded' = geladene rows, 'shown' berücksichtigt Anzeige-Toggles."
+                    text="Anzahl Outcomes aus der DB im Fenster. 'loaded' = geladene rows, 'shown' ber�cksichtigt Anzeige-Toggles."
                   />
                 </div>
               }
@@ -204,8 +204,8 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
           </Link>
         </div>
         <p className="text-xs text-slate-400">
-          Totals = DB counts fÃ¼r Swing 1D (Filter: days/asset/playbook). Tabelle unten = Sample (limit 300) + UI-Toggles. Unterschied zu Overview:
-          Artefakt-first, 1D/1W, ggf. andere Labels/Aggregate. Hinweis: Totals ignorieren die Anzeige-Toggles fÃ¼r Grades/NO_TRADE (werden nur clientseitig gefiltert).
+          Totals = DB counts f�r Swing 1D (Filter: days/asset/playbook). Tabelle unten = Sample (limit 300) + UI-Toggles. Unterschied zu Overview:
+          Artefakt-first, 1D/1W, ggf. andere Labels/Aggregate. Hinweis: Totals ignorieren die Anzeige-Toggles f�r Grades/NO_TRADE (werden nur clientseitig gefiltert).
         </p>
         <p className="text-xs text-slate-400">
           Window: days={days}, profile=SWING, timeframe=1D, asset={assetId ?? "all"}, playbook={playbookId ?? "all"}.
@@ -236,7 +236,7 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
         <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-white">Top-KOs (NO_TRADE)</h2>
-            <span className="text-xs text-slate-400">Gründe aus NO_TRADE-Setups im aktuellen Filterfenster</span>
+            <span className="text-xs text-slate-400">Gr�nde aus NO_TRADE-Setups im aktuellen Filterfenster</span>
           </div>
           <div className="mt-3 space-y-1 text-sm text-slate-200">
             {Object.entries(stats.noTradeReasonCounts)
@@ -271,7 +271,7 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-white">Kuerzlich evaluierte Setups (DB)</h2>
         <div className="text-xs text-slate-400">
-          SetupType beschreibt das Marktregime (z. B. Range vs Pullback). Handelbarkeit wird über Grade entschieden. Deshalb kann ein Setup als range_bias
+          SetupType beschreibt das Marktregime (z. B. Range vs Pullback). Handelbarkeit wird �ber Grade entschieden. Deshalb kann ein Setup als range_bias
           markiert sein und trotzdem NO_TRADE sein (z. B. Trend &lt; 50).
         </div>
         <div className="text-xs">
@@ -388,3 +388,5 @@ function buildPlaybookFilters(available: string[]): Array<{ value: string; label
   }
   return chips;
 }
+
+

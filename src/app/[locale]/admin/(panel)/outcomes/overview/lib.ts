@@ -43,6 +43,12 @@ export type Integrity = {
   missingGrade: number;
 };
 
+export type PlaybookCoverage = {
+  observed: string[];
+  missing: string[];
+  unexpected: string[];
+};
+
 export function filterRows(report: OutcomeReport, filters: OverviewFilters) {
   return report.byKey.filter((row) => {
     if (filters.timeframe !== "all" && row.key.timeframe.toLowerCase() !== filters.timeframe) return false;
@@ -146,4 +152,13 @@ export function computeIntegrity(rows: OutcomeReport["byKey"], fallbackUsedCount
     if (!row.key.grade || row.key.grade === "UNKNOWN") missingGrade += row.outcomesTotal;
   }
   return { fallbackUsedCount, missingPlaybook, missingDecision, missingGrade };
+}
+
+export function diffPlaybooks(expected: string[], observed: string[]): PlaybookCoverage {
+  const expSet = new Set(expected);
+  const obsSet = new Set(observed);
+  const observedSorted = Array.from(obsSet).sort();
+  const missing = expected.filter((id) => !obsSet.has(id)).sort();
+  const unexpected = observedSorted.filter((id) => !expSet.has(id));
+  return { observed: observedSorted, missing, unexpected };
 }

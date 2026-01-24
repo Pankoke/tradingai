@@ -1,5 +1,8 @@
 import Link from "next/link";
 import type { Locale } from "@/i18n";
+import { OutcomesIntro } from "@/src/components/admin/OutcomesIntro";
+import type { ArtifactMeta } from "@/lib/artifacts/storage";
+import { SWING_PLAYBOOK_IDS } from "@/src/lib/engine/playbooks";
 import { loadLatestOutcomeReport } from "../../playbooks/lib";
 import {
   aggregateAssets,
@@ -7,10 +10,10 @@ import {
   aggregatePlaybooks,
   computeIntegrity,
   computeTotals,
+  diffPlaybooks,
   filterRows,
   type BucketRow,
 } from "./lib";
-import { OutcomesIntro } from "@/src/components/admin/OutcomesIntro";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -26,8 +29,8 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
   const minClosed = Number.isFinite(Number(query.minClosed)) ? Number(query.minClosed) : 20;
   const includeOpenOnly = query.includeOpenOnly === "1";
 
-  const report = await loadLatestOutcomeReport();
-  if (!report) {
+  const loaded = await loadLatestOutcomeReport();
+  if (!loaded) {
     return (
       <div className="space-y-3">
         <h1 className="text-2xl font-semibold text-white">Outcomes Overview (Swing)</h1>
@@ -38,12 +41,15 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
     );
   }
 
+  const { report, meta } = loaded;
   const filtered = filterRows(report, { timeframe, label, minClosed, includeOpenOnly });
   const totals = computeTotals(filtered);
   const playbooks = aggregatePlaybooks(filtered, { timeframe, label, minClosed, includeOpenOnly }).slice(0, 10);
   const assets = aggregateAssets(filtered, { timeframe, label, minClosed, includeOpenOnly }).slice(0, 10);
   const decisions = aggregateDecisions(filtered);
   const integrity = computeIntegrity(filtered, (report as unknown as { fallbackUsedCount?: number }).fallbackUsedCount ?? null);
+  const observedPlaybooks = Array.from(new Set(report.byKey.map((r) => r.key.playbookId).filter(Boolean))) as string[];
+  const coverage = diffPlaybooks(SWING_PLAYBOOK_IDS, observedPlaybooks);
 
   return (
     <div className="space-y-6">
@@ -53,35 +59,32 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
           {
             heading: "Was zeigt diese Seite?",
             items: [
-              "Artefakt-first Aggregation (swing-outcome-analysis) fÃ¼r Swing 1D/1W, ohne DB-Load.",
+              "Artefakt-first Aggregation (swing-outcome-analysis) für Swing 1D/1W, ohne DB-Load.",
               "KPIs pro Playbook/Asset/Decision mit minClosed-Filter.",
-              "Staleness mÃ¶glich â€“ basiert auf zuletzt erzeugtem Artefakt.",
+              "Staleness möglich – basiert auf zuletzt erzeugtem Artefakt.",
             ],
           },
           {
             heading: "Wichtige Eigenschaften",
             items: [
               "Winrate = TP/(TP+SL); CloseRate = Closed/Outcomes.",
-              "minClosed blendet kleine Samples aus; includeOpenOnly fÃ¼r offene Playbooks.",
+              "minClosed blendet kleine Samples aus; includeOpenOnly für offene Playbooks.",
               "Kann von Explorer/Diagnostics abweichen (anderes Fenster/Labels, kein Limit).",
             ],
           },
           {
             heading: "Wann nutzen?",
             items: [
-              "Schneller Ãœberblick Ã¼ber Performance je Playbook/Asset.",
+              "Schneller Überblick über Performance je Playbook/Asset.",
               "Vergleich von geschlossenen vs. offenen Outcomes.",
-              "Nicht fÃ¼r detaillierte Single-Outcome-Inspektion (dafÃ¼r Explorer).",
+              "Nicht für detaillierte Single-Outcome-Inspektion (dafür Explorer).",
             ],
           },
         ]}
       />
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold text-white">Outcomes Overview (Swing)</h1>
-        <p className="text-sm text-slate-300">
-          Artefakt: swing-outcome-analysis-latest (version {report.version}), generatedAt {report.generatedAt}, window{" "}
-          {report.params.days} Tage.
-        </p>
+        <MetaBox meta={meta} report={report} />
         <div className="flex flex-wrap gap-2 text-xs">
           {["all", "1d", "1w"].map((tf) => (
             <Link
@@ -188,6 +191,19 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
           </Link>
         </div>
       </section>
+
+      <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 shadow-sm space-y-2">
+        <h2 className="text-sm font-semibold text-white">Playbook Coverage (Artefakt vs Registry)</h2>
+        <p className="text-xs text-slate-300">
+          Registry Swing-Playbooks vs. beobachtet im Artefakt. generic gilt als Fallback; Index-/FX-Klassen können fehlen,
+          wenn Asset-spezifische Resolver greifen.
+        </p>
+        <div className="grid gap-3 md:grid-cols-3 text-xs text-slate-200">
+          <CoverageList title="Observed" items={coverage.observed} tone="ok" />
+          <CoverageList title="Missing (Registry aber nicht im Artefakt)" items={coverage.missing} tone="warn" />
+          <CoverageList title="Unexpected (Artefakt aber nicht Registry)" items={coverage.unexpected} tone="error" />
+        </div>
+      </section>
     </div>
   );
 }
@@ -248,6 +264,45 @@ function SummaryMetric({ label, value }: { label: string; value: number | string
     <div className="flex justify-between text-slate-200">
       <span className="text-slate-400">{label}</span>
       <span className="font-semibold text-white">{display}</span>
+    </div>
+  );
+}
+
+function MetaBox({ meta, report }: { meta: ArtifactMeta; report: { generatedAt?: string; params?: { days?: number } } }) {
+  return (
+    <div className="rounded border border-slate-800 bg-slate-900/70 p-3 text-xs text-slate-300 space-y-1">
+      <div className="font-semibold text-white">Data Source</div>
+      <div className="flex flex-wrap gap-4">
+        <span>source: {meta.source}</span>
+        <span>artifact: {meta.artifactId}</span>
+        <span>
+          version: {meta.pickedVersion ?? "n/a"}
+          {meta.fallbackReason ? ` (fallback: ${meta.fallbackReason})` : ""}
+        </span>
+        <span>generatedAt: {report.generatedAt ?? "n/a"}</span>
+        <span>loadedAt: {meta.loadedAt}</span>
+        {report.params?.days ? <span>window: {report.params.days} Tage</span> : null}
+        {meta.byteSize ? <span>size: {meta.byteSize} bytes</span> : null}
+      </div>
+    </div>
+  );
+}
+
+function CoverageList({ title, items, tone }: { title: string; items: string[]; tone: "ok" | "warn" | "error" }) {
+  const toneClass = tone === "ok" ? "text-emerald-300" : tone === "warn" ? "text-amber-300" : "text-rose-300";
+  return (
+    <div className="rounded border border-slate-800 bg-slate-950/50 p-3 space-y-1">
+      <div className={`font-semibold ${toneClass}`}>{title}</div>
+      {items.length === 0 ? <div className="text-slate-500">–</div> : null}
+      {items.length > 0 ? (
+        <ul className="list-disc pl-4 space-y-1">
+          {items.map((item) => (
+            <li key={item} className="text-slate-200">
+              {item}
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }

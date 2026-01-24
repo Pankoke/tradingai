@@ -13,7 +13,7 @@ type OutcomesIntroProps = {
   defaultOpen?: boolean;
 };
 
-export function OutcomesIntro({ title, sections, defaultOpen = true }: OutcomesIntroProps) {
+export function OutcomesIntro({ title, sections, defaultOpen = false }: OutcomesIntroProps) {
   const [open, setOpen] = useState(defaultOpen);
 
   return (

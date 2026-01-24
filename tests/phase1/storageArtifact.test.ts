@@ -22,7 +22,9 @@ describe("loadPhase1Artifact", () => {
     expect(result).not.toBeNull();
     const typed = result as ArtifactLoadResult<{ hello: string }>;
     expect(typed.data.hello).toBe("world");
-    expect(typed.source).toBe("fs");
-    expect(typed.location).toBe(file);
+    expect(typed.meta.source).toBe("fs");
+    expect(typed.meta.artifactId).toBe(file);
+    expect(typed.meta.tried.length).toBeGreaterThan(0);
+    expect(typed.meta.loadedAt).toBeTruthy();
   });
 });
