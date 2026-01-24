@@ -50,6 +50,11 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
   const integrity = computeIntegrity(filtered, (report as unknown as { fallbackUsedCount?: number }).fallbackUsedCount ?? null);
   const observedPlaybooks = Array.from(new Set(report.byKey.map((r) => r.key.playbookId).filter(Boolean))) as string[];
   const coverage = diffPlaybooks(SWING_PLAYBOOK_IDS, observedPlaybooks);
+  const expectedMissing = coverage.missing.filter(
+    (id) => id === "index-swing-v0.1" || id === "fx-swing-v0.1" || id === "generic-swing-v0.1",
+  );
+  const expectedMissingSet = new Set<string>(expectedMissing);
+  const problemMissing = coverage.missing.filter((id) => !expectedMissingSet.has(id));
 
   return (
     <div className="space-y-6">
@@ -195,12 +200,16 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
       <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 shadow-sm space-y-2">
         <h2 className="text-sm font-semibold text-white">Playbook Coverage (Artefakt vs Registry)</h2>
         <p className="text-xs text-slate-300">
-          Registry Swing-Playbooks vs. beobachtet im Artefakt. generic gilt als Fallback; Index-/FX-Klassen können fehlen,
-          wenn Asset-spezifische Resolver greifen.
+          Registry Swing-Playbooks vs. beobachtet im Artefakt. generic ist Fallback; Index-/FX-Klassen können fehlen,
+          wenn Asset-spezifische Resolver greifen. Erwartet-missing (ok): index-swing-v0.1, fx-swing-v0.1, generic-swing-v0.1.
         </p>
         <div className="grid gap-3 md:grid-cols-3 text-xs text-slate-200">
           <CoverageList title="Observed" items={coverage.observed} tone="ok" />
-          <CoverageList title="Missing (Registry aber nicht im Artefakt)" items={coverage.missing} tone="warn" />
+          <CoverageList
+            title="Missing (Registry aber nicht im Artefakt)"
+            items={[...problemMissing, ...expectedMissing]}
+            tone="warn"
+          />
           <CoverageList title="Unexpected (Artefakt aber nicht Registry)" items={coverage.unexpected} tone="error" />
         </div>
       </section>
