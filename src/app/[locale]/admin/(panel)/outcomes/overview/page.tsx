@@ -10,6 +10,7 @@ import {
   filterRows,
   type BucketRow,
 } from "./lib";
+import { OutcomesIntro } from "@/src/components/admin/OutcomesIntro";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -46,6 +47,35 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
 
   return (
     <div className="space-y-6">
+      <OutcomesIntro
+        title="Worum geht es hier?"
+        sections={[
+          {
+            heading: "Was zeigt diese Seite?",
+            items: [
+              "Artefakt-first Aggregation (swing-outcome-analysis) fÃ¼r Swing 1D/1W, ohne DB-Load.",
+              "KPIs pro Playbook/Asset/Decision mit minClosed-Filter.",
+              "Staleness mÃ¶glich â€“ basiert auf zuletzt erzeugtem Artefakt.",
+            ],
+          },
+          {
+            heading: "Wichtige Eigenschaften",
+            items: [
+              "Winrate = TP/(TP+SL); CloseRate = Closed/Outcomes.",
+              "minClosed blendet kleine Samples aus; includeOpenOnly fÃ¼r offene Playbooks.",
+              "Kann von Explorer/Diagnostics abweichen (anderes Fenster/Labels, kein Limit).",
+            ],
+          },
+          {
+            heading: "Wann nutzen?",
+            items: [
+              "Schneller Ãœberblick Ã¼ber Performance je Playbook/Asset.",
+              "Vergleich von geschlossenen vs. offenen Outcomes.",
+              "Nicht fÃ¼r detaillierte Single-Outcome-Inspektion (dafÃ¼r Explorer).",
+            ],
+          },
+        ]}
+      />
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold text-white">Outcomes Overview (Swing)</h1>
         <p className="text-sm text-slate-300">

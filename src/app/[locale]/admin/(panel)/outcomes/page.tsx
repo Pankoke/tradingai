@@ -6,6 +6,7 @@ import { OutcomesExportButtons } from "@/src/components/admin/OutcomesExportButt
 import { Filters } from "./Filters";
 import { buildHref } from "./href";
 import { buildOverviewHref } from "./href";
+import { OutcomesIntro } from "@/src/components/admin/OutcomesIntro";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -47,6 +48,35 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
 
   return (
     <div className="space-y-6">
+      <OutcomesIntro
+        title="Worum geht es hier?"
+        sections={[
+          {
+            heading: "Was zeigt diese Seite?",
+            items: [
+              "DB-getriebenes Sample (Swing 1D) mit Limit 300 rows und aktuellen Backend-Filtern.",
+              "Handelbare Grades A/B per Default, NO_TRADE und weitere Grades per Toggle.",
+              "Export-Buttons liefern Backend-gefilterte Daten (days/asset/playbook).",
+            ],
+          },
+          {
+            heading: "Wichtige Eigenschaften",
+            items: [
+              "Totals = DB-Counts (same filter), ignorieren Anzeige-Toggles fÃ¼r Grades/NO_TRADE.",
+              "Tabelle kann von Totals abweichen (Limit, Anzeige-Toggles).",
+              "Nur Swing 1D; fÃ¼r 1W oder Gesamt-KPIs Artefakt-Seiten nutzen.",
+            ],
+          },
+          {
+            heading: "Wann nutzen?",
+            items: [
+              "Drilldown auf einzelne Outcomes im aktuellen Fenster.",
+              "Schneller Health-Check fÃ¼r konkrete Playbooks/Assets.",
+              "Nicht als Performance-Gesamtaussage verwenden â€“ dafÃ¼r Overview/Diagnostics.",
+            ],
+          },
+        ]}
+      />
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight text-white">Outcomes Explorer (DB)</h1>
         <p className="text-sm text-slate-300">
@@ -175,7 +205,10 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
         </div>
         <p className="text-xs text-slate-400">
           Totals = DB counts fÃ¼r Swing 1D (Filter: days/asset/playbook). Tabelle unten = Sample (limit 300) + UI-Toggles. Unterschied zu Overview:
-          Artefakt-first, 1D/1W, ggf. andere Labels/Aggregate.
+          Artefakt-first, 1D/1W, ggf. andere Labels/Aggregate. Hinweis: Totals ignorieren die Anzeige-Toggles fÃ¼r Grades/NO_TRADE (werden nur clientseitig gefiltert).
+        </p>
+        <p className="text-xs text-slate-400">
+          Window: days={days}, profile=SWING, timeframe=1D, asset={assetId ?? "all"}, playbook={playbookId ?? "all"}.
         </p>
         <div className="grid gap-3 md:grid-cols-3 text-sm text-slate-200">
           <Metric label="Outcomes total" value={totals.totals.total} />

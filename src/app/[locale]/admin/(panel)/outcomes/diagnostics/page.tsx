@@ -1,13 +1,15 @@
 import Link from "next/link";
 import type { Locale } from "@/i18n";
 import { loadLatestOutcomeReport, loadLatestJoinStats, computeMissingDims, computeStalenessMinutes, computeMostlyOpenShare } from "./lib";
+import { OutcomesIntro } from "@/src/components/admin/OutcomesIntro";
 
 type PageProps = {
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 };
 
 export default async function OutcomesDiagnosticsPage({ params }: PageProps) {
-  const locale = (params.locale as Locale | undefined) ?? "en";
+  const resolvedParams = await params;
+  const locale = (resolvedParams.locale as Locale | undefined) ?? "en";
   const outcome = await loadLatestOutcomeReport();
   const join = await loadLatestJoinStats();
 
@@ -35,6 +37,35 @@ export default async function OutcomesDiagnosticsPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6">
+      <OutcomesIntro
+        title="Worum geht es hier?"
+        sections={[
+          {
+            heading: "Was zeigt diese Seite?",
+            items: [
+              "Artefakt-first Diagnostics: Outcome-Analyse + Join-Stats (Phase-1).",
+              "Health-KPIs: joinRate, missing dimensions, mostly-open Anteil, Staleness.",
+              "Runbook fÃ¼r Analyzer/Join-Stats/Backfill/Cron-Aufrufe.",
+            ],
+          },
+          {
+            heading: "Wichtige Eigenschaften",
+            items: [
+              "Liest statische Artefakte aus artifacts/phase1; kann stale sein.",
+              "Keine DB-Live-Queries; Filters sind im Artefakt fix kodiert (z. B. days=60).",
+              "Nicht fÃ¼r Einzel-Outcome-Drilldowns (dafÃ¼r Explorer), nicht fÃ¼r Performance-KPIs (dafÃ¼r Overview/Playbooks).",
+            ],
+          },
+          {
+            heading: "Wann nutzen?",
+            items: [
+              "Pipeline-Gesundheit prÃ¼fen (Join-Rate, Missing Playbook/Decision/Grade).",
+              "Abweichungen erklÃ¤ren (z. B. nur wenige Playbooks sichtbar).",
+              "Runbook-Kommandos schnell kopieren.",
+            ],
+          },
+        ]}
+      />
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold text-white">Outcomes Diagnostics (Swing)</h1>
         <p className="text-sm text-slate-300">
