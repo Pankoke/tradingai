@@ -133,8 +133,8 @@ export function phase1FsCandidates(baseName: string): ArtifactCandidate[] {
 
 export function phase1BlobCandidates(baseName: string): ArtifactCandidate[] {
   return [
-    { blobKey: `phase1/${baseName}/latest-v2.json` },
-    { blobKey: `phase1/${baseName}/latest-v1.json` },
+    { blobKey: `phase1/${baseName}/${baseName}-latest-v2.json` },
+    { blobKey: `phase1/${baseName}/${baseName}-latest-v1.json` },
   ];
 }
 

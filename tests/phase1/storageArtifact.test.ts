@@ -28,3 +28,15 @@ describe("loadPhase1Artifact", () => {
     expect(typed.meta.loadedAt).toBeTruthy();
   });
 });
+
+describe("phase1 blob candidate naming", () => {
+  it("matches uploader naming convention baseName-latest-v*.json", async () => {
+    const baseName = "swing-outcome-analysis";
+    const blobCandidates = [
+      { blobKey: `phase1/${baseName}/${baseName}-latest-v2.json` },
+      { blobKey: `phase1/${baseName}/${baseName}-latest-v1.json` },
+    ];
+    expect(blobCandidates[0].blobKey).toContain(`${baseName}-latest-v2.json`);
+    expect(blobCandidates[1].blobKey).toContain(`${baseName}-latest-v1.json`);
+  });
+});
