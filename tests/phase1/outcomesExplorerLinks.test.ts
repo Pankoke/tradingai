@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildHref } from "@/src/app/[locale]/admin/(panel)/outcomes/href";
+import { buildHref, buildOverviewHref } from "@/src/app/[locale]/admin/(panel)/outcomes/href";
 
 describe("buildHref", () => {
   it("builds default link with locale and days", () => {
@@ -31,5 +31,10 @@ describe("buildHref", () => {
       includeNoTrade: false,
     });
     expect(href).toBe("/en/admin/outcomes?days=7&assetId=gold");
+  });
+
+  it("builds overview link", () => {
+    const href = buildOverviewHref({ locale: "en", days: 60, assetId: "wti", playbookId: "energy-swing-v0.1" });
+    expect(href).toBe("/en/admin/outcomes/overview?days=60&assetId=wti&playbookId=energy-swing-v0.1");
   });
 });

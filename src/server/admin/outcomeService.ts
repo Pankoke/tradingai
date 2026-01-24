@@ -3,8 +3,10 @@ import { getSnapshotById, listSnapshotItems } from "@/src/server/repositories/pe
 import {
   listOutcomesForWindow,
   aggregateOutcomes,
+  aggregateOutcomesByGrade,
   type SetupOutcomeRow,
   type OutcomeAggregateRow,
+  type OutcomeGradeAggregateRow,
 } from "@/src/server/repositories/setupOutcomeRepository";
 import type { OutcomeStatus } from "@/src/server/services/outcomeEvaluator";
 import type { Setup } from "@/src/lib/engine/types";
@@ -52,6 +54,67 @@ export type OutcomeExportRow = {
   outcome: SetupOutcomeRow;
   setup?: Setup;
 };
+
+export type OutcomeTotals = {
+  totals: OutcomeAggregateRow;
+  gradeTotals: OutcomeGradeAggregateRow[];
+};
+
+export async function loadOutcomeTotals(params: { days?: number; assetId?: string; playbookId?: string }): Promise<OutcomeTotals> {
+  const days = params.days ?? 30;
+  const from = new Date(Date.now() - days * DAY_MS);
+  const cohortFrom = from < FIX_DATE ? FIX_DATE : from;
+
+  const aggregates = await aggregateOutcomes({
+    from,
+    cohortFromSnapshot: cohortFrom,
+    assetId: params.assetId,
+    playbookId: params.playbookId,
+    profile: "SWING",
+    timeframe: "1D",
+    excludeInvalid: false,
+  });
+
+  const gradeAggregates = await aggregateOutcomesByGrade({
+    from,
+    cohortFromSnapshot: cohortFrom,
+    assetId: params.assetId,
+    playbookId: params.playbookId,
+    profile: "SWING",
+    timeframe: "1D",
+    excludeInvalid: false,
+  });
+
+  const totals = aggregates.reduce<OutcomeAggregateRow>(
+    (acc, row) => {
+      acc.total += Number(row.total ?? 0);
+      acc.open += Number(row.open ?? 0);
+      acc.hit_tp += Number(row.hit_tp ?? 0);
+      acc.hit_sl += Number(row.hit_sl ?? 0);
+      acc.expired += Number(row.expired ?? 0);
+      acc.ambiguous += Number(row.ambiguous ?? 0);
+      acc.invalid += Number(row.invalid ?? 0);
+      return acc;
+    },
+    {
+      playbookId: "all",
+      setupEngineVersion: null,
+      evaluationTimeframe: "1D",
+      total: 0,
+      open: 0,
+      hit_tp: 0,
+      hit_sl: 0,
+      expired: 0,
+      ambiguous: 0,
+      invalid: 0,
+    },
+  );
+
+  return {
+    totals,
+    gradeTotals: gradeAggregates,
+  };
+}
 
 export type EngineHealthRow = OutcomeAggregateRow & {
   winRate: number | null;

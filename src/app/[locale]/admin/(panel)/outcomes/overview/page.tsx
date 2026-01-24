@@ -12,13 +12,14 @@ import {
 } from "./lib";
 
 type PageProps = {
-  params: { locale: string };
-  searchParams?: { timeframe?: string; label?: string; minClosed?: string; includeOpenOnly?: string };
+  params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ timeframe?: string; label?: string; minClosed?: string; includeOpenOnly?: string }>;
 };
 
 export default async function OutcomesOverviewPage({ params, searchParams }: PageProps) {
-  const locale = (params.locale as Locale | undefined) ?? "en";
-  const query = searchParams ?? {};
+  const resolvedParams = await params;
+  const locale = (resolvedParams.locale as Locale | undefined) ?? "en";
+  const query = (await searchParams) ?? {};
   const timeframe = (query.timeframe ?? "all").toLowerCase();
   const label = (query.label ?? "all").toLowerCase();
   const minClosed = Number.isFinite(Number(query.minClosed)) ? Number(query.minClosed) : 20;

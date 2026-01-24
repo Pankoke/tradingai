@@ -19,6 +19,16 @@ export type OutcomeAggregateRow = {
   ambiguous: number;
   invalid: number;
 };
+export type OutcomeGradeAggregateRow = {
+  setupGrade: string | null;
+  total: number;
+  open: number;
+  hit_tp: number;
+  hit_sl: number;
+  expired: number;
+  ambiguous: number;
+  invalid: number;
+};
 
 function isMissingTableError(error: unknown): boolean {
   if (typeof error === "object" && error) {
@@ -293,6 +303,63 @@ export async function aggregateOutcomes(params: {
       .leftJoin(perceptionSnapshots, eq(perceptionSnapshots.id, setupOutcomes.snapshotId))
       .where(snapshotFilter ? and(whereClause ?? sql`true`, snapshotFilter) : whereClause)
       .groupBy(setupOutcomes.playbookId, setupOutcomes.setupEngineVersion, setupOutcomes.evaluationTimeframe)
+      .orderBy(desc(sql<number>`count(*)`));
+    return rows;
+  } catch (error) {
+    if (isMissingTableError(error)) return [];
+    throw error;
+  }
+}
+
+export async function aggregateOutcomesByGrade(params: {
+  from?: Date;
+  to?: Date;
+  profile?: string;
+  timeframe?: string;
+  assetId?: string;
+  playbookId?: string;
+  engineVersion?: string;
+  excludeInvalid?: boolean;
+  cohortFromSnapshot?: Date;
+}): Promise<OutcomeGradeAggregateRow[]> {
+  const conditions = [];
+  if (params.from) conditions.push(gte(setupOutcomes.evaluatedAt, params.from));
+  if (params.to) conditions.push(lte(setupOutcomes.evaluatedAt, params.to));
+  if (params.profile) conditions.push(eq(setupOutcomes.profile, params.profile));
+  if (params.timeframe) conditions.push(eq(setupOutcomes.timeframe, params.timeframe));
+  if (params.assetId) conditions.push(eq(setupOutcomes.assetId, params.assetId));
+  if (params.playbookId) {
+    conditions.push(
+      or(eq(setupOutcomes.playbookId, params.playbookId), ilike(setupOutcomes.playbookId, `${params.playbookId}%`)),
+    );
+  }
+  if (params.engineVersion) conditions.push(eq(setupOutcomes.setupEngineVersion, params.engineVersion));
+  if (params.excludeInvalid) conditions.push(ne(setupOutcomes.outcomeStatus, "invalid"));
+
+  const whereClause = conditions.length ? and(...conditions) : undefined;
+  const snapshotFilter =
+    params.cohortFromSnapshot != null
+      ? or(
+          gte(perceptionSnapshots.createdAt, params.cohortFromSnapshot),
+          and(sql`${perceptionSnapshots.createdAt} is null`, gte(perceptionSnapshots.snapshotTime, params.cohortFromSnapshot)),
+        )
+      : undefined;
+  try {
+    const rows = await db
+      .select({
+        setupGrade: setupOutcomes.setupGrade,
+        total: sql<number>`count(*)`,
+        open: sql<number>`sum(case when ${setupOutcomes.outcomeStatus} = 'open' then 1 else 0 end)`,
+        hit_tp: sql<number>`sum(case when ${setupOutcomes.outcomeStatus} = 'hit_tp' then 1 else 0 end)`,
+        hit_sl: sql<number>`sum(case when ${setupOutcomes.outcomeStatus} = 'hit_sl' then 1 else 0 end)`,
+        expired: sql<number>`sum(case when ${setupOutcomes.outcomeStatus} = 'expired' then 1 else 0 end)`,
+        ambiguous: sql<number>`sum(case when ${setupOutcomes.outcomeStatus} = 'ambiguous' then 1 else 0 end)`,
+        invalid: sql<number>`sum(case when ${setupOutcomes.outcomeStatus} = 'invalid' then 1 else 0 end)`,
+      })
+      .from(setupOutcomes)
+      .leftJoin(perceptionSnapshots, eq(perceptionSnapshots.id, setupOutcomes.snapshotId))
+      .where(snapshotFilter ? and(whereClause ?? sql`true`, snapshotFilter) : whereClause)
+      .groupBy(setupOutcomes.setupGrade)
       .orderBy(desc(sql<number>`count(*)`));
     return rows;
   } catch (error) {

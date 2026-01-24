@@ -1,10 +1,11 @@
 import Link from "next/link";
 import type { Locale } from "@/i18n";
-import { loadOutcomeStats } from "@/src/server/admin/outcomeService";
+import { loadOutcomeStats, loadOutcomeTotals } from "@/src/server/admin/outcomeService";
 import { InfoTooltip } from "@/src/components/admin/InfoTooltip";
 import { OutcomesExportButtons } from "@/src/components/admin/OutcomesExportButtons";
 import { Filters } from "./Filters";
 import { buildHref } from "./href";
+import { buildOverviewHref } from "./href";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -33,6 +34,7 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
   const includeNoTrade = query.includeNoTrade === "1";
 
   const stats = await loadOutcomeStats({ days, assetId, playbookId });
+  const totals = await loadOutcomeTotals({ days, assetId, playbookId });
   const playbookFilters = buildPlaybookFilters(stats.availablePlaybooks);
 
   const recentFiltered = stats.recent.filter((row) => {
@@ -161,6 +163,42 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
         </Card>
       </section>
 
+      <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 shadow-sm space-y-2">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-white">DB Totals (same filters, no limit)</h2>
+          <Link
+            className="text-xs text-emerald-300 hover:underline"
+            href={buildOverviewHref({ locale, days, assetId, playbookId })}
+          >
+            Open same window in Overview
+          </Link>
+        </div>
+        <p className="text-xs text-slate-400">
+          Totals = DB counts fÃ¼r Swing 1D (Filter: days/asset/playbook). Tabelle unten = Sample (limit 300) + UI-Toggles. Unterschied zu Overview:
+          Artefakt-first, 1D/1W, ggf. andere Labels/Aggregate.
+        </p>
+        <div className="grid gap-3 md:grid-cols-3 text-sm text-slate-200">
+          <Metric label="Outcomes total" value={totals.totals.total} />
+          <Metric label="Closed (tp/sl/exp/amb/invalid)" value={totalsClosed(totals)} />
+          <Metric label="Open" value={totals.totals.open} />
+          <Metric label="TP" value={totals.totals.hit_tp} />
+          <Metric label="SL" value={totals.totals.hit_sl} />
+          <Metric label="Expired" value={totals.totals.expired} />
+          <Metric label="Ambiguous" value={totals.totals.ambiguous} />
+          <Metric label="Invalid" value={totals.totals.invalid} />
+        </div>
+        <div className="mt-2 text-xs text-slate-300">
+          Grade-Verteilung (DB, gleiche Filter):
+          <div className="mt-1 flex flex-wrap gap-2">
+            {totals.gradeTotals.map((g) => (
+              <span key={g.setupGrade ?? "unknown"} className="rounded bg-slate-800 px-2 py-1">
+                {g.setupGrade ?? "unknown"}: {g.total}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {includeNoTrade && stats.noTradeReasonCounts ? (
         <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 shadow-sm">
           <div className="flex items-center justify-between">
@@ -280,7 +318,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   );
 }
 
-function Metric({ label, value }: { label: React.ReactNode; value: string }) {
+function Metric({ label, value }: { label: React.ReactNode; value: string | number }) {
   return (
     <div className="flex justify-between rounded bg-slate-900/60 px-3 py-2">
       <span className="text-slate-300">{label}</span>
@@ -292,6 +330,10 @@ function Metric({ label, value }: { label: React.ReactNode; value: string }) {
 function formatRate(value: number | null): string {
   if (value === null || Number.isNaN(value)) return "-";
   return `${Math.round(value * 100)}%`;
+}
+
+function totalsClosed(t: { totals: { hit_tp: number; hit_sl: number; expired: number; ambiguous: number; invalid: number } }): number {
+  return t.totals.hit_tp + t.totals.hit_sl + t.totals.expired + t.totals.ambiguous + t.totals.invalid;
 }
 
 function buildPlaybookFilters(available: string[]): Array<{ value: string; label: string }> {

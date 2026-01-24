@@ -20,3 +20,11 @@ export function buildHref(params: HrefParams): string {
   if (params.includeNoTrade) query.set("includeNoTrade", "1");
   return `/${params.locale}/admin/outcomes?${query.toString()}`;
 }
+
+export function buildOverviewHref(params: { locale: Locale; days: number; assetId?: string; playbookId?: string }): string {
+  const query = new URLSearchParams();
+  query.set("days", String(params.days));
+  if (params.assetId) query.set("assetId", params.assetId);
+  if (params.playbookId) query.set("playbookId", params.playbookId);
+  return `/${params.locale}/admin/outcomes/overview?${query.toString()}`;
+}
