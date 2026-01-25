@@ -1,16 +1,17 @@
-import { stat, readFile } from "node:fs/promises";
+import { stat, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { put } from "@vercel/blob";
+import { pathToFileURL } from "node:url";
 
-type ArtifactSpec = {
-  name: string;
-  files: string[];
+type UploadResult = {
+  key: string;
+  size: number;
 };
 
-const specs: ArtifactSpec[] = [
-  { name: "swing-outcome-analysis", files: ["swing-outcome-analysis-latest-v2.json", "swing-outcome-analysis-latest-v1.json"] },
-  { name: "join-stats", files: ["join-stats-latest-v1.json"] },
-];
+type LatestOutcomePick = {
+  fullPath: string;
+  generatedAt?: string;
+};
 
 async function main() {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
@@ -19,24 +20,34 @@ async function main() {
   }
 
   const baseDir = path.join(process.cwd(), "artifacts", "phase1");
-  const uploads: { key: string; size: number }[] = [];
+  const uploads: UploadResult[] = [];
 
-  for (const spec of specs) {
-    for (const filename of spec.files) {
-      const full = path.join(baseDir, filename);
-      if (!(await exists(full))) continue;
-      const data = await readFile(full);
-      const key = `phase1/${spec.name}/${filename}`;
-      const res = await put(key, data, {
-        access: "public",
-        contentType: "application/json",
-        token,
-        allowOverwrite: true,
-      });
-      uploads.push({ key: res.pathname, size: data.byteLength });
-      // only upload the first available file per spec to avoid redundant overwrites
-      break;
-    }
+  const outcomePick = await pickLatestOutcomeAnalysis(baseDir);
+  if (outcomePick) {
+    const data = await readFile(outcomePick.fullPath);
+    const key = "phase1/swing-outcome-analysis/swing-outcome-analysis-latest-v2.json";
+    const res = await put(key, data, {
+      access: "public",
+      contentType: "application/json",
+      token,
+      allowOverwrite: true,
+    });
+    uploads.push({ key: res.pathname, size: data.byteLength });
+    console.log("Outcome analysis source:", outcomePick.fullPath);
+    console.log("Outcome analysis generatedAt:", outcomePick.generatedAt ?? "n/a");
+  }
+
+  const joinLatest = path.join(baseDir, "join-stats-latest-v1.json");
+  if (await exists(joinLatest)) {
+    const data = await readFile(joinLatest);
+    const key = "phase1/join-stats/join-stats-latest-v1.json";
+    const res = await put(key, data, {
+      access: "public",
+      contentType: "application/json",
+      token,
+      allowOverwrite: true,
+    });
+    uploads.push({ key: res.pathname, size: data.byteLength });
   }
 
   if (uploads.length === 0) {
@@ -56,7 +67,50 @@ async function exists(file: string): Promise<boolean> {
   }
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+function parseGeneratedAt(value: unknown): string | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const maybe = (value as { generatedAt?: unknown }).generatedAt;
+  return typeof maybe === "string" ? maybe : undefined;
+}
+
+export async function pickLatestOutcomeAnalysis(baseDir: string): Promise<LatestOutcomePick | null> {
+  const pattern = /^swing-outcome-analysis-.*-v1\.json$/;
+  const files = await readdir(baseDir);
+  const candidates = files.filter((f) => pattern.test(f)).map((f) => path.join(baseDir, f));
+  if (candidates.length === 0) {
+    const fallback = path.join(baseDir, "swing-outcome-analysis-latest-v1.json");
+    return (await exists(fallback)) ? { fullPath: fallback } : null;
+  }
+
+  let best: LatestOutcomePick | null = null;
+  let bestTime = -1;
+  for (const file of candidates) {
+    const raw = await readFile(file, "utf-8");
+    const parsed = JSON.parse(raw) as unknown;
+    const generatedAt = parseGeneratedAt(parsed);
+    const ts = generatedAt ? Date.parse(generatedAt) : NaN;
+    const compare = Number.isNaN(ts) ? await getMtime(file) : ts;
+    if (compare > bestTime) {
+      bestTime = compare;
+      best = { fullPath: file, generatedAt };
+    }
+  }
+
+  return best;
+}
+
+async function getMtime(file: string): Promise<number> {
+  try {
+    const info = await stat(file);
+    return info.mtimeMs;
+  } catch {
+    return -1;
+  }
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

@@ -6,13 +6,20 @@ import { aggregatePlaybooks, loadLatestOutcomeReport } from "./lib";
 const allowedDays = ["30", "60", "180"];
 
 type PageProps = {
-  params: { locale: string };
-  searchParams?: { timeframe?: string; label?: string; minClosed?: string; days?: string; includeOpenOnly?: string };
+  params: Promise<{ locale: string }>;
+  searchParams?: Promise<{
+    timeframe?: string;
+    label?: string;
+    minClosed?: string;
+    days?: string;
+    includeOpenOnly?: string;
+  }>;
 };
 
 export default async function PlaybooksOverviewPage({ params, searchParams }: PageProps) {
-  const locale = params.locale as Locale;
-  const query = searchParams ?? {};
+  const resolvedParams = await params;
+  const locale = (resolvedParams.locale as Locale | undefined) ?? "en";
+  const query = (await searchParams) ?? {};
   const timeframeFilter = (query.timeframe ?? "all").toLowerCase();
   const labelFilter = (query.label ?? "all").toLowerCase();
   const minClosed = Number.isFinite(Number(query.minClosed)) ? Number(query.minClosed) : 20;
@@ -205,4 +212,3 @@ function formatRateFromValue(value: number | null | undefined): string {
   if (value === null || value === undefined || Number.isNaN(value)) return "-";
   return `${Math.round(value * 100)}%`;
 }
-
