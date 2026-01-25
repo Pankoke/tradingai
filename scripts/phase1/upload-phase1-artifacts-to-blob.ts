@@ -1,7 +1,6 @@
 import { stat, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { put } from "@vercel/blob";
-import { pathToFileURL } from "node:url";
 
 type UploadResult = {
   key: string;
@@ -108,7 +107,8 @@ async function getMtime(file: string): Promise<number> {
   }
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+const invoked = process.argv[1] && process.argv[1].includes("upload-phase1-artifacts-to-blob");
+if (invoked) {
   main().catch((err) => {
     console.error(err);
     process.exit(1);
