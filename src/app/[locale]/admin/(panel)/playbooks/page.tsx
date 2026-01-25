@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Locale } from "@/i18n";
 import type { ArtifactMeta } from "@/lib/artifacts/storage";
 import { aggregatePlaybooks, loadLatestOutcomeReport } from "./lib";
+import { ArtifactHealthNotice } from "@/src/components/admin/ArtifactHealthNotice";
 
 const allowedDays = ["30", "60", "180"];
 
@@ -49,6 +50,7 @@ export default async function PlaybooksOverviewPage({ params, searchParams }: Pa
 
   return (
     <div className="space-y-6">
+      <ArtifactHealthNotice source={meta.source} generatedAt={report.generatedAt} windowDays={report.params?.days} />
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold text-white">Playbooks Overview (Swing)</h1>
         <MetaBox meta={meta} report={report} />

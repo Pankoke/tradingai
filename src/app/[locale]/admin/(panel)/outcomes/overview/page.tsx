@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Locale } from "@/i18n";
 import { OutcomesIntro } from "@/src/components/admin/OutcomesIntro";
+import { ArtifactHealthNotice } from "@/src/components/admin/ArtifactHealthNotice";
 import type { ArtifactMeta } from "@/lib/artifacts/storage";
 import { SWING_PLAYBOOK_IDS } from "@/src/lib/engine/playbooks";
 import { loadLatestOutcomeReport } from "../../playbooks/lib";
@@ -87,6 +88,7 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
           },
         ]}
       />
+      <ArtifactHealthNotice source={meta.source} generatedAt={report.generatedAt} windowDays={report.params?.days} />
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold text-white">Outcomes Overview (Swing)</h1>
         <MetaBox meta={meta} report={report} />

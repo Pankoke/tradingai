@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Locale } from "@/i18n";
 import type { ArtifactMeta } from "@/lib/artifacts/storage";
+import { ArtifactHealthNotice } from "@/src/components/admin/ArtifactHealthNotice";
 import {
   loadLatestOutcomeReport,
   loadLatestJoinStats,
@@ -73,6 +74,7 @@ export default async function OutcomesDiagnosticsPage({ params }: PageProps) {
           },
         ]}
       />
+      <ArtifactHealthNotice source={outcome.meta.source} generatedAt={outcome.report.generatedAt} windowDays={outcome.report.params?.days} />
       <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-200 space-y-2">
         <h2 className="text-sm font-semibold text-white">Warum weichen Zahlen ab?</h2>
         <ul className="list-disc pl-5 space-y-1">
@@ -297,4 +299,3 @@ function winrate(tp: number, sl: number): number | null {
   const denom = tp + sl;
   return denom > 0 ? tp / denom : null;
 }
-
