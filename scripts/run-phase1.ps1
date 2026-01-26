@@ -1,13 +1,13 @@
 # --- CONFIG ---
-$RepoPath = "CG:\tradingai"   # dein lokales Repo
+$RepoPath = "C:\tradingai"   # dein lokales Repo
 $Days = 180
 $Limit = 1500
 
 # --- ENV (falls nicht global gesetzt) ---
-$env:BASE_URL = "https://deine-url"
-$env:CRON_SECRET = "1234"
+$env:BASE_URL = "https://tradingai-alpha.vercel.app/"
+$env:CRON_SECRET = "Super"
 $env:DATABASE_URL = "postgresql://neondb_owner:npg_jHNeSBx96DnX@ep-patient-bread-agloa67k-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require"
-$env:BLOB_READ_WRITE_TOKEN = "vercel_blob_token"
+$env:BLOB_READ_WRITE_TOKEN = "vercel_blob_rw_094ODPQLEEa4NCKq_d2Js2O3AWle8B5hlbYarpO2fqwlbW6"
 
 # --- START ---
 Write-Host "=== Phase1 Artifact Run START $(Get-Date) ==="
