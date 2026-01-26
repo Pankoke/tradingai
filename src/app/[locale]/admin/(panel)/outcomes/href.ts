@@ -1,4 +1,11 @@
 import type { Locale } from "@/i18n";
+import {
+  buildExplorerHref,
+  buildOverviewHref as buildOverviewHrefModel,
+  mergeOverviewParams,
+  type ExplorerQuery,
+  type OverviewQuery,
+} from "./queryModel";
 
 export type HrefParams = {
   locale: Locale;
@@ -11,20 +18,31 @@ export type HrefParams = {
 };
 
 export function buildHref(params: HrefParams): string {
-  const query = new URLSearchParams();
-  query.set("days", String(params.days));
-  if (params.assetId) query.set("assetId", params.assetId);
-  if (params.playbookId) query.set("playbookId", params.playbookId);
-  if (params.showNoTradeType) query.set("showNoTradeType", "1");
-  if (params.includeAllGrades) query.set("includeAllGrades", "1");
-  if (params.includeNoTrade) query.set("includeNoTrade", "1");
-  return `/${params.locale}/admin/outcomes?${query.toString()}`;
+  const normalized: ExplorerQuery = {
+    days: params.days,
+    assetId: params.assetId,
+    playbookId: params.playbookId,
+    includeAllGrades: Boolean(params.includeAllGrades),
+    includeNoTrade: Boolean(params.includeNoTrade),
+    showNoTradeType: Boolean(params.showNoTradeType),
+  };
+  return buildExplorerHref(params.locale, normalized);
 }
 
 export function buildOverviewHref(params: { locale: Locale; days: number; assetId?: string; playbookId?: string }): string {
-  const query = new URLSearchParams();
-  query.set("days", String(params.days));
-  if (params.assetId) query.set("assetId", params.assetId);
-  if (params.playbookId) query.set("playbookId", params.playbookId);
-  return `/${params.locale}/admin/outcomes/overview?${query.toString()}`;
+  const base: OverviewQuery = {
+    timeframe: "all",
+    label: "all",
+    minClosed: 20,
+    includeOpenOnly: false,
+    flag: "all",
+    days: params.days,
+  };
+  return buildOverviewHrefModel(
+    params.locale,
+    "/admin/outcomes/overview",
+    mergeOverviewParams(base, {
+      days: params.days,
+    }),
+  );
 }

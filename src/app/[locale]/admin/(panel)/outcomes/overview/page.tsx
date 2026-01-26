@@ -6,6 +6,13 @@ import type { ArtifactMeta } from "@/lib/artifacts/storage";
 import { SWING_PLAYBOOK_IDS } from "@/src/lib/engine/playbooks";
 import { loadLatestOutcomeReport } from "../../playbooks/lib";
 import {
+  buildExplorerHrefFromOverviewState,
+  buildOverviewHref,
+  mergeOverviewParams,
+  parseOverviewParams,
+  type OverviewQuery,
+} from "../queryModel";
+import {
   aggregateAssets,
   aggregateDecisions,
   aggregatePlaybooks,
@@ -33,11 +40,8 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
   const resolvedParams = await params;
   const locale = (resolvedParams.locale as Locale | undefined) ?? "en";
   const query = (await searchParams) ?? {};
-  const timeframe = (query.timeframe ?? "all").toLowerCase();
-  const label = (query.label ?? "all").toLowerCase();
-  const minClosed = Number.isFinite(Number(query.minClosed)) ? Number(query.minClosed) : 20;
-  const includeOpenOnly = query.includeOpenOnly === "1";
-  const flagFilter = (query.flag ?? "all").toLowerCase();
+  const overviewFilters = parseOverviewParams(query);
+  const { timeframe, label, minClosed, includeOpenOnly, flag: flagFilter } = overviewFilters;
 
   const loaded = await loadLatestOutcomeReport();
   if (!loaded) {
@@ -53,6 +57,7 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
 
   const { report, meta } = loaded;
   const reportDays = report.params?.days ?? 30;
+  const overviewWithDays = mergeOverviewParams(overviewFilters, { days: overviewFilters.days ?? reportDays });
   const filtered = filterRows(report, { timeframe, label, minClosed, includeOpenOnly });
   const totals = computeTotals(filtered);
   const playbooksRaw = aggregatePlaybooks(filtered, { timeframe, label, minClosed, includeOpenOnly });
@@ -112,13 +117,15 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold text-white">Outcomes Overview (Swing)</h1>
         <MetaBox meta={meta} report={report} />
+        <div className="text-xs text-slate-400">
+          Filters: tf={overviewWithDays.timeframe}, label={overviewWithDays.label}, minClosed={overviewWithDays.minClosed},
+          includeOpenOnly={overviewWithDays.includeOpenOnly ? "1" : "0"}, flag={overviewWithDays.flag}
+        </div>
         <div className="flex flex-wrap gap-2 text-xs">
           {["all", "1d", "1w"].map((tf) => (
             <Link
               key={tf}
-              href={`/${locale}/admin/outcomes/overview?timeframe=${tf}${label ? `&label=${label}` : ""}${
-                includeOpenOnly ? "&includeOpenOnly=1" : ""
-              }${minClosed ? `&minClosed=${minClosed}` : ""}`}
+              href={buildOverviewHref(locale, "/admin/outcomes/overview", mergeOverviewParams(overviewWithDays, { timeframe: tf as "all" | "1d" | "1w" }))}
               className={`rounded-full px-3 py-1 font-semibold ${
                 tf === timeframe ? "bg-slate-200 text-slate-900" : "bg-slate-800 text-slate-200"
               }`}
@@ -129,9 +136,7 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
           {["all", "eod", "us_open", "morning", "(null)"].map((lb) => (
             <Link
               key={lb}
-              href={`/${locale}/admin/outcomes/overview?timeframe=${timeframe}&label=${lb}${
-                includeOpenOnly ? "&includeOpenOnly=1" : ""
-              }${minClosed ? `&minClosed=${minClosed}` : ""}`}
+              href={buildOverviewHref(locale, "/admin/outcomes/overview", mergeOverviewParams(overviewWithDays, { label: lb as OverviewQuery["label"] }))}
               className={`rounded-full px-3 py-1 font-semibold ${
                 lb === label ? "bg-slate-200 text-slate-900" : "bg-slate-800 text-slate-200"
               }`}
@@ -140,9 +145,11 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
             </Link>
           ))}
           <Link
-            href={`/${locale}/admin/outcomes/overview?timeframe=${timeframe}&label=${label}&includeOpenOnly=${
-              includeOpenOnly ? "0" : "1"
-            }${minClosed ? `&minClosed=${minClosed}` : ""}`}
+            href={buildOverviewHref(
+              locale,
+              "/admin/outcomes/overview",
+              mergeOverviewParams(overviewWithDays, { includeOpenOnly: !includeOpenOnly }),
+            )}
             className="rounded bg-slate-800 px-3 py-1 font-semibold text-slate-200 hover:bg-slate-700"
           >
             {includeOpenOnly ? "Playbooks mit nur Closed zeigen" : "Playbooks mit Open-only anzeigen"}
@@ -150,9 +157,11 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
           {["all", "low-sample", "mostly-open"].map((flag) => (
             <Link
               key={flag}
-              href={`/${locale}/admin/outcomes/overview?timeframe=${timeframe}&label=${label}&includeOpenOnly=${
-                includeOpenOnly ? "1" : "0"
-              }${minClosed ? `&minClosed=${minClosed}` : ""}&flag=${flag}`}
+              href={buildOverviewHref(
+                locale,
+                "/admin/outcomes/overview",
+                mergeOverviewParams(overviewWithDays, { flag: flag as OverviewQuery["flag"] }),
+              )}
               className={`rounded-full px-3 py-1 font-semibold ${
                 flag === flagFilter ? "bg-amber-200 text-slate-900" : "bg-slate-800 text-slate-200"
               }`}
@@ -184,7 +193,7 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
         <BucketTable
           title="Top Playbooks"
           rows={playbooks}
-          linkBase={`/${locale}/admin/outcomes?days=${reportDays}`}
+          linkBase={buildExplorerHrefFromOverviewState(locale, overviewWithDays, { reportDays })}
         />
         <BucketTable title="Top Assets" rows={assets} />
       </section>
@@ -237,6 +246,9 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
         <div className="text-xs text-slate-400">
           Flag-Legende: <span className="text-slate-200">low-sample</span> = wenig Closed;{" "}
           <span className="text-slate-200">mostly-open</span> = CloseRate &lt; 20%.
+        </div>
+        <div className="text-xs text-slate-400">
+          Flag-Filter wirkt nur auf die Tabellen (Top Playbooks/Assets), nicht auf die KPI-Boxen.
         </div>
       </section>
 

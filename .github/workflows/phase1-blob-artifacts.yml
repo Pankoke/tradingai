@@ -1,10 +1,15 @@
 name: Phase1 Blob Artifacts
 
+run-name: "phase1-blob-artifacts (${{ github.event_name }})"
+
 on:
   schedule:
     - cron: "30 6 * * *" # daily
     - cron: "0 7 * * 1"  # weekly deep
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: phase1-blob-artifacts
@@ -31,10 +36,23 @@ jobs:
       - name: Install deps
         run: npm ci
 
+      - name: Schedule heartbeat
+        if: ${{ github.event_name == 'schedule' }}
+        run: |
+          echo "SCHEDULE RUN DETECTED"
+          echo "event_name=${{ github.event_name }}"
+          echo "event_schedule=${{ github.event.schedule }}"
+
       - name: Resolve window params
         id: params
         run: |
           cron="${{ github.event.schedule }}"
+          echo "event_name=${{ github.event_name }}"
+          echo "event_schedule=${{ github.event.schedule }}"
+          if [ "${{ github.event_name }}" = "schedule" ] && [ -z "$cron" ]; then
+            echo "Schedule event detected but github.event.schedule is empty." >&2
+            exit 1
+          fi
           if [ "$cron" = "0 7 * * 1" ]; then
             echo "mode=weekly" >> $GITHUB_OUTPUT
             echo "days=365" >> $GITHUB_OUTPUT
