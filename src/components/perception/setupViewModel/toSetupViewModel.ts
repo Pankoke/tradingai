@@ -111,10 +111,10 @@ function buildDecisionReasons(setup: SetupSource): string[] {
   return deduped;
 }
 
-function resolveDecision(setup: SetupSource): DecisionContract | null {
+function resolveDecision(setup: SetupSource): DecisionContract | undefined {
   const fromDecision = normalizeDecisionValue((setup as { decision?: string | null }).decision ?? null);
   if (fromDecision) return fromDecision;
-  return normalizeDecisionValue((setup as { setupDecision?: string | null }).setupDecision ?? null);
+  return normalizeDecisionValue((setup as { setupDecision?: string | null }).setupDecision ?? null) ?? undefined;
 }
 
 export function toSetupViewModel(input: SetupSource, opts?: { generatedAt?: string | null }): SetupViewModel {
