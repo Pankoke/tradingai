@@ -6,6 +6,7 @@ on:
   schedule:
     - cron: "30 6 * * *" # daily
     - cron: "0 7 * * 1"  # weekly deep
+    # - cron: "*/5 * * * *" # TEMP DEBUG ONLY – remove after verification
   workflow_dispatch:
 
 permissions:
@@ -24,6 +25,7 @@ env:
 jobs:
   build-and-upload:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,6 +37,17 @@ jobs:
 
       - name: Install deps
         run: npm ci
+
+      - name: Schedule Debug Header
+        run: |
+          echo "event_name=${{ github.event_name }}"
+          echo "event_schedule=${{ github.event.schedule }}"
+          echo "ref=${{ github.ref }}"
+          echo "workflow_ref=${{ github.workflow_ref }}"
+          echo "sha=${{ github.sha }}"
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "NOT A SCHEDULED RUN"
+          fi
 
       - name: Schedule heartbeat
         if: ${{ github.event_name == 'schedule' }}
