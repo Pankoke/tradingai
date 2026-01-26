@@ -25,27 +25,21 @@ function makeSetup(overrides: Partial<Setup> = {}): Setup {
 }
 
 describe("persisted dimensions write helper", () => {
-  it("prefers setupDecision when present", () => {
+  it("prefers persisted decision when present", () => {
+    const setup = makeSetup({ decision: "watch_plus" as unknown as never });
+    const decision = derivePersistedDecision(setup);
+    expect(decision).toBe("WATCH_PLUS");
+  });
+
+  it("falls back to setupDecision when decision is missing", () => {
     const setup = makeSetup({ setupDecision: "trade" as unknown as never });
-    const decision = derivePersistedDecision(setup, { setupType: "WATCH" });
+    const decision = derivePersistedDecision(setup);
     expect(decision).toBe("TRADE");
-  });
-
-  it("falls back to setupType and noTradeReason", () => {
-    const setup = makeSetup({ noTradeReason: "too weak" as unknown as never });
-    const decision = derivePersistedDecision(setup, { setupType: "watch" });
-    expect(decision).toBe("WATCH");
-  });
-
-  it("returns NO_TRADE when no setupDecision but has noTradeReason and no setupType", () => {
-    const setup = makeSetup({ noTradeReason: "filter" as unknown as never });
-    const decision = derivePersistedDecision(setup, { setupType: null });
-    expect(decision).toBe("NO_TRADE");
   });
 
   it("returns UNKNOWN when nothing is available", () => {
     const setup = makeSetup();
-    const decision = derivePersistedDecision(setup, { setupType: null });
+    const decision = derivePersistedDecision(setup);
     expect(decision).toBe("UNKNOWN");
   });
 });

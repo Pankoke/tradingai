@@ -371,6 +371,8 @@ export const setupSchema = z.object({
   playbookId: z.string().optional().nullable(),
   grade: setupGradeEnum.optional().nullable(),
   decision: z.string().optional().nullable(),
+  decisionVersion: z.string().optional().nullable(),
+  decisionSegment: z.string().optional().nullable(),
   alignment: z.string().optional().nullable(),
   decisionReasons: z.array(z.string()).optional().nullable(),
   watchSegment: z.string().optional().nullable(),

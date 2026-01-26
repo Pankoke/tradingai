@@ -34,6 +34,7 @@ describe("recomputeDecisionsInSetups", () => {
         setupPlaybookId: "spx-swing-v0.1",
         setupGrade: "NO_TRADE",
         setupType: "pullback_continuation",
+        decision: "WATCH",
         setupOfTheDay: false,
         setupUniverseRank: 1,
         setupAssetRank: 1,
@@ -54,14 +55,10 @@ describe("recomputeDecisionsInSetups", () => {
     });
 
     expect(result.consideredCount).toBe(1);
-    expect(result.updatedCount).toBe(1);
-    expect((result.setups[0] as Record<string, unknown>).setupDecision).toBeDefined();
-    const total =
-      (result.decisionDistribution["TRADE"] ?? 0) +
-      (result.decisionDistribution["WATCH"] ?? 0) +
-      (result.decisionDistribution["BLOCKED"] ?? 0);
-    expect(total).toBeGreaterThan(0);
-    expect(result.updatedIds.length).toBeGreaterThan(0);
+    expect(result.updatedCount).toBe(0);
+    expect(result.setups[0]).toEqual(setups[0]);
+    expect(result.decisionDistribution["WATCH"]).toBe(1);
+    expect(result.updatedIds.length).toBe(0);
   });
 
   it("does not modify non-matching asset/timeframe setups", () => {
@@ -78,7 +75,7 @@ describe("recomputeDecisionsInSetups", () => {
       direction: "Long",
       biasScore: 80,
       confidence: 60,
-      setupDecision: "BLOCKED",
+      decision: "BLOCKED",
     };
     const btcSetup = {
       id: "s4",
@@ -100,11 +97,11 @@ describe("recomputeDecisionsInSetups", () => {
     });
 
     expect(result.consideredCount).toBe(1);
-    expect(result.updatedCount).toBe(1);
+    expect(result.updatedCount).toBe(0);
     // non-matching entries stay byte-identical
     expect(result.setups[0]).toEqual(baseSetup);
     expect(result.setups[2]).toEqual(btcSetup);
-    // matching entry changed decision away from the original blocked value
-    expect((result.setups[1] as Record<string, unknown>).setupDecision).not.toBe(spxSetup.setupDecision);
+    // matching entry remains unchanged
+    expect(result.setups[1]).toEqual(spxSetup);
   });
 });

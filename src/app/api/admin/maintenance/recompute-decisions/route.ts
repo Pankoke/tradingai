@@ -6,9 +6,19 @@ import { perceptionSnapshots } from "@/src/server/db/schema/perceptionSnapshots"
 import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 import { recomputeDecisionsInSetups } from "@/src/server/admin/recomputeDecisions";
 import type { Setup } from "@/src/lib/engine/types";
-import { deriveSetupDecision } from "@/src/lib/decision/setupDecision";
 
 export const runtime = "nodejs";
+
+type DecisionContract = "TRADE" | "WATCH_PLUS" | "WATCH" | "BLOCKED";
+
+function normalizeDecision(value: string | null | undefined): DecisionContract | null {
+  if (!value) return null;
+  const upper = value.toUpperCase();
+  if (upper === "TRADE" || upper === "WATCH_PLUS" || upper === "WATCH" || upper === "BLOCKED") {
+    return upper as DecisionContract;
+  }
+  return null;
+}
 
 function isAuthorized(request: NextRequest): { ok: boolean; debug?: Record<string, unknown> } {
   const cronSecret = process.env.CRON_SECRET;
@@ -249,7 +259,9 @@ async function buildPostCheck(params: PostCheckParams) {
       const tf = ((setup.timeframeUsed ?? setup.timeframe ?? "") as string).toUpperCase();
       if (!assetMatch || tf !== params.timeframe) continue;
       setupsInWindow += 1;
-      const decisionResult = deriveSetupDecision(setup);
+      const decisionResult =
+        normalizeDecision((setup as { decision?: string | null }).decision ?? null) ??
+        normalizeDecision((setup as { setupDecision?: string | null }).setupDecision ?? null);
       const reasonTexts = [
         setup.noTradeReason ?? "",
         ...(Array.isArray((setup as { decisionReasons?: unknown }).decisionReasons)
@@ -261,16 +273,18 @@ async function buildPostCheck(params: PostCheckParams) {
       if (reasonTexts.some((r) => r.includes("no default alignment"))) {
         stillNoDefaultAlignment += 1;
       }
-      if (decisionResult.decision === "BLOCKED") {
+      if (decisionResult === "BLOCKED") {
         stillBlocked += 1;
         const reason =
           setup.noTradeReason ??
-          decisionResult.reasons[0] ??
+          (Array.isArray((setup as { decisionReasons?: unknown }).decisionReasons)
+            ? ((setup as { decisionReasons?: unknown }).decisionReasons as string[])[0]
+            : null) ??
           (setup as { gradeDebugReason?: string | null }).gradeDebugReason ??
           "Blocked (unspecified)";
         blockedReasons[reason] = (blockedReasons[reason] ?? 0) + 1;
       }
-      if (decisionResult.decision === "WATCH") {
+      if (decisionResult === "WATCH" || decisionResult === "WATCH_PLUS") {
         watch += 1;
       }
     }

@@ -139,7 +139,7 @@ function formatGeneratedAt(input?: string | null): string | null {
 }
 
 function buildDecisionChip(setup: SetupViewModel): JSX.Element | null {
-  const decision = setup.setupDecision ?? null;
+  const decision = setup.decision ?? null;
   const grade = setup.setupGrade ?? null;
   if (!decision && !grade) return null;
 
@@ -160,8 +160,8 @@ function buildDecisionChip(setup: SetupViewModel): JSX.Element | null {
       tone = "border-emerald-500/50 bg-emerald-500/10 text-emerald-200";
       label = "TRADE";
     }
-  } else if (decision === "WATCH") {
-    if (setup.isWatchPlus) {
+  } else if (decision === "WATCH" || decision === "WATCH_PLUS") {
+    if (decision === "WATCH_PLUS" || setup.isWatchPlus) {
       tone = "border-amber-300/80 bg-amber-300/15 text-amber-50";
       label = "WATCH+";
     } else {
@@ -261,10 +261,10 @@ function buildSourceLine(setup: SetupViewModel): string | null {
 }
 
 function buildDecisionLine(setup: SetupViewModel): JSX.Element | null {
-  if (!setup.setupDecision || setup.setupDecision === "TRADE") return null;
+  if (!setup.decision || setup.decision === "TRADE") return null;
 
   const reasons = (setup.decisionReasons ?? []).slice(0, 2);
-  const tone = setup.setupDecision === "WATCH" ? "text-amber-200" : "text-rose-200";
+  const tone = setup.decision === "WATCH" || setup.decision === "WATCH_PLUS" ? "text-amber-200" : "text-rose-200";
 
   const lines: string[] = [];
   if (setup.isWatchPlus) {
@@ -281,7 +281,7 @@ function buildDecisionLine(setup: SetupViewModel): JSX.Element | null {
 
 
 function buildRequirementsLine(setup: SetupViewModel): JSX.Element | null {
-  if (setup.setupDecision !== "WATCH") return null;
+  if (setup.decision !== "WATCH" && setup.decision !== "WATCH_PLUS") return null;
   const playbookId = (setup.setupPlaybookId ?? "").toLowerCase();
   if (!watchEnabledPlaybookIds.has(playbookId)) return null;
   const requirements = tradeRequirementsByPlaybook[playbookId] ?? [];

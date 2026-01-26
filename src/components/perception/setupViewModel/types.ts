@@ -42,7 +42,9 @@ export type SetupViewModel = {
   gradeRationale?: string[] | null;
   noTradeReason?: string | null;
   gradeDebugReason?: string | null;
-  setupDecision?: "TRADE" | "WATCH" | "BLOCKED";
+  decision?: "TRADE" | "WATCH_PLUS" | "WATCH" | "BLOCKED";
+  decisionSegment?: string | null;
+  decisionVersion?: string | null;
   decisionReasons?: string[];
   decisionCategory?: "soft" | "hard" | null;
   isWatchPlus?: boolean;

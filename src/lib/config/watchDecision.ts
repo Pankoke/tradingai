@@ -27,5 +27,5 @@ export const tradeRequirementsByPlaybook: Record<string, string[]> = {
   "eurjpy-swing-v0.1": ["Bias >= 65", "Trend >= 50", "Signalqualitaet >= 55", "Confidence >= 55"],
 };
 
-export type SetupDecision = "TRADE" | "WATCH" | "BLOCKED";
+export type SetupDecision = "TRADE" | "WATCH_PLUS" | "WATCH" | "BLOCKED";
 export type SetupDecisionCategory = "soft" | "hard";

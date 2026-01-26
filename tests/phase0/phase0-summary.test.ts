@@ -73,6 +73,7 @@ function makeSetup(partial: Partial<Setup> & { id: string; assetId: string; symb
     gradeRationale: partial.gradeRationale ?? [],
     noTradeReason: partial.noTradeReason ?? null,
     gradeDebugReason: partial.gradeDebugReason ?? undefined,
+    decision: partial.decision ?? undefined,
   } as Setup;
 }
 
@@ -90,6 +91,7 @@ describe("buildPhase0SummaryForAsset", () => {
             profile: "SWING",
             setupPlaybookId: "gold-swing-v0.2",
             setupGrade: "A",
+            decision: "TRADE",
           }),
           makeSetup({
             id: "spx-1",
@@ -99,6 +101,7 @@ describe("buildPhase0SummaryForAsset", () => {
             profile: "SWING",
             setupPlaybookId: "spx-swing-v0.1",
             setupGrade: "B",
+            decision: "TRADE",
           }),
         ],
       },
@@ -124,4 +127,3 @@ describe("buildPhase0SummaryForAsset", () => {
     expect(btcSummary.decisionDistribution.TRADE).toBe(0);
   });
 });
-

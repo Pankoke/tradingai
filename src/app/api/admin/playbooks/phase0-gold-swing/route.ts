@@ -7,12 +7,9 @@ import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 import { listOutcomesForWindow } from "@/src/server/repositories/setupOutcomeRepository";
 import { getSnapshotById } from "@/src/server/repositories/perceptionSnapshotRepository";
 import { computeSignalQuality } from "@/src/lib/engine/signalQuality";
-import { deriveSetupDecision } from "@/src/lib/decision/setupDecision";
 import { deriveFxAlignment } from "@/src/lib/decision/fxAlignment";
 import { deriveRegimeTag } from "@/src/lib/engine/metrics/regime";
 import type { SetupDecision } from "@/src/lib/config/watchDecision";
-import { deriveSpxWatchSegment } from "@/src/lib/decision/spxWatchSegment";
-import { deriveFxWatchSegment } from "@/src/lib/decision/fxWatchSegment";
 
 type GradeKey = "A" | "B" | "NO_TRADE";
 type WatchSegmentKey =
@@ -46,8 +43,59 @@ type AssetDiagnostics = {
 
 type FxAlignment = "LONG" | "SHORT" | "NEUTRAL";
 
+function normalizeDecision(value: string | null | undefined): SetupDecision | null {
+  if (!value) return null;
+  const upper = value.toUpperCase();
+  if (upper === "TRADE" || upper === "WATCH_PLUS" || upper === "WATCH" || upper === "BLOCKED") {
+    return upper as SetupDecision;
+  }
+  return null;
+}
+
+function readPersistedDecision(setup: Setup): SetupDecision | null {
+  const fromDecision = normalizeDecision((setup as { decision?: string | null }).decision ?? null);
+  if (fromDecision) return fromDecision;
+  return normalizeDecision((setup as { setupDecision?: string | null }).setupDecision ?? null);
+}
+
+function readPersistedDecisionReasons(setup: Setup): string[] {
+  const reasons =
+    (setup as { decisionReasons?: string[] | null }).decisionReasons ??
+    setup.gradeRationale ??
+    [];
+  const noTradeReason = setup.noTradeReason ?? null;
+  const values = [...reasons];
+  if (noTradeReason) values.push(noTradeReason);
+  const seen = new Set<string>();
+  const deduped: string[] = [];
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (!trimmed) continue;
+    if (seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    deduped.push(trimmed);
+    if (deduped.length >= 5) break;
+  }
+  return deduped;
+}
+
+function readPersistedSegment(setup: Setup): string | null {
+  return (
+    (setup as { decisionSegment?: string | null }).decisionSegment ??
+    (setup as { watchSegment?: string | null }).watchSegment ??
+    (setup as { fxWatchSegment?: string | null }).fxWatchSegment ??
+    null
+  );
+}
+
 type AssetPhase0Summary = {
-  meta: { assetId: string; timeframe: string; sampleWindowDays: number; labelsUsedCounts?: Record<string, number> };
+  meta: {
+    assetId: string;
+    timeframe: string;
+    sampleWindowDays: number;
+    labelsUsedCounts?: Record<string, number>;
+    decisionMissingCount?: number;
+  };
   decisionDistribution: Record<SetupDecision, number>;
   gradeDistribution?: Record<GradeKey, number>;
   watchSegmentsDistribution?: Record<string, number>;
@@ -181,7 +229,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     const total = matches.length;
     const gradeCounts: Record<GradeKey, number> = { A: 0, B: 0, NO_TRADE: 0 };
-    const decisionCounts: Record<"TRADE" | "WATCH" | "BLOCKED", number> = { TRADE: 0, WATCH: 0, BLOCKED: 0 };
+    const decisionCounts: Record<SetupDecision, number> = { TRADE: 0, WATCH_PLUS: 0, WATCH: 0, BLOCKED: 0 };
     const watchSegmentStats: Record<
       WatchSegmentKey,
       { count: number; sumBias: number; sumTrend: number; sumSQ: number; sumConf: number }
@@ -220,12 +268,17 @@ export async function GET(request: NextRequest): Promise<Response> {
     let btcTradesBlockedByRegime = 0;
     let staleCount = 0;
     let fallbackCount = 0;
+    let decisionMissingCount = 0;
 
     for (const setup of matches) {
       const grade = normalizeGrade((setup as { setupGrade?: string | null }).setupGrade ?? null);
       gradeCounts[grade] += 1;
-      const decision = deriveSetupDecision(setup).decision;
-      decisionCounts[decision] += 1;
+      const decision = readPersistedDecision(setup);
+      if (decision) {
+        decisionCounts[decision] += 1;
+      } else {
+        decisionMissingCount += 1;
+      }
       const validity = (setup as { validity?: { isStale?: boolean } | null }).validity;
       if (validity?.isStale) staleCount += 1;
       const dataSourcePrimary = (setup as { dataSourcePrimary?: string | null }).dataSourcePrimary;
@@ -564,6 +617,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     const decisionDistribution = {
       total,
       TRADE: { count: decisionCounts.TRADE, pct: pct(decisionCounts.TRADE, total) },
+      WATCH_PLUS: { count: decisionCounts.WATCH_PLUS, pct: pct(decisionCounts.WATCH_PLUS, total) },
       WATCH: { count: decisionCounts.WATCH, pct: pct(decisionCounts.WATCH, total) },
       BLOCKED: { count: decisionCounts.BLOCKED, pct: pct(decisionCounts.BLOCKED, total) },
     };
@@ -663,7 +717,13 @@ const summariesAssetIds = ["gold", "btc", "spx", "dax", "ndx", "dow", "eurusd", 
     );
 
     return respondOk({
-      meta: { assetId: canonicalAssetIdUpper, profile: "SWING", timeframe: "1D", daysBack: effectiveDays },
+      meta: {
+        assetId: canonicalAssetIdUpper,
+        profile: "SWING",
+        timeframe: "1D",
+        daysBack: effectiveDays,
+        decisionMissingCount: decisionMissingCount > 0 ? decisionMissingCount : undefined,
+      },
       gradeDistribution: {
         total,
         A: { count: gradeCounts.A, pct: pct(gradeCounts.A, total) },
@@ -872,21 +932,10 @@ function deriveOutcomeDecision(
     const setups = snapshotCache.get(snapshotId);
     const setup = setups?.find((s) => s.id === setupId);
     if (setup) {
-      return deriveSetupDecision(setup).decision;
+      return readPersistedDecision(setup) ?? "BLOCKED";
     }
   }
-  // fallback: no info -> treat as blocked
-  const noTradeReason = (outcome as { noTradeReason?: string | null }).noTradeReason ?? null;
-  const rationale = (outcome as { gradeRationale?: string[] | null }).gradeRationale ?? null;
-  if (noTradeReason || (rationale?.length ?? 0) > 0) {
-    const decision = deriveSetupDecision({
-      setupGrade: grade ?? "NO_TRADE",
-      noTradeReason,
-      gradeRationale: rationale ?? [],
-      setupPlaybookId: (outcome as { playbookId?: string | null }).playbookId ?? null,
-    } as unknown as Setup);
-    return decision.decision;
-  }
+  // fallback: no setup context -> treat as blocked
   return "BLOCKED";
 }
 
@@ -1197,7 +1246,7 @@ function bucketBtcRrrOutcomes(
       const assetId = (setup.assetId ?? setup.symbol ?? "").toLowerCase();
       if (assetId !== canonicalAssetId) continue;
       // ensure this outcome is TRADE decision (align with outcomesByDecision.TRADE)
-      const decision = deriveSetupDecision(setup).decision;
+      const decision = readPersistedDecision(setup);
       if (decision !== "TRADE") {
         rrrBucketDecisionMismatchSkipped += 1;
         continue;
@@ -1291,11 +1340,8 @@ function isUnhelpfulReason(reason: string | null | undefined): boolean {
   return false;
 }
 
-function pickCanonicalReason(
-  decisionResult: { reasons?: string[] },
-  setup: Setup,
-): string | null {
-  const reasons = (decisionResult.reasons ?? [])
+function pickCanonicalReason(reasonsInput: string[], setup: Setup): string | null {
+  const reasons = (reasonsInput ?? [])
     .map((r) => mapAlignmentReason(r, setup))
     .filter((r) => r && r.trim().length > 0 && !isUnhelpfulReason(r));
   const nonAlignment = reasons.find((r) => !isAlignmentDerivedReason(r));
@@ -1323,7 +1369,7 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
   const target = assetId.toLowerCase();
   const targetUpper = target.toUpperCase();
 
-  const decisionDistribution: Record<SetupDecision, number> = { TRADE: 0, WATCH: 0, BLOCKED: 0 };
+  const decisionDistribution: Record<SetupDecision, number> = { TRADE: 0, WATCH_PLUS: 0, WATCH: 0, BLOCKED: 0 };
   const gradeCounts: Record<GradeKey, number> = { A: 0, B: 0, NO_TRADE: 0 };
   const watchSegments: Record<string, number> = {};
   const upgradeReasons: Record<string, number> = {};
@@ -1337,6 +1383,7 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
   const fxWatchSegments: Record<string, number> = {};
   const fxAlignmentDistribution: Record<FxAlignment, number> = { LONG: 0, SHORT: 0, NEUTRAL: 0 };
 
+  let decisionMissingCount = 0;
   for (const row of rows) {
     const setups = Array.isArray((row as { setups?: unknown }).setups) ? ((row as { setups: Setup[] }).setups ?? []) : [];
     for (const setup of setups) {
@@ -1352,18 +1399,22 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
       const grade = normalizeGrade((setup as { setupGrade?: string | null }).setupGrade ?? null);
       gradeCounts[grade] += 1;
 
-      const decisionResult = deriveSetupDecision(setup);
-      decisionDistribution[decisionResult.decision] += 1;
-      const canonicalReason = pickCanonicalReason(decisionResult, setup);
+      const decision = readPersistedDecision(setup);
+      if (decision) {
+        decisionDistribution[decision] += 1;
+      } else {
+        decisionMissingCount += 1;
+      }
+      const canonicalReason = pickCanonicalReason(readPersistedDecisionReasons(setup), setup);
       if (canonicalReason) {
-        if (decisionResult.decision === "BLOCKED") {
+        if (decision === "BLOCKED") {
           blockedReasons[canonicalReason] = (blockedReasons[canonicalReason] ?? 0) + 1;
-        } else if (decisionResult.decision === "WATCH") {
+        } else if (decision === "WATCH" || decision === "WATCH_PLUS") {
           watchReasons[canonicalReason] = (watchReasons[canonicalReason] ?? 0) + 1;
         }
       }
 
-      if (target === "gold" && decisionResult.decision === "WATCH") {
+      if (target === "gold" && decision === "WATCH") {
         const scores = resolveScores(setup);
         const segment = classifyWatchSegment(scores);
         watchSegments[segment] = (watchSegments[segment] ?? 0) + 1;
@@ -1373,16 +1424,16 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
         }
       }
 
-      if ((target === "spx" || target === "dax" || target === "ndx" || target === "dow") && decisionResult.decision === "WATCH") {
-        const segment = (setup as { watchSegment?: string | null }).watchSegment ?? deriveSpxWatchSegment(setup);
+      if ((target === "spx" || target === "dax" || target === "ndx" || target === "dow") && decision === "WATCH") {
+        const segment = readPersistedSegment(setup);
         if (segment) {
           indexWatchSegments[segment] = (indexWatchSegments[segment] ?? 0) + 1;
         }
       }
 
       if (target === "eurusd" || target === "gbpusd" || target === "usdjpy" || target === "eurjpy") {
-        if (decisionResult.decision === "WATCH") {
-          const segment = (setup as { watchSegment?: string | null }).watchSegment ?? deriveFxWatchSegment(setup);
+        if (decision === "WATCH") {
+          const segment = readPersistedSegment(setup);
           if (segment) {
             fxWatchSegments[segment] = (fxWatchSegments[segment] ?? 0) + 1;
           }
@@ -1422,6 +1473,7 @@ export function buildPhase0SummaryForAsset(params: BuildSummaryParams): AssetPha
       timeframe: "1D",
       sampleWindowDays,
       labelsUsedCounts: Object.keys(labelsUsedCounts).length ? labelsUsedCounts : undefined,
+      decisionMissingCount: decisionMissingCount > 0 ? decisionMissingCount : undefined,
     },
     decisionDistribution,
     gradeDistribution: gradeTotal > 0 ? gradeCounts : undefined,

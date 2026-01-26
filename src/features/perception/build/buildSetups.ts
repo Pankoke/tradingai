@@ -24,6 +24,8 @@ import { computeSignalQuality } from "@/src/lib/engine/signalQuality";
 import { resolvePlaybookWithReason } from "@/src/lib/engine/playbooks";
 import { deriveSetupProfileFromTimeframe } from "@/src/lib/config/setupProfile";
 import type { SetupGrade } from "@/src/lib/engine/types";
+import { deriveSetupDecision } from "@/src/lib/decision/setupDecision";
+import { isWatchPlusGold } from "@/src/lib/decision/watchPlus";
 
 export type PerceptionSnapshotEngineResult = PerceptionSnapshot;
 
@@ -40,6 +42,33 @@ type BuildParams = {
 
 const SNAPSHOT_VERSION = process.env.SETUP_ENGINE_VERSION ?? "v1.0.0";
 const MAX_LLM_SUMMARIES_PER_SNAPSHOT = 5;
+const DECISION_VERSION = "2026-01-18";
+const MAX_DECISION_REASONS = 5;
+
+type DecisionContract = "TRADE" | "WATCH_PLUS" | "WATCH" | "BLOCKED";
+
+function compactReasons(values: Array<string | null | undefined>): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (!trimmed) continue;
+    if (seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    result.push(trimmed);
+    if (result.length >= MAX_DECISION_REASONS) break;
+  }
+  return result;
+}
+
+function normalizeDecisionValue(value: string | null | undefined): DecisionContract | null {
+  if (!value) return null;
+  const upper = value.toUpperCase();
+  if (upper === "TRADE" || upper === "WATCH_PLUS" || upper === "WATCH" || upper === "BLOCKED") {
+    return upper as DecisionContract;
+  }
+  return null;
+}
 
 function deriveSnapshotLabel(date: Date): "morning" | "us_open" | "eod" | null {
   const hour = date.getUTCHours();
@@ -65,12 +94,12 @@ function createId(prefix: string): string {
 
 export type SnapshotBuildSource = "ui" | "admin" | "cron" | "cron_intraday";
 
-export function derivePersistedDecision(setup: Setup, evaluation: { setupType?: string | null }): string {
-  const fromSetup = (setup as { setupDecision?: string | null }).setupDecision;
-  if (fromSetup && typeof fromSetup === "string") return fromSetup.toUpperCase();
-  const setupType = evaluation.setupType ?? (setup as { setupType?: string | null }).setupType;
-  if (setupType && typeof setupType === "string") return setupType.toUpperCase();
-  if ((setup as { noTradeReason?: string | null }).noTradeReason) return "NO_TRADE";
+// Legacy-only: normalize existing decisions without recomputing new ones.
+export function derivePersistedDecision(setup: Setup): DecisionContract | "UNKNOWN" {
+  const fromDecision = normalizeDecisionValue((setup as { decision?: string | null }).decision ?? null);
+  if (fromDecision) return fromDecision;
+  const fromSetupDecision = normalizeDecisionValue((setup as { setupDecision?: string | null }).setupDecision ?? null);
+  if (fromSetupDecision) return fromSetupDecision;
   return "UNKNOWN";
 }
 
@@ -271,19 +300,50 @@ export async function buildAndStorePerceptionSnapshot(
           }
         : setup.sentiment;
 
-    const persistedDecision = derivePersistedDecision(setup, { setupType: evaluation.setupType ?? null });
     const persistedAlignment =
       (setup as { alignment?: string | null }).alignment ??
       (setup as { derivedAlignment?: string | null }).derivedAlignment ??
-      null;
-    const persistedReasons =
-      (setup as { decisionReasons?: string[] | null }).decisionReasons ??
-      (setup as { gradeRationale?: string[] | null }).gradeRationale ??
       null;
     const persistedSegment =
       (setup as { watchSegment?: string | null }).watchSegment ??
       (setup as { fxWatchSegment?: string | null }).fxWatchSegment ??
       null;
+
+    // Decision is computed once here and then persisted. Do not recompute elsewhere.
+    const decisionInput: Setup = {
+      ...setup,
+      setupPlaybookId: playbook.id,
+      setupGrade: evaluation.setupGrade,
+      setupType: evaluation.setupType,
+      gradeRationale: evaluation.gradeRationale,
+      noTradeReason: evaluation.noTradeReason,
+      gradeDebugReason: evaluation.debugReason ?? playbookReason,
+      watchSegment: persistedSegment ?? undefined,
+    };
+    // Decision computed once here; do not recompute elsewhere.
+    const decisionBase = deriveSetupDecision(decisionInput);
+    const watchPlus = isWatchPlusGold({ setup: decisionInput, decision: decisionBase, signalQuality });
+
+    let decision: DecisionContract =
+      normalizeDecisionValue(decisionBase.decision) ??
+      normalizeDecisionValue((setup as { decision?: string | null }).decision ?? null) ??
+      "WATCH";
+    let decisionReasons = compactReasons([
+      ...(decisionBase.reasons ?? []),
+      evaluation.noTradeReason ?? null,
+      ...(evaluation.gradeRationale ?? []),
+    ]);
+    if (watchPlus.isWatchPlus && decision === "WATCH") {
+      decision = "WATCH_PLUS";
+      decisionReasons = compactReasons([watchPlus.label ?? "Upgrade candidate", ...decisionReasons]);
+    }
+    if (!decisionReasons.length) {
+      decisionReasons = compactReasons([decision === "TRADE" ? "Trade conditions met" : "Decision pending"]);
+    }
+    let decisionSegment =
+      decisionBase.watchSegment ??
+      persistedSegment ??
+      (decision === "WATCH_PLUS" ? "watch_plus" : "unspecified");
 
     updatedSetups.push({
       ...setup,
@@ -301,9 +361,11 @@ export async function buildAndStorePerceptionSnapshot(
       // Persisted dimension copies (source-of-truth for Phase-1)
       playbookId: playbook.id,
       grade: evaluation.setupGrade as SetupGrade | null,
-      decision: persistedDecision,
+      decision,
+      decisionVersion: DECISION_VERSION,
+      decisionSegment,
       alignment: persistedAlignment,
-      decisionReasons: persistedReasons ?? undefined,
+      decisionReasons: decisionReasons ?? undefined,
       watchSegment: persistedSegment ?? undefined,
     });
   }

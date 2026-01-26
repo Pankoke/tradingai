@@ -1,8 +1,7 @@
 import type { Setup } from "@/src/lib/engine/types";
 import { filterSetupsByProfile, parseProfileFilter } from "@/src/lib/setups/profileFilter";
-import { deriveSetupDecision, getDecisionOrder } from "@/src/lib/decision/setupDecision";
+import { getDecisionOrder } from "@/src/lib/decision/setupDecision";
 import { computeSignalQuality } from "@/src/lib/engine/signalQuality";
-import { isWatchPlusGold } from "@/src/lib/decision/watchPlus";
 
 export type SortKey = "signal_quality" | "confidence" | "risk_reward" | "direction";
 export type SortDir = "asc" | "desc";
@@ -83,20 +82,28 @@ const getDecisionRank = (
   order: number;
   isWatchPlus: boolean;
   signalQualityScore: number | null;
-  decision: ReturnType<typeof deriveSetupDecision>;
+  decision: "TRADE" | "WATCH_PLUS" | "WATCH" | "BLOCKED" | null;
 } => {
-  const decision = deriveSetupDecision(setup);
+  const rawDecision =
+    (setup as { decision?: string | null }).decision ??
+    (setup as { setupDecision?: string | null }).setupDecision ??
+    null;
+  const normalizedDecision = rawDecision && typeof rawDecision === "string" ? rawDecision.toUpperCase() : null;
+  const decision =
+    normalizedDecision === "TRADE" ||
+    normalizedDecision === "WATCH_PLUS" ||
+    normalizedDecision === "WATCH" ||
+    normalizedDecision === "BLOCKED"
+      ? (normalizedDecision as "TRADE" | "WATCH_PLUS" | "WATCH" | "BLOCKED")
+      : null;
   const signalQuality = computeSignalQuality(setup);
-  const watchPlus = isWatchPlusGold({ setup, decision, signalQuality });
+  const isWatchPlus = decision === "WATCH_PLUS";
 
-  let order = getDecisionOrder(decision.decision);
-  if (watchPlus.isWatchPlus && decision.decision === "WATCH") {
-    order = 1; // between TRADE (0) and the rest
-  }
+  let order = getDecisionOrder(decision ?? undefined);
 
   return {
     order,
-    isWatchPlus: watchPlus.isWatchPlus,
+    isWatchPlus,
     signalQualityScore: signalQuality?.score ?? null,
     decision,
   };

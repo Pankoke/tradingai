@@ -6,8 +6,8 @@ import { computeSignalQuality, type SignalQuality } from "@/src/lib/engine/signa
 import type { RiskRewardSummary } from "@/src/lib/engine/types";
 import { isEventModifierEnabledClient } from "@/src/lib/config/eventModifier";
 import { deriveSetupProfileFromTimeframe } from "@/src/lib/config/setupProfile";
-import { deriveSetupDecision } from "@/src/lib/decision/setupDecision";
-import { isWatchPlusGold } from "@/src/lib/decision/watchPlus";
+
+type DecisionContract = "TRADE" | "WATCH_PLUS" | "WATCH" | "BLOCKED";
 
 function isHomepageSetup(input: SetupSource): input is HomepageSetup {
   if ("weakSignal" in input || "eventLevel" in input) {
@@ -81,6 +81,42 @@ function deriveEventLevelFromScore(score?: number | null): "high" | "medium" | "
   return "low";
 }
 
+function normalizeDecisionValue(value: string | null | undefined): DecisionContract | null {
+  if (!value) return null;
+  const upper = value.toUpperCase();
+  if (upper === "TRADE" || upper === "WATCH_PLUS" || upper === "WATCH" || upper === "BLOCKED") {
+    return upper as DecisionContract;
+  }
+  return null;
+}
+
+function buildDecisionReasons(setup: SetupSource): string[] {
+  const reasons =
+    (setup as { decisionReasons?: string[] | null }).decisionReasons ??
+    (setup as { gradeRationale?: string[] | null }).gradeRationale ??
+    [];
+  const noTradeReason = (setup as { noTradeReason?: string | null }).noTradeReason ?? null;
+  const values = [...reasons];
+  if (noTradeReason) values.push(noTradeReason);
+  const seen = new Set<string>();
+  const deduped: string[] = [];
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (!trimmed) continue;
+    if (seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    deduped.push(trimmed);
+    if (deduped.length >= 5) break;
+  }
+  return deduped;
+}
+
+function resolveDecision(setup: SetupSource): DecisionContract | null {
+  const fromDecision = normalizeDecisionValue((setup as { decision?: string | null }).decision ?? null);
+  if (fromDecision) return fromDecision;
+  return normalizeDecisionValue((setup as { setupDecision?: string | null }).setupDecision ?? null);
+}
+
 export function toSetupViewModel(input: SetupSource, opts?: { generatedAt?: string | null }): SetupViewModel {
   if (isHomepageSetup(input)) {
     return mapHomepageSetup(input, opts);
@@ -95,8 +131,16 @@ function mapSetup(setup: Setup, opts?: { generatedAt?: string | null }): SetupVi
   const modifierEnabled = isEventModifierEnabledClient();
   const eventLevel = modifierEnabled ? null : deriveEventLevelFromScore(setup.rings?.eventScore);
   const signalQuality = computeSignalQuality(setup);
-  const decision = deriveSetupDecision(setup);
-  const watchPlus = isWatchPlusGold({ setup, decision, signalQuality });
+  const decision = resolveDecision(setup);
+  const decisionReasons = buildDecisionReasons(setup);
+  const decisionVersion = (setup as { decisionVersion?: string | null }).decisionVersion ?? (decision ? "legacy" : null);
+  const decisionSegment =
+    (setup as { decisionSegment?: string | null }).decisionSegment ??
+    (setup as { watchSegment?: string | null }).watchSegment ??
+    (setup as { fxWatchSegment?: string | null }).fxWatchSegment ??
+    null;
+  const isWatchPlus = decision === "WATCH_PLUS";
+  const watchPlusLabel = isWatchPlus ? "Upgrade-Kandidat" : null;
   const meta: SetupMeta = {
     snapshotId: setup.snapshotId ?? null,
     snapshotCreatedAt: setup.snapshotCreatedAt ?? null,
@@ -125,11 +169,13 @@ function mapSetup(setup: Setup, opts?: { generatedAt?: string | null }): SetupVi
     gradeRationale: setup.gradeRationale ?? null,
     noTradeReason: setup.noTradeReason ?? null,
     gradeDebugReason: setup.gradeDebugReason ?? null,
-    setupDecision: decision.decision,
-    decisionReasons: decision.reasons,
-    decisionCategory: decision.category ?? null,
-    isWatchPlus: watchPlus.isWatchPlus,
-    watchPlusLabel: watchPlus.label ?? null,
+    decision,
+    decisionVersion,
+    decisionSegment,
+    decisionReasons,
+    decisionCategory: null,
+    isWatchPlus,
+    watchPlusLabel,
     eventContext: setup.eventContext ?? null,
     eventModifier: setup.eventModifier ?? null,
     riskReward: setup.riskReward ?? null,
@@ -152,8 +198,16 @@ function mapHomepageSetup(setup: HomepageSetup, opts?: { generatedAt?: string | 
   const entry = parseHomepageEntry(setup.entryZone);
   const stop = parseHomepagePoint(setup.stopLoss);
   const tp = parseHomepagePoint(setup.takeProfit);
-  const decision = deriveSetupDecision(setup);
-  const watchPlus = isWatchPlusGold({ setup: setup as unknown as Setup, decision, signalQuality: deriveSignalQualityFromRings(setup.rings) });
+  const decision = resolveDecision(setup);
+  const decisionReasons = buildDecisionReasons(setup);
+  const decisionVersion = (setup as { decisionVersion?: string | null }).decisionVersion ?? (decision ? "legacy" : null);
+  const decisionSegment =
+    (setup as { decisionSegment?: string | null }).decisionSegment ??
+    (setup as { watchSegment?: string | null }).watchSegment ??
+    (setup as { fxWatchSegment?: string | null }).fxWatchSegment ??
+    null;
+  const isWatchPlus = decision === "WATCH_PLUS";
+  const watchPlusLabel = isWatchPlus ? "Upgrade-Kandidat" : null;
   const meta: SetupMeta = {
     snapshotId: setup.snapshotId ?? null,
     snapshotCreatedAt: setup.snapshotCreatedAt ?? null,
@@ -177,11 +231,13 @@ function mapHomepageSetup(setup: HomepageSetup, opts?: { generatedAt?: string | 
     gradeRationale: setup.gradeRationale ?? null,
     noTradeReason: setup.noTradeReason ?? null,
     gradeDebugReason: setup.gradeDebugReason ?? null,
-    setupDecision: decision.decision,
-    decisionReasons: decision.reasons,
-    decisionCategory: decision.category ?? null,
-    isWatchPlus: watchPlus.isWatchPlus,
-    watchPlusLabel: watchPlus.label ?? null,
+    decision,
+    decisionVersion,
+    decisionSegment,
+    decisionReasons,
+    decisionCategory: null,
+    isWatchPlus,
+    watchPlusLabel,
     direction: setup.direction,
     setupPlaybookId: (setup as { setupPlaybookId?: string | null }).setupPlaybookId ?? null,
     rings: setup.rings,

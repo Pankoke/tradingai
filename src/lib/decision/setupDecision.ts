@@ -42,6 +42,8 @@ const buildFxAlignmentReason = (alignment: FxAlignment | null): string => {
   return "Alignment unavailable (fx)";
 };
 
+// NOTE: Decision logic must only run during snapshot build.
+// DO NOT recompute decisions in UI/reporting layers. Read persisted fields instead.
 export function deriveSetupDecision(setup: SetupLike): DecisionResult {
   const grade = (setup as { setupGrade?: string | null }).setupGrade ?? null;
   const playbookId = ((setup as { setupPlaybookId?: string | null }).setupPlaybookId ?? "").toLowerCase();
@@ -352,7 +354,8 @@ function normalizeNumber(value: unknown): boolean {
 
 export function getDecisionOrder(decision: SetupDecision | null | undefined): number {
   if (decision === "TRADE") return 0;
-  if (decision === "WATCH") return 1;
-  if (decision === "BLOCKED") return 2;
-  return 3;
+  if (decision === "WATCH_PLUS") return 1;
+  if (decision === "WATCH") return 2;
+  if (decision === "BLOCKED") return 3;
+  return 4;
 }
