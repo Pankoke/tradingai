@@ -4,9 +4,9 @@ run-name: "phase1-blob-artifacts (${{ github.event_name }})"
 
 on:
   schedule:
-    - cron: "30 6 * * *" # daily
+    #- cron: "30 6 * * *" # daily
     - cron: "0 7 * * 1"  # weekly deep
-    # - cron: "*/5 * * * *" # TEMP DEBUG ONLY – remove after verification
+    - cron: "*/5 * * * *" # TEMP DEBUG ONLY – remove after verification
   workflow_dispatch:
 
 permissions:
