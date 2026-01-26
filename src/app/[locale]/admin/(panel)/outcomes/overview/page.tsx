@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import type { Locale } from "@/i18n";
 import { OutcomesIntro } from "@/src/components/admin/OutcomesIntro";
 import { ArtifactHealthNotice } from "@/src/components/admin/ArtifactHealthNotice";
@@ -14,11 +14,19 @@ import {
   diffPlaybooks,
   filterRows,
   type BucketRow,
+  type Integrity,
+  type Totals,
 } from "./lib";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
-  searchParams?: Promise<{ timeframe?: string; label?: string; minClosed?: string; includeOpenOnly?: string }>;
+  searchParams?: Promise<{
+    timeframe?: string;
+    label?: string;
+    minClosed?: string;
+    includeOpenOnly?: string;
+    flag?: string;
+  }>;
 };
 
 export default async function OutcomesOverviewPage({ params, searchParams }: PageProps) {
@@ -29,6 +37,7 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
   const label = (query.label ?? "all").toLowerCase();
   const minClosed = Number.isFinite(Number(query.minClosed)) ? Number(query.minClosed) : 20;
   const includeOpenOnly = query.includeOpenOnly === "1";
+  const flagFilter = (query.flag ?? "all").toLowerCase();
 
   const loaded = await loadLatestOutcomeReport();
   if (!loaded) {
@@ -43,12 +52,18 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
   }
 
   const { report, meta } = loaded;
+  const reportDays = report.params?.days ?? 30;
   const filtered = filterRows(report, { timeframe, label, minClosed, includeOpenOnly });
   const totals = computeTotals(filtered);
-  const playbooks = aggregatePlaybooks(filtered, { timeframe, label, minClosed, includeOpenOnly }).slice(0, 10);
-  const assets = aggregateAssets(filtered, { timeframe, label, minClosed, includeOpenOnly }).slice(0, 10);
+  const playbooksRaw = aggregatePlaybooks(filtered, { timeframe, label, minClosed, includeOpenOnly });
+  const assetsRaw = aggregateAssets(filtered, { timeframe, label, minClosed, includeOpenOnly });
+  const playbooks = filterByFlag(playbooksRaw, flagFilter).slice(0, 10);
+  const assets = filterByFlag(assetsRaw, flagFilter).slice(0, 10);
   const decisions = aggregateDecisions(filtered);
-  const integrity = computeIntegrity(filtered, (report as unknown as { fallbackUsedCount?: number }).fallbackUsedCount ?? null);
+  const integrity = computeIntegrity(
+    filtered,
+    (report as unknown as { fallbackUsedCount?: number }).fallbackUsedCount ?? null,
+  );
   const observedPlaybooks = Array.from(new Set(report.byKey.map((r) => r.key.playbookId).filter(Boolean))) as string[];
   const coverage = diffPlaybooks(SWING_PLAYBOOK_IDS, observedPlaybooks);
   const expectedMissing = coverage.missing.filter(
@@ -89,6 +104,11 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
         ]}
       />
       <ArtifactHealthNotice source={meta.source} generatedAt={report.generatedAt} windowDays={report.params?.days} />
+      <InterpretationBox
+        totals={totals}
+        integrity={integrity}
+        monitoringMode={totals.closed < 20}
+      />
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold text-white">Outcomes Overview (Swing)</h1>
         <MetaBox meta={meta} report={report} />
@@ -127,6 +147,19 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
           >
             {includeOpenOnly ? "Playbooks mit nur Closed zeigen" : "Playbooks mit Open-only anzeigen"}
           </Link>
+          {["all", "low-sample", "mostly-open"].map((flag) => (
+            <Link
+              key={flag}
+              href={`/${locale}/admin/outcomes/overview?timeframe=${timeframe}&label=${label}&includeOpenOnly=${
+                includeOpenOnly ? "1" : "0"
+              }${minClosed ? `&minClosed=${minClosed}` : ""}&flag=${flag}`}
+              className={`rounded-full px-3 py-1 font-semibold ${
+                flag === flagFilter ? "bg-amber-200 text-slate-900" : "bg-slate-800 text-slate-200"
+              }`}
+            >
+              Flag {flag}
+            </Link>
+          ))}
         </div>
       </header>
 
@@ -148,7 +181,11 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
       </section>
 
       <section className="grid gap-4 md:grid-cols-2">
-        <BucketTable title="Top Playbooks" rows={playbooks} />
+        <BucketTable
+          title="Top Playbooks"
+          rows={playbooks}
+          linkBase={`/${locale}/admin/outcomes?days=${reportDays}`}
+        />
         <BucketTable title="Top Assets" rows={assets} />
       </section>
 
@@ -197,6 +234,10 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
             Outcomes Explorer
           </Link>
         </div>
+        <div className="text-xs text-slate-400">
+          Flag-Legende: <span className="text-slate-200">low-sample</span> = wenig Closed;{" "}
+          <span className="text-slate-200">mostly-open</span> = CloseRate &lt; 20%.
+        </div>
       </section>
 
       <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 shadow-sm space-y-2">
@@ -219,7 +260,7 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
   );
 }
 
-function BucketTable({ title, rows }: { title: string; rows: BucketRow[] }) {
+function BucketTable({ title, rows, linkBase }: { title: string; rows: BucketRow[]; linkBase?: string }) {
   return (
     <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 shadow-sm">
       <h2 className="text-sm font-semibold text-white">{title}</h2>
@@ -227,7 +268,17 @@ function BucketTable({ title, rows }: { title: string; rows: BucketRow[] }) {
         <table className="min-w-full divide-y divide-slate-800 text-sm text-slate-200">
           <thead className="bg-slate-900/60">
             <tr>
-              {["Key", "Outcomes", "Closed", "Open", "TP", "SL", "Winrate", "CloseRate", "Flags"].map((h) => (
+              <th className="px-3 py-2 text-left text-xs uppercase tracking-wide text-slate-400">Key</th>
+              <th colSpan={5} className="px-3 py-2 text-left text-xs uppercase tracking-wide text-slate-400">
+                Counts
+              </th>
+              <th colSpan={2} className="px-3 py-2 text-left text-xs uppercase tracking-wide text-slate-400">
+                Quality
+              </th>
+              <th className="px-3 py-2 text-left text-xs uppercase tracking-wide text-slate-400">Meta</th>
+            </tr>
+            <tr>
+              {["Outcomes", "Closed", "Open", "TP", "SL", "Winrate", "CloseRate", "Flags"].map((h) => (
                 <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wide text-slate-400">
                   {h}
                 </th>
@@ -237,15 +288,30 @@ function BucketTable({ title, rows }: { title: string; rows: BucketRow[] }) {
           <tbody className="divide-y divide-slate-800">
             {rows.map((row) => (
               <tr key={row.id} className="hover:bg-slate-900/50">
-                <td className="px-3 py-2 font-semibold text-slate-100">{row.id}</td>
+                <td className="px-3 py-2 font-semibold text-slate-100">
+                  {linkBase ? (
+                    <Link
+                      href={`${linkBase}&playbookId=${encodeURIComponent(row.id)}`}
+                      className="text-emerald-300 hover:underline"
+                    >
+                      {row.id}
+                    </Link>
+                  ) : (
+                    row.id
+                  )}
+                </td>
                 <td className="px-3 py-2">{row.outcomesTotal}</td>
                 <td className="px-3 py-2">{row.closed}</td>
                 <td className="px-3 py-2">{row.open}</td>
                 <td className="px-3 py-2">{row.tp}</td>
                 <td className="px-3 py-2">{row.sl}</td>
-                <td className="px-3 py-2">{formatRate(row.tp, row.sl)}</td>
+                <td className="px-3 py-2">
+                  <span className="rounded bg-slate-800 px-2 py-0.5 text-xs text-slate-200" title={`Closed: ${row.closed}`}>
+                    {formatRate(row.tp, row.sl)}
+                  </span>
+                </td>
                 <td className="px-3 py-2">{formatRateFromValue(row.closeRate)}</td>
-                <td className="px-3 py-2 text-xs text-slate-400">{row.flags.join(" | ") || "—"}</td>
+                <td className="px-3 py-2 text-xs text-slate-400">{row.flags.join(" | ") || "-"}</td>
               </tr>
             ))}
           </tbody>
@@ -304,7 +370,7 @@ function CoverageList({ title, items, tone }: { title: string; items: string[]; 
   return (
     <div className="rounded border border-slate-800 bg-slate-950/50 p-3 space-y-1">
       <div className={`font-semibold ${toneClass}`}>{title}</div>
-      {items.length === 0 ? <div className="text-slate-500">–</div> : null}
+      {items.length === 0 ? <div className="text-slate-500">-</div> : null}
       {items.length > 0 ? (
         <ul className="list-disc pl-4 space-y-1">
           {items.map((item) => (
@@ -328,3 +394,43 @@ function formatRateFromValue(value: number | null | undefined): string {
   if (value === null || value === undefined || Number.isNaN(value)) return "-";
   return `${Math.round(value * 100)}%`;
 }
+
+function filterByFlag(rows: BucketRow[], flag: string): BucketRow[] {
+  if (flag === "all") return rows;
+  return rows.filter((row) => row.flags.includes(flag));
+}
+
+function InterpretationBox({
+  totals,
+  integrity,
+  monitoringMode,
+}: {
+  totals: Totals;
+  integrity: Integrity;
+  monitoringMode: boolean;
+}) {
+  const hints: string[] = [];
+  if (monitoringMode) {
+    hints.push("Monitoring Mode: Closed < 20. Ergebnisse sind nur als Trendhinweis interpretierbar.");
+  }
+  if (totals.open > totals.closed) {
+    hints.push("Viele offene Outcomes -> Winrate n/a oder instabil; CloseRate prüfen.");
+  }
+  if (integrity.missingPlaybook > 0 || integrity.missingDecision > 0 || integrity.missingGrade > 0) {
+    hints.push("Dimensionen fehlen (playbook/decision/grade) -> Datenqualität prüfen.");
+  }
+  if (hints.length === 0) {
+    hints.push("Closed-Samples ausreichend und keine offensichtlichen Warnungen.");
+  }
+  return (
+    <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-200 space-y-2">
+      <div className="font-semibold text-white">Interpretation</div>
+      <ul className="list-disc pl-5 space-y-1">
+        {hints.map((hint) => (
+          <li key={hint}>{hint}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
