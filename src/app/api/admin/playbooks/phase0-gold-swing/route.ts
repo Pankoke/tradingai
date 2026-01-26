@@ -932,7 +932,9 @@ function deriveOutcomeDecision(
     const setups = snapshotCache.get(snapshotId);
     const setup = setups?.find((s) => s.id === setupId);
     if (setup) {
-      return readPersistedDecision(setup) ?? "BLOCKED";
+      const persisted = readPersistedDecision(setup);
+      if (persisted === "WATCH_PLUS") return "WATCH";
+      return persisted ?? "BLOCKED";
     }
   }
   // fallback: no setup context -> treat as blocked
