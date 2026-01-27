@@ -121,7 +121,7 @@ function renderBiasHistogram(biasHistogram?: Record<string, BiasBucket>): string
 
 function renderWatchProxy(proxy?: { count: number; total: number; pct: number } | null): string {
   if (!proxy) return "";
-  return `### Watch→Trade Proxy\n- hits: ${proxy.count}/${proxy.total} (${formatPct(proxy.pct / 100)})\n`;
+  return `### Watch->Trade Proxy\n- hits: ${proxy.count}/${proxy.total} (${formatPct(proxy.pct / 100)})\n`;
 }
 
 function buildAlerts(data: Phase0PayloadData): string[] {
@@ -132,15 +132,24 @@ function buildAlerts(data: Phase0PayloadData): string[] {
     const tradePct = (dist.TRADE as { pct?: number })?.pct ?? 0;
     if (tradePct < 10) alerts.push(`TRADE Anteil niedrig: ${trade}/${dist.total} (${tradePct}%)`);
   }
-  const watchBucket = data.outcomesByDecision?.WATCH;
-  if (watchBucket) {
-    const evalCount = watchBucket.evaluatedCount ?? ((watchBucket.hit_tp ?? 0) + (watchBucket.hit_sl ?? 0));
-    const winRate = evalCount > 0 ? (watchBucket.hit_tp ?? 0) / evalCount : 0;
-    if (evalCount >= 5 && winRate < 0.5) {
-      alerts.push(`WATCH Winrate niedrig: ${formatPct(winRate)} bei ${evalCount} evaluierten`);
+  const outcomesByDecisionRaw = (data as { outcomesByDecision?: unknown }).outcomesByDecision;
+  if (outcomesByDecisionRaw && typeof outcomesByDecisionRaw === "object") {
+    const watchBucket = (outcomesByDecisionRaw as Record<string, unknown>).WATCH as OutcomeBucket | undefined;
+    if (watchBucket) {
+      const evalCount = watchBucket.evaluatedCount ?? ((watchBucket.hit_tp ?? 0) + (watchBucket.hit_sl ?? 0));
+      const winRate = evalCount > 0 ? (watchBucket.hit_tp ?? 0) / evalCount : 0;
+      if (evalCount >= 5 && winRate < 0.5) {
+        alerts.push(`WATCH Winrate niedrig: ${formatPct(winRate)} bei ${evalCount} evaluierten`);
+      }
     }
   }
   return alerts;
+}
+
+function getOutcomesByDecision(data: Phase0PayloadData): Record<string, OutcomeBucket> | undefined {
+  const raw = (data as { outcomesByDecision?: unknown }).outcomesByDecision;
+  if (!raw || typeof raw !== "object") return undefined;
+  return raw as Record<string, OutcomeBucket>;
 }
 
 function renderWatchSegments(segments?: Record<string, WatchSegment> | null, outcomes?: Record<string, OutcomeBucket> | null): string {
@@ -189,6 +198,7 @@ function renderAssetSection(label: string, data: Phase0PayloadData): string {
   const isGold = (meta.assetId ?? "").toLowerCase() === "gold";
   const upgrade = isGold ? data.debugMeta?.watchUpgradeCandidates : null;
   const isBtc = (meta.assetId ?? "").toLowerCase() === "btc";
+  const outcomesByDecision = getOutcomesByDecision(data);
   const btcAlignment = data.debugMeta?.btcAlignmentBreakdown;
   const btcAlignmentCounters = data.debugMeta?.btcAlignmentCounters as
     | { alignmentResolvedCount?: number; alignmentDerivedCount?: number; alignmentStillMissingCount?: number; total?: number }
@@ -211,9 +221,9 @@ function renderAssetSection(label: string, data: Phase0PayloadData): string {
     "",
     renderDistribution("Decision Distribution", data.decisionDistribution),
     renderDistribution("Grade Distribution", data.gradeDistribution),
-    renderOutcomes("Outcomes TRADE", data.outcomesByDecision?.TRADE),
-    renderOutcomes("Outcomes WATCH", data.outcomesByDecision?.WATCH),
-    renderOutcomes("Outcomes BLOCKED", data.outcomesByDecision?.BLOCKED),
+    renderOutcomes("Outcomes TRADE", outcomesByDecision?.TRADE),
+    renderOutcomes("Outcomes WATCH", outcomesByDecision?.WATCH),
+    renderOutcomes("Outcomes BLOCKED", outcomesByDecision?.BLOCKED),
     renderWatchProxy(data.watchToTradeProxy ?? null),
     isGold ? renderWatchSegments(data.debugMeta?.watchSegments ?? null, data.outcomesByWatchSegment ?? null) : "",
     isBtc ? renderBtcWatchSegments(data.debugMeta?.btcWatchSegments ?? null) : "",
