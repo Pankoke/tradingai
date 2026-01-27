@@ -384,7 +384,8 @@ export function renderAssetSummarySection(summary: AssetPhase0Summary, label?: s
   lines.push(`- Meta: asset=${summary.meta.assetId} tf=${summary.meta.timeframe} days=${summary.meta.sampleWindowDays}`);
   lines.push("");
   if (summary.meta.labelsUsedCounts && Object.keys(summary.meta.labelsUsedCounts).length > 0) {
-    const sortedLabels = Object.entries(summary.meta.labelsUsedCounts).sort((a, b) => b[1] - a[1]);
+    const labels = summary.meta.labelsUsedCounts as Record<string, number>;
+    const sortedLabels = Object.entries(labels).sort((a, b) => b[1] - a[1]);
     const labelTable = ["| Label | Count |", "| --- | ---: |", ...sortedLabels.map(([k, v]) => `| ${k} | ${v} |`), ""];
     lines.push("### Labels Used");
     lines.push(labelTable.join("\n"));
