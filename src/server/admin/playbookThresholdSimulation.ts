@@ -142,7 +142,15 @@ type DebugSummary = {
   };
   biasGateEnabled: boolean;
   note?: string;
-  primaryExclusionReason: "missing_bias" | "missing_sq" | "bias_below" | "sq_below" | "other" | "none";
+  primaryExclusionReason:
+    | "missing_bias"
+    | "missing_sq"
+    | "missing_conf"
+    | "bias_below"
+    | "sq_below"
+    | "conf_below"
+    | "other"
+    | "none";
   suggestedQueryAdjustments?: {
     biasMinSuggested?: number;
     sqMinSuggested?: number;

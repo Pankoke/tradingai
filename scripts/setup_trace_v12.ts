@@ -7,8 +7,9 @@ import { getSnapshotWithItems } from "@/src/server/repositories/perceptionSnapsh
 import { setupOutcomes } from "@/src/server/db/schema/setupOutcomes";
 import { db } from "@/src/server/db/db";
 import { resolvePlaybookWithReason } from "@/src/lib/engine/playbooks";
-import { computeLevelsForSetup } from "@/src/lib/engine/levels";
+import { computeLevelsForSetup, type SetupLevelCategory } from "@/src/lib/engine/levels";
 import type { Setup } from "@/src/lib/engine/types";
+import type { SetupProfile } from "@/src/lib/config/setupProfile";
 
 type OutcomeRow = typeof setupOutcomes.$inferSelect;
 
@@ -53,8 +54,12 @@ async function main(): Promise<void> {
     { id: setup.assetId, symbol: setup.symbol, name: (setup as { name?: string }).name },
     setup.profile ?? "SWING",
   );
-  const category = typeof setup.type === "string" ? setup.type : "unknown";
-  const profile = typeof setup.profile === "string" ? setup.profile : "SWING";
+  const category = ((): SetupLevelCategory => {
+    const value = typeof setup.type === "string" ? setup.type : "unknown";
+    const allowed: SetupLevelCategory[] = ["pullback", "breakout", "range", "trendContinuation", "liquidityGrab", "unknown"];
+    return (allowed.includes(value as SetupLevelCategory) ? value : "unknown") as SetupLevelCategory;
+  })();
+  const profile = (typeof setup.profile === "string" ? setup.profile : "SWING") as SetupProfile;
   const levels = computeLevelsForSetup({
     direction: setup.direction.toLowerCase() as "long" | "short" | "neutral",
     referencePrice: Number((setup as { referencePrice?: number }).referencePrice ?? toNumberOrNull(setup.entryZone) ?? 0),

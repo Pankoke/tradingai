@@ -68,7 +68,10 @@ function renderDistribution(title: string, dist?: Distribution): string {
   return [`### ${title}`, ...lines, ""].join("\n");
 }
 
-function renderCountTable(title: string, entries?: Record<string, number> | Record<string, unknown>): string {
+function renderCountTable(
+  title: string,
+  entries?: Record<string, number | { count?: number; pct?: number }> | Record<string, unknown> | null,
+): string {
   if (!entries || Object.keys(entries).length === 0) {
     return [`### ${title}`, "- No data", ""].join("\n");
   }
@@ -77,7 +80,13 @@ function renderCountTable(title: string, entries?: Record<string, number> | Reco
     "| Key | Count |",
     "| --- | ---: |",
     ...Object.entries(entries)
-      .map(([k, v]) => [k, typeof v === "number" ? v : Number(v) || 0] as const)
+      .map(([k, v]) => {
+        if (typeof v === "number") return [k, v] as const;
+        if (v && typeof v === "object" && "count" in v && typeof (v as { count?: unknown }).count === "number") {
+          return [k, (v as { count?: number }).count ?? 0] as const;
+        }
+        return [k, Number(v) || 0] as const;
+      })
       .sort((a, b) => b[1] - a[1])
       .map(([k, v]) => `| ${k} | ${v} |`),
     "",
@@ -378,6 +387,21 @@ function renderAssetSection(label: string, data: Phase0PayloadData): string {
   return lines.join("\n");
 }
 
+function normalizeDistribution(dist?: Distribution | Record<string, unknown>): Record<string, number> | undefined {
+  if (!dist || typeof dist !== "object") return undefined;
+  return Object.fromEntries(
+    Object.entries(dist)
+      .filter(([k]) => k !== "total")
+      .map(([k, v]) => {
+        if (typeof v === "number") return [k, v];
+        if (v && typeof v === "object" && "count" in v && typeof (v as { count?: unknown }).count === "number") {
+          return [k, (v as { count?: number }).count ?? 0];
+        }
+        return [k, Number(v) || 0];
+      }),
+  );
+}
+
 export function renderAssetSummarySection(summary: AssetPhase0Summary, label?: string): string {
   const name = label ?? `${summary.meta.assetId.toUpperCase()} Swing`;
   const lines: string[] = [];
@@ -391,10 +415,12 @@ export function renderAssetSummarySection(summary: AssetPhase0Summary, label?: s
     lines.push("### Labels Used");
     lines.push(labelTable.join("\n"));
   }
-  lines.push(renderCountTable("Decision Distribution", summary.decisionDistribution as Record<string, number>));
-  if (summary.gradeDistribution) lines.push(renderCountTable("Grade Distribution", summary.gradeDistribution as Record<string, number>));
-  if (summary.watchSegmentsDistribution) lines.push(renderCountTable("WATCH Segments", summary.watchSegmentsDistribution as Record<string, number>));
-  if (summary.alignmentDistribution) lines.push(renderCountTable("FX Alignment Distribution", summary.alignmentDistribution as Record<string, number>));
+  lines.push(renderCountTable("Decision Distribution", normalizeDistribution(summary.decisionDistribution)));
+  if (summary.gradeDistribution) lines.push(renderCountTable("Grade Distribution", normalizeDistribution(summary.gradeDistribution)));
+  if (summary.watchSegmentsDistribution)
+    lines.push(renderCountTable("WATCH Segments", normalizeDistribution(summary.watchSegmentsDistribution)));
+  if (summary.alignmentDistribution)
+    lines.push(renderCountTable("FX Alignment Distribution", normalizeDistribution(summary.alignmentDistribution)));
   if (summary.upgradeCandidates) {
     lines.push("### WATCH+ / Upgrade Candidates");
     lines.push(`- total: ${summary.upgradeCandidates.total}`);
@@ -406,12 +432,11 @@ export function renderAssetSummarySection(summary: AssetPhase0Summary, label?: s
     }
     lines.push("");
   }
-  if (summary.regimeDistribution)
-    lines.push(renderCountTable("Regime Distribution", summary.regimeDistribution as Record<string, number>));
+  if (summary.regimeDistribution) lines.push(renderCountTable("Regime Distribution", normalizeDistribution(summary.regimeDistribution)));
   if (summary.diagnostics) {
     lines.push("### Diagnostics");
     if (summary.diagnostics.regimeDistribution) {
-      lines.push(renderCountTable("Regime Distribution", summary.diagnostics.regimeDistribution as Record<string, number>));
+      lines.push(renderCountTable("Regime Distribution", normalizeDistribution(summary.diagnostics.regimeDistribution)));
     }
     if (summary.diagnostics.volatilityBuckets && summary.diagnostics.volatilityBuckets.length > 0) {
       const volTable = ["| Bucket | Count |", "| --- | ---: |", ...summary.diagnostics.volatilityBuckets.map((b) => `| ${b.bucket} | ${b.count} |`), ""];
@@ -456,10 +481,9 @@ const summariesFromPayload =
   const fallbackSummaryFromPayload = (data: Phase0PayloadData, assetId: string): AssetPhase0Summary => {
     const dist = data.decisionDistribution;
     const grade = data.gradeDistribution;
-    const watchSegments = getWatchSegments(data)
-      ? Object.fromEntries(
-          Object.entries(getWatchSegments(data) ?? {}).map(([k, v]) => [k, v.count]),
-        )
+    const watchSegmentsRecord = getWatchSegments(data);
+    const watchSegments = watchSegmentsRecord
+      ? Object.fromEntries(Object.entries(watchSegmentsRecord).map(([k, v]) => [k, v.count]))
       : undefined;
     const defaultDecision = { TRADE: 0, WATCH: 0, BLOCKED: 0 };
     return {

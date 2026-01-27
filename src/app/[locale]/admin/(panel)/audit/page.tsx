@@ -143,12 +143,27 @@ export default async function AdminAuditPage({ params, searchParams }: PageProps
   };
 
   const runs: AuditRunRow[] = resolvedSearch.freshness
-    ? await getFreshnessRuns({
-        hasFreshnessOnly: true,
-        action: resolvedSearch.action,
-        gate: resolvedSearch.gate,
-        limit: resolvedSearch.pageSize,
-      })
+    ? (
+        await getFreshnessRuns({
+          hasFreshnessOnly: true,
+          action: resolvedSearch.action,
+          gate: resolvedSearch.gate,
+          limit: resolvedSearch.pageSize,
+        })
+      ).map((run) => ({
+        id: run.id,
+        action: run.action,
+        createdAt: run.timestamp,
+        source: run.source,
+        error: run.error ?? null,
+        message: run.message ?? null,
+        ok: run.ok,
+        durationMs: run.durationMs ?? null,
+        meta: run.meta ?? {},
+        gate: run.gate ?? null,
+        status: run.freshnessStatus ?? null,
+        skippedCount: run.skippedCount ?? 0,
+      }))
     : (
         await listAuditRuns({
           filters: baseFilters,

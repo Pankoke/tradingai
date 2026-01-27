@@ -150,7 +150,7 @@ async function measureDbHealth(): Promise<DbHealth> {
 
 async function countRows(table: unknown, condition?: unknown): Promise<number> {
   const builder = db.select({ value: sql<number>`count(*)` }).from(table as never);
-  const rows = condition ? await builder.where(condition as never) : await builder;
+  const rows = (condition ? await builder.where(condition as never) : await builder) as Array<{ value: number | string | null }>;
   const [result] = rows;
   return Number(result?.value ?? 0);
 }

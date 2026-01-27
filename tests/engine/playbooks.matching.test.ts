@@ -22,7 +22,7 @@ describe("Playbook resolver matching for gold swing", () => {
     expect(index.playbook.id).toBe("spx-swing-v0.1");
 
     const crypto = resolvePlaybookWithReason({ id: "btc", symbol: "BTCUSDT", name: "Bitcoin" }, "swing");
-    expect(crypto.playbook.id).toBe("crypto-swing-v0.1");
+    expect(crypto.playbook.id).toBe("btc-swing-v0.1");
 
     const fx = resolvePlaybookWithReason({ id: "eurusd", symbol: "EURUSD=X", name: "EUR/USD" }, "swing");
     expect(fx.playbook.id).toBe("eurusd-swing-v0.1");

@@ -234,6 +234,24 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
     return { decision: "WATCH", category: "soft", reasons: mergedReasons };
   }
 
+  // Crypto soft downgrade: prefer WATCH for soft gates when playbook is watch-enabled
+  if (isCryptoAsset && watchEnabled && !hard) {
+    return { decision: "WATCH", category: soft ? "soft" : "hard", reasons: ensureReasons(reasons, "Watch (crypto soft gate)") };
+  }
+
+  // Crypto soft downgrades: treat regime/trend/confirmation failures as WATCH when watchEnabled
+  if (isCryptoAsset && watchEnabled && !hard) {
+    const text = (noTradeReason ?? "").toLowerCase();
+    const softGate =
+      text.includes("regime") ||
+      text.includes("trend too weak") ||
+      text.includes("confirmation failed") ||
+      text.includes("invalid rrr");
+    if (softGate) {
+      return { decision: "WATCH", category: "soft", reasons: ensureReasons(reasons, "Watch (soft gate)") };
+    }
+  }
+
   if (isFxAsset && watchEnabled && !hard && (alignmentMissing || !noTradeReason || fxAlignment !== null)) {
     const segment = deriveFxWatchSegment(setup);
     const alignmentReason = buildFxAlignmentReason(fxAlignment);

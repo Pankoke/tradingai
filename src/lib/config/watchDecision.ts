@@ -1,6 +1,7 @@
 export const watchEnabledPlaybookIds = new Set<string>([
   "gold-swing-v0.2",
   "crypto-swing-v0.1",
+  "btc-swing-v0.1",
   "spx-swing-v0.1",
   "dax-swing-v0.1",
   "ndx-swing-v0.1",
@@ -17,6 +18,7 @@ export const softReasonKeywords = ["bias", "trend", "signal", "confidence", "qua
 export const tradeRequirementsByPlaybook: Record<string, string[]> = {
   "gold-swing-v0.2": ["Bias >= 70", "Trend >= 50", "Signalqualitaet >= 55", "Confidence >= 60"],
   "crypto-swing-v0.1": ["Bias >= 70", "Trend >= 50", "Signalqualitaet >= 55", "Confidence >= 60"],
+  "btc-swing-v0.1": ["Trend >= 55", "Orderflow >= 50", "RRR >= 1.0"],
   "spx-swing-v0.1": ["Bias >= 70", "Trend >= 60", "Signalqualitaet >= 55", "Confidence >= 55"],
   "dax-swing-v0.1": ["Bias >= 70", "Trend >= 60", "Signalqualitaet >= 55", "Confidence >= 55"],
   "ndx-swing-v0.1": ["Bias >= 70", "Trend >= 60", "Signalqualitaet >= 55", "Confidence >= 55"],

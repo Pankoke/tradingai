@@ -2,6 +2,7 @@ import type { EventModifier, RiskRewardSummary } from "@/src/lib/engine/types";
 import type { SignalQuality } from "@/src/lib/engine/signalQuality";
 import { deriveRegimeTag } from "@/src/lib/engine/metrics/regime";
 import type { Setup } from "@/src/lib/engine/types";
+import { getCryptoSwingProfile } from "@/src/lib/engine/playbooks/profiles/cryptoSwingProfiles";
 
 export type SetupGrade = "A" | "B" | "NO_TRADE";
 export type SetupPlaybookType = "pullback_continuation" | "range_bias" | "unknown";
@@ -74,6 +75,7 @@ const EURJPY_PLAYBOOK_ID = "eurjpy-swing-v0.1";
 const METALS_PLAYBOOK_ID = "metals-swing-v0.1";
 const ENERGY_PLAYBOOK_ID = "energy-swing-v0.1";
 const CRYPTO_PLAYBOOK_ID = "crypto-swing-v0.1";
+const BTC_PLAYBOOK_ID = "btc-swing-v0.1";
 const FX_PLAYBOOK_ID = "fx-swing-v0.1";
 const GENERIC_PLAYBOOK_ID = "generic-swing-v0.1";
 
@@ -87,6 +89,7 @@ export const SWING_PLAYBOOK_IDS: string[] = [
   METALS_PLAYBOOK_ID,
   ENERGY_PLAYBOOK_ID,
   CRYPTO_PLAYBOOK_ID,
+  BTC_PLAYBOOK_ID,
   FX_PLAYBOOK_ID,
   EURUSD_PLAYBOOK_ID,
   GBPUSD_PLAYBOOK_ID,
@@ -200,6 +203,14 @@ function matchCryptoAsset(asset: PlaybookContext["asset"]): MatchResult {
   return { matched: false, reason: "no crypto match" };
 }
 
+function matchBtcAsset(asset: PlaybookContext["asset"]): MatchResult {
+  const id = (asset.id ?? "").toLowerCase();
+  const symbol = (asset.symbol ?? "").toUpperCase();
+  if (id === "btc") return { matched: true, reason: "btc id" };
+  if (symbol.includes("BTC")) return { matched: true, reason: "btc symbol" };
+  return { matched: false, reason: "no btc match" };
+}
+
 function resolvePlaybookIdForAsset(asset: PlaybookContext["asset"], profile?: string | null): PlaybookResolution {
   const profileKey = (profile ?? "").toLowerCase();
   const nonSwingPatterns = ["intraday", "daytrade", "day_trade", "scalp", "scalping", "shortterm", "short_term"];
@@ -207,6 +218,9 @@ function resolvePlaybookIdForAsset(asset: PlaybookContext["asset"], profile?: st
   if (profileKey.length > 0 && nonSwingPatterns.some((pat) => profileKey.includes(pat))) {
     return { playbook: genericSwingPlaybook, reason: "non-swing profile" };
   }
+
+  const btc = matchBtcAsset(asset);
+  if (btc.matched) return { playbook: btcSwingPlaybook, reason: btc.reason };
 
   const spx = matchSpxAsset(asset);
   if (spx.matched) return { playbook: spxSwingPlaybook, reason: spx.reason };
@@ -578,10 +592,11 @@ const dowSwingPlaybook: Playbook = {
 
 function evaluateCryptoSwing(context: PlaybookContext): PlaybookEvaluation {
   const { rings, orderflow } = context;
-  const trendOk = rings.trendScore >= 60;
+  const profile = getCryptoSwingProfile(context.asset?.id ?? null);
+  const trendOk = rings.trendScore >= profile.trendMin;
   const confirmationScore =
     typeof rings.orderflowScore === "number" ? rings.orderflowScore : typeof orderflow?.score === "number" ? orderflow.score : null;
-  const confirmationOk = (confirmationScore ?? -Infinity) >= 55;
+  const confirmationOk = (confirmationScore ?? -Infinity) >= profile.confirmationMin;
   const regime = deriveRegimeTag({
     rings: { ...rings, momentumScore: (orderflow?.score ?? null) as number | null },
   } as unknown as Setup);
@@ -645,11 +660,84 @@ function evaluateCryptoSwing(context: PlaybookContext): PlaybookEvaluation {
   };
 }
 
+function evaluateBtcSwing(context: PlaybookContext): PlaybookEvaluation {
+  const { rings, orderflow } = context;
+  const trendScore = rings.trendScore;
+  const confirmationScore =
+    typeof rings.orderflowScore === "number" ? rings.orderflowScore : typeof orderflow?.score === "number" ? orderflow.score : null;
+  const confirmationOk = (confirmationScore ?? -Infinity) >= 50;
+  const trendOk = trendScore >= 55;
+  const regimeTag = deriveRegimeTag({
+    rings: { ...rings, momentumScore: (orderflow?.score ?? null) as number | null },
+  } as unknown as Setup);
+  const relaxedRegimeOk = regimeTag === "TREND" || (trendOk && confirmationOk);
+  const levelsOk =
+    Boolean(context.levels?.entryZone) &&
+    Boolean(context.levels?.stopLoss) &&
+    Boolean(context.levels?.takeProfit) &&
+    context.levels?.riskReward !== null;
+  const rrrUnattractive = typeof context.levels?.riskReward?.rrr === "number" ? context.levels.riskReward.rrr < 1 : false;
+
+  if (!relaxedRegimeOk) {
+    return {
+      setupGrade: "NO_TRADE",
+      setupType: deriveSetupType(rings),
+      gradeRationale: ["Regime range / chop"],
+      noTradeReason: "Regime range / chop",
+      debugReason: `btc:g1_regime:${regimeTag}`,
+    };
+  }
+
+  if (!trendOk) {
+    return {
+      setupGrade: "NO_TRADE",
+      setupType: deriveSetupType(rings),
+      gradeRationale: ["Trend too weak"],
+      noTradeReason: "Trend too weak",
+      debugReason: "btc:g2_trend",
+    };
+  }
+
+  if (!confirmationOk) {
+    return {
+      setupGrade: "NO_TRADE",
+      setupType: deriveSetupType(rings),
+      gradeRationale: ["Confirmation failed / chop"],
+      noTradeReason: "Confirmation failed / chop",
+      debugReason: "btc:g3_confirmation",
+    };
+  }
+
+  if (!levelsOk || rrrUnattractive) {
+    return {
+      setupGrade: "NO_TRADE",
+      setupType: deriveSetupType(rings),
+      gradeRationale: ["Invalid RRR / levels"],
+      noTradeReason: "Invalid RRR / levels",
+      debugReason: `btc:g4_risk${levelsOk ? "" : ":levels_missing"}${rrrUnattractive ? ":rrr_unattractive" : ""}`,
+    };
+  }
+
+  return {
+    setupGrade: "B",
+    setupType: deriveSetupType(rings),
+    gradeRationale: ["Regime TREND", "Trend strong (>=55)", "Confirmation via orderflow (>=50)"],
+    debugReason: "btc:g5_trade",
+  };
+}
+
 const cryptoSwingPlaybook: Playbook = {
   id: CRYPTO_PLAYBOOK_ID,
   label: "Crypto Swing",
   shortLabel: "Crypto",
   evaluateSetup: evaluateCryptoSwing,
+};
+
+const btcSwingPlaybook: Playbook = {
+  id: BTC_PLAYBOOK_ID,
+  label: "BTC Swing",
+  shortLabel: "BTC",
+  evaluateSetup: evaluateBtcSwing,
 };
 
 const eurusdSwingPlaybook: Playbook = {
@@ -722,6 +810,7 @@ const PLAYBOOK_LABELS: Record<string, { label: string; short: string }> = {
   [METALS_PLAYBOOK_ID]: { label: "Metals Swing", short: "Metals Swing" },
   [ENERGY_PLAYBOOK_ID]: { label: "Energy Swing", short: "Energy Swing" },
   [CRYPTO_PLAYBOOK_ID]: { label: "Crypto Swing", short: "Crypto Swing" },
+  [BTC_PLAYBOOK_ID]: { label: "BTC Swing", short: "BTC Swing" },
   [FX_PLAYBOOK_ID]: { label: "FX Swing", short: "FX Swing" },
   [GENERIC_PLAYBOOK_ID]: { label: "Generic Swing", short: "Generic Swing" },
 };
@@ -729,11 +818,13 @@ const PLAYBOOK_LABELS: Record<string, { label: string; short: string }> = {
 export const playbookTestExports = {
   evaluateGoldSwing,
   evaluateCryptoSwing,
+  evaluateBtcSwing,
   evaluateDefault,
   deriveSetupType,
   matchGoldAsset,
   matchIndexAsset,
   matchCryptoAsset,
+  matchBtcAsset,
   matchFxAsset,
   resolvePlaybookIdForAsset,
 };
@@ -758,6 +849,7 @@ export function getPlaybookLabel(playbookId?: string | null, locale: "en" | "de"
     if (playbookId === INDEX_PLAYBOOK_ID) return "Index Swing";
     if (playbookId === SPX_PLAYBOOK_ID) return "SPX Swing";
     if (playbookId === CRYPTO_PLAYBOOK_ID) return "Krypto Swing";
+    if (playbookId === BTC_PLAYBOOK_ID) return "BTC Swing";
     if (playbookId === FX_PLAYBOOK_ID) return "FX Swing";
     if (playbookId === GENERIC_PLAYBOOK_ID) return "Generic Swing";
   }
