@@ -405,11 +405,12 @@ export function renderAssetSummarySection(summary: AssetPhase0Summary, label?: s
     }
     lines.push("");
   }
-  if (summary.regimeDistribution) lines.push(renderCountTable("Regime Distribution", summary.regimeDistribution));
+  if (summary.regimeDistribution)
+    lines.push(renderCountTable("Regime Distribution", summary.regimeDistribution as Record<string, number>));
   if (summary.diagnostics) {
     lines.push("### Diagnostics");
     if (summary.diagnostics.regimeDistribution) {
-      lines.push(renderCountTable("Regime Distribution", summary.diagnostics.regimeDistribution));
+      lines.push(renderCountTable("Regime Distribution", summary.diagnostics.regimeDistribution as Record<string, number>));
     }
     if (summary.diagnostics.volatilityBuckets && summary.diagnostics.volatilityBuckets.length > 0) {
       const volTable = ["| Bucket | Count |", "| --- | ---: |", ...summary.diagnostics.volatilityBuckets.map((b) => `| ${b.bucket} | ${b.count} |`), ""];
