@@ -152,6 +152,12 @@ function getOutcomesByDecision(data: Phase0PayloadData): Record<string, OutcomeB
   return raw as Record<string, OutcomeBucket>;
 }
 
+function getOutcomesByWatchSegment(data: Phase0PayloadData): Record<string, OutcomeBucket> | null {
+  const raw = (data as { outcomesByWatchSegment?: unknown }).outcomesByWatchSegment;
+  if (!raw || typeof raw !== "object") return null;
+  return raw as Record<string, OutcomeBucket>;
+}
+
 function getWatchSegments(data: Phase0PayloadData): Record<string, WatchSegment> | null {
   const raw = (data as { debugMeta?: unknown }).debugMeta;
   if (!raw || typeof raw !== "object") return null;
@@ -217,6 +223,7 @@ function renderAssetSection(label: string, data: Phase0PayloadData): string {
   const outcomesByDecision = getOutcomesByDecision(data);
   const watchSegments = getWatchSegments(data);
   const btcWatchSegments = getBtcWatchSegments(data);
+  const outcomesByWatchSegment = getOutcomesByWatchSegment(data);
   const btcAlignment = data.debugMeta?.btcAlignmentBreakdown;
   const btcAlignmentCounters = data.debugMeta?.btcAlignmentCounters as
     | { alignmentResolvedCount?: number; alignmentDerivedCount?: number; alignmentStillMissingCount?: number; total?: number }
@@ -243,7 +250,7 @@ function renderAssetSection(label: string, data: Phase0PayloadData): string {
     renderOutcomes("Outcomes WATCH", outcomesByDecision?.WATCH),
     renderOutcomes("Outcomes BLOCKED", outcomesByDecision?.BLOCKED),
     renderWatchProxy(data.watchToTradeProxy ?? null),
-    isGold ? renderWatchSegments(watchSegments, data.outcomesByWatchSegment ?? null) : "",
+    isGold ? renderWatchSegments(watchSegments, outcomesByWatchSegment) : "",
     isBtc ? renderBtcWatchSegments(btcWatchSegments) : "",
     isGold && upgrade
       ? [
