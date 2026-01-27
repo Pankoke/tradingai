@@ -68,7 +68,7 @@ function renderDistribution(title: string, dist?: Distribution): string {
   return [`### ${title}`, ...lines, ""].join("\n");
 }
 
-function renderCountTable(title: string, entries?: Record<string, number>): string {
+function renderCountTable(title: string, entries?: Record<string, number> | Record<string, unknown>): string {
   if (!entries || Object.keys(entries).length === 0) {
     return [`### ${title}`, "- No data", ""].join("\n");
   }
@@ -77,6 +77,7 @@ function renderCountTable(title: string, entries?: Record<string, number>): stri
     "| Key | Count |",
     "| --- | ---: |",
     ...Object.entries(entries)
+      .map(([k, v]) => [k, typeof v === "number" ? v : Number(v) || 0] as const)
       .sort((a, b) => b[1] - a[1])
       .map(([k, v]) => `| ${k} | ${v} |`),
     "",
