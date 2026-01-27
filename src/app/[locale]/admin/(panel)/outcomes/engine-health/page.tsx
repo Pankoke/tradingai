@@ -34,7 +34,7 @@ export default async function EngineHealthPage({ params, searchParams }: PagePro
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight text-white">Engine Health (Forward Cohort)</h1>
         <p className="text-sm text-slate-300">
-          Nur Outcomes ab {new Date(FIX_DATE_ISO).toISOString().slice(0, 10)} (cohort-policy). Status "invalid"
+          Nur Outcomes ab {new Date(FIX_DATE_ISO).toISOString().slice(0, 10)} (cohort-policy). Status &quot;invalid&quot;
           ausgeschlossen.
         </p>
         <div className="flex flex-wrap gap-2 text-xs">

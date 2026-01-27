@@ -82,5 +82,4 @@ describe("swing performance breakdown", () => {
     expect(mapOutcomeStatus("open")).toBe("OPEN");
     expect(mapOutcomeStatus("unknown_status")).toBe("UNKNOWN");
   });
-}
-*** End Patch
+});

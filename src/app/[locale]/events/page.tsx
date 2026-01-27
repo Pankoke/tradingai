@@ -421,8 +421,9 @@ function mapSeverity(impact: number): "low" | "medium" | "high" {
 }
 
 function mapCategory(value: string): "macro" | "crypto" | "onchain" | "technical" | "other" {
-  const allowed = new Set(["macro", "crypto", "onchain", "technical", "other"]);
-  return allowed.has(value) ? (value as any) : "other";
+  const allowed = ["macro", "crypto", "onchain", "technical", "other"] as const;
+  const isAllowed = (val: string): val is (typeof allowed)[number] => (allowed as readonly string[]).includes(val);
+  return isAllowed(value) ? value : "other";
 }
 
 function toIntlLocale(locale: Locale): string {

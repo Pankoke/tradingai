@@ -340,7 +340,7 @@ export async function buildAndStorePerceptionSnapshot(
     if (!decisionReasons.length) {
       decisionReasons = compactReasons([decision === "TRADE" ? "Trade conditions met" : "Decision pending"]);
     }
-    let decisionSegment =
+    const decisionSegment =
       decisionBase.watchSegment ??
       persistedSegment ??
       (decision === "WATCH_PLUS" ? "watch_plus" : "unspecified");

@@ -25,6 +25,7 @@ vi.mock("@/src/server/repositories/candleRepository", () => ({
 vi.mock("@/src/server/marketData/timeframeConfig", () => ({
   getTimeframesForAsset: () => ["1D"],
   TIMEFRAME_SYNC_WINDOWS: {},
+  getProfileTimeframes: () => ["1D"],
 }));
 vi.mock("@/src/lib/engine/marketMetrics", () => ({
   buildMarketMetrics: () => ({

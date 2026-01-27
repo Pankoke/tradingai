@@ -169,7 +169,7 @@ export default async function PremiumSetupsPage({ params, searchParams }: PagePr
   const fulfilledLabel = (meta as { fulfilledLabel?: string } | undefined)?.fulfilledLabel ?? snapshot.label;
   const intradayFallback = wantsIntraday && fulfilledLabel !== "intraday";
   const snapshotTime = snapshot.snapshotTime ? new Date(snapshot.snapshotTime) : null;
-  const minutesAgo = snapshotTime ? Math.round((Date.now() - snapshotTime.getTime()) / 60000) : null;
+  const minutesAgo = snapshotTime ? Math.round((new Date().getTime() - snapshotTime.getTime()) / 60000) : null;
   const snapshotUnavailable =
     (meta as { snapshotAvailable?: boolean } | undefined)?.snapshotAvailable === false || profileResult.effective.length === 0;
   const profileLabels: Record<ProfileFilter, string> = {

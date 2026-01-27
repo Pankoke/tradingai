@@ -11,7 +11,7 @@ vi.mock("@/src/server/repositories/perceptionSnapshotRepository", () => ({
 }));
 
 vi.mock("@/src/server/repositories/setupOutcomeRepository", () => ({
-  getOutcomesBySetupIds: (...args: unknown[]) => mockGetOutcomes(...args),
+  getOutcomesBySnapshotAndSetupIds: (...args: unknown[]) => mockGetOutcomes(...args),
   upsertOutcome: (...args: unknown[]) => mockUpsert(...args),
 }));
 

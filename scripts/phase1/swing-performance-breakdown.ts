@@ -48,7 +48,7 @@ type Bucket = {
   statusCounts: StatusCounts;
 };
 
-type Report = {
+export type Report = {
   version: string;
   generatedAt: string;
   params: {
@@ -104,7 +104,7 @@ type OutcomeClass =
   | "OPEN"
   | "UNKNOWN";
 
-function mapOutcomeStatus(statusRaw: string | null | undefined): OutcomeClass {
+export function mapOutcomeStatus(statusRaw: string | null | undefined): OutcomeClass {
   if (!statusRaw) return "UNKNOWN";
   const status = statusRaw.toLowerCase();
   if (TP_STATUSES.has(status)) return "TP";

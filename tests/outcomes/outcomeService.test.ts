@@ -13,10 +13,12 @@ vi.mock("@/src/server/repositories/assetRepository", () => ({
 
 vi.mock("@/src/server/repositories/perceptionSnapshotRepository", () => ({
   getSnapshotById: async () => ({
+    id: "snap1",
     setups: [
       { id: "s1", setupGrade: "A", setupType: "pullback_continuation", rings: {}, eventModifier: null },
     ],
   }),
+  listSnapshotItems: async () => [],
 }));
 
 describe("outcomeService filters by playbook", () => {

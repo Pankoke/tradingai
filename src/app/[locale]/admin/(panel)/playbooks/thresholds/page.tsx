@@ -100,7 +100,7 @@ export default async function ThresholdsPage({ params, searchParams }: PageProps
             limit={limit}
             minClosedTotal={minClosedTotal}
             minHits={minHits}
-            lastRun={{ timestamp: Date.now(), durationMs: timings?.totalMs }}
+            lastRun={timings ? { durationMs: timings.totalMs } : undefined}
           />
         </div>
         <ExportLinks

@@ -53,13 +53,15 @@ async function main(): Promise<void> {
     { id: setup.assetId, symbol: setup.symbol, name: (setup as { name?: string }).name },
     setup.profile ?? "SWING",
   );
+  const category = typeof setup.type === "string" ? setup.type : "unknown";
+  const profile = typeof setup.profile === "string" ? setup.profile : "SWING";
   const levels = computeLevelsForSetup({
     direction: setup.direction.toLowerCase() as "long" | "short" | "neutral",
     referencePrice: Number((setup as { referencePrice?: number }).referencePrice ?? toNumberOrNull(setup.entryZone) ?? 0),
     volatilityScore: setup.eventScore,
     confidence: setup.confidence,
-    category: (setup.type as any) ?? "unknown",
-    profile: (setup.profile as any) ?? "SWING",
+    category,
+    profile,
   });
 
   const outcome = await getOutcomeBySnapshotSetup(snapshotId, setupId);

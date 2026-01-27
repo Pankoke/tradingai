@@ -71,6 +71,7 @@ export function SnapshotSetupList({ setups, ringLabels, setupMessages, listMessa
   }, [setups]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setExpandedIds((prev) => {
       const next: Record<string, boolean> = {};
       for (const row of rows) {

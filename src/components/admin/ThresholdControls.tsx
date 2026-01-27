@@ -54,6 +54,7 @@ export function ThresholdControls({
   const managerRef = useMemo(() => createAutoApplyManager(AUTO_APPLY_DEBOUNCE_MS), []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDraft(applied);
   }, [applied.closedOnly, applied.includeNoTrade, applied.useConf, applied.limit, applied.minClosedTotal, applied.minHits]);
 

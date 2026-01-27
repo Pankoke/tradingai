@@ -103,7 +103,9 @@ export default async function AdminSnapshotsPage({ params, searchParams }: PageP
   const showingFrom = total === 0 ? 0 : (resolvedSearch.page - 1) * resolvedSearch.pageSize + 1;
   const showingTo = Math.min(total, resolvedSearch.page * resolvedSearch.pageSize);
 
-  const quickFrom = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const quickFromDate = new Date();
+  quickFromDate.setUTCDate(quickFromDate.getUTCDate() - 7);
+  const quickFrom = quickFromDate.toISOString().slice(0, 10);
 
   return (
     <div className="space-y-8">

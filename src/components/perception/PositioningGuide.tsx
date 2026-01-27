@@ -133,7 +133,7 @@ export function PositioningGuide({ setup }: PositioningGuideProps): JSX.Element 
 
   // Confidence badge text
   let confidenceTone: Tone = confBucket === "high" ? "good" : confBucket === "medium" ? "ok" : "weak";
-  let confidenceText = t(`perception.tradeDecision.positioning.sizing.${sizing}`).replace(
+  const confidenceText = t(`perception.tradeDecision.positioning.sizing.${sizing}`).replace(
     "{confidence}",
     `${Math.round(confidence)}%`,
   );

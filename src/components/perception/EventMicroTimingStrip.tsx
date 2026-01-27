@@ -1,7 +1,6 @@
 "use client";
 
 import { Bell, CalendarClock, Clock } from "lucide-react";
-import { useMemo } from "react";
 import type { JSX } from "react";
 import type { Setup } from "@/src/lib/engine/types";
 import { cn } from "@/lib/utils";
@@ -32,7 +31,6 @@ export function formatEventTiming(isoDate: string, t: (k: string) => string): st
 export function EventMicroTimingStrip({ eventContext }: Props): JSX.Element {
   const t = useT();
   const topEvent = eventContext?.topEvents?.[0];
-  const nowRef = useMemo(() => Date.now(), []);
 
   if (!topEvent) {
     return (

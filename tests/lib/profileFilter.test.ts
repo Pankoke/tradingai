@@ -22,13 +22,13 @@ describe("profile filter parsing", () => {
 
 describe("filterSetupsByProfile", () => {
   it("filters intraday correctly", () => {
-    const filtered = filterSetupsByProfile(baseSetups as any, "intraday");
+    const filtered = filterSetupsByProfile(baseSetups, "intraday");
     expect(filtered).toHaveLength(1);
     expect(filtered[0].profile).toBe("INTRADAY");
   });
 
   it("returns empty when no matching profile", () => {
-    const filtered = filterSetupsByProfile(baseSetups as any, "position");
+    const filtered = filterSetupsByProfile(baseSetups, "position");
     expect(filtered).toHaveLength(1);
     expect(filtered[0].profile).toBe("POSITION");
   });

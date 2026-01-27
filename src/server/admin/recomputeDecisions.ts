@@ -38,7 +38,7 @@ export function recomputeDecisionsInSetups(
 ): RecomputeResult {
   const canonicalAsset = params.assetId.toLowerCase();
   const timeframe = params.timeframe.toUpperCase();
-  let updatedCount = 0;
+  const updatedCount = 0;
   let consideredCount = 0;
   const decisionDistribution: Record<string, number> = {};
   const updatedIds: string[] = [];

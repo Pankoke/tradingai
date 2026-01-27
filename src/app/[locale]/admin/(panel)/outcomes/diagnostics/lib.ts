@@ -27,22 +27,28 @@ export async function loadLatestJoinStats(): Promise<LoadJoinResult> {
 
 function normalizeOpenCounts(value: unknown): unknown {
   if (!value || typeof value !== "object") return value;
-  const clone = structuredClone(value) as any;
-  if (clone.overall && typeof clone.overall.openCount !== "number" && typeof clone.overall.closedCount === "number" && typeof clone.overall.outcomesTotal === "number") {
-    clone.overall.openCount = clone.overall.outcomesTotal - clone.overall.closedCount;
+  const clone = structuredClone(value) as Record<string, unknown>;
+  const overall = clone.overall && typeof clone.overall === "object" ? (clone.overall as Record<string, unknown>) : null;
+  if (
+    overall &&
+    typeof overall.openCount !== "number" &&
+    typeof overall.closedCount === "number" &&
+    typeof overall.outcomesTotal === "number"
+  ) {
+    overall.openCount = overall.outcomesTotal - overall.closedCount;
   }
   if (Array.isArray(clone.byKey)) {
-    clone.byKey = clone.byKey.map((row: any) => {
+    clone.byKey = clone.byKey.map((row) => {
+      if (!row || typeof row !== "object") return row;
+      const record = row as Record<string, unknown>;
       if (
-        row &&
-        typeof row === "object" &&
-        typeof row.openCount !== "number" &&
-        typeof row.closedCount === "number" &&
-        typeof row.outcomesTotal === "number"
+        typeof record.openCount !== "number" &&
+        typeof record.closedCount === "number" &&
+        typeof record.outcomesTotal === "number"
       ) {
-        return { ...row, openCount: row.outcomesTotal - row.closedCount };
+        return { ...record, openCount: record.outcomesTotal - record.closedCount };
       }
-      return row;
+      return record;
     });
   }
   return clone;

@@ -27,6 +27,10 @@ export async function loadCoverageMatrix(): Promise<CoverageRow[]> {
         source: latest?.source ?? null,
       };
     }
+    const statusByTf: Record<string, CoverageRow["timeframes"][string]["status"]> = {};
+    for (const tf of TIMEFRAMES) {
+      statusByTf[tf] = tfMap[tf].status;
+    }
 
     return {
       assetId: asset.id,
@@ -34,7 +38,7 @@ export async function loadCoverageMatrix(): Promise<CoverageRow[]> {
       displayName: (asset as { displayName?: string }).displayName ?? asset.symbol,
       provider: (asset as { dataProvider?: string | null }).dataProvider ?? null,
       timeframes: tfMap,
-      profiles: deriveProfileCoverage(tfMap as Record<string, any>),
+      profiles: deriveProfileCoverage(statusByTf),
     };
   });
 

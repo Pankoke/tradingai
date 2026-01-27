@@ -43,11 +43,11 @@ describe("outcome backfill with repeated setupId across snapshots", () => {
 
     mockListSnapshots
       .mockResolvedValueOnce({
-        snapshots: [{ id: "snap-1", snapshotTime: new Date("2024-01-01"), setups: [setup] }],
+        snapshots: [{ id: "snap-1", snapshotTime: new Date("2026-01-10"), setups: [setup] }],
         total: 100,
       })
       .mockResolvedValueOnce({
-        snapshots: [{ id: "snap-2", snapshotTime: new Date("2024-01-02"), setups: [setup] }],
+        snapshots: [{ id: "snap-2", snapshotTime: new Date("2026-01-11"), setups: [setup] }],
         total: 100,
       })
       .mockResolvedValue({ snapshots: [], total: 100 });

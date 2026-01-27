@@ -9,7 +9,7 @@ describe("candle timeframe gating", () => {
 
   it("filters out unsupported 15m timeframe", async () => {
     const { filterAllowedTimeframes } = await import("@/src/lib/config/candleTimeframes");
-    const filtered = filterAllowedTimeframes(sample as any);
+    const filtered = filterAllowedTimeframes([...sample]);
     expect(filtered).toEqual(["1D", "4H", "1H"]);
   });
 });

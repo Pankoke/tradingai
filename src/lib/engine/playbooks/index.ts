@@ -578,7 +578,6 @@ const dowSwingPlaybook: Playbook = {
 
 function evaluateCryptoSwing(context: PlaybookContext): PlaybookEvaluation {
   const { rings, orderflow } = context;
-  const biasOk = rings.biasScore >= 70;
   const trendOk = rings.trendScore >= 60;
   const confirmationScore =
     typeof rings.orderflowScore === "number" ? rings.orderflowScore : typeof orderflow?.score === "number" ? orderflow.score : null;
@@ -586,44 +585,63 @@ function evaluateCryptoSwing(context: PlaybookContext): PlaybookEvaluation {
   const regime = deriveRegimeTag({
     rings: { ...rings, momentumScore: (orderflow?.score ?? null) as number | null },
   } as unknown as Setup);
+  const levelsOk =
+    Boolean(context.levels?.entryZone) &&
+    Boolean(context.levels?.stopLoss) &&
+    Boolean(context.levels?.takeProfit) &&
+    context.levels?.riskReward !== null;
+  const rrrUnattractive = typeof context.levels?.riskReward?.rrr === "number" ? context.levels.riskReward.rrr < 1 : false;
 
+  // Gate 1 (Doc 4): Regime must be TREND.
   if (regime !== "TREND") {
     return {
       setupGrade: "NO_TRADE",
       setupType: deriveSetupType(rings),
-      gradeRationale: ["Regime range/chop (trend confirmation missing)"],
-      noTradeReason: "Regime range/chop (trend confirmation missing)",
-      debugReason: `regime:${regime}`,
+      gradeRationale: ["Regime range / chop"],
+      noTradeReason: "Regime range / chop",
+      debugReason: `crypto:g1_regime:${regime}`,
     };
   }
 
-  if (biasOk && trendOk && confirmationOk) {
-    return {
-      setupGrade: "B",
-      setupType: deriveSetupType(rings),
-      gradeRationale: ["Bias strong (>=70)", "Trend supportive (>=60)", "Confirmation via orderflow (>=55)"],
-      debugReason: "regime:TREND",
-    };
-  }
-
-  if (biasOk && trendOk && !confirmationOk) {
+  // Gate 2 (Doc 4): Trend strength must be sufficient.
+  if (!trendOk) {
     return {
       setupGrade: "NO_TRADE",
       setupType: deriveSetupType(rings),
-      gradeRationale: ["Chop/confirmation failed (orderflow <55)"],
-      noTradeReason: "Chop/confirmation failed",
-      debugReason: "confirmation_failed",
+      gradeRationale: ["Trend too weak"],
+      noTradeReason: "Trend too weak",
+      debugReason: "crypto:g2_trend",
     };
   }
 
-  // Fallback: alignment derived so decision layer can downgrade to WATCH instead of blocking.
-  const derivedDirection = rings.biasScore >= 50 || rings.trendScore >= 50 ? "LONG" : "SHORT";
+  // Gate 3 (Doc 4): Confirmation required.
+  if (!confirmationOk) {
+    return {
+      setupGrade: "NO_TRADE",
+      setupType: deriveSetupType(rings),
+      gradeRationale: ["Confirmation failed / chop"],
+      noTradeReason: "Confirmation failed / chop",
+      debugReason: "crypto:g3_confirmation",
+    };
+  }
+
+  // Gate 4 (Doc 4): Risk/levels must be valid.
+  if (!levelsOk || rrrUnattractive) {
+    return {
+      setupGrade: "NO_TRADE",
+      setupType: deriveSetupType(rings),
+      gradeRationale: ["Invalid RRR / levels"],
+      noTradeReason: "Invalid RRR / levels",
+      debugReason: `crypto:g4_risk${levelsOk ? "" : ":levels_missing"}${rrrUnattractive ? ":rrr_unattractive" : ""}`,
+    };
+  }
+
+  // Gate 5 (Doc 4): Trade allowed. Grade B by default.
   return {
-    setupGrade: "NO_TRADE",
+    setupGrade: "B",
     setupType: deriveSetupType(rings),
-    gradeRationale: [`Derived alignment ${derivedDirection}; bias/trend below defaults`],
-    noTradeReason: `Alignment derived (${derivedDirection}) from bias/trend`,
-    debugReason: "alignment_fallback",
+    gradeRationale: ["Regime TREND", "Trend strong (>=60)", "Confirmation via orderflow (>=55)"],
+    debugReason: "crypto:g5_trade",
   };
 }
 
@@ -710,6 +728,7 @@ const PLAYBOOK_LABELS: Record<string, { label: string; short: string }> = {
 
 export const playbookTestExports = {
   evaluateGoldSwing,
+  evaluateCryptoSwing,
   evaluateDefault,
   deriveSetupType,
   matchGoldAsset,

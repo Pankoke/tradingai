@@ -99,7 +99,7 @@ const getDecisionRank = (
   const signalQuality = computeSignalQuality(setup);
   const isWatchPlus = decision === "WATCH_PLUS";
 
-  let order = getDecisionOrder(decision ?? undefined);
+  const order = getDecisionOrder(decision ?? undefined);
 
   return {
     order,

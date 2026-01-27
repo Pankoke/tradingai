@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { loadThresholdRelaxationSimulation } from "@/src/server/admin/playbookThresholdSimulation";
-import { pickRecommendation, recommendThresholdV2 } from "@/src/lib/admin/thresholdSimulate";
+import { pickRecommendation, recommendThresholdV2, type SimulationGridRow } from "@/src/lib/admin/thresholdSimulate";
 
 vi.mock("@/src/server/repositories/setupOutcomeRepository", () => {
   const base = {
@@ -47,16 +47,16 @@ describe("threshold relaxation simulation", () => {
   });
 
   it("computes percentiles correctly", async () => {
-    const stats = (await loadThresholdRelaxationSimulation({
+    const stats = await loadThresholdRelaxationSimulation({
       days: 30,
       playbookId: "gold-swing-v0.2",
       biasCandidates: [80],
       sqCandidates: [55],
       debug: true,
-    })) as any;
-    const biasStats = stats.debug.metrics.biasScore;
-    expect(biasStats.p50).toBe(77);
-    expect(biasStats.p90).toBeGreaterThan(60);
+    });
+    const biasStats = stats.debug?.metrics.biasScore;
+    expect(biasStats?.p50).toBe(77);
+    expect((biasStats?.p90 ?? 0)).toBeGreaterThan(60);
   });
 
   it("ignores bias gating (SQ-only)", async () => {
@@ -161,9 +161,21 @@ describe("threshold relaxation simulation", () => {
   });
 
   it("pickRecommendation respects guardrails", () => {
-    const rows: any = [
-      { kpis: { utilityScore: 80, closedTotal: 5 }, closedCounts: { hit_tp: 0 }, biasMin: 0 },
-      { kpis: { utilityScore: 50, closedTotal: 30 }, closedCounts: { hit_tp: 2 }, biasMin: 0 },
+    const rows: SimulationGridRow[] = [
+      {
+        biasMin: 0,
+        eligibleCount: 0,
+        delta: 0,
+        closedCounts: { hit_tp: 0, hit_sl: 0, expired: 0, ambiguous: 0, open: 0 },
+        kpis: { utilityScore: 80, closedTotal: 5, hitRate: 0, expiryRate: 0, winLoss: 0 },
+      },
+      {
+        biasMin: 0,
+        eligibleCount: 0,
+        delta: 0,
+        closedCounts: { hit_tp: 2, hit_sl: 0, expired: 0, ambiguous: 0, open: 0 },
+        kpis: { utilityScore: 50, closedTotal: 30, hitRate: 0, expiryRate: 0, winLoss: 0 },
+      },
     ];
     const rec = pickRecommendation(rows, { minClosedTotal: 20, minHits: 1 });
     expect(rec.row).toBe(rows[1]);
@@ -171,19 +183,28 @@ describe("threshold relaxation simulation", () => {
   });
 
   it("recommendThresholdV2 selects valid candidate and alternatives", () => {
-    const rows: any = [
+    const rows: SimulationGridRow[] = [
       {
         sqMin: 50,
+        biasMin: 0,
+        eligibleCount: 0,
+        delta: 0,
         closedCounts: { hit_tp: 5, hit_sl: 5, expired: 0, ambiguous: 0, open: 0 },
         kpis: { utilityScore: 40, closedTotal: 10, hitRate: 0.5, expiryRate: 0, winLoss: 1 },
       },
       {
         sqMin: 55,
+        biasMin: 0,
+        eligibleCount: 0,
+        delta: 0,
         closedCounts: { hit_tp: 2, hit_sl: 1, expired: 0, ambiguous: 0, open: 0 },
         kpis: { utilityScore: 60, closedTotal: 3, hitRate: 0.66, expiryRate: 0, winLoss: 2 },
       },
       {
         sqMin: 60,
+        biasMin: 0,
+        eligibleCount: 0,
+        delta: 0,
         closedCounts: { hit_tp: 1, hit_sl: 0, expired: 0, ambiguous: 0, open: 0 },
         kpis: { utilityScore: 80, closedTotal: 1, hitRate: 1, expiryRate: 0, winLoss: 1 },
       },

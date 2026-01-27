@@ -629,7 +629,9 @@ function buildDebugSummary(input: {
     const sorted = Object.entries(input.exclusions).sort((a, b) => b[1] - a[1]);
     const topKey = sorted[0]?.[0];
     const allowed = ["missing_bias", "missing_sq", "missing_conf", "bias_below", "sq_below", "conf_below", "other"] as const;
-    primaryExclusionReason = allowed.includes(topKey as any) ? (topKey as any) : "other";
+    const isAllowed = (value: string | undefined): value is (typeof allowed)[number] =>
+      typeof value === "string" && (allowed as readonly string[]).includes(value);
+    primaryExclusionReason = isAllowed(topKey) ? topKey : "other";
   }
 
   const suggested: DebugSummary["suggestedQueryAdjustments"] | undefined = buildSuggestedAdjustment(

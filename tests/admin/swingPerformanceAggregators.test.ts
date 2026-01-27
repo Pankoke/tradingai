@@ -64,7 +64,7 @@ describe("swing performance aggregators", () => {
     expect(energy?.tpCount).toBe(1);
     expect(energy?.slCount).toBe(1);
     expect(energy?.winrateTpSl).toBe(0.5);
-    expect(gold?.closedCount).toBe(1);
+    expect(gold?.closedCount).toBe(2);
   });
 
   it("aggregates by asset", () => {

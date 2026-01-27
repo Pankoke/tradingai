@@ -25,7 +25,7 @@ describe("outcome backfill persists effective playbook id", () => {
   });
 
   it("stores resolved playbookId when none stored on setup", async () => {
-    const snapshotTime = new Date("2024-02-01T00:00:00Z");
+    const snapshotTime = new Date("2026-02-01T00:00:00Z");
     const setup: Setup = {
       id: "gold-setup",
       assetId: "GC=F",

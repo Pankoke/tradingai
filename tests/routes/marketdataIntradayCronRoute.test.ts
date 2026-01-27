@@ -8,6 +8,7 @@ const mockGetLatestCandleForAsset = vi.fn();
 const mockSync = vi.fn();
 const mockAudit = vi.fn();
 const mockAllowed = vi.fn<[], MarketTimeframe[]>();
+const mockDerive4h = vi.fn();
 
 vi.mock("@/src/server/repositories/assetRepository", () => ({
   getActiveAssets: (...args: unknown[]) => mockGetActiveAssets(...args),
@@ -15,6 +16,7 @@ vi.mock("@/src/server/repositories/assetRepository", () => ({
 
 vi.mock("@/src/server/marketData/timeframeConfig", () => ({
   getTimeframesForAsset: (...args: unknown[]) => mockGetTimeframesForAsset(...args),
+  getProfileTimeframes: () => ["1D", "1W"],
 }));
 
 vi.mock("@/src/lib/config/candleTimeframes", () => ({
@@ -33,16 +35,27 @@ vi.mock("@/src/server/repositories/auditRunRepository", () => ({
   createAuditRun: (...args: unknown[]) => mockAudit(...args),
 }));
 
+vi.mock("@/src/server/marketData/aggregateIntraday", () => ({
+  derive4hFrom1hCandles: (...args: unknown[]) => mockDerive4h(...args),
+}));
+
+vi.mock("@/src/server/marketData/requestThrottler", () => ({
+  consumeThrottlerStats: () => ({}),
+}));
+
 describe("POST /api/cron/marketdata/intraday", () => {
   const originalSecret = process.env.CRON_SECRET;
 
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.resetModules();
     process.env.CRON_SECRET = "cron-secret";
+    process.env.INTRADAY_ASSET_WHITELIST = "BTCUSDT,ETHUSDT";
   });
 
   afterEach(() => {
     process.env.CRON_SECRET = originalSecret;
+    delete process.env.INTRADAY_ASSET_WHITELIST;
   });
 
   it("syncs only intraday timeframes (1H/4H) and skips fresh candles", async () => {
@@ -57,6 +70,7 @@ describe("POST /api/cron/marketdata/intraday", () => {
       return { timestamp: new Date(now - 30 * 60 * 1000) }; // fresh -> skip
     });
     mockSync.mockResolvedValue(undefined);
+    mockDerive4h.mockResolvedValue({ inserted: 0, buckets: 0 });
 
     const { POST } = await import("@/src/app/api/cron/marketdata/intraday/route");
     const req = new NextRequest("http://localhost/api/cron/marketdata/intraday", {
@@ -67,11 +81,8 @@ describe("POST /api/cron/marketdata/intraday", () => {
     expect(res.status).toBe(200);
     const payload = await res.json();
     expect(payload.ok).toBe(true);
-    expect(mockSync).toHaveBeenCalledTimes(1);
-    expect(mockSync).toHaveBeenCalledWith(
-      expect.objectContaining({ timeframe: "4H" }),
-    );
-    expect(mockSync).not.toHaveBeenCalledWith(expect.objectContaining({ timeframe: "1H" }));
+    expect(mockSync).not.toHaveBeenCalled();
+    expect(mockDerive4h).toHaveBeenCalledTimes(1);
     expect(mockAudit).toHaveBeenCalledWith(expect.objectContaining({ action: "marketdata.intraday_sync" }));
   });
 
@@ -81,6 +92,7 @@ describe("POST /api/cron/marketdata/intraday", () => {
     mockGetTimeframesForAsset.mockReturnValue(["4H", "1H", "15m"]);
     mockGetLatestCandleForAsset.mockResolvedValue({ timestamp: new Date(0) });
     mockSync.mockResolvedValue(undefined);
+    mockDerive4h.mockResolvedValue({ inserted: 0, buckets: 0 });
 
     const { POST } = await import("@/src/app/api/cron/marketdata/intraday/route");
     const req = new NextRequest("http://localhost/api/cron/marketdata/intraday", {
@@ -90,7 +102,8 @@ describe("POST /api/cron/marketdata/intraday", () => {
     await POST(req);
 
     const timeframes = mockSync.mock.calls.map((call) => call[0].timeframe);
-    expect(timeframes).toEqual(expect.arrayContaining(["1H", "4H", "15m"]));
+    expect(timeframes).toEqual(expect.arrayContaining(["1H", "15m"]));
+    expect(timeframes).not.toContain("4H");
   });
 
   it("rejects unauthorized requests", async () => {

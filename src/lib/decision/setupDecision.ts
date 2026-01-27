@@ -203,7 +203,15 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
   }
 
   const watchEnabled = watchEnabledPlaybookIds.has(playbookId);
-  const hard = isHardKo(setup);
+  const hardRaw = isHardKo(setup);
+  const entryZone = (setup as { entryZone?: unknown }).entryZone;
+  const stopLoss = (setup as { stopLoss?: unknown }).stopLoss;
+  const takeProfit = (setup as { takeProfit?: unknown }).takeProfit;
+  const cryptoStructural =
+    isCryptoAsset &&
+    (levelsMissing(entryZone, stopLoss, takeProfit) ||
+      (noTradeReason ?? "").toLowerCase().includes("invalid rrr / levels"));
+  const hard = cryptoStructural ? false : hardRaw;
   const soft = !hard && isSoftReason(noTradeReason, gradeRationale);
 
   let reasons = buildReasons(noTradeReason, gradeRationale, gradeDebugReason);
@@ -216,6 +224,10 @@ export function deriveSetupDecision(setup: SetupLike): DecisionResult {
   // Here we derive a fallback direction so the decision becomes WATCH (soft) rather than BLOCKED.
   const isCryptoSwing = playbookId === "crypto-swing-v0.1";
   const alignmentMissing = (noTradeReason ?? "").toLowerCase().includes("alignment");
+  if (isCryptoAsset && watchEnabled && (noTradeReason ?? "").toLowerCase().includes("invalid rrr / levels")) {
+    const mergedReasons = buildReasons(noTradeReason, gradeRationale, gradeDebugReason);
+    return { decision: "WATCH", category: "soft", reasons: ensureReasons(mergedReasons, "Invalid RRR / levels") };
+  }
   if ((isCryptoSwing || isCryptoAsset) && watchEnabled && !hard && (alignmentMissing || !noTradeReason)) {
     const alignmentReason = deriveCryptoAlignmentReason();
     const mergedReasons = buildReasons(alignmentReason, gradeRationale, gradeDebugReason);

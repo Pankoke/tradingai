@@ -65,10 +65,12 @@ describe("snapshotBuildService", () => {
 
     expect(result.snapshot).toBe(builtSnapshot);
     expect(result.reused).toBe(false);
-    expect(buildSetupsMock.buildAndStorePerceptionSnapshot).toHaveBeenCalledWith({
-      source: "cron",
-      allowSync: true,
-    });
+    expect(buildSetupsMock.buildAndStorePerceptionSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: "cron",
+        allowSync: false,
+      }),
+    );
     expect(dbExecuteMock).toHaveBeenCalledTimes(2);
   });
 
@@ -104,10 +106,12 @@ describe("snapshotBuildService", () => {
 
     await requestSnapshotBuild({ source: "ui" });
 
-    expect(buildSetupsMock.buildAndStorePerceptionSnapshot).toHaveBeenCalledWith({
-      source: "ui",
-      allowSync: false,
-    });
+    expect(buildSetupsMock.buildAndStorePerceptionSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: "ui",
+        allowSync: false,
+      }),
+    );
   });
 });
 

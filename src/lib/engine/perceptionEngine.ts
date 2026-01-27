@@ -309,8 +309,9 @@ export async function buildPerceptionSnapshot(options?: {
     const scoringVolatility = EVENT_MODIFIER_ENABLED
       ? undefined
       : Math.abs(eventResult.eventScore - biasResult.biasScore);
+    const scoreProfile = typeof base.profile === "string" ? base.profile : "SWING";
     const scoreBreakdown = computeSetupScore({
-      profile: base.profile as any,
+      profile: scoreProfile,
       trendStrength: scoringEventScore,
       biasScore: biasResult.biasScore,
       momentum: sentimentScore,

@@ -37,6 +37,11 @@ vi.mock("@/src/server/marketData/timeframeConfig", () => ({
     "15m": 7,
   },
   getTimeframesForAsset: vi.fn(() => ["1D", "1W", "4H", "1H"]),
+  getProfileTimeframes: vi.fn((profile: string) => {
+    if (profile === "INTRADAY") return ["1H", "4H"];
+    if (profile === "POSITION") return ["1W"];
+    return ["1D", "1W"];
+  }),
 }));
 
 vi.mock("@/src/lib/engine/marketMetrics", () => ({

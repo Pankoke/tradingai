@@ -104,7 +104,7 @@ describe("buildEventModifier relevance & classification", () => {
     const scheduledAt = new Date(now.getTime() + 30 * 60 * 60 * 1000).toISOString();
     const modifier = buildEventModifier({
       now,
-      setup: { symbol: "XAUUSD", timeframe: "1D", category: "commodity" } as any,
+      setup: { symbol: "XAUUSD", timeframe: "1D", category: "commodity", profile: "SWING" },
       context: {
         ...baseContext,
         topEvents: [{ title: "US CPI", impact: 3, scheduledAt, timeToEventMinutes: 30 * 60, country: "US", currency: "USD", category: "macro" }],

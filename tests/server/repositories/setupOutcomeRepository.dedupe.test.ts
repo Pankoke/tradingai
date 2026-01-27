@@ -3,14 +3,24 @@ import { listOutcomesForWindow } from "@/src/server/repositories/setupOutcomeRep
 
 vi.mock("@/src/server/db/db", () => {
   const rows = [
-    { setupId: "s1", snapshotId: "snap1", evaluatedAt: new Date("2024-01-02"), assetId: "A", profile: "SWING", timeframe: "1D", direction: "long", outcomeStatus: "open" },
-    { setupId: "s1", snapshotId: "snap2", evaluatedAt: new Date("2024-01-03"), assetId: "A", profile: "SWING", timeframe: "1D", direction: "long", outcomeStatus: "open" },
-    { setupId: "s2", snapshotId: "snap3", evaluatedAt: new Date("2024-01-04"), assetId: "A", profile: "SWING", timeframe: "1D", direction: "long", outcomeStatus: "open" },
+    { setup_outcomes: { setupId: "s1", snapshotId: "snap1", evaluatedAt: new Date("2024-01-02"), assetId: "A", profile: "SWING", timeframe: "1D", direction: "long", outcomeStatus: "open" } },
+    { setup_outcomes: { setupId: "s1", snapshotId: "snap2", evaluatedAt: new Date("2024-01-03"), assetId: "A", profile: "SWING", timeframe: "1D", direction: "long", outcomeStatus: "open" } },
+    { setup_outcomes: { setupId: "s2", snapshotId: "snap3", evaluatedAt: new Date("2024-01-04"), assetId: "A", profile: "SWING", timeframe: "1D", direction: "long", outcomeStatus: "open" } },
   ];
   return {
     db: {
       select: () => ({
         from: () => ({
+          leftJoin: () => ({
+            where: () => ({
+              orderBy: () => ({
+                limit: () => rows,
+              }),
+            }),
+            orderBy: () => ({
+              limit: () => rows,
+            }),
+          }),
           where: () => ({
             orderBy: () => ({
               limit: () => rows,

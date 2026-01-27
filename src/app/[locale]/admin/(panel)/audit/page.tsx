@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Locale } from "@/i18n";
 import deMessages from "@/src/messages/de.json";
@@ -22,6 +22,19 @@ type ParsedSearch = {
   gate?: string;
 };
 
+type AuditRunBase = Awaited<ReturnType<typeof listAuditRuns>>["runs"][number];
+type AuditRunRow = AuditRunBase & {
+  gate?: string | null;
+  status?: string | null;
+  skippedCount?: number;
+};
+
+type FreshnessMeta = {
+  gate?: string;
+  status?: string;
+  skippedAssets?: unknown[];
+};
+
 export const ACTION_OPTIONS = [
   "snapshot_build",
   "snapshot_build_swing_backfill",
@@ -40,6 +53,23 @@ const STATUS_TONES = {
   ok: "bg-emerald-500/15 text-emerald-200 border border-emerald-400/40",
   fail: "bg-rose-500/15 text-rose-200 border border-rose-400/40",
 };
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object") return null;
+  return value as Record<string, unknown>;
+}
+
+function getFreshnessMeta(meta: unknown): FreshnessMeta | null {
+  const record = asRecord(meta);
+  if (!record) return null;
+  const freshness = asRecord(record.freshness);
+  if (!freshness) return null;
+  return {
+    gate: typeof freshness.gate === "string" ? freshness.gate : undefined,
+    status: typeof freshness.status === "string" ? freshness.status : undefined,
+    skippedAssets: Array.isArray(freshness.skippedAssets) ? freshness.skippedAssets : undefined,
+  };
+}
 
 function toArrayValue(value: string | string[] | undefined): string | undefined {
   if (!value) return undefined;
@@ -112,7 +142,7 @@ export default async function AdminAuditPage({ params, searchParams }: PageProps
     ok: resolvedSearch.ok === undefined ? undefined : resolvedSearch.ok === "true",
   };
 
-  const runs = resolvedSearch.freshness
+  const runs: AuditRunRow[] = resolvedSearch.freshness
     ? await getFreshnessRuns({
         hasFreshnessOnly: true,
         action: resolvedSearch.action,
@@ -126,12 +156,12 @@ export default async function AdminAuditPage({ params, searchParams }: PageProps
           offset: (resolvedSearch.page - 1) * resolvedSearch.pageSize,
         })
       ).runs.map((run) => {
-        const freshness = (run.meta as any)?.freshness ?? {};
-        const skippedAssets = Array.isArray(freshness.skippedAssets) ? freshness.skippedAssets : [];
+        const freshness = getFreshnessMeta(run.meta);
+        const skippedAssets = Array.isArray(freshness?.skippedAssets) ? freshness?.skippedAssets : [];
         return {
           ...run,
-          gate: typeof freshness.gate === "string" ? freshness.gate : null,
-          status: typeof freshness.status === "string" ? freshness.status : null,
+          gate: typeof freshness?.gate === "string" ? freshness.gate : null,
+          status: typeof freshness?.status === "string" ? freshness.status : null,
           skippedCount: skippedAssets.length,
         };
       });
@@ -269,7 +299,7 @@ export default async function AdminAuditPage({ params, searchParams }: PageProps
                 <tr key={run.id}>
                   <td className="px-4 py-3 text-slate-300">
                     {"timestamp" in run
-                      ? formatDate((run as any).timestamp, locale)
+                      ? formatDate((run as { timestamp?: Date | string }).timestamp ?? run.createdAt, locale)
                       : run.createdAt instanceof Date
                         ? formatDate(run.createdAt, locale)
                         : formatDate(new Date(run.createdAt), locale)}
@@ -281,8 +311,8 @@ export default async function AdminAuditPage({ params, searchParams }: PageProps
                       {run.ok ? messages["admin.audit.status.ok"] : messages["admin.audit.status.fail"]}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-slate-200">{(run as any).gate ?? "—"}</td>
-                  <td className="px-4 py-3 text-slate-200">{(run as any).skippedCount ?? 0}</td>
+                  <td className="px-4 py-3 text-slate-200">{run.gate ?? "—"}</td>
+                  <td className="px-4 py-3 text-slate-200">{run.skippedCount ?? 0}</td>
                   <td className="px-4 py-3 text-slate-300">{run.durationMs != null ? `${run.durationMs} ms` : "—"}</td>
                   <td className="px-4 py-3 text-slate-300">{run.message ?? "—"}</td>
                   <td className="px-4 py-3">
@@ -341,3 +371,4 @@ export default async function AdminAuditPage({ params, searchParams }: PageProps
     </div>
   );
 }
+

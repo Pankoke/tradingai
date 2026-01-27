@@ -1,6 +1,29 @@
 import { describe, it, expect } from "vitest";
 import { __test_buildExecutionContent } from "@/src/components/perception/setupViewModel/SetupUnifiedCard";
 import type { SetupViewModel } from "@/src/components/perception/setupViewModel/types";
+import type { useT } from "@/src/lib/i18n/ClientProvider";
+
+const baseRings: SetupViewModel["rings"] = {
+  trendScore: 0,
+  eventScore: 0,
+  biasScore: 0,
+  sentimentScore: 0,
+  orderflowScore: 0,
+  confidenceScore: 0,
+  event: 0,
+  bias: 0,
+  sentiment: 0,
+  orderflow: 0,
+  confidence: 0,
+  meta: {
+    trend: { quality: "unknown" },
+    event: { quality: "unknown" },
+    bias: { quality: "unknown" },
+    sentiment: { quality: "unknown" },
+    orderflow: { quality: "unknown" },
+    confidence: { quality: "unknown" },
+  },
+};
 
 const baseVm: SetupViewModel = {
   id: "s1",
@@ -12,10 +35,10 @@ const baseVm: SetupViewModel = {
   entry: { from: null, to: null },
   stop: { value: null },
   takeProfit: { value: null },
-  rings: { confidenceScore: 60, eventScore: 0 } as any,
+  rings: { ...baseRings, confidenceScore: 60, eventScore: 0 },
 };
 
-const tStub = (key: string) => {
+const tStub: ReturnType<typeof useT> = (key: string) => {
   const table: Record<string, string> = {
     "perception.execution.intraday.title": "intraday",
     "perception.execution.intraday.titleEvent": "event intraday",
@@ -47,15 +70,15 @@ const tStub = (key: string) => {
 
 describe("intraday execution content", () => {
   it("uses timing/confirmation copy when intraday without events", () => {
-    const result = __test_buildExecutionContent(baseVm, tStub as any, true);
+    const result = __test_buildExecutionContent(baseVm, tStub, true);
     expect(result.title.toLowerCase()).toContain("intraday");
     expect(result.bullets.some((b) => b.toLowerCase().includes("confirmation"))).toBe(true);
     expect(result.bullets.some((b) => b.toLowerCase().includes("size"))).toBe(true);
   });
 
   it("adds wait/confirm copy when execution_critical", () => {
-    const vm = { ...baseVm, eventModifier: { classification: "execution_critical" } as any };
-    const result = __test_buildExecutionContent(vm, tStub as any, true);
+    const vm: SetupViewModel = { ...baseVm, eventModifier: { classification: "execution_critical" } };
+    const result = __test_buildExecutionContent(vm, tStub, true);
     expect(result.title.toLowerCase()).toContain("event");
     expect(result.bullets.join(" ").toLowerCase()).toContain("wait for release");
     expect(result.bullets.join(" ").toLowerCase()).toContain("confirm");
@@ -65,12 +88,12 @@ describe("intraday execution content", () => {
     const swingVm: SetupViewModel = {
       ...baseVm,
       profile: "SWING",
-      rings: { eventScore: 80, confidenceScore: 80 } as any,
+      rings: { ...baseRings, eventScore: 80, confidenceScore: 80 },
       entry: { from: null, to: null },
       stop: { value: null },
       takeProfit: { value: null },
     };
-    const result = __test_buildExecutionContent(swingVm, tStub as any, false);
+    const result = __test_buildExecutionContent(swingVm, tStub, false);
     expect(result.title).toContain("perception.execution.title.eventDriven");
   });
 });
@@ -80,19 +103,19 @@ describe("position execution content", () => {
     ...baseVm,
     profile: "POSITION",
     timeframe: "1W",
-    rings: { confidenceScore: 60, eventScore: 0 } as any,
+    rings: { ...baseRings, confidenceScore: 60, eventScore: 0 },
   };
 
   it("uses weekly/daily framing and risk notes", () => {
-    const result = __test_buildExecutionContent(basePos, tStub as any, true);
+    const result = __test_buildExecutionContent(basePos, tStub, true);
     expect(result.title.toLowerCase()).toContain("position");
     expect(result.bullets.join(" ").toLowerCase()).toContain("weekly");
     expect(result.bullets.join(" ").toLowerCase()).toContain("size");
   });
 
   it("event critical delays initiation post-event", () => {
-    const vm = { ...basePos, eventModifier: { classification: "execution_critical" } as any };
-    const result = __test_buildExecutionContent(vm, tStub as any, true);
+    const vm: SetupViewModel = { ...basePos, eventModifier: { classification: "execution_critical" } };
+    const result = __test_buildExecutionContent(vm, tStub, true);
     expect(result.bullets.join(" ").toLowerCase()).toContain("avoid initiating");
     expect(result.bullets.join(" ").toLowerCase()).toContain("post-event");
   });

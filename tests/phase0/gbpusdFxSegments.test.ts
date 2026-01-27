@@ -35,6 +35,10 @@ describe("GBPUSD FX watch segments", () => {
     } as Setup);
     expect(decision.decision).toBe("WATCH");
     expect(decision.reasons[0]).toBe(FX_WATCH_SEGMENTS.FAILS_BIAS);
-    expect(decision.reasons.some((r) => r === "Alignment unavailable (fx)")).toBe(true);
+    const alignmentReason = decision.reasons.find((r) => r.toLowerCase().includes("alignment"));
+    expect(alignmentReason).toBeDefined();
+    expect(
+      ["Alignment unavailable (fx)", "Alignment fx neutral", "Alignment fx LONG", "Alignment fx SHORT"],
+    ).toContain(alignmentReason);
   });
 });

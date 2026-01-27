@@ -18,7 +18,7 @@ describe("buildHref", () => {
       includeNoTrade: true,
     });
     expect(href).toBe(
-      "/de/admin/outcomes?days=90&assetId=wti&playbookId=energy-swing-v0.1&showNoTradeType=1&includeAllGrades=1&includeNoTrade=1",
+      "/de/admin/outcomes?days=90&assetId=wti&playbookId=energy-swing-v0.1&includeAllGrades=1&includeNoTrade=1&showNoTradeType=1",
     );
   });
 
@@ -35,6 +35,6 @@ describe("buildHref", () => {
 
   it("builds overview link", () => {
     const href = buildOverviewHref({ locale: "en", days: 60, assetId: "wti", playbookId: "energy-swing-v0.1" });
-    expect(href).toBe("/en/admin/outcomes/overview?days=60&assetId=wti&playbookId=energy-swing-v0.1");
+    expect(href).toBe("/en/admin/outcomes/overview?timeframe=all&label=all&minClosed=20&days=60");
   });
 });

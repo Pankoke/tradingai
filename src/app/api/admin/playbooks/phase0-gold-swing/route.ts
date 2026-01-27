@@ -1314,6 +1314,12 @@ function isFxSetup(setup: Setup): boolean {
   return assetClass === "fx" || ["eurusd", "gbpusd", "usdjpy", "eurjpy", "audusd"].includes(assetId);
 }
 
+function isCryptoSetup(setup: Setup): boolean {
+  const assetId = ((setup as { assetId?: string | null }).assetId ?? "").toLowerCase();
+  const assetClass = ((setup as { assetClass?: string | null }).assetClass ?? "").toLowerCase();
+  return assetClass === "crypto" || assetId === "btc" || assetId === "eth";
+}
+
 function mapAlignmentReason(reason: string, setup?: Setup): string {
   const lower = reason.toLowerCase();
   if (setup && isFxSetup(setup)) {
@@ -1321,6 +1327,11 @@ function mapAlignmentReason(reason: string, setup?: Setup): string {
     if (lower.includes("alignment unavailable (fx)")) return "Alignment unavailable (fx)";
     if (lower.includes("no default alignment")) return "Alignment unavailable (fx)";
     if (lower.includes("alignment derived")) return "Alignment unavailable (fx)";
+  }
+  if (setup && isCryptoSetup(setup)) {
+    if (lower.includes("alignment unavailable (crypto)")) return "Alignment unavailable (crypto)";
+    if (lower.includes("no default alignment")) return "Alignment unavailable (crypto)";
+    if (lower.includes("alignment derived")) return "Alignment unavailable (crypto)";
   }
   if (lower.includes("no default alignment")) return "Alignment derived (fallback)";
   if (lower.includes("alignment derived")) return "Alignment derived (fallback)";

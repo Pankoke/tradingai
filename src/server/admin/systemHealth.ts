@@ -148,9 +148,9 @@ async function measureDbHealth(): Promise<DbHealth> {
   return health;
 }
 
-async function countRows(table: any, condition?: any): Promise<number> {
-  const builder = db.select({ value: sql<number>`count(*)` }).from(table);
-  const rows = condition ? await builder.where(condition) : await builder;
+async function countRows(table: unknown, condition?: unknown): Promise<number> {
+  const builder = db.select({ value: sql<number>`count(*)` }).from(table as never);
+  const rows = condition ? await builder.where(condition as never) : await builder;
   const [result] = rows;
   return Number(result?.value ?? 0);
 }
@@ -226,7 +226,7 @@ async function loadJobHealth(): Promise<JobHealthSummary> {
     const runs = await listAuditRuns({ filters: { action: job.action }, limit: 1 });
     const run = runs.runs[0];
     let status: JobHealth["status"] = "missing";
-    let lastRunAt: string | null | undefined = run?.createdAt?.toISOString?.() ?? null;
+    const lastRunAt: string | null | undefined = run?.createdAt?.toISOString?.() ?? null;
     if (run) {
       const ageMinutes = lastRunAt ? (Date.now() - new Date(lastRunAt).getTime()) / 60000 : Infinity;
       status = ageMinutes > job.staleMinutes ? "stale" : "ok";

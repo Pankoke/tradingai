@@ -1,4 +1,5 @@
-﻿const fs=require('fs');
+﻿/* eslint-disable @typescript-eslint/no-require-imports */
+const fs=require('fs');
 const path='src/components/perception/OrderflowInspector.tsx';
 const lines=fs.readFileSync(path,'utf8').split(/\r?\n/);
 const marker='import type { JSX } from  react;';

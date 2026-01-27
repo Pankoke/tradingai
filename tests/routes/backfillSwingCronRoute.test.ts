@@ -10,7 +10,8 @@ vi.mock("@/src/features/perception/build/buildSetups", () => ({
 }));
 
 vi.mock("@/src/server/repositories/perceptionSnapshotRepository", () => ({
-  getSnapshotByTime: (...args: unknown[]) => mockGet(...args),
+  findSnapshotByDayAndLabel: (...args: unknown[]) => mockGet(...args),
+  deleteSnapshotsByDayAndLabel: vi.fn(),
 }));
 
 vi.mock("@/src/server/repositories/auditRunRepository", () => ({
@@ -49,7 +50,12 @@ describe("POST /api/cron/snapshots/backfillSwing", () => {
     expect(body.data.rebuilt).toBe(1);
     expect(body.data.skipped).toBe(0);
     expect(mockBuild).toHaveBeenCalledWith(
-      expect.objectContaining({ snapshotId: "snap-existing" }),
+      expect.objectContaining({
+        source: "cron",
+        allowSync: false,
+        profiles: ["SWING"],
+        assetFilter: undefined,
+      }),
     );
     expect(mockAudit).toHaveBeenCalled();
   });

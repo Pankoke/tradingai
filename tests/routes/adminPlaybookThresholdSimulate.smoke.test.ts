@@ -3,9 +3,13 @@ import { NextRequest } from "next/server";
 
 const mockSimulate = vi.fn();
 
-vi.mock("@/src/server/admin/playbookThresholdSimulation", () => ({
-  loadThresholdRelaxationSimulation: (...args: unknown[]) => mockSimulate(...args),
-}));
+vi.mock("@/src/server/admin/playbookThresholdSimulation", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/src/server/admin/playbookThresholdSimulation")>();
+  return {
+    ...actual,
+    loadThresholdRelaxationSimulation: (...args: unknown[]) => mockSimulate(...args),
+  };
+});
 
 describe("admin playbook thresholds simulate smoke", () => {
   const originalSecret = process.env.CRON_SECRET;
