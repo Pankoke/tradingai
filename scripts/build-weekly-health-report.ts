@@ -398,7 +398,8 @@ export function renderAssetSummarySection(summary: AssetPhase0Summary, label?: s
     lines.push("### WATCH+ / Upgrade Candidates");
     lines.push(`- total: ${summary.upgradeCandidates.total}`);
     if (summary.upgradeCandidates.byReason) {
-      Object.entries(summary.upgradeCandidates.byReason)
+      const byReason = summary.upgradeCandidates.byReason as Record<string, number>;
+      Object.entries(byReason)
         .sort((a, b) => b[1] - a[1])
         .forEach(([k, v]) => lines.push(`- ${k}: ${v}`));
     }
