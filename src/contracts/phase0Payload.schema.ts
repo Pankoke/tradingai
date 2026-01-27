@@ -33,7 +33,7 @@ const zPhase0Meta = z.object({
 
 const zDiagnostics = z
   .object({
-    regimeDistribution: z.record(z.number()).optional(),
+    regimeDistribution: z.record(z.string(), z.number()).optional(),
     volatilityBuckets: z
       .array(
         z.object({
@@ -48,8 +48,8 @@ const zDiagnostics = z
 
 const zBiasBucket = z.object({
   total: z.number(),
-  byGrade: z.record(z.number()),
-  noTradeReasons: z.record(z.number()),
+  byGrade: z.record(z.string(), z.number()),
+  noTradeReasons: z.record(z.string(), z.number()),
 });
 
 const zWatchSegment = z.object({
@@ -71,7 +71,7 @@ const zBtcWatchSegment = z.object({
 });
 
 const zWatchUpgradeCandidates = z.object({
-  definition: z.record(z.unknown()),
+  definition: z.record(z.string(), z.unknown()),
   totalWatchFailsTrend: z.number().optional(),
   candidatesCount: z.number().optional(),
   candidatesPctOfWatchFailsTrend: z.number().optional(),
@@ -86,23 +86,23 @@ const zAssetPhase0Summary = z.object({
     assetId: z.string(),
     timeframe: z.string(),
     sampleWindowDays: z.number(),
-    labelsUsedCounts: z.record(z.number()).optional(),
+    labelsUsedCounts: z.record(z.string(), z.number()).optional(),
   }),
-  decisionDistribution: z.record(z.number()),
-  gradeDistribution: z.record(z.number()).optional(),
-  watchSegmentsDistribution: z.record(z.number()).optional(),
-  alignmentDistribution: z.record(z.number()).optional(),
+  decisionDistribution: z.record(z.string(), z.number()),
+  gradeDistribution: z.record(z.string(), z.number()).optional(),
+  watchSegmentsDistribution: z.record(z.string(), z.number()).optional(),
+  alignmentDistribution: z.record(z.string(), z.number()).optional(),
   upgradeCandidates: z
     .object({
       total: z.number(),
-      byReason: z.record(z.number()).optional(),
+      byReason: z.record(z.string(), z.number()).optional(),
     })
     .optional(),
-  regimeDistribution: z.record(z.number()).optional(),
+  regimeDistribution: z.record(z.string(), z.number()).optional(),
   diagnostics: zDiagnostics.optional(),
-  blockedReasonsDistribution: z.record(z.number()).optional(),
-  noTradeReasonsDistribution: z.record(z.number()).optional(),
-  watchReasonsDistribution: z.record(z.number()).optional(),
+  blockedReasonsDistribution: z.record(z.string(), z.number()).optional(),
+  noTradeReasonsDistribution: z.record(z.string(), z.number()).optional(),
+  watchReasonsDistribution: z.record(z.string(), z.number()).optional(),
 });
 
 export const zPhase0PayloadData = z
@@ -110,7 +110,7 @@ export const zPhase0PayloadData = z
     meta: zPhase0Meta,
     decisionDistribution: zDistribution,
     gradeDistribution: zDistribution.optional(),
-    outcomesByDecision: z.record(zOutcomeBucket).optional(),
+    outcomesByDecision: z.record(z.string(), zOutcomeBucket).optional(),
     watchToTradeProxy: z
       .object({
         count: z.number(),
@@ -121,15 +121,15 @@ export const zPhase0PayloadData = z
       .optional(),
     debugMeta: z
       .object({
-        biasHistogram: z.record(zBiasBucket).optional(),
+        biasHistogram: z.record(z.string(), zBiasBucket).optional(),
         cohortTimeRange: z
           .object({
             snapshotTimeMin: z.string().nullable().optional(),
             snapshotTimeMax: z.string().nullable().optional(),
           })
           .optional(),
-        watchSegments: z.record(zWatchSegment).nullable().optional(),
-        btcWatchSegments: z.record(zBtcWatchSegment).nullable().optional(),
+        watchSegments: z.record(z.string(), zWatchSegment).nullable().optional(),
+        btcWatchSegments: z.record(z.string(), zBtcWatchSegment).nullable().optional(),
         btcRegimeDistribution: z
           .object({
             total: z.number().optional(),
@@ -183,7 +183,7 @@ export const zPhase0PayloadData = z
       })
       .passthrough()
       .optional(),
-    summaries: z.record(zAssetPhase0Summary).optional(),
+    summaries: z.record(z.string(), zAssetPhase0Summary).optional(),
   })
   .passthrough();
 

@@ -445,7 +445,10 @@ async function main() {
   const gold = await loadJson("phase0_gold.json");
   const btc = await loadJson("phase0_btc.json");
 
-const summariesFromPayload = gold.summaries ?? btc.summaries ?? undefined;
+const summariesFromPayload =
+  (gold.summaries && (gold.summaries as Record<string, AssetPhase0Summary>)) ??
+  (btc.summaries && (btc.summaries as Record<string, AssetPhase0Summary>)) ??
+  undefined;
 
   const sampleWindowDays =
     gold.meta?.daysBack ?? btc.meta?.daysBack ?? gold.meta?.daysBack ?? 30;
@@ -453,8 +456,10 @@ const summariesFromPayload = gold.summaries ?? btc.summaries ?? undefined;
   const fallbackSummaryFromPayload = (data: Phase0PayloadData, assetId: string): AssetPhase0Summary => {
     const dist = data.decisionDistribution;
     const grade = data.gradeDistribution;
-    const watchSegments = data.debugMeta?.watchSegments
-      ? Object.fromEntries(Object.entries(data.debugMeta.watchSegments).map(([k, v]) => [k, v.count]))
+    const watchSegments = getWatchSegments(data)
+      ? Object.fromEntries(
+          Object.entries(getWatchSegments(data) ?? {}).map(([k, v]) => [k, v.count]),
+        )
       : undefined;
     const defaultDecision = { TRADE: 0, WATCH: 0, BLOCKED: 0 };
     return {
