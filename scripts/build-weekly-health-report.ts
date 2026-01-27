@@ -152,6 +152,22 @@ function getOutcomesByDecision(data: Phase0PayloadData): Record<string, OutcomeB
   return raw as Record<string, OutcomeBucket>;
 }
 
+function getWatchSegments(data: Phase0PayloadData): Record<string, WatchSegment> | null {
+  const raw = (data as { debugMeta?: unknown }).debugMeta;
+  if (!raw || typeof raw !== "object") return null;
+  const segments = (raw as { watchSegments?: unknown }).watchSegments;
+  if (!segments || typeof segments !== "object") return null;
+  return segments as Record<string, WatchSegment>;
+}
+
+function getBtcWatchSegments(data: Phase0PayloadData): Record<string, BtcWatchSegment> | null {
+  const raw = (data as { debugMeta?: unknown }).debugMeta;
+  if (!raw || typeof raw !== "object") return null;
+  const segments = (raw as { btcWatchSegments?: unknown }).btcWatchSegments;
+  if (!segments || typeof segments !== "object") return null;
+  return segments as Record<string, BtcWatchSegment>;
+}
+
 function renderWatchSegments(segments?: Record<string, WatchSegment> | null, outcomes?: Record<string, OutcomeBucket> | null): string {
   if (!segments) return "";
   const lines: string[] = ["### WATCH Segments (Gold)"];
@@ -199,6 +215,8 @@ function renderAssetSection(label: string, data: Phase0PayloadData): string {
   const upgrade = isGold ? data.debugMeta?.watchUpgradeCandidates : null;
   const isBtc = (meta.assetId ?? "").toLowerCase() === "btc";
   const outcomesByDecision = getOutcomesByDecision(data);
+  const watchSegments = getWatchSegments(data);
+  const btcWatchSegments = getBtcWatchSegments(data);
   const btcAlignment = data.debugMeta?.btcAlignmentBreakdown;
   const btcAlignmentCounters = data.debugMeta?.btcAlignmentCounters as
     | { alignmentResolvedCount?: number; alignmentDerivedCount?: number; alignmentStillMissingCount?: number; total?: number }
@@ -225,9 +243,8 @@ function renderAssetSection(label: string, data: Phase0PayloadData): string {
     renderOutcomes("Outcomes WATCH", outcomesByDecision?.WATCH),
     renderOutcomes("Outcomes BLOCKED", outcomesByDecision?.BLOCKED),
     renderWatchProxy(data.watchToTradeProxy ?? null),
-    isGold ? renderWatchSegments(data.debugMeta?.watchSegments ?? null, data.outcomesByWatchSegment ?? null) : "",
-    isBtc ? renderBtcWatchSegments(data.debugMeta?.btcWatchSegments ?? null) : "",
-    isBtc ? renderBtcWatchSegments(data.debugMeta?.btcWatchSegments ?? null) : "",
+    isGold ? renderWatchSegments(watchSegments, data.outcomesByWatchSegment ?? null) : "",
+    isBtc ? renderBtcWatchSegments(btcWatchSegments) : "",
     isGold && upgrade
       ? [
           "### Upgrade Candidate (WATCH_FAILS_TREND filtered)",
