@@ -1,5 +1,6 @@
 import { promises as fs } from "fs";
 import { resolve } from "path";
+import { zPhase0Payload, type AssetPhase0Summary, type Phase0PayloadData } from "@/src/contracts/phase0Payload.schema";
 
 type Distribution = { total: number; [key: string]: { count: number; pct: number } | number };
 type OutcomeBucket = { hit_tp?: number; hit_sl?: number; open?: number; expired?: number; ambiguous?: number; evaluatedCount?: number; winRateTpVsSl?: number };
@@ -31,81 +32,24 @@ type WatchUpgradeCandidates = {
   avgConfidence: number | null;
 };
 
-type Phase0Payload = {
-  meta?: { assetId?: string; profile?: string; timeframe?: string; daysBack?: number };
-  decisionDistribution?: Distribution;
-  gradeDistribution?: Distribution;
-  outcomesByDecision?: Record<"TRADE" | "WATCH" | "BLOCKED", OutcomeBucket>;
-  outcomesByBtcRegime?: Record<string, OutcomeBucket> | null;
-  outcomesByWatchSegment?: Record<string, OutcomeBucket> | null;
-  outcomesByWatchUpgradeCandidate?: OutcomeBucket | null;
-  outcomesByBtcTradeRrrBucket?: Record<string, OutcomeBucket> | null;
-  outcomesByBtcTradeDirection?: Record<string, OutcomeBucket> | null;
-  outcomesByBtcTradeTrendBucket?: Record<string, OutcomeBucket> | null;
-  outcomesByBtcTradeVolBucket?: Record<string, OutcomeBucket> | null;
-  watchToTradeProxy?: { count: number; total: number; pct: number } | null;
-  debugMeta?: {
-    biasHistogram?: Record<string, BiasBucket>;
-    cohortTimeRange?: { snapshotTimeMin?: string | null; snapshotTimeMax?: string | null };
-    watchSegments?: Record<string, WatchSegment> | null;
-    btcWatchSegments?: Record<string, BtcWatchSegment> | null;
-    btcRegimeDistribution?: { total?: number; TREND?: { count: number; pct: number }; RANGE?: { count: number; pct: number }; MISSING?: { count: number; pct: number } } | null;
-    btcTrendOnlyGate?: { totalSetups?: number; trendRegimeCount?: number; nonTrendRegimeCount?: number; tradesAllowed?: number; tradesBlockedByRegime?: number } | null;
-    watchUpgradeCandidates?: WatchUpgradeCandidates | null;
-    btcAlignmentBreakdown?: { total: number; top: { reason: string; count: number; pct: number }[] } | null;
-    btcAlignmentCounters?: {
-      alignmentResolvedCount?: number;
-      alignmentDerivedCount?: number;
-      alignmentStillMissingCount?: number;
-      total?: number;
-    } | null;
-    btcLevelPlausibility?: {
-      count: number;
-      parseErrors: number;
-      avgStopPct: number | null;
-      p50StopPct: number | null;
-      p90StopPct: number | null;
-      avgTargetPct: number | null;
-      p50TargetPct: number | null;
-      p90TargetPct: number | null;
-      avgRRR: number | null;
-    } | null;
-  };
-};
-
-export type AssetPhase0Summary = {
-  meta: { assetId: string; timeframe: string; sampleWindowDays: number; labelsUsedCounts?: Record<string, number> };
-  decisionDistribution: Record<string, number>;
-  gradeDistribution?: Record<string, number>;
-  watchSegmentsDistribution?: Record<string, number>;
-  alignmentDistribution?: Record<string, number>;
-  upgradeCandidates?: { total: number; byReason?: Record<string, number> };
-  regimeDistribution?: Record<string, number>;
-  diagnostics?: {
-    regimeDistribution?: Record<string, number>;
-    volatilityBuckets?: Array<{ bucket: string; count: number }>;
-    notes?: string[];
-  };
-  blockedReasonsDistribution?: Record<string, number>;
-  noTradeReasonsDistribution?: Record<string, number>;
-  watchReasonsDistribution?: Record<string, number>;
-};
-
-type Phase0Response = { ok: true; data: Phase0Payload & { summaries?: Record<string, AssetPhase0Summary> } } | { ok: false; error: unknown };
-
-async function loadJson(path: string): Promise<Phase0Payload & { summaries?: Record<string, AssetPhase0Summary> }> {
+async function loadJson(path: string): Promise<Phase0PayloadData & { summaries?: Record<string, AssetPhase0Summary> }> {
   const raw = await fs.readFile(path, "utf-8");
-  let parsed: Phase0Response;
+  let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch (err) {
     throw new Error(`Invalid JSON at ${path}: ${(err as Error).message}`);
   }
-  if (!parsed || parsed.ok !== true || !parsed.data) {
-    const details = (parsed as { error?: unknown })?.error ?? "unknown";
+  const validated = zPhase0Payload.safeParse(parsed);
+  if (!validated.success) {
+    const issues = validated.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ");
+    throw new Error(`Phase0 contract validation failed at ${path}: ${issues}`);
+  }
+  if (!validated.data.ok || !validated.data.data) {
+    const details = (validated.data as { error?: unknown })?.error ?? "unknown";
     throw new Error(`Invalid Phase0 JSON at ${path}: ${JSON.stringify(details)}`);
   }
-  return parsed.data;
+  return validated.data.data;
 }
 
 function formatPct(value: number | undefined): string {
@@ -180,7 +124,7 @@ function renderWatchProxy(proxy?: { count: number; total: number; pct: number } 
   return `### Watch→Trade Proxy\n- hits: ${proxy.count}/${proxy.total} (${formatPct(proxy.pct / 100)})\n`;
 }
 
-function buildAlerts(data: Phase0Payload): string[] {
+function buildAlerts(data: Phase0PayloadData): string[] {
   const alerts: string[] = [];
   const dist = data.decisionDistribution;
   if (dist && typeof dist.total === "number" && dist.total > 0) {
@@ -238,7 +182,7 @@ function renderBtcWatchSegments(segments?: Record<string, BtcWatchSegment> | nul
   return lines.join("\n");
 }
 
-function renderAssetSection(label: string, data: Phase0Payload): string {
+function renderAssetSection(label: string, data: Phase0PayloadData): string {
   const meta = data.meta ?? {};
   const cohort = data.debugMeta?.cohortTimeRange;
   const alerts = buildAlerts(data);
@@ -454,7 +398,7 @@ const summariesFromPayload = gold.summaries ?? btc.summaries ?? undefined;
   const sampleWindowDays =
     gold.meta?.daysBack ?? btc.meta?.daysBack ?? gold.meta?.daysBack ?? 30;
 
-  const fallbackSummaryFromPayload = (data: Phase0Payload, assetId: string): AssetPhase0Summary => {
+  const fallbackSummaryFromPayload = (data: Phase0PayloadData, assetId: string): AssetPhase0Summary => {
     const dist = data.decisionDistribution;
     const grade = data.gradeDistribution;
     const watchSegments = data.debugMeta?.watchSegments
@@ -486,21 +430,21 @@ const summariesFromPayload = gold.summaries ?? btc.summaries ?? undefined;
   };
 
   const summaries: Record<string, AssetPhase0Summary> = { ...(summariesFromPayload ?? {}) };
-  const ensure = (assetId: string, data: Phase0Payload) => {
+  const ensure = (assetId: string, data: Phase0PayloadData) => {
     if (!summaries[assetId]) {
       summaries[assetId] = fallbackSummaryFromPayload(data, assetId);
     }
   };
   ensure("gold", gold);
   ensure("btc", btc);
-  ensure("eurusd", {} as Phase0Payload);
-  ensure("spx", {} as Phase0Payload);
-  ensure("dax", {} as Phase0Payload);
-  ensure("ndx", {} as Phase0Payload);
-  ensure("dow", {} as Phase0Payload);
-  ensure("gbpusd", {} as Phase0Payload);
-  ensure("usdjpy", {} as Phase0Payload);
-  ensure("eurjpy", {} as Phase0Payload);
+  ensure("eurusd", {} as Phase0PayloadData);
+  ensure("spx", {} as Phase0PayloadData);
+  ensure("dax", {} as Phase0PayloadData);
+  ensure("ndx", {} as Phase0PayloadData);
+  ensure("dow", {} as Phase0PayloadData);
+  ensure("gbpusd", {} as Phase0PayloadData);
+  ensure("usdjpy", {} as Phase0PayloadData);
+  ensure("eurjpy", {} as Phase0PayloadData);
 
   if (process.env.NODE_ENV !== "production") {
     const keys = Object.keys(summariesFromPayload ?? {});
