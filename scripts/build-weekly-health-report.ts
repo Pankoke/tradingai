@@ -2,7 +2,7 @@ import { promises as fs } from "fs";
 import { resolve } from "path";
 import { zPhase0Payload, type AssetPhase0Summary, type Phase0PayloadData } from "@/src/contracts/phase0Payload.schema";
 
-type Distribution = { total: number; [key: string]: { count: number; pct: number } | number };
+type Distribution = { total: number; [key: string]: { count?: number; pct?: number } | number };
 type OutcomeBucket = { hit_tp?: number; hit_sl?: number; open?: number; expired?: number; ambiguous?: number; evaluatedCount?: number; winRateTpVsSl?: number };
 type BiasBucket = { total: number; byGrade: Record<"A" | "B" | "NO_TRADE", number>; noTradeReasons: Record<string, number> };
 type WatchSegment = {
