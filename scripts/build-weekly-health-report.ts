@@ -174,6 +174,14 @@ function getBtcWatchSegments(data: Phase0PayloadData): Record<string, BtcWatchSe
   return segments as Record<string, BtcWatchSegment>;
 }
 
+function getBiasHistogram(data: Phase0PayloadData): Record<string, BiasBucket> | undefined {
+  const raw = (data as { debugMeta?: unknown }).debugMeta;
+  if (!raw || typeof raw !== "object") return undefined;
+  const histogram = (raw as { biasHistogram?: unknown }).biasHistogram;
+  if (!histogram || typeof histogram !== "object") return undefined;
+  return histogram as Record<string, BiasBucket>;
+}
+
 function renderWatchSegments(segments?: Record<string, WatchSegment> | null, outcomes?: Record<string, OutcomeBucket> | null): string {
   if (!segments) return "";
   const lines: string[] = ["### WATCH Segments (Gold)"];
@@ -223,6 +231,7 @@ function renderAssetSection(label: string, data: Phase0PayloadData): string {
   const outcomesByDecision = getOutcomesByDecision(data);
   const watchSegments = getWatchSegments(data);
   const btcWatchSegments = getBtcWatchSegments(data);
+  const biasHistogram = getBiasHistogram(data);
   const outcomesByWatchSegment = getOutcomesByWatchSegment(data);
   const btcAlignment = data.debugMeta?.btcAlignmentBreakdown;
   const btcAlignmentCounters = data.debugMeta?.btcAlignmentCounters as
@@ -363,7 +372,7 @@ function renderAssetSection(label: string, data: Phase0PayloadData): string {
           "",
         ].join("\n")
       : "",
-    renderBiasHistogram(data.debugMeta?.biasHistogram),
+    renderBiasHistogram(biasHistogram),
   ];
   return lines.join("\n");
 }
