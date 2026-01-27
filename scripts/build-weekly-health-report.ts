@@ -32,7 +32,7 @@ type WatchUpgradeCandidates = {
   avgConfidence: number | null;
 };
 
-async function loadJson(path: string): Promise<Phase0PayloadData & { summaries?: Record<string, AssetPhase0Summary> }> {
+async function loadJson(path: string): Promise<Phase0PayloadData> {
   const raw = await fs.readFile(path, "utf-8");
   let parsed: unknown;
   try {
