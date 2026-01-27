@@ -1,6 +1,9 @@
+import "dotenv/config";
+import "tsconfig-paths/register";
 import { promises as fs } from "fs";
 import { resolve } from "path";
 import { zPhase0Payload, type AssetPhase0Summary, type Phase0PayloadData } from "@/src/contracts/phase0Payload.schema";
+import { PHASE0_ASSETS } from "@/scripts/phase0-assets";
 
 type Distribution = { total: number; [key: string]: { count?: number; pct?: number } | number };
 type OutcomeBucket = { hit_tp?: number; hit_sl?: number; open?: number; expired?: number; ambiguous?: number; evaluatedCount?: number; winRateTpVsSl?: number };
@@ -467,16 +470,19 @@ export function renderAssetSummarySection(summary: AssetPhase0Summary, label?: s
 }
 
 async function main() {
-  const gold = await loadJson("phase0_gold.json");
-  const btc = await loadJson("phase0_btc.json");
+  const loadedAssets = await Promise.all(
+    PHASE0_ASSETS.map(async (cfg) => ({ cfg, data: await loadJson(cfg.file) })),
+  );
 
-const summariesFromPayload =
-  (gold.summaries && (gold.summaries as Record<string, AssetPhase0Summary>)) ??
-  (btc.summaries && (btc.summaries as Record<string, AssetPhase0Summary>)) ??
-  undefined;
+  const summariesFromPayload = loadedAssets.reduce<Record<string, AssetPhase0Summary>>((acc, entry) => {
+    if (entry.data.summaries && typeof entry.data.summaries === "object") {
+      Object.assign(acc, entry.data.summaries as Record<string, AssetPhase0Summary>);
+    }
+    return acc;
+  }, {});
 
   const sampleWindowDays =
-    gold.meta?.daysBack ?? btc.meta?.daysBack ?? gold.meta?.daysBack ?? 30;
+    loadedAssets.find((a) => a.data.meta?.daysBack)?.data.meta?.daysBack ?? loadedAssets[0]?.data.meta?.daysBack ?? 30;
 
   const fallbackSummaryFromPayload = (data: Phase0PayloadData, assetId: string): AssetPhase0Summary => {
     const dist = data.decisionDistribution;
@@ -510,14 +516,13 @@ const summariesFromPayload =
     };
   };
 
-  const summaries: Record<string, AssetPhase0Summary> = { ...(summariesFromPayload ?? {}) };
+  const summaries: Record<string, AssetPhase0Summary> = { ...summariesFromPayload };
   const ensure = (assetId: string, data: Phase0PayloadData) => {
     if (!summaries[assetId]) {
       summaries[assetId] = fallbackSummaryFromPayload(data, assetId);
     }
   };
-  ensure("gold", gold);
-  ensure("btc", btc);
+  loadedAssets.forEach((entry) => ensure(entry.cfg.assetId, entry.data));
   ensure("eurusd", {} as Phase0PayloadData);
   ensure("spx", {} as Phase0PayloadData);
   ensure("dax", {} as Phase0PayloadData);
@@ -550,7 +555,7 @@ const summariesFromPayload =
     "## Alerts (global)",
   ];
 
-  const globalAlerts = [...buildAlerts(gold), ...buildAlerts(btc)];
+  const globalAlerts = loadedAssets.flatMap((a) => buildAlerts(a.data));
   if (globalAlerts.length) {
     globalAlerts.forEach((a) => reportLines.push(`- ${a}`));
   } else {
@@ -558,7 +563,7 @@ const summariesFromPayload =
   }
   reportLines.push("");
 
-  const assetOrder = ["gold", "btc", "eurusd", "gbpusd", "usdjpy", "eurjpy", "spx", "dax", "ndx", "dow"];
+  const assetOrder = [...PHASE0_ASSETS.map((a) => a.assetId), "eurusd", "gbpusd", "usdjpy", "eurjpy", "spx", "dax", "ndx", "dow"];
   assetOrder
     .filter((a) => summaries[a])
     .forEach((assetId) => {

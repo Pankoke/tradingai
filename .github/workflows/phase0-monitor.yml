@@ -63,6 +63,18 @@ jobs:
             exit 1
           fi
 
+      - name: Fetch Phase0 ETH
+        run: |
+          curl -sS -w "%{http_code}" -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "$CLEAN_BASE/api/admin/playbooks/phase0-gold-swing?daysBack=30&playbookId=crypto-swing-v0.1&assetId=eth&dedupeBy=snapshotId&windowField=evaluatedAt" \
+            -o phase0_eth.json > .curl_eth_status || true
+          STATUS=$(cat .curl_eth_status)
+          if [ "$STATUS" != "200" ]; then
+            echo "ETH endpoint returned HTTP $STATUS"
+            cat phase0_eth.json || true
+            exit 1
+          fi
+
       - name: Build weekly health report
         run: |
           REPORT_LOG=$(npx ts-node --project scripts/tsconfig.scripts.json scripts/build-weekly-health-report.ts)
@@ -92,6 +104,7 @@ jobs:
           path: |
             phase0_gold.json
             phase0_btc.json
+            phase0_eth.json
 
       - name: Upload report artifact
         uses: actions/upload-artifact@v4

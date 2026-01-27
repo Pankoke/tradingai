@@ -22,6 +22,18 @@ describe("phase0 payload contract", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts a minimal valid payload for ETH", () => {
+    const ethPayload = {
+      ...minimalPayload,
+      data: {
+        ...minimalPayload.data,
+        meta: { assetId: "eth", profile: "SWING", timeframe: "1D", daysBack: 30 },
+      },
+    };
+    const result = zPhase0Payload.safeParse(ethPayload);
+    expect(result.success).toBe(true);
+  });
+
   it("fails when required meta fields are missing", () => {
     const bad = {
       ok: true,
