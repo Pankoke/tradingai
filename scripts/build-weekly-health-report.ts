@@ -390,10 +390,10 @@ export function renderAssetSummarySection(summary: AssetPhase0Summary, label?: s
     lines.push("### Labels Used");
     lines.push(labelTable.join("\n"));
   }
-  lines.push(renderCountTable("Decision Distribution", summary.decisionDistribution));
-  if (summary.gradeDistribution) lines.push(renderCountTable("Grade Distribution", summary.gradeDistribution));
-  if (summary.watchSegmentsDistribution) lines.push(renderCountTable("WATCH Segments", summary.watchSegmentsDistribution));
-  if (summary.alignmentDistribution) lines.push(renderCountTable("FX Alignment Distribution", summary.alignmentDistribution));
+  lines.push(renderCountTable("Decision Distribution", summary.decisionDistribution as Record<string, number>));
+  if (summary.gradeDistribution) lines.push(renderCountTable("Grade Distribution", summary.gradeDistribution as Record<string, number>));
+  if (summary.watchSegmentsDistribution) lines.push(renderCountTable("WATCH Segments", summary.watchSegmentsDistribution as Record<string, number>));
+  if (summary.alignmentDistribution) lines.push(renderCountTable("FX Alignment Distribution", summary.alignmentDistribution as Record<string, number>));
   if (summary.upgradeCandidates) {
     lines.push("### WATCH+ / Upgrade Candidates");
     lines.push(`- total: ${summary.upgradeCandidates.total}`);
