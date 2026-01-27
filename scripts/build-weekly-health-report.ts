@@ -235,6 +235,11 @@ function renderAssetSection(label: string, data: Phase0PayloadData): string {
   const btcVol = data.outcomesByBtcTradeVolBucket;
   const btcRegime = data.debugMeta?.btcRegimeDistribution;
   const btcRegimeOutcomes = data.outcomesByBtcRegime;
+  const watchUpgradeOutcomesRaw = (data as { outcomesByWatchUpgradeCandidate?: unknown }).outcomesByWatchUpgradeCandidate;
+  const watchUpgradeOutcomes =
+    watchUpgradeOutcomesRaw && typeof watchUpgradeOutcomesRaw === "object"
+      ? (watchUpgradeOutcomesRaw as OutcomeBucket)
+      : null;
 
   const lines = [
     `## ${label}`,
@@ -258,9 +263,9 @@ function renderAssetSection(label: string, data: Phase0PayloadData): string {
           `- total WATCH_FAILS_TREND: ${upgrade.totalWatchFailsTrend}`,
           `- candidates: ${upgrade.candidatesCount} (${upgrade.candidatesPctOfWatchFailsTrend}%)`,
           `- avg bias ${upgrade.avgBias ?? "n/a"} | trend ${upgrade.avgTrend ?? "n/a"} | SQ ${upgrade.avgSignalQuality ?? "n/a"} | conf ${upgrade.avgConfidence ?? "n/a"}`,
-          data.outcomesByWatchUpgradeCandidate
-            ? `- outcomes: eval=${data.outcomesByWatchUpgradeCandidate.evaluatedCount ?? 0} winRate=${formatPct(
-                data.outcomesByWatchUpgradeCandidate.winRateTpVsSl ?? 0,
+          watchUpgradeOutcomes
+            ? `- outcomes: eval=${watchUpgradeOutcomes.evaluatedCount ?? 0} winRate=${formatPct(
+                watchUpgradeOutcomes.winRateTpVsSl ?? 0,
               )}`
             : "- outcomes: n/a",
           "",
