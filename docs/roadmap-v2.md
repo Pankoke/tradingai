@@ -60,6 +60,21 @@ Status 2026-01-29:
 - Adapter + Composition Root (src/server/container.ts) angelegt, Smoke-Test hinzugefügt
 
 ================================================================
+PHASE 1.5 – ARCHITEKTUR-GUARDRAILS
+
+Ziel:
+
+Domain vom Server trennen, Architektur-Drift verhindern
+
+Ergebnis:
+
+ESLint-Guardrail: src/domain/** darf nicht aus src/server/** importieren (Fehler, „Domain ≠ Server“)
+ESLint-Warnung: src/lib/engine/** soll keine src/server/** Imports nutzen (Warn-Level, Vorbereitung Entkopplung)
+
+Status 2026-01-29:
+- Guardrails aktiviert (eslint.config.mjs, no-restricted-imports)
+
+================================================================
 PHASE 2 – ENGINE ENTKOPPLEN
 
 Ziel:

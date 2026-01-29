@@ -354,5 +354,10 @@ BACKTESTING:
 
 app/backtesting/* → domain/backtesting + api
 
+GUARDRAILS (PHASE 1.5):
+
+Domain-Code (src/domain/**) darf nicht aus src/server/** importieren (ESLint Fehler; Domain ≠ Server).
+Engine-Code (src/lib/engine/**) soll serverfrei bleiben; server-Imports sind nur Warnung (Vorbereitung Entkopplung).
+
 ================================================================
 ENDE DER DATEI
