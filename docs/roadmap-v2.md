@@ -114,6 +114,11 @@ Slice 2.3b (2026-01-29):
 - Pure-Test für marketMetrics mit fixem asOf hinzugefügt
 - orderflowMetrics serverfrei & deterministisch (Ports-Eingaben, bounded windows), Pure-Test ergänzt
 
+Slice 2.3c (2026-01-29):
+- Bias über Provider/Deps injiziert (DbBiasProvider nur im Server-Wrapper)
+- asOf deterministisch durchgereicht, now→asOf im Bias-Pfad harmonisiert
+- Pure-Test für Bias-Scoring hinzugefügt
+
 ================================================================
 PHASE 3 – MARKET DATA V2
 

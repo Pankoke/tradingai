@@ -34,7 +34,8 @@ export interface PerceptionDataSource {
   getEventsForWindow(params: { from: Date; to: Date }): Promise<Event[]>;
   getBiasSnapshotForAssets(params: {
     assets: { assetId?: string | null; symbol: string; timeframe?: string }[];
-    date: Date;
+    asOf?: Date;
+    date?: Date;
   }): Promise<BiasSnapshot>;
 }
 
@@ -55,7 +56,7 @@ type BiasDomainModel = {
 type MarketTimeframe = CandleTimeframe;
 
 type BiasProvider = {
-  getBiasSnapshot(params: { assetId: string; date: Date; timeframe: string }): Promise<BiasDomainModel | null>;
+  getBiasSnapshot(params: { assetId: string; date: Date; timeframe: string; asOf?: Date }): Promise<BiasDomainModel | null>;
 };
 
 type SentimentContext = {
@@ -292,8 +293,10 @@ class LivePerceptionDataSource implements PerceptionDataSource {
 
   async getBiasSnapshotForAssets(params: {
     assets: { assetId?: string | null; symbol: string; timeframe?: string }[];
-    date: Date;
+    asOf?: Date;
+    date?: Date;
   }): Promise<BiasSnapshot> {
+    const referenceDate = params.asOf ?? params.date ?? new Date();
     const uniqueAssets = new Map<
       string,
       { key: string; assetId: string; symbol: string; timeframe: string }
@@ -312,7 +315,8 @@ class LivePerceptionDataSource implements PerceptionDataSource {
       Array.from(uniqueAssets.values()).map(async (asset) => {
         const result = await this.deps.biasProvider.getBiasSnapshot({
           assetId: asset.assetId,
-          date: params.date,
+          date: referenceDate,
+          asOf: referenceDate,
           timeframe: asset.timeframe,
         });
 
@@ -341,7 +345,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
               ...filtered.map((row) => row.date.getTime()),
             ),
           ).toISOString()
-        : params.date.toISOString();
+        : referenceDate.toISOString();
 
     return {
       generatedAt,

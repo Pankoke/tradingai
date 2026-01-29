@@ -269,7 +269,7 @@ export async function buildPerceptionSnapshot(options?: {
       symbol: setup.symbol,
       timeframe: setup.timeframe,
     })),
-    date: asOf,
+    asOf,
   });
 
   const dataMode = getPerceptionDataMode();
