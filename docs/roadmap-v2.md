@@ -165,6 +165,21 @@ Slice 4.1 (2026-01-29):
 - Write/Upsert Semantik vereinheitlicht (standardisiertes WriteResult, unknown counts markiert)
 - Tests für Health Builder & WriteResult Mapping
 
+Slice 4.2 (2026-01-29):
+- Admin-Systemseite zeigt Health Summary (Status, Freshness, Counts, Warnungen/Errors, Drilldowns)
+- Health Summary nutzt /api/admin/health/summary Contract, null-safe Rendering
+- Drilldowns zu bestehenden Marketdata/Events/Sentiment Admin-Seiten
+
+Slice 4.3 (2026-01-29):
+- Zentrale Health-Policy/Thresholds (ok/degraded/error) + computeHealthStatus helper
+- buildHealthSummary nutzt Policy (age/counts/warnings/errors) statt Ad-hoc
+- Admin UI zeigt Threshold-Hinweise; Tests für Policy/Status
+
+Slice 4.4 (2026-01-29):
+- Overall Health Helper (worst-of) mit Counts/ErrorKeys, tests
+- Intraday Cron Payload enthält overallHealthStatus + summary; Log Marker [HEALTH_ERROR]/[HEALTH_DEGRADED] bei Problemen
+- Keine breaking Changes, nur additive Signale
+
 ================================================================
 PHASE 5 – SENTIMENT V2
 

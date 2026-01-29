@@ -12,6 +12,8 @@ import { deriveCandlesForTimeframe, type DeriveTimeframesResult } from "@/src/se
 import { getContainer } from "@/src/server/container";
 import { consumeThrottlerStats } from "@/src/server/marketData/requestThrottler";
 import { findDerivedPair } from "@/src/server/marketData/derived-config";
+import { buildHealthSummary } from "@/src/server/health/buildHealthSummary";
+import { computeOverallHealth } from "@/src/server/health/overallHealth";
 
 const cronLogger = logger.child({ route: "cron-marketdata-intraday-sync" });
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -216,6 +218,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     const durationMs = Date.now() - startedAt;
+    const healthResults = await buildHealthSummary();
+    const overallHealth = computeOverallHealth(healthResults);
     const meta = {
       assetsConsidered,
       assetsWithIntraday,
@@ -229,9 +233,16 @@ export async function POST(request: NextRequest): Promise<Response> {
       durationMs,
       binanceUsed,
       throttling: consumeThrottlerStats(),
+      health: overallHealth,
       deriveResults,
       logs: logs.slice(0, 50),
     };
+
+    if (overallHealth.overallStatus === "error") {
+      cronLogger.error("[HEALTH_ERROR] intraday_cron", { errorKeys: overallHealth.errorKeys, counts: overallHealth.counts });
+    } else if (overallHealth.overallStatus === "degraded") {
+      cronLogger.warn("[HEALTH_DEGRADED] intraday_cron", { degradedKeys: overallHealth.degradedKeys, counts: overallHealth.counts });
+    }
 
     await createAuditRun({
       action: "marketdata.intraday_sync",
@@ -245,9 +256,9 @@ export async function POST(request: NextRequest): Promise<Response> {
     cronLogger.info("intraday sync completed with binance disabled", { binanceUsed: false });
 
     if (failures === timeframesAttempted) {
-      return respondFail("INTERNAL_ERROR", "All intraday syncs failed", 500, { meta });
+      return respondFail("INTERNAL_ERROR", "All intraday syncs failed", 500, { meta, overallHealthStatus: overallHealth.overallStatus });
     }
-    return respondOk(meta);
+    return respondOk({ ...meta, overallHealthStatus: overallHealth.overallStatus });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     const durationMs = Date.now() - startedAt;

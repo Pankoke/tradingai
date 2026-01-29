@@ -6,6 +6,8 @@ import enMessages from "@/src/messages/en.json";
 import { getSystemHealthReport } from "@/src/server/admin/systemHealth";
 import { listAuditRuns } from "@/src/server/repositories/auditRunRepository";
 import { getLatestFreshnessRuns } from "@/src/server/admin/freshnessAuditService";
+import { buildHealthSummary } from "@/src/server/health/buildHealthSummary";
+import type { HealthCheckResult } from "@/src/server/health/healthTypes";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -18,6 +20,14 @@ const STATUS_TONES: Record<Status, string> = {
   warning: "bg-amber-500/15 text-amber-200 border border-amber-400/40",
   critical: "bg-rose-500/15 text-rose-200 border border-rose-400/40",
 };
+
+function StatusBadge({ status }: { status: Status }) {
+  return (
+    <span className={clsx("rounded-full px-2 py-0.5 text-[0.65rem] font-semibold", STATUS_TONES[status])}>
+      {status.toUpperCase()}
+    </span>
+  );
+}
 
 const GATE_LABELS: Record<string, string> = {
   perception_swing: "Perception Swing (Daily)",
@@ -88,17 +98,36 @@ function formatAgo(value?: string | null, locale?: Locale): string {
   return date.toLocaleString(locale === "de" ? "de-DE" : "en-US");
 }
 
+function formatAgeSeconds(ageSeconds?: number): string {
+  if (ageSeconds == null) return "unknown";
+  const minutes = ageSeconds / 60;
+  if (minutes < 60) return `${Math.round(minutes)}m`;
+  const hours = minutes / 60;
+  if (hours < 48) return `${Math.round(hours)}h`;
+  return `${(hours / 24).toFixed(1)}d`;
+}
+
+function getDrilldown(key: string, locale: Locale): string | null {
+  const base = `/${locale}/admin`;
+  if (key === "marketdata") return `${base}/marketdata`;
+  if (key === "derived") return `${base}/marketdata`;
+  if (key === "events") return `${base}/events`;
+  if (key === "sentiment") return `${base}/ops/bias`;
+  return null;
+}
+
 export default async function AdminSystemHealthPage({ params }: Props) {
   const { locale: localeParam } = await params;
   const locale = localeParam as Locale;
   const messages = locale === "de" ? deMessages : enMessages;
-  const [health, auditPreview, freshnessRuns] = await Promise.all([
+  const [health, auditPreview, freshnessRuns, healthSummary] = await Promise.all([
     getSystemHealthReport(),
     listAuditRuns({ limit: 8 }),
     getLatestFreshnessRuns({
       actions: ["snapshot_build", "perception_intraday", "outcomes.evaluate"],
       limitPerAction: 1,
     }),
+    buildHealthSummary(),
   ]);
   const recentRuns = auditPreview.runs;
 
@@ -384,6 +413,74 @@ export default async function AdminSystemHealthPage({ params }: Props) {
           ) : null}
         </section>
       ) : null}
+
+      <section className="rounded-2xl border border-slate-800 bg-slate-950/40 p-5 shadow-lg shadow-black/40">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Health Summary</p>
+            <p className="text-sm text-slate-400">Aggregated status from /api/admin/health/summary</p>
+          </div>
+          <span className="text-xs text-slate-500">as of {new Date().toISOString()}</span>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          {healthSummary.map((item: HealthCheckResult) => (
+            <article key={item.key} className="rounded-xl border border-slate-800/60 bg-slate-900/50 p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-semibold text-white">{item.key}</div>
+                <StatusBadge status={item.status === "error" ? "critical" : item.status === "degraded" ? "warning" : "ok"} />
+              </div>
+              <div className="mt-1 text-xs text-slate-400">
+                <div>asOf: {item.asOf}</div>
+                <div>duration: {item.durationMs.toFixed(0)} ms</div>
+                {item.freshness?.latestTimestamp && (
+                  <div>
+                    latest: {item.freshness.latestTimestamp} ({formatAgeSeconds(item.freshness.ageSeconds)} ago)
+                  </div>
+                )}
+              </div>
+              {item.counts && (
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-200">
+                  {Object.entries(item.counts).map(([key, value]) => (
+                    <div key={key} className="rounded border border-slate-800/60 bg-slate-800/40 px-2 py-1">
+                      <div className="text-[10px] uppercase tracking-wide text-slate-400">{key}</div>
+                      <div>{value ?? "unknown"}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {item.warnings.length > 0 && (
+                <div className="mt-3">
+                  <div className="text-[11px] font-semibold text-amber-300">Warnings</div>
+                  <ul className="mt-1 space-y-1 text-xs text-amber-200">
+                    {item.warnings.map((w) => (
+                      <li key={w}>{w}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {item.errors.length > 0 && (
+                <div className="mt-3">
+                  <div className="text-[11px] font-semibold text-rose-300">Errors</div>
+                  <ul className="mt-1 space-y-1 text-xs text-rose-200">
+                    {item.errors.map((e) => (
+                      <li key={`${e.code}-${e.message}`}>
+                        {e.code}: {e.message}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {getDrilldown(item.key, locale) && (
+                <div className="mt-3 text-xs">
+                  <Link href={getDrilldown(item.key, locale)!} className="text-sky-300 hover:text-sky-200">
+                    View details
+                  </Link>
+                </div>
+              )}
+            </article>
+          ))}
+        </div>
+      </section>
 
       <section className="rounded-2xl border border-slate-800 bg-slate-950/40 p-5 shadow-lg shadow-black/40">
         <div className="flex items-center justify-between">

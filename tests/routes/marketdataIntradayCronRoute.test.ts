@@ -10,6 +10,8 @@ const mockAudit = vi.fn();
 const mockAllowed = vi.fn<[], MarketTimeframe[]>();
 const mockDerive4h = vi.fn();
 const mockGetContainer = vi.fn();
+const mockBuildHealth = vi.fn();
+const mockOverallHealth = vi.fn();
 
 vi.mock("@/src/server/repositories/assetRepository", () => ({
   getActiveAssets: (...args: unknown[]) => mockGetActiveAssets(...args),
@@ -46,6 +48,14 @@ vi.mock("@/src/server/marketData/requestThrottler", () => ({
 
 vi.mock("@/src/server/container", () => ({
   getContainer: () => mockGetContainer(),
+}));
+
+vi.mock("@/src/server/health/buildHealthSummary", () => ({
+  buildHealthSummary: () => mockBuildHealth(),
+}));
+
+vi.mock("@/src/server/health/overallHealth", () => ({
+  computeOverallHealth: () => mockOverallHealth(),
 }));
 
 describe("POST /api/cron/marketdata/intraday", () => {
@@ -98,6 +108,13 @@ describe("POST /api/cron/marketdata/intraday", () => {
         asOf: new Date(),
       },
     });
+    mockBuildHealth.mockResolvedValue([]);
+    mockOverallHealth.mockReturnValue({
+      overallStatus: "ok",
+      counts: { ok: 0, degraded: 0, error: 0 },
+      errorKeys: [],
+      degradedKeys: [],
+    });
 
     const { POST } = await import("@/src/app/api/cron/marketdata/intraday/route");
     const req = new NextRequest("http://localhost/api/cron/marketdata/intraday", {
@@ -108,6 +125,7 @@ describe("POST /api/cron/marketdata/intraday", () => {
     expect(res.status).toBe(200);
     const payload = await res.json();
     expect(payload.ok).toBe(true);
+    expect(payload.overallHealthStatus).toBe("ok");
     expect(mockSync).not.toHaveBeenCalled();
     expect(mockDerive4h).toHaveBeenCalledTimes(1);
     expect(mockAudit).toHaveBeenCalledWith(expect.objectContaining({ action: "marketdata.intraday_sync" }));
