@@ -1,7 +1,6 @@
 import { applyBiasScoring } from "@/src/lib/engine/modules/biasScoring";
 import { applySentimentScoring } from "@/src/lib/engine/modules/sentimentScoring";
 import { sortSetupsForToday } from "@/src/lib/engine/modules/ranking";
-import { createPerceptionDataSourceFromContainer } from "@/src/server/perception/perceptionDataSourceFactory";
 import { computeSetupBalanceScore, computeSetupConfidence, computeSetupScore } from "@/src/lib/engine/scoring";
 import { perceptionSnapshotSchema, type AccessLevel, type PerceptionSnapshot, type Setup } from "@/src/lib/engine/types";
 import type { BiasSnapshot, Event as BiasEvent } from "@/src/lib/engine/eventsBiasTypes";
@@ -15,8 +14,8 @@ import { buildEventModifier } from "@/src/lib/engine/modules/eventModifier";
 import { isMissingTableError } from "@/src/lib/utils";
 import { isEventModifierEnabled } from "@/src/lib/config/eventModifier";
 import { logger } from "@/src/lib/logger";
-import { getEventsInRange } from "@/src/server/repositories/eventRepository";
 import { deriveSetupProfileFromTimeframe, type SetupProfile } from "@/src/lib/config/setupProfile";
+import type { PerceptionDataSource } from "@/src/lib/engine/perceptionDataSource";
 
 const ENGINE_VERSION = "0.1.0";
 
@@ -236,13 +235,13 @@ export async function buildPerceptionSnapshot(options?: {
   allowSync?: boolean;
   profiles?: SetupProfile[];
   assetFilter?: string[];
+  dataSource?: PerceptionDataSource;
 }): Promise<PerceptionSnapshot> {
   const asOf = options?.asOf ?? new Date();
-  const dataSource = createPerceptionDataSourceFromContainer({
-    allowSync: options?.allowSync ?? false,
-    profiles: options?.profiles,
-    assetFilter: options?.assetFilter,
-  });
+  const dataSource = options?.dataSource;
+  if (!dataSource) {
+    throw new Error("PerceptionDataSource missing (pass via server factory)");
+  }
   const setups = await dataSource.getSetupsForToday({ asOf });
 
   const biasSnapshot: BiasSnapshot = await dataSource.getBiasSnapshotForAssets({

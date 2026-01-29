@@ -1,4 +1,4 @@
-import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
+import { buildPerceptionSnapshotWithContainer } from "@/src/server/perception/perceptionEngineFactory";
 import { computeSetupConfidence, computeSetupScore } from "@/src/lib/engine/scoring";
 import type { PerceptionSnapshot } from "@/src/lib/engine/types";
 import type { Setup } from "@/src/lib/engine/types";
@@ -125,7 +125,7 @@ export async function buildAndStorePerceptionSnapshot(
   const mode: PerceptionDataMode = params.mode ?? getPerceptionDataMode();
 
   const start = Date.now();
-  const engineResult: PerceptionSnapshotEngineResult = await buildPerceptionSnapshot({
+  const engineResult: PerceptionSnapshotEngineResult = await buildPerceptionSnapshotWithContainer({
     asOf: snapshotTime,
     allowSync: params.allowSync,
     profiles: params.profiles,

@@ -98,6 +98,11 @@ Slice 2.1 (2026-01-29):
 - asOf wird an DataSource-Boundary geführt (deterministisch)
 - Container-Fabrik verfügbar für Live-Betrieb, Mock bleibt erhalten
 
+Slice 2.2 (2026-01-29):
+- perceptionEngine serverfrei (keine direkten server-imports)
+- Snapshot-only Contract: Engine orchestriert, DataSource liefert Daten via Ports/Factory
+- asOf als first-class Parameter bis in Engine/DataSource durchgereicht
+
 ================================================================
 PHASE 3 – MARKET DATA V2
 

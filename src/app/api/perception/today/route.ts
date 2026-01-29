@@ -1,5 +1,5 @@
 import type { PerceptionSnapshotWithItems } from "@/src/server/repositories/perceptionSnapshotRepository";
-import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
+import { buildPerceptionSnapshotWithContainer } from "@/src/server/perception/perceptionEngineFactory";
 import { isPerceptionMockMode } from "@/src/lib/config/perceptionDataMode";
 import { loadLatestSnapshotForProfile } from "@/src/features/perception/cache/snapshotStore";
 import { logger } from "@/src/lib/logger";
@@ -70,7 +70,7 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 async function buildEngineSnapshotResponse(mode: "mock" | "fallback"): Promise<PerceptionSnapshotWithItems> {
-  const snapshot = await buildPerceptionSnapshot({ allowSync: false });
+  const snapshot = await buildPerceptionSnapshotWithContainer({ allowSync: false });
   const fallbackSnapshotTime = new Date();
   const isoCreatedAt = fallbackSnapshotTime.toISOString();
   const snapshotId = `${mode}-${Date.now()}`;

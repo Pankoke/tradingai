@@ -1,4 +1,4 @@
-import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
+import { buildPerceptionSnapshotWithContainer } from "@/src/server/perception/perceptionEngineFactory";
 import type { Setup } from "@/src/lib/engine/types";
 import { clamp } from "@/src/lib/math";
 
@@ -160,7 +160,7 @@ function scoreSetup(setup: HomepageSetup): number {
 }
 
 export async function getHomepageSetups(): Promise<HomepageSetups> {
-  const snapshot = await buildPerceptionSnapshot({ allowSync: false });
+  const snapshot = await buildPerceptionSnapshotWithContainer({ allowSync: false });
   const timestamp = snapshot.generatedAt;
 
   const candidates: HomepageSetup[] = snapshot.setups.map((s) => mapSetup(s, timestamp));
