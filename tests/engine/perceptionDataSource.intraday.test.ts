@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createPerceptionDataSource } from "@/src/lib/engine/perceptionDataSource";
-import { getLatestCandleForAsset } from "@/src/server/repositories/candleRepository";
+import { createPerceptionDataSource, type PerceptionDataSourceDeps } from "@/src/lib/engine/perceptionDataSource";
 import { syncDailyCandlesForAsset } from "@/src/features/marketData/syncDailyCandles";
+import type { CandleRow, CandleTimeframe } from "@/src/domain/market-data/types";
+import type { SentimentSnapshot } from "@/src/domain/sentiment/types";
 
 const mockActiveAssets = [
   {
@@ -11,18 +12,6 @@ const mockActiveAssets = [
     isActive: true,
   },
 ] as const;
-
-vi.mock("@/src/server/repositories/assetRepository", () => ({
-  getActiveAssets: vi.fn(async () => mockActiveAssets),
-}));
-
-vi.mock("@/src/server/repositories/candleRepository", () => ({
-  getLatestCandleForAsset: vi.fn(async ({ timeframe }: { timeframe: string }) => {
-    if (timeframe === "1W") return { close: "150" };
-    if (timeframe === "1H") return { close: "101" };
-    return { close: "100" };
-  }),
-}));
 
 vi.mock("@/src/features/marketData/syncDailyCandles", () => ({
   syncDailyCandlesForAsset: vi.fn(async () => {}),
@@ -93,6 +82,81 @@ vi.mock("@/src/lib/engine/sentimentMetrics", () => ({
   })),
 }));
 
+const asOf = new Date("2025-01-01T00:00:00Z");
+
+const makeCandle = (timeframe: CandleTimeframe, close: number, timestamp: string): CandleRow => ({
+  id: `${timeframe}-${timestamp}`,
+  assetId: "asset-1",
+  timeframe,
+  timestamp: new Date(timestamp),
+  open: close,
+  high: close + 1,
+  low: close - 1,
+  close,
+  volume: 1000,
+  source: "mock",
+});
+
+const candleStore: Record<CandleTimeframe, CandleRow[]> = {
+  "1D": [makeCandle("1D", 100, "2024-12-31T00:00:00Z")],
+  "1W": [makeCandle("1W", 150, "2024-12-29T00:00:00Z")],
+  "4H": [makeCandle("4H", 102, "2024-12-31T20:00:00Z")],
+  "1H": [makeCandle("1H", 101, "2024-12-31T23:00:00Z")],
+  "15m": [makeCandle("15m", 101, "2024-12-31T23:45:00Z")],
+};
+
+function buildDeps(overrides: Partial<PerceptionDataSourceDeps> = {}): PerceptionDataSourceDeps {
+  const deps: PerceptionDataSourceDeps = {
+    assets: { getActiveAssets: vi.fn(async () => mockActiveAssets as unknown as typeof mockActiveAssets) },
+    events: {
+      findRelevant: vi.fn(async () => []),
+      upsertMany: vi.fn(async () => ({ inserted: 0, updated: 0 })),
+    },
+    candles: {
+      upsertMany: vi.fn(async () => ({ inserted: 0, updated: 0 })),
+      findLatestByAsset: vi.fn(async (_assetId: string, timeframe: CandleTimeframe) => candleStore[timeframe] ?? []),
+      findRangeByAsset: vi.fn(async (_assetId: string, timeframe: CandleTimeframe) => candleStore[timeframe] ?? []),
+    },
+    sentiment: {
+      fetchSentiment: vi.fn(async ({ assetId }: { assetId: string }): Promise<SentimentSnapshot> => ({
+        assetId,
+        asOf,
+        score: 55,
+        label: "neutral",
+        confidence: 60,
+      })),
+    },
+    biasProvider: {
+      getBiasSnapshot: vi.fn(async () => ({
+        assetId: "asset-1",
+        date: asOf,
+        timeframe: "1D",
+        biasScore: 10,
+        confidence: 60,
+      })),
+    },
+    timeframeConfig: {
+      TIMEFRAME_SYNC_WINDOWS: {
+        "1D": 180,
+        "1W": 730,
+        "4H": 90,
+        "1H": 30,
+        "15m": 7,
+      },
+      getTimeframesForAsset: vi.fn(() => ["1D", "1W", "4H", "1H"]),
+      getProfileTimeframes: vi.fn((profile: string) => {
+        if (profile === "INTRADAY") return ["1H", "4H"];
+        if (profile === "POSITION") return ["1W"];
+        return ["1D", "1W"];
+      }),
+    },
+    resolveProviderSymbol: () => null,
+    allowSync: true,
+  };
+
+  return { ...deps, ...overrides };
+}
+
 describe("LivePerceptionDataSource intraday generation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -100,8 +164,8 @@ describe("LivePerceptionDataSource intraday generation", () => {
   });
 
   it("creates both SWING and INTRADAY setups when intraday data is available", async () => {
-    const dataSource = createPerceptionDataSource();
-    const setups = await dataSource.getSetupsForToday({ asOf: new Date("2025-01-01T00:00:00Z") });
+    const dataSource = createPerceptionDataSource(buildDeps());
+    const setups = await dataSource.getSetupsForToday({ asOf });
     const profiles = setups.map((s) => s.profile);
 
     expect(profiles).toContain("SWING");
@@ -121,10 +185,9 @@ describe("LivePerceptionDataSource intraday generation", () => {
   });
 
   it("does not attempt candle sync when allowSync is false", async () => {
-    vi.mocked(getLatestCandleForAsset).mockResolvedValue(null as unknown as { close: string });
-
-    const dataSource = createPerceptionDataSource({ allowSync: false });
-    await dataSource.getSetupsForToday({ asOf: new Date("2025-01-01T00:00:00Z") });
+    const deps = buildDeps({ allowSync: false });
+    const dataSource = createPerceptionDataSource(deps);
+    await dataSource.getSetupsForToday({ asOf });
 
     expect(syncDailyCandlesForAsset).not.toHaveBeenCalled();
   });

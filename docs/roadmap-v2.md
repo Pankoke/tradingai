@@ -103,6 +103,17 @@ Slice 2.2 (2026-01-29):
 - Snapshot-only Contract: Engine orchestriert, DataSource liefert Daten via Ports/Factory
 - asOf als first-class Parameter bis in Engine/DataSource durchgereicht
 
+Slice 2.3a (2026-01-29):
+- Event-Module serverfrei (eventRingV2 entkoppelt, Ports/Inputs statt DB)
+- Event-Windows deterministisch über asOf/Window-Params
+- Tests für Event-Flow mit Ports-basierten Inputs hinzugefügt
+
+Slice 2.3b (2026-01-29):
+- Market/Candle Pfad serverfrei (marketMetrics/orderflowMetrics arbeiten auf injizierten Candles)
+- asOf end-to-end im Market Snapshot, Candle-Ranges bounded (from/to)
+- Pure-Test für marketMetrics mit fixem asOf hinzugefügt
+- orderflowMetrics serverfrei & deterministisch (Ports-Eingaben, bounded windows), Pure-Test ergänzt
+
 ================================================================
 PHASE 3 – MARKET DATA V2
 

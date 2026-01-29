@@ -4,14 +4,71 @@ import { getTimeframesForAsset } from "@/src/server/marketData/timeframeConfig";
 import {
   buildOrderflowMetrics,
   ORDERFLOW_TIMEFRAMES,
+  type MarketTimeframe,
 } from "@/src/lib/engine/orderflowMetrics";
-import type { MarketTimeframe } from "@/src/server/marketData/MarketDataProvider";
 import { applyOrderflowConfidenceAdjustment } from "@/src/lib/engine/orderflowAdjustments";
 import type { ConfidenceAdjustmentResult } from "@/src/lib/engine/sentimentAdjustments";
 import { buildMarketMetrics } from "@/src/lib/engine/marketMetrics";
-import { getRecentCandlesForAsset } from "@/src/server/repositories/candleRepository";
+import { getCandlesForAsset, getRecentCandlesForAsset } from "@/src/server/repositories/candleRepository";
 import { DbBiasProvider } from "@/src/server/providers/biasProvider";
 import type { Timeframe } from "@/src/server/providers/marketDataProvider";
+
+type CandleLike = {
+  timestamp: Date;
+  open: number | string;
+  high: number | string;
+  low: number | string;
+  close: number | string;
+  volume?: number | string | null;
+};
+
+const CANDLE_LOOKBACK_COUNT: Record<MarketTimeframe, number> = {
+  "1D": 120,
+  "1W": 120,
+  "4H": 90,
+  "1H": 72,
+  "15m": 60,
+};
+
+function timeframeToMs(timeframe: MarketTimeframe): number {
+  switch (timeframe) {
+    case "1W":
+      return 7 * 24 * 60 * 60 * 1000;
+    case "1D":
+      return 24 * 60 * 60 * 1000;
+    case "4H":
+      return 4 * 60 * 60 * 1000;
+    case "1H":
+      return 60 * 60 * 1000;
+    case "15m":
+    default:
+      return 15 * 60 * 1000;
+  }
+}
+
+function normalizeTimeframe(tf: string): MarketTimeframe | null {
+  const upper = tf.toUpperCase();
+  if (upper === "1D" || upper === "1H" || upper === "4H" || upper === "1W") return upper as MarketTimeframe;
+  if (upper === "15M") return "15m";
+  return null;
+}
+
+async function loadCandlesByTimeframe(params: {
+  assetId: string;
+  timeframes: MarketTimeframe[];
+  asOf: Date;
+}): Promise<Record<MarketTimeframe, CandleLike[]>> {
+  const result: Partial<Record<MarketTimeframe, CandleLike[]>> = {};
+  await Promise.all(
+    params.timeframes.map(async (tf) => {
+      const durationMs = timeframeToMs(tf) * (CANDLE_LOOKBACK_COUNT[tf] ?? 60);
+      const from = new Date(params.asOf.getTime() - durationMs);
+      const rows = await getCandlesForAsset({ assetId: params.assetId, timeframe: tf, from, to: params.asOf });
+      result[tf] = rows;
+    }),
+  );
+  return result as Record<MarketTimeframe, CandleLike[]>;
+}
 
 async function resolveReferencePrice(assetId: string): Promise<number> {
   const [latest] = await getRecentCandlesForAsset({
@@ -56,16 +113,19 @@ export async function GET(request: NextRequest) {
   }
 
   const configured = getTimeframesForAsset(asset);
-  const supported = configured.filter((tf): tf is MarketTimeframe =>
-    ORDERFLOW_TIMEFRAMES.includes(tf as MarketTimeframe),
-  );
+  const supported = configured
+    .map(normalizeTimeframe)
+    .filter((tf): tf is MarketTimeframe => Boolean(tf) && ORDERFLOW_TIMEFRAMES.includes(tf as MarketTimeframe));
   const timeframes = supported.length > 0 ? supported : ORDERFLOW_TIMEFRAMES;
+  const asOf = new Date();
+  const candlesByTimeframe = await loadCandlesByTimeframe({ assetId: asset.id, timeframes, asOf });
 
   const referencePrice = await resolveReferencePrice(asset.id);
   const marketMetrics = await buildMarketMetrics({
-    asset,
     referencePrice,
-    timeframes: getTimeframesForAsset(asset),
+    timeframes,
+    candlesByTimeframe,
+    now: asOf,
   });
 
   const biasProvider = new DbBiasProvider();
@@ -77,10 +137,11 @@ export async function GET(request: NextRequest) {
   const normalizedBias = normalizeBiasScore(biasSnapshot?.biasScore);
 
   const metrics = await buildOrderflowMetrics({
-    asset,
+    candlesByTimeframe,
     timeframes,
     trendScore: marketMetrics.trendScore,
     biasScore: normalizedBias ?? null,
+    assetClass: asset.assetClass ?? null,
   });
 
   const baseConfidence = 50;

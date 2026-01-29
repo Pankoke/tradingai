@@ -1,6 +1,4 @@
-import { getRecentCandlesForAsset, type Candle } from "@/src/server/repositories/candleRepository";
-import type { Asset } from "@/src/server/repositories/assetRepository";
-import type { MarketTimeframe } from "@/src/server/marketData/MarketDataProvider";
+import type { CandleTimeframe } from "@/src/domain/market-data/types";
 
 export type OrderflowMode = "buyers" | "sellers" | "balanced";
 
@@ -28,6 +26,16 @@ export interface OrderflowReasonDetail {
   category: OrderflowReasonCategory;
   text: string;
 }
+
+export type MarketTimeframe = CandleTimeframe;
+
+export type CandleLike = {
+  timestamp: Date;
+  close: number | string;
+  high?: number | string;
+  low?: number | string;
+  volume?: number | string | null;
+};
 
 const INTRADAY_PROFILE_TUNING = {
   default: {
@@ -75,13 +83,6 @@ export interface OrderflowMetrics {
 }
 
 export const ORDERFLOW_TIMEFRAMES: MarketTimeframe[] = ["4H", "1H", "15m"];
-const DEFAULT_LIMITS: Record<MarketTimeframe, number> = {
-  "4H": 90,
-  "1H": 96,
-  "15m": 120,
-  "1D": 120,
-  "1W": 120,
-};
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.max(min, Math.min(max, value));
@@ -198,8 +199,10 @@ interface NormalizedCandle {
   volume: number;
 }
 
-function normalizeCandles(candles: Candle[]): NormalizedCandle[] {
+function normalizeCandles(candles: CandleLike[]): NormalizedCandle[] {
   return candles
+    .slice()
+    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
     .map((candle) => ({
       timestamp: candle.timestamp,
       close: Number(candle.close),
@@ -253,16 +256,19 @@ function computeConsistency(clvSeries: number[]): number {
 }
 
 export async function buildOrderflowMetrics(params: {
-  asset: Asset;
+  candlesByTimeframe: Partial<Record<MarketTimeframe, CandleLike[]>>;
   timeframes?: MarketTimeframe[];
   trendScore?: number | null;
   biasScore?: number | null;
+  assetClass?: string | null;
+  now?: Date;
 }): Promise<OrderflowMetrics> {
-  const profileId = resolveOrderflowProfile(params.asset);
+  const profileId = resolveOrderflowProfile(params.assetClass);
 
   if (profileId !== "crypto") {
+    const dailyCandles = normalizeCandles(params.candlesByTimeframe["1D"] ?? []);
     return buildDailyOrderflowMetrics({
-      asset: params.asset,
+      candles: dailyCandles,
       profileId: profileId as NonCryptoProfileId,
       trendScore: params.trendScore,
       biasScore: params.biasScore,
@@ -281,18 +287,12 @@ export async function buildOrderflowMetrics(params: {
 
   const candleMap = new Map<MarketTimeframe, NormalizedCandle[]>();
 
-  await Promise.all(
-    uniqueTfs.map(async (timeframe) => {
-      const raw = await getRecentCandlesForAsset({
-        assetId: params.asset.id,
-        timeframe,
-        limit: DEFAULT_LIMITS[timeframe] ?? 60,
-      });
-      const normalized = normalizeCandles(raw);
-      candleMap.set(timeframe, normalized);
-      timeframeSamples[timeframe] = normalized.length;
-    }),
-  );
+  uniqueTfs.forEach((timeframe) => {
+    const raw = params.candlesByTimeframe[timeframe] ?? [];
+    const normalized = normalizeCandles(raw);
+    candleMap.set(timeframe, normalized);
+    timeframeSamples[timeframe] = normalized.length;
+  });
 
   const fifteen = candleMap.get("15m") ?? [];
   const oneHour = candleMap.get("1H") ?? [];
@@ -491,18 +491,13 @@ export async function buildOrderflowMetrics(params: {
 }
 
 async function buildDailyOrderflowMetrics(params: {
-  asset: Asset;
+  candles: NormalizedCandle[];
   profileId: NonCryptoProfileId;
   trendScore?: number | null;
   biasScore?: number | null;
 }): Promise<OrderflowMetrics> {
   const config = DAILY_PROFILE_CONFIG[params.profileId] ?? DAILY_PROFILE_CONFIG.default;
-  const raw = await getRecentCandlesForAsset({
-    assetId: params.asset.id,
-    timeframe: "1D",
-    limit: config.lookbackDays,
-  });
-  const normalized = normalizeCandles(raw);
+  const normalized = params.candles.slice(0, config.lookbackDays);
   const timeframeSamples: Record<MarketTimeframe, number> = {
     "1W": 0,
     "1D": normalized.length,
@@ -664,14 +659,14 @@ async function buildDailyOrderflowMetrics(params: {
   };
 }
 
-function resolveOrderflowProfile(asset: Asset): OrderflowProfileId {
+function resolveOrderflowProfile(assetClass?: string | null): OrderflowProfileId {
   const mapping: Record<string, OrderflowProfileId> = {
     crypto: "crypto",
     index: "index",
     fx: "fx",
     commodity: "commodity",
   };
-  return mapping[asset.assetClass ?? ""] ?? "default";
+  return mapping[assetClass ?? ""] ?? "default";
 }
 
 function computeAverageRange(series: NormalizedCandle[], length: number): number {

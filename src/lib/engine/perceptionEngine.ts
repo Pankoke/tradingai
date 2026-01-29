@@ -16,6 +16,7 @@ import { isEventModifierEnabled } from "@/src/lib/config/eventModifier";
 import { logger } from "@/src/lib/logger";
 import { deriveSetupProfileFromTimeframe, type SetupProfile } from "@/src/lib/config/setupProfile";
 import type { PerceptionDataSource } from "@/src/lib/engine/perceptionDataSource";
+import type { EventRow } from "@/src/domain/events/types";
 
 const ENGINE_VERSION = "0.1.0";
 
@@ -33,6 +34,19 @@ const QUALITY_NOTES = {
   noMarketData: "no_market_data",
   aggregate: "meta_aggregate",
 } as const;
+
+function mapBiasEventToEventRow(event: BiasEvent): EventRow {
+  return {
+    id: event.id,
+    title: event.title,
+    description: event.description ?? null,
+    category: event.category,
+    impact: event.severity === "high" ? 3 : event.severity === "medium" ? 2 : 1,
+    scheduledAt: new Date(event.startTime),
+    affectedAssets: event.symbols,
+    source: event.source,
+  };
+}
 
 const EVENT_MODIFIER_ENABLED = isEventModifierEnabled();
 
@@ -159,10 +173,15 @@ export async function resolveEventRingForSetup(params: {
   asOf: Date;
   dataMode: "live" | "mock";
   fallbackEvents?: BiasEvent[];
+  events?: EventRow[];
 }): Promise<EventRingResolution> {
   if (params.dataMode === "live") {
     try {
-      const result = await computeEventRingV2({ setup: params.setup, now: params.asOf });
+      const result = await computeEventRingV2({
+        setup: params.setup,
+        now: params.asOf,
+        events: params.events ?? [],
+      });
       return {
         eventScore: result.score,
         eventContext: buildSetupEventContext(result.context),
@@ -277,11 +296,22 @@ export async function buildPerceptionSnapshot(options?: {
       accessLevel: "free",
     };
 
+    let ringEvents: EventRow[] = [];
+    if (dataMode === "live") {
+      const eventWindow = resolveEventRingWindow(base, asOf);
+      const biasEvents = await dataSource.getEventsForWindow({
+        from: eventWindow.windowFrom,
+        to: eventWindow.windowTo,
+      });
+      ringEvents = biasEvents.map(mapBiasEventToEventRow);
+    }
+
     const eventResult = await resolveEventRingForSetup({
       setup: base,
       asOf,
       dataMode,
       fallbackEvents,
+      events: ringEvents,
     });
     const eventModifier = buildEventModifier({ context: eventResult.eventContext, now: asOf, setup: base });
     if (EVENT_MODIFIER_ENABLED && (process.env.EVENT_MODIFIER_DEBUG === "1" || process.env.NODE_ENV !== "production")) {

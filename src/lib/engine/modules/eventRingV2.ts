@@ -1,4 +1,4 @@
-import { getEventsInRange, type Event as DbEvent } from "@/src/server/repositories/eventRepository";
+import type { EventRow } from "@/src/domain/events/types";
 import type { RingTimeframe, Setup } from "@/src/lib/engine/types";
 
 export type EventRingWindow = {
@@ -8,7 +8,7 @@ export type EventRingWindow = {
 };
 
 type AnalyzeParams = {
-  events: DbEvent[];
+  events: EventRow[];
   now: Date;
   window: EventRingWindow;
 };
@@ -52,7 +52,7 @@ const IMPACT_SEVERITY: Record<number, "low" | "medium" | "high"> = {
   3: "high",
 };
 
-export function resolveEventRingWindow(setup: Pick<Setup, "timeframe" | "category">, now = new Date()): EventRingWindow {
+export function resolveEventRingWindow(setup: Pick<Setup, "timeframe" | "category">, now: Date): EventRingWindow {
   const kind = classifyWindowKind(setup);
   const nowMs = now.getTime();
 
@@ -93,14 +93,20 @@ function classifyWindowKind(setup: Pick<Setup, "timeframe" | "category">): RingT
   return "unknown";
 }
 
-export async function computeEventRingV2(params: { setup: Setup; now?: Date }): Promise<EventRingResult> {
-  const now = params.now ?? new Date();
-  const window = resolveEventRingWindow(params.setup, now);
-  const rows = await getEventsInRange({ from: window.windowFrom, to: window.windowTo });
+export async function computeEventRingV2(params: {
+  setup: Setup;
+  now: Date;
+  events: EventRow[];
+}): Promise<EventRingResult> {
+  const window = resolveEventRingWindow(params.setup, params.now);
+
+  const eventsInWindow = params.events.filter(
+    (event) => event.scheduledAt >= window.windowFrom && event.scheduledAt <= window.windowTo,
+  );
 
   const analysis = analyzeEventsForWindow({
-    events: rows,
-    now,
+    events: eventsInWindow,
+    now: params.now,
     window,
   });
 

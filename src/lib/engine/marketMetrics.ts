@@ -1,7 +1,4 @@
-import type { Asset } from "@/src/server/repositories/assetRepository";
-import type { MarketTimeframe } from "@/src/server/marketData/MarketDataProvider";
-import { getRecentCandlesForAsset } from "@/src/server/repositories/candleRepository";
-import type { Candle } from "@/src/server/repositories/candleRepository";
+import type { CandleTimeframe } from "@/src/domain/market-data/types";
 
 export type MarketMetrics = {
   trendScore: number;
@@ -14,19 +11,29 @@ export type MarketMetrics = {
   evaluatedAt: string;
 };
 
-const DEFAULT_LIMITS: Record<MarketTimeframe, number> = {
-  "1D": 120,
-  "1W": 120,
-  "4H": 90,
-  "1H": 72,
-  "15m": 60,
+export type MarketTimeframe = CandleTimeframe;
+
+export type CandleLike = {
+  timestamp: Date;
+  open: number | string;
+  high: number | string;
+  low: number | string;
+  close: number | string;
+  volume?: number | string | null;
+};
+
+type NormalizedCandle = {
+  timestamp: Date;
+  close: number;
+  high: number;
+  low: number;
 };
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function normalizeCandles(candles: Candle[]): { timestamp: Date; close: number; high: number; low: number }[] {
+function normalizeCandles(candles: CandleLike[]): NormalizedCandle[] {
   return candles
     .map((candle) => ({
       timestamp: candle.timestamp,
@@ -57,7 +64,7 @@ function computeMomentumScore(series: number[]): number {
 
 function computeVolatilityScore(values: number[]): number {
   if (values.length < 10) return 50;
-  const returns = [] as number[];
+  const returns: number[] = [];
   for (let i = 0; i < values.length - 1; i += 1) {
     const prev = values[i + 1];
     if (prev === 0) continue;
@@ -70,24 +77,20 @@ function computeVolatilityScore(values: number[]): number {
   return clamp(stddev * 1000, 10, 100);
 }
 
-function isFresh(timestamp: Date, toleranceMs: number): boolean {
-  const now = Date.now();
-  return now - timestamp.getTime() <= toleranceMs;
+function isFresh(timestamp: Date, toleranceMs: number, now: Date): boolean {
+  return now.getTime() - timestamp.getTime() <= toleranceMs;
 }
 
 export async function buildMarketMetrics(params: {
-  asset: Asset;
+  candlesByTimeframe: Partial<Record<MarketTimeframe, CandleLike[]>>;
   referencePrice: number;
   timeframes: MarketTimeframe[];
+  now: Date;
 }): Promise<MarketMetrics> {
-  const candlesByTimeframe = new Map<MarketTimeframe, { timestamp: Date; close: number; high: number; low: number }[]>();
+  const candlesByTimeframe = new Map<MarketTimeframe, NormalizedCandle[]>();
 
   for (const timeframe of params.timeframes) {
-    const raw = await getRecentCandlesForAsset({
-      assetId: params.asset.id,
-      timeframe,
-      limit: DEFAULT_LIMITS[timeframe] ?? 60,
-    });
+    const raw = params.candlesByTimeframe[timeframe] ?? [];
     candlesByTimeframe.set(timeframe, normalizeCandles(raw));
   }
 
@@ -122,24 +125,23 @@ export async function buildMarketMetrics(params: {
     return scores.reduce((sum, val) => sum + val, 0) / scores.length;
   })();
 
-  const volatilityScore = volatilitySeries.length
-    ? computeVolatilityScore(volatilitySeries)
-    : 50;
+  const volatilityScore = volatilitySeries.length ? computeVolatilityScore(volatilitySeries) : 50;
 
   const latestPriceSource = fifteenMin[0] ?? oneHour[0] ?? fourHour[0] ?? dailyCandles[0];
   const lastPrice = latestPriceSource?.close ?? null;
-  const priceDriftPct = params.referencePrice > 0 && lastPrice
-    ? ((lastPrice - params.referencePrice) / params.referencePrice) * 100
-    : 0;
+  const priceDriftPct =
+    params.referencePrice > 0 && lastPrice
+      ? ((lastPrice - params.referencePrice) / params.referencePrice) * 100
+      : 0;
 
   const reasons: string[] = [];
   if (!dailyCandles.length && !fourHour.length && !oneHour.length) {
     reasons.push("No market data for trend");
   }
-  if (dailyCandles.length && !isFresh(dailyCandles[0].timestamp, 2 * 24 * 60 * 60 * 1000)) {
+  if (dailyCandles.length && !isFresh(dailyCandles[0].timestamp, 2 * 24 * 60 * 60 * 1000, params.now)) {
     reasons.push("Daily candle outdated");
   }
-  if (oneHour.length && !isFresh(oneHour[0].timestamp, 90 * 60 * 1000)) {
+  if (oneHour.length && !isFresh(oneHour[0].timestamp, 90 * 60 * 1000, params.now)) {
     reasons.push("1H candle outdated");
   }
   if (Math.abs(priceDriftPct) > 5 && lastPrice) {
@@ -154,6 +156,6 @@ export async function buildMarketMetrics(params: {
     lastPrice,
     isStale: reasons.length > 0,
     reasons,
-    evaluatedAt: new Date().toISOString(),
+    evaluatedAt: params.now.toISOString(),
   };
 }

@@ -166,6 +166,31 @@ function resolveLevelCategory(definition?: SetupDefinition): SetupLevelCategory 
 
 const MARKETDATA_SYNC_WINDOW_DAYS = 30;
 const INTRADAY_STALE_MINUTES = 180;
+const CANDLE_LOOKBACK_COUNT: Record<MarketTimeframe, number> = {
+  "1D": 120,
+  "1W": 120,
+  "4H": 90,
+  "1H": 72,
+  "15m": 60,
+};
+const PRIMARY_CANDLE_LOOKBACK_COUNT = 3;
+
+function timeframeToMs(timeframe: MarketTimeframe): number {
+  switch (timeframe) {
+    case "1W":
+      return 7 * 24 * 60 * 60 * 1000;
+    case "1D":
+      return 24 * 60 * 60 * 1000;
+    case "4H":
+      return 4 * 60 * 60 * 1000;
+    case "1H":
+      return 60 * 60 * 1000;
+    case "15m":
+      return 15 * 60 * 1000;
+    default:
+      return 24 * 60 * 60 * 1000;
+  }
+}
 
 class MockPerceptionDataSource implements PerceptionDataSource {
   async getSetupsForToday(params: { asOf: Date }): Promise<Setup[]> {
@@ -396,16 +421,20 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     const normalizedBiasScore = this.normalizeBiasScore(biasSnapshot?.biasScore);
 
     const timeframes = this.deps.timeframeConfig.getProfileTimeframes(profile, asset);
+    const candlesByTimeframe = await this.loadCandlesForTimeframes(asset, timeframes, evaluationDate);
+
     const metrics = await buildMarketMetrics({
-      asset: asset as unknown as Parameters<typeof buildMarketMetrics>[0]["asset"],
+      candlesByTimeframe,
       referencePrice,
       timeframes,
+      now: evaluationDate,
     });
     const orderflow = await buildOrderflowMetrics({
-      asset: asset as unknown as Parameters<typeof buildOrderflowMetrics>[0]["asset"],
+      candlesByTimeframe,
       timeframes,
       trendScore: metrics.trendScore,
       biasScore: normalizedBiasScore,
+      assetClass: asset.assetClass ?? null,
     });
     const orderflowMode =
       LivePerceptionDataSource.ORDERFLOW_MODE_MAPPING[orderflow.mode];
@@ -534,7 +563,12 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     asset: AssetLike,
     timeframe: MarketTimeframe
   ) {
-    let candle = await this.deps.candles.findLatestByAsset(asset.id, timeframe, 1).then((rows) => rows[0] as CandleRow | undefined);
+    let candle = await this.getCandlesWindow({
+      assetId: asset.id,
+      timeframe,
+      asOf: new Date(),
+      lookback: PRIMARY_CANDLE_LOOKBACK_COUNT,
+    }).then((rows) => rows[0] as CandleRow | undefined);
     if (this.isCandleValid(candle)) {
       if (!(candle.timestamp instanceof Date)) {
         candle = { ...candle, timestamp: new Date(candle.timestamp ?? Date.now()) };
@@ -551,7 +585,12 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     }
 
     await this.syncCandlesForAsset(asset, timeframe);
-    candle = await this.deps.candles.findLatestByAsset(asset.id, timeframe, 1).then((rows) => rows[0] as CandleRow | undefined);
+    candle = await this.getCandlesWindow({
+      assetId: asset.id,
+      timeframe,
+      asOf: new Date(),
+      lookback: PRIMARY_CANDLE_LOOKBACK_COUNT,
+    }).then((rows) => rows[0] as CandleRow | undefined);
     if (!this.isCandleValid(candle)) {
       console.error(
         `[LivePerceptionDataSource] no candle available for ${asset.symbol} (${timeframe}) after fallback`,
@@ -700,6 +739,48 @@ class LivePerceptionDataSource implements PerceptionDataSource {
 
   private clampScore(value: number): number {
     return Math.max(0, Math.min(100, Math.round(value)));
+  }
+
+  private async loadCandlesForTimeframes(
+    asset: AssetLike,
+    timeframes: MarketTimeframe[],
+    asOf: Date,
+  ): Promise<Record<MarketTimeframe, CandleRow[]>> {
+    const result: Record<MarketTimeframe, CandleRow[]> = {} as Record<MarketTimeframe, CandleRow[]>;
+    const unique = Array.from(new Set(timeframes));
+
+    await Promise.all(
+      unique.map(async (tf) => {
+        const rows = await this.getCandlesWindow({
+          assetId: asset.id,
+          timeframe: tf,
+          asOf,
+          lookback: CANDLE_LOOKBACK_COUNT[tf] ?? 60,
+        });
+        result[tf] = rows;
+      }),
+    );
+
+    return result;
+  }
+
+  private async getCandlesWindow(params: {
+    assetId: string;
+    timeframe: MarketTimeframe;
+    asOf: Date;
+    lookback: number;
+  }): Promise<CandleRow[]> {
+    const durationMs = params.lookback * timeframeToMs(params.timeframe);
+    const from = new Date(params.asOf.getTime() - durationMs);
+    const rows = await this.deps.candles.findRangeByAsset(
+      params.assetId,
+      params.timeframe,
+      from,
+      params.asOf,
+    );
+    return rows
+      .slice()
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   }
 }
 
