@@ -9,6 +9,7 @@ const mockSync = vi.fn();
 const mockAudit = vi.fn();
 const mockAllowed = vi.fn<[], MarketTimeframe[]>();
 const mockDerive4h = vi.fn();
+const mockGetContainer = vi.fn();
 
 vi.mock("@/src/server/repositories/assetRepository", () => ({
   getActiveAssets: (...args: unknown[]) => mockGetActiveAssets(...args),
@@ -35,12 +36,16 @@ vi.mock("@/src/server/repositories/auditRunRepository", () => ({
   createAuditRun: (...args: unknown[]) => mockAudit(...args),
 }));
 
-vi.mock("@/src/server/marketData/aggregateIntraday", () => ({
-  derive4hFrom1hCandles: (...args: unknown[]) => mockDerive4h(...args),
+vi.mock("@/src/server/marketData/deriveTimeframes", () => ({
+  deriveCandlesForTimeframe: (...args: unknown[]) => mockDerive4h(...args),
 }));
 
 vi.mock("@/src/server/marketData/requestThrottler", () => ({
   consumeThrottlerStats: () => ({}),
+}));
+
+vi.mock("@/src/server/container", () => ({
+  getContainer: () => mockGetContainer(),
 }));
 
 describe("POST /api/cron/marketdata/intraday", () => {
@@ -51,6 +56,13 @@ describe("POST /api/cron/marketdata/intraday", () => {
     vi.resetModules();
     process.env.CRON_SECRET = "cron-secret";
     process.env.INTRADAY_ASSET_WHITELIST = "BTCUSDT,ETHUSDT";
+    mockGetContainer.mockReturnValue({
+      candleRepo: {} as never,
+      eventRepo: {} as never,
+      marketData: {} as never,
+      sentiment: {} as never,
+      snapshotStore: {} as never,
+    });
   });
 
   afterEach(() => {
@@ -70,7 +82,7 @@ describe("POST /api/cron/marketdata/intraday", () => {
       return { timestamp: new Date(now - 30 * 60 * 1000) }; // fresh -> skip
     });
     mockSync.mockResolvedValue(undefined);
-    mockDerive4h.mockResolvedValue({ inserted: 0, buckets: 0 });
+    mockDerive4h.mockResolvedValue({ derivedBuckets: 0, upserted: 0, updated: 0 });
 
     const { POST } = await import("@/src/app/api/cron/marketdata/intraday/route");
     const req = new NextRequest("http://localhost/api/cron/marketdata/intraday", {
@@ -92,7 +104,7 @@ describe("POST /api/cron/marketdata/intraday", () => {
     mockGetTimeframesForAsset.mockReturnValue(["4H", "1H", "15m"]);
     mockGetLatestCandleForAsset.mockResolvedValue({ timestamp: new Date(0) });
     mockSync.mockResolvedValue(undefined);
-    mockDerive4h.mockResolvedValue({ inserted: 0, buckets: 0 });
+    mockDerive4h.mockResolvedValue({ derivedBuckets: 0, upserted: 0, updated: 0 });
 
     const { POST } = await import("@/src/app/api/cron/marketdata/intraday/route");
     const req = new NextRequest("http://localhost/api/cron/marketdata/intraday", {

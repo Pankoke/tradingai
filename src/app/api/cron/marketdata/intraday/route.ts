@@ -8,7 +8,8 @@ import { syncDailyCandlesForAsset } from "@/src/features/marketData/syncDailyCan
 import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
 import type { MarketTimeframe } from "@/src/server/marketData/MarketDataProvider";
 import { logger } from "@/src/lib/logger";
-import { derive4hFrom1hCandles } from "@/src/server/marketData/aggregateIntraday";
+import { deriveCandlesForTimeframe } from "@/src/server/marketData/deriveTimeframes";
+import { getContainer } from "@/src/server/container";
 import { consumeThrottlerStats } from "@/src/server/marketData/requestThrottler";
 
 const cronLogger = logger.child({ route: "cron-marketdata-intraday-sync" });
@@ -141,18 +142,22 @@ export async function POST(request: NextRequest): Promise<Response> {
 
       // Derive 4H from 1H if 4H is part of requested timeframes
       if (supported.includes("4H")) {
+        const container = getContainer();
         const latest4h = await getLatestCandleForAsset({ assetId: asset.id, timeframe: "4H" });
         const deriveFrom = computeFrom(latest4h?.timestamp, "4H", now);
-        const { inserted, buckets } = await derive4hFrom1hCandles({
+        const { derivedBuckets, upserted } = await deriveCandlesForTimeframe({
           assetId: asset.id,
-          from: deriveFrom,
-          to: now,
+          sourceTimeframe: "1H",
+          targetTimeframe: "4H",
+          lookbackCount: Math.max(24, Math.ceil((now.getTime() - deriveFrom.getTime()) / (60 * 60 * 1000))),
+          asOf: now,
+          candleRepo: container.candleRepo,
           sourceLabel: "derived",
         });
-        if (inserted > 0) {
+        if (upserted > 0) {
           timeframesDerived += 1;
           log.derived.push("4H");
-          log.details["4H"] = { provider: "derived", fetched: buckets, persisted: inserted };
+          log.details["4H"] = { provider: "derived", fetched: derivedBuckets, persisted: upserted };
         } else {
           log.details["4H"] = { provider: "derived", fetched: 0, persisted: 0, reason: "no_data" };
         }

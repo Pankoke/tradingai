@@ -140,6 +140,11 @@ Slice 3.1 (2026-01-29):
 - Aggregation 1H→4H mit UTC-Buckets + deterministischer Auswahl implementiert
 - Pure Tests für Aggregation/Fenster-Selektion hinzugefügt; minimale Integration via DataSource-Window-Selection
 
+Slice 3.2 (2026-01-29):
+- Derived Candles materialisiert (1H → 4H) via Domain-Services + Repo-Upsert (source="derived")
+- Intraday Cron ruft derivation nach 1H Sync auf, idempotent über Upsert
+- Test für deriveTimeframes (UTC-Buckets, OHLCV korrekt) ergänzt
+
 ================================================================
 PHASE 4 – EVENTS V2
 
