@@ -110,10 +110,10 @@ function buildDeps(overrides: Partial<PerceptionDataSourceDeps> = {}): Perceptio
     assets: { getActiveAssets: vi.fn(async () => mockActiveAssets as unknown as typeof mockActiveAssets) },
     events: {
       findRelevant: vi.fn(async () => []),
-      upsertMany: vi.fn(async () => ({ inserted: 0, updated: 0 })),
+      upsertMany: vi.fn(async () => ({ inserted: 0, updated: 0, upserted: 0 })),
     },
     candles: {
-      upsertMany: vi.fn(async () => ({ inserted: 0, updated: 0 })),
+      upsertMany: vi.fn(async () => ({ inserted: 0, updated: 0, upserted: 0 })),
       findLatestByAsset: vi.fn(async (_assetId: string, timeframe: CandleTimeframe) => candleStore[timeframe] ?? []),
       findRangeByAsset: vi.fn(async (_assetId: string, timeframe: CandleTimeframe) => candleStore[timeframe] ?? []),
     },

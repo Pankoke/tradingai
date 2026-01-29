@@ -115,11 +115,13 @@ export async function deriveCandlesForTimeframe(params: DeriveParams): Promise<D
 
     try {
       const result = await candleRepo.upsertMany(aggregated);
+      const upserted = result.upserted ?? result.inserted ?? 0;
+      const updated = result.updated ?? 0;
       return {
         ok: true,
         derivedComputed: aggregated.length,
-        upserted: result.inserted,
-        updated: result.updated,
+        upserted,
+        updated,
         missingInputs,
         warnings,
         durationMs: Date.now() - startedAt,

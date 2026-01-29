@@ -1,11 +1,13 @@
 import type { CandleRepositoryPort } from "@/src/domain/market-data/ports";
 import type { CandleInsert, CandleRow, CandleTimeframe } from "@/src/domain/market-data/types";
+import { UNKNOWN_COUNTS_NOTE, type WriteResult } from "@/src/domain/shared/writeResult";
 import { getCandlesForAsset, getRecentCandlesForAsset, upsertCandles } from "@/src/server/repositories/candleRepository";
+import { unknownWriteResult } from "@/src/server/storage/writeResult";
 
 export class CandleRepositoryAdapter implements CandleRepositoryPort {
-  async upsertMany(candles: CandleInsert[]): Promise<{ inserted: number; updated: number }> {
+  async upsertMany(candles: CandleInsert[]): Promise<WriteResult> {
     if (!candles.length) {
-      return { inserted: 0, updated: 0 };
+      return { inserted: 0, updated: 0, upserted: 0 };
     }
 
     await upsertCandles(
@@ -19,7 +21,7 @@ export class CandleRepositoryAdapter implements CandleRepositoryPort {
       })),
     );
 
-    return { inserted: candles.length, updated: 0 };
+    return unknownWriteResult(UNKNOWN_COUNTS_NOTE);
   }
 
   async findLatestByAsset(assetId: string, timeframe: CandleTimeframe, limit: number): Promise<CandleRow[]> {

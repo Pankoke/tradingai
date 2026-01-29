@@ -175,14 +175,15 @@ export async function POST(request: NextRequest): Promise<Response> {
         });
         deriveResults.push(deriveResult);
         if (deriveResult.ok) {
-          if (deriveResult.upserted > 0) {
+          const upserted = deriveResult.upserted ?? 0;
+          if (upserted > 0) {
             timeframesDerived += 1;
             log.derived.push("4H");
           }
           log.details["4H"] = {
             provider: "derived",
             fetched: deriveResult.derivedComputed,
-            persisted: deriveResult.upserted,
+            persisted: upserted,
             derivedComputed: deriveResult.derivedComputed,
             missingInputs: deriveResult.missingInputs,
             warnings: deriveResult.warnings,

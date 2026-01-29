@@ -26,10 +26,10 @@ function buildDeps(): PerceptionDataSourceDeps {
     assets: { getActiveAssets: vi.fn(async () => assets) },
     events: {
       findRelevant: vi.fn(async () => []),
-      upsertMany: vi.fn(async () => ({ inserted: 0, updated: 0 })),
+      upsertMany: vi.fn(async () => ({ inserted: 0, updated: 0, upserted: 0 })),
     },
     candles: {
-      upsertMany: vi.fn(async () => ({ inserted: 0, updated: 0 })),
+      upsertMany: vi.fn(async () => ({ inserted: 0, updated: 0, upserted: 0 })),
       findLatestByAsset: vi.fn(async (assetId: string, timeframe: CandleTimeframe) => [
         makeCandle(assetId, timeframe),
       ]),

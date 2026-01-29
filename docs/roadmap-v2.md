@@ -160,6 +160,11 @@ Event-Domäne
 
 Relevance, Modifier, Ring als Services
 
+Slice 4.1 (2026-01-29):
+- Einheitlicher Health-Contract (Market/Derived/Events/Sentiment) + Admin Health Summary Endpoint
+- Write/Upsert Semantik vereinheitlicht (standardisiertes WriteResult, unknown counts markiert)
+- Tests für Health Builder & WriteResult Mapping
+
 ================================================================
 PHASE 5 – SENTIMENT V2
 

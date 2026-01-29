@@ -27,7 +27,7 @@ describe("deriveCandlesForTimeframe", () => {
     ];
 
     const mockRepo: CandleRepositoryPort = {
-      upsertMany: vi.fn(async () => ({ inserted: 1, updated: 0 })),
+      upsertMany: vi.fn(async () => ({ inserted: 1, updated: 0, upserted: 1 })),
       findRangeByAsset: vi.fn(async () => rows),
       findLatestByAsset: vi.fn(),
     };

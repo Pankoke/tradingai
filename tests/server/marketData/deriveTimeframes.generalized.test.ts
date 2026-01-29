@@ -23,7 +23,7 @@ describe("deriveCandlesForTimeframe generalized", () => {
     const asOf = new Date("2024-01-02T08:00:00Z");
     const mockRepo: CandleRepositoryPort = {
       findRangeByAsset: vi.fn(async () => [candle("2024-01-02T04:00:00Z"), candle("2024-01-02T05:00:00Z")]),
-      upsertMany: vi.fn(async () => ({ inserted: 1, updated: 0 })),
+      upsertMany: vi.fn(async () => ({ inserted: 1, updated: 0, upserted: 1 })),
       findLatestByAsset: vi.fn(),
     };
 

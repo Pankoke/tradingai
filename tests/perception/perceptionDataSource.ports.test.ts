@@ -7,11 +7,11 @@ import type { SentimentSnapshot } from "@/src/domain/sentiment/types";
 const stubDeps: PerceptionDataSourceDeps = {
   assets: { getActiveAssets: async () => [] },
   events: {
-    upsertMany: async (_events: EventInsert[]) => ({ inserted: 0, updated: 0 }),
+    upsertMany: async (_events: EventInsert[]) => ({ inserted: 0, updated: 0, upserted: 0 }),
     findRelevant: async () => [] as EventRow[],
   },
   candles: {
-    upsertMany: async (_candles: CandleInsert[]) => ({ inserted: 0, updated: 0 }),
+    upsertMany: async (_candles: CandleInsert[]) => ({ inserted: 0, updated: 0, upserted: 0 }),
     findLatestByAsset: async () => [] as CandleRow[],
     findRangeByAsset: async () => [] as CandleRow[],
   },
