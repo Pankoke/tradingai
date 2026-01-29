@@ -38,7 +38,7 @@ const eslintConfig = defineConfig([
     files: ["src/lib/engine/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [
-        "warn",
+        "error",
         {
           patterns: [
             {
@@ -48,7 +48,7 @@ const eslintConfig = defineConfig([
                 "../server/**",
                 "../../server/**",
               ],
-              message: "Engine should stay server-agnostic (Phase 1.5 warning: avoid imports from src/server).",
+              message: "Engine must stay server-agnostic (Architecture guardrail: Engine ≠ Server).",
             },
           ],
         },

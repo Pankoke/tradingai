@@ -16,7 +16,7 @@ const stubDataSource: PerceptionDataSource = {
       endTime: e.endTime,
     }));
   },
-  async getBiasSnapshotForAssets() {
+  async getBiasSnapshotForAssets(_params: { assets: { assetId?: string | null; symbol: string; timeframe?: string }[]; asOf: Date }) {
     return mockBiasSnapshot;
   },
 };

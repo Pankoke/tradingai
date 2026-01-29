@@ -21,8 +21,11 @@ export class SentimentProviderAdapter implements SentimentProviderPort {
 
     const provider = resolveSentimentProvider(asset);
     const raw = provider ? await provider.fetchSentiment({ asset }) : null;
+    const normalizedRaw = raw
+      ? { ...raw, timestamp: raw.timestamp ? new Date(raw.timestamp).toISOString() : undefined }
+      : null;
 
-    const metrics = buildSentimentMetrics({ asset, sentiment: raw });
+    const metrics = buildSentimentMetrics({ asset, sentiment: normalizedRaw });
     const confidence = metrics.flags?.includes("low_conviction") ? 0.25 : 0.75;
 
     return {

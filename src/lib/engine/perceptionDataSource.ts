@@ -28,14 +28,14 @@ import { createDefaultRings } from "@/src/lib/engine/rings";
 import { applyOrderflowConfidenceAdjustment } from "@/src/lib/engine/orderflowAdjustments";
 import { getSetupProfileConfig, type SetupProfile } from "@/src/lib/config/setupProfile";
 import { logger } from "@/src/lib/logger";
+import type { SentimentRawSnapshot } from "@/src/lib/engine/sentimentMetrics";
 
 export interface PerceptionDataSource {
   getSetupsForToday(params: { asOf: Date }): Promise<Setup[]>;
   getEventsForWindow(params: { from: Date; to: Date }): Promise<Event[]>;
   getBiasSnapshotForAssets(params: {
     assets: { assetId?: string | null; symbol: string; timeframe?: string }[];
-    asOf?: Date;
-    date?: Date;
+    asOf: Date;
   }): Promise<BiasSnapshot>;
 }
 
@@ -88,24 +88,6 @@ type AssetForSentiment = {
   isActive: boolean | null;
   createdAt: Date | null;
   updatedAt: Date | null;
-};
-
-type SentimentRawSnapshot = {
-  assetId: string;
-  symbol: string;
-  source: string;
-  timestamp: Date;
-  profileKey?: string;
-  baseScore?: number;
-  biasScore?: number;
-  trendScore?: number;
-  momentumScore?: number;
-  orderflowScore?: number;
-  eventScore?: number;
-  rrr?: number;
-  riskPercent?: number;
-  volatilityLabel?: string;
-  driftPct?: number;
 };
 
 type TimeframeConfigDeps = {
@@ -209,11 +191,10 @@ class MockPerceptionDataSource implements PerceptionDataSource {
     });
   }
 
-  async getBiasSnapshotForAssets(params: {
+  async getBiasSnapshotForAssets(_params: {
     assets: { assetId?: string | null; symbol: string; timeframe?: string }[];
-    date: Date;
+    asOf: Date;
   }): Promise<BiasSnapshot> {
-    void params;
     return mockBiasSnapshot;
   }
 }
@@ -293,10 +274,9 @@ class LivePerceptionDataSource implements PerceptionDataSource {
 
   async getBiasSnapshotForAssets(params: {
     assets: { assetId?: string | null; symbol: string; timeframe?: string }[];
-    asOf?: Date;
-    date?: Date;
+    asOf: Date;
   }): Promise<BiasSnapshot> {
-    const referenceDate = params.asOf ?? params.date ?? new Date();
+    const referenceDate = params.asOf;
     const uniqueAssets = new Map<
       string,
       { key: string; assetId: string; symbol: string; timeframe: string }
@@ -382,7 +362,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     const profileConfig = getSetupProfileConfig(profile);
     const levelCategory = resolveLevelCategory(template);
     const dataSourcePrimary = "unknown";
-    const candle = await this.ensureLatestCandle(asset, baseTimeframe);
+    const candle = await this.ensureLatestCandle(asset, baseTimeframe, evaluationDate);
     await this.ensureSupplementalTimeframes(asset, baseTimeframe);
     if (profile === "INTRADAY" && isIntradayCandleStale(candle ?? null, evaluationDate, INTRADAY_STALE_MINUTES)) {
       logger.warn("[LivePerceptionDataSource] skipping intraday setup: stale/missing candle", {
@@ -565,12 +545,13 @@ class LivePerceptionDataSource implements PerceptionDataSource {
 
   private async ensureLatestCandle(
     asset: AssetLike,
-    timeframe: MarketTimeframe
+    timeframe: MarketTimeframe,
+    asOf: Date,
   ) {
     let candle = await this.getCandlesWindow({
       assetId: asset.id,
       timeframe,
-      asOf: new Date(),
+      asOf,
       lookback: PRIMARY_CANDLE_LOOKBACK_COUNT,
     }).then((rows) => rows[0] as CandleRow | undefined);
     if (this.isCandleValid(candle)) {
@@ -592,7 +573,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     candle = await this.getCandlesWindow({
       assetId: asset.id,
       timeframe,
-      asOf: new Date(),
+      asOf,
       lookback: PRIMARY_CANDLE_LOOKBACK_COUNT,
     }).then((rows) => rows[0] as CandleRow | undefined);
     if (!this.isCandleValid(candle)) {
@@ -704,10 +685,14 @@ class LivePerceptionDataSource implements PerceptionDataSource {
 
   private normalizeSentimentRaw(raw?: SentimentRawSnapshot | null) {
     if (!raw) return undefined;
+    const timestamp =
+      typeof raw.timestamp === "string"
+        ? raw.timestamp
+        : undefined;
     return {
       source: raw.source,
       profileKey: raw.profileKey ?? undefined,
-      timestamp: raw.timestamp?.toISOString(),
+      timestamp,
       baseScore: raw.baseScore ?? undefined,
       biasScore: raw.biasScore,
       trendScore: raw.trendScore,

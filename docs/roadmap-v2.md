@@ -119,6 +119,11 @@ Slice 2.3c (2026-01-29):
 - asOf deterministisch durchgereicht, now→asOf im Bias-Pfad harmonisiert
 - Pure-Test für Bias-Scoring hinzugefügt
 
+Slice 2.4 (2026-01-29):
+- Engine-Guardrail auf ERROR hochgestuft (src/lib/engine/** darf nicht src/server/** importieren)
+- Verbleibende server-Imports in Engine entfernt; sentiment/bias Pfade serverfrei
+- asOf Defaulting nur noch in äußeren Boundaries (Factories/Routes), nicht in Engine/DataSource
+
 ================================================================
 PHASE 3 – MARKET DATA V2
 

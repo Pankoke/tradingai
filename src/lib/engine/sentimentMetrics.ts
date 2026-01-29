@@ -1,12 +1,33 @@
-﻿import type { Asset } from "@/src/server/repositories/assetRepository";
-import type { SentimentRawSnapshot } from "@/src/server/sentiment/SentimentProvider";
-import type {
+﻿import type {
   SentimentDriverCategory,
   SentimentDriverSummary,
   SentimentFlag,
   SentimentLabel,
 } from "@/src/lib/engine/types";
 import { isEventModifierEnabled } from "@/src/lib/config/eventModifier";
+
+type SentimentAsset = {
+  assetClass?: string | null;
+};
+
+export type SentimentRawSnapshot = {
+  source?: string;
+  profileKey?: string;
+  timestamp?: string;
+  baseScore?: number;
+  biasScore?: number;
+  trendScore?: number;
+  momentumScore?: number;
+  orderflowScore?: number;
+  eventScore?: number;
+  rrr?: number;
+  riskPercent?: number;
+  volatilityLabel?: string;
+  driftPct?: number;
+  reasons?: string[];
+  flags?: string[];
+  contributions?: unknown;
+};
 
 export type SentimentContributionId =
   | "bias"
@@ -100,7 +121,7 @@ export type SentimentProfile = {
 };
 
 type BuildParams = {
-  asset: Asset;
+  asset: SentimentAsset;
   sentiment?: SentimentRawSnapshot | null;
 };
 
@@ -250,7 +271,7 @@ function normalizeScore(value?: number | null): number | undefined {
   return clampScore(value);
 }
 
-function getProfileForAsset(asset: Asset): SentimentProfile {
+function getProfileForAsset(asset: SentimentAsset): SentimentProfile {
   const key = asset.assetClass?.toLowerCase() as SentimentProfileKey | undefined;
   if (key && SENTIMENT_PROFILES[key]) {
     return SENTIMENT_PROFILES[key];
@@ -258,7 +279,7 @@ function getProfileForAsset(asset: Asset): SentimentProfile {
   return SENTIMENT_PROFILES.default;
 }
 
-export function getSentimentProfileForAsset(asset: Asset): SentimentProfile {
+export function getSentimentProfileForAsset(asset: SentimentAsset): SentimentProfile {
   return getProfileForAsset(asset);
 }
 
@@ -472,3 +493,4 @@ function mapContributionIdToDriver(id: SentimentContributionId): SentimentDriver
   if (id === "riskPercent") return "risk";
   return id;
 }
+

@@ -127,7 +127,11 @@ export async function GET(request: Request) {
     );
   }
 
-  const sentimentMetrics = buildSentimentMetrics({ asset, sentiment: raw });
+  const normalizedRaw = {
+    ...raw,
+    timestamp: raw?.timestamp ? new Date(raw.timestamp).toISOString() : undefined,
+  };
+  const sentimentMetrics = buildSentimentMetrics({ asset, sentiment: normalizedRaw });
   const confidenceAdjustment = applySentimentConfidenceAdjustment({
     base: baseConfidence,
     sentiment: sentimentMetrics,

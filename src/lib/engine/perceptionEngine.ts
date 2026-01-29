@@ -249,15 +249,15 @@ function createRingMetaOverrides(params: {
   return overrides;
 }
 
-export async function buildPerceptionSnapshot(options?: {
-  asOf?: Date;
+export async function buildPerceptionSnapshot(options: {
+  asOf: Date;
   allowSync?: boolean;
   profiles?: SetupProfile[];
   assetFilter?: string[];
   dataSource?: PerceptionDataSource;
 }): Promise<PerceptionSnapshot> {
-  const asOf = options?.asOf ?? new Date();
-  const dataSource = options?.dataSource;
+  const asOf = options.asOf;
+  const dataSource = options.dataSource;
   if (!dataSource) {
     throw new Error("PerceptionDataSource missing (pass via server factory)");
   }

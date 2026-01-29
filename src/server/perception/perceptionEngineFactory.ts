@@ -9,6 +9,7 @@ export async function buildPerceptionSnapshotWithContainer(options?: {
   profiles?: SetupProfile[];
   assetFilter?: string[];
 }): Promise<PerceptionSnapshot> {
+  const asOf = options?.asOf ?? new Date();
   const dataSource = createPerceptionDataSourceFromContainer({
     allowSync: options?.allowSync ?? false,
     profiles: options?.profiles,
@@ -17,6 +18,7 @@ export async function buildPerceptionSnapshotWithContainer(options?: {
 
   return buildPerceptionSnapshot({
     ...options,
+    asOf,
     dataSource,
   });
 }
