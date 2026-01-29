@@ -5,15 +5,12 @@ import { mockEvents } from "@/src/lib/mockEvents";
 import { mockBiasSnapshot } from "@/src/lib/mockBias";
 import { setupDefinitions, type SetupDefinition } from "@/src/lib/engine/setupDefinitions";
 import { computeLevelsForSetup, type SetupLevelCategory } from "@/src/lib/engine/levels";
-import { getActiveAssets, type Asset } from "@/src/server/repositories/assetRepository";
-import { getEventsInRange } from "@/src/server/repositories/eventRepository";
-import { DbBiasProvider, type BiasDomainModel } from "@/src/server/providers/biasProvider";
-import { getLatestCandleForAsset, type Candle } from "@/src/server/repositories/candleRepository";
-import type { Timeframe } from "@/src/server/providers/marketDataProvider";
-import type { MarketTimeframe } from "@/src/server/marketData/MarketDataProvider";
-import { getProfileTimeframes, getTimeframesForAsset, TIMEFRAME_SYNC_WINDOWS } from "@/src/server/marketData/timeframeConfig";
-import { resolveMarketDataProviders } from "@/src/server/marketData/providerResolver";
-import { syncDailyCandlesForAsset } from "@/src/features/marketData/syncDailyCandles";
+import type { CandleRow, CandleTimeframe } from "@/src/domain/market-data/types";
+import type { EventRepositoryPort } from "@/src/domain/events/ports";
+import type { EventRow } from "@/src/domain/events/types";
+import type { CandleRepositoryPort } from "@/src/domain/market-data/ports";
+import type { SentimentProviderPort } from "@/src/domain/sentiment/ports";
+import type { SentimentSnapshot } from "@/src/domain/sentiment/types";
 import { buildMarketMetrics } from "@/src/lib/engine/marketMetrics";
 import type { MarketMetrics } from "@/src/lib/engine/marketMetrics";
 import {
@@ -21,11 +18,6 @@ import {
   type OrderflowMode,
 } from "@/src/lib/engine/orderflowMetrics";
 import { getPerceptionDataMode } from "@/src/lib/config/perceptionDataMode";
-import { resolveSentimentProvider } from "@/src/server/sentiment/providerResolver";
-import type {
-  SentimentContext,
-  SentimentRawSnapshot,
-} from "@/src/server/sentiment/SentimentProvider";
 import { buildSentimentMetrics, type SentimentMetrics } from "@/src/lib/engine/sentimentMetrics";
 import {
   applySentimentConfidenceAdjustment,
@@ -36,7 +28,6 @@ import { createDefaultRings } from "@/src/lib/engine/rings";
 import { applyOrderflowConfidenceAdjustment } from "@/src/lib/engine/orderflowAdjustments";
 import { getSetupProfileConfig, type SetupProfile } from "@/src/lib/config/setupProfile";
 import { logger } from "@/src/lib/logger";
-import { resolveProviderSymbolForSource } from "@/src/server/marketData/providerDisplay";
 
 export interface PerceptionDataSource {
   getSetupsForToday(params: { asOf: Date }): Promise<Setup[]>;
@@ -47,6 +38,93 @@ export interface PerceptionDataSource {
   }): Promise<BiasSnapshot>;
 }
 
+type AssetLike = {
+  id: string;
+  symbol: string;
+  assetClass?: string | null;
+};
+
+type BiasDomainModel = {
+  assetId: string;
+  date: Date;
+  timeframe: string;
+  biasScore: number;
+  confidence: number;
+};
+
+type MarketTimeframe = CandleTimeframe;
+
+type BiasProvider = {
+  getBiasSnapshot(params: { assetId: string; date: Date; timeframe: string }): Promise<BiasDomainModel | null>;
+};
+
+type SentimentContext = {
+  biasScore?: number;
+  trendScore?: number;
+  momentumScore?: number;
+  orderflowScore?: number;
+  eventScore?: number;
+  rrr?: number;
+  riskPercent?: number;
+  volatilityLabel?: string;
+  driftPct?: number;
+};
+
+type SentimentAsset = {
+  id: string;
+  symbol: string;
+  assetClass?: string | null;
+};
+
+type AssetForSentiment = {
+  id: string;
+  symbol: string;
+  displaySymbol: string;
+  name: string;
+  assetClass: string;
+  baseCurrency: string | null;
+  quoteCurrency: string | null;
+  isActive: boolean | null;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+};
+
+type SentimentRawSnapshot = {
+  assetId: string;
+  symbol: string;
+  source: string;
+  timestamp: Date;
+  profileKey?: string;
+  baseScore?: number;
+  biasScore?: number;
+  trendScore?: number;
+  momentumScore?: number;
+  orderflowScore?: number;
+  eventScore?: number;
+  rrr?: number;
+  riskPercent?: number;
+  volatilityLabel?: string;
+  driftPct?: number;
+};
+
+type TimeframeConfigDeps = {
+  getProfileTimeframes(profile: SetupProfile, asset: AssetLike): MarketTimeframe[];
+  getTimeframesForAsset(asset: AssetLike): MarketTimeframe[];
+  TIMEFRAME_SYNC_WINDOWS: Record<MarketTimeframe, number>;
+};
+
+export type PerceptionDataSourceDeps = {
+  assets: { getActiveAssets(): Promise<AssetLike[]> };
+  events: EventRepositoryPort;
+  candles: CandleRepositoryPort;
+  sentiment: SentimentProviderPort;
+  biasProvider: BiasProvider;
+  timeframeConfig: TimeframeConfigDeps;
+  resolveProviderSymbol: (asset: AssetLike, source: string) => string | null | undefined;
+  syncCandles?: (params: { asset: AssetLike; timeframe: MarketTimeframe; from: Date; to: Date }) => Promise<void>;
+  allowSync?: boolean;
+};
+
 const EVENT_CATEGORIES = ["macro", "crypto", "onchain", "technical", "other"] as const;
 type EventCategory = (typeof EVENT_CATEGORIES)[number];
 
@@ -55,6 +133,20 @@ function mapCategory(value: string): EventCategory {
     return value as EventCategory;
   }
   return "other";
+}
+
+function mapEventRowToEvent(row: EventRow): Event {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description ?? "",
+    category: mapCategory(row.category),
+    severity: row.impact >= 3 ? "high" : row.impact === 2 ? "medium" : "low",
+    startTime: row.scheduledAt.toISOString(),
+    endTime: null,
+    symbols: Array.isArray(row.affectedAssets) ? row.affectedAssets.map(String) : [],
+    source: row.source,
+  };
 }
 
 const TEMPLATE_LEVEL_CATEGORY: Record<SetupDefinition["id"], SetupLevelCategory> = {
@@ -76,7 +168,8 @@ const MARKETDATA_SYNC_WINDOW_DAYS = 30;
 const INTRADAY_STALE_MINUTES = 180;
 
 class MockPerceptionDataSource implements PerceptionDataSource {
-  async getSetupsForToday(): Promise<Setup[]> {
+  async getSetupsForToday(params: { asOf: Date }): Promise<Setup[]> {
+    void params;
     return mockSetups;
   }
 
@@ -101,12 +194,10 @@ class MockPerceptionDataSource implements PerceptionDataSource {
 
 class LivePerceptionDataSource implements PerceptionDataSource {
   constructor(
-    private readonly allowSync: boolean,
+    private readonly deps: PerceptionDataSourceDeps,
     private readonly allowedProfiles: SetupProfile[],
     private readonly assetFilter?: string[],
   ) {}
-
-  private biasProvider = new DbBiasProvider();
 
   private static ORDERFLOW_MODE_MAPPING: Record<
     OrderflowMode,
@@ -117,9 +208,9 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     balanced: "balanced",
   };
 
-  async getSetupsForToday(): Promise<Setup[]> {
+  async getSetupsForToday(params: { asOf: Date }): Promise<Setup[]> {
     const assets = await this.getFilteredAssets();
-    const evaluationDate = new Date();
+    const evaluationDate = params.asOf;
     const setups: Setup[] = [];
     const profiles: SetupProfile[] = this.allowedProfiles.length
       ? this.allowedProfiles
@@ -134,7 +225,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
         for (const profile of profiles) {
           const config = getSetupProfileConfig(profile);
           const baseTimeframe = this.normalizeTimeframe(config.primaryTimeframe);
-          const supportedTimeframes = getProfileTimeframes(profile, asset);
+          const supportedTimeframes = this.deps.timeframeConfig.getProfileTimeframes(profile, asset);
           if (!supportedTimeframes.includes(baseTimeframe)) {
             continue;
           }
@@ -158,29 +249,20 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     return setups;
   }
 
-  private async getFilteredAssets(): Promise<Asset[]> {
-    const assets = await getActiveAssets();
+  private async getFilteredAssets(): Promise<AssetLike[]> {
+    const assets = await this.deps.assets.getActiveAssets();
     if (!this.assetFilter || !this.assetFilter.length) return assets;
     const set = new Set(this.assetFilter.map((v) => v.toUpperCase()));
     return assets.filter((asset) => set.has(asset.id.toUpperCase()) || set.has(asset.symbol.toUpperCase()));
   }
 
   async getEventsForWindow(params: { from: Date; to: Date }): Promise<Event[]> {
-    const rows = await getEventsInRange(params);
-    return rows.map((row) => ({
-      id: row.id,
-      title: row.title,
-      description: row.description ?? "",
-      category: mapCategory(row.category),
-      severity:
-        row.impact >= 3 ? "high" : row.impact === 2 ? "medium" : "low",
-      startTime: row.scheduledAt.toISOString(),
-      endTime: null,
-      symbols: Array.isArray(row.affectedAssets)
-        ? row.affectedAssets.map(String)
-        : [],
-      source: row.source,
-    }));
+    const rows = await this.deps.events.findRelevant({
+      assetId: "",
+      from: params.from,
+      to: params.to,
+    });
+    return rows.map(mapEventRowToEvent);
   }
 
   async getBiasSnapshotForAssets(params: {
@@ -203,10 +285,10 @@ class LivePerceptionDataSource implements PerceptionDataSource {
 
     const biasRows = await Promise.all(
       Array.from(uniqueAssets.values()).map(async (asset) => {
-        const result = await this.biasProvider.getBiasSnapshot({
+        const result = await this.deps.biasProvider.getBiasSnapshot({
           assetId: asset.assetId,
           date: params.date,
-          timeframe: asset.timeframe as Timeframe,
+          timeframe: asset.timeframe,
         });
 
         if (!result) return null;
@@ -259,7 +341,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
   }
 
   private async buildSetupForProfile(params: {
-    asset: Asset;
+    asset: AssetLike;
     template: SetupDefinition;
     direction: "Long" | "Short";
     normalizedDirection: "long" | "short";
@@ -270,11 +352,10 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     const { asset, template, direction, normalizedDirection, profile, baseTimeframe, evaluationDate } = params;
     const profileConfig = getSetupProfileConfig(profile);
     const levelCategory = resolveLevelCategory(template);
-    const marketProviders = resolveMarketDataProviders({ asset, timeframe: baseTimeframe });
-    const dataSourcePrimary = marketProviders.primary.provider;
+    const dataSourcePrimary = "unknown";
     const candle = await this.ensureLatestCandle(asset, baseTimeframe);
     await this.ensureSupplementalTimeframes(asset, baseTimeframe);
-    if (profile === "INTRADAY" && isIntradayCandleStale(candle, new Date(), INTRADAY_STALE_MINUTES)) {
+    if (profile === "INTRADAY" && isIntradayCandleStale(candle ?? null, evaluationDate, INTRADAY_STALE_MINUTES)) {
       logger.warn("[LivePerceptionDataSource] skipping intraday setup: stale/missing candle", {
         symbol: asset.symbol,
         timeframe: baseTimeframe,
@@ -307,21 +388,21 @@ class LivePerceptionDataSource implements PerceptionDataSource {
       bandScale: profileConfig.levelsDefaults?.bandScale,
     });
 
-    const biasSnapshot = await this.biasProvider.getBiasSnapshot({
+    const biasSnapshot = await this.deps.biasProvider.getBiasSnapshot({
       assetId: asset.id,
       date: evaluationDate,
-      timeframe: baseTimeframe as Timeframe,
+      timeframe: baseTimeframe,
     });
     const normalizedBiasScore = this.normalizeBiasScore(biasSnapshot?.biasScore);
 
-    const timeframes = getProfileTimeframes(profile, asset);
+    const timeframes = this.deps.timeframeConfig.getProfileTimeframes(profile, asset);
     const metrics = await buildMarketMetrics({
-      asset,
+      asset: asset as unknown as Parameters<typeof buildMarketMetrics>[0]["asset"],
       referencePrice,
       timeframes,
     });
     const orderflow = await buildOrderflowMetrics({
-      asset,
+      asset: asset as unknown as Parameters<typeof buildOrderflowMetrics>[0]["asset"],
       timeframes,
       trendScore: metrics.trendScore,
       biasScore: normalizedBiasScore,
@@ -346,7 +427,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
       volatilityLabel,
       driftPct: metrics.priceDriftPct,
     };
-    const sentiment = await this.buildSentimentMetricsForAsset(asset, sentimentContext);
+    const sentiment = await this.buildSentimentMetricsForAsset(asset, sentimentContext, evaluationDate);
 
     const enhancedRiskReward = {
       ...safeRiskReward,
@@ -366,7 +447,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
       typeof candle?.source === "string" && candle.source
         ? (candle.source as typeof dataSourcePrimary)
         : dataSourcePrimary;
-    const providerSymbolUsed = resolveProviderSymbolForSource(asset, dataSourceUsed);
+    const providerSymbolUsed = this.deps.resolveProviderSymbol(asset, dataSourceUsed) ?? undefined;
 
     const rings = {
       ...createDefaultRings(),
@@ -450,21 +531,18 @@ class LivePerceptionDataSource implements PerceptionDataSource {
   }
 
   private async ensureLatestCandle(
-    asset: Asset,
+    asset: AssetLike,
     timeframe: MarketTimeframe
   ) {
-    let candle = await getLatestCandleForAsset({
-      assetId: asset.id,
-      timeframe,
-    });
+    let candle = await this.deps.candles.findLatestByAsset(asset.id, timeframe, 1).then((rows) => rows[0] as CandleRow | undefined);
     if (this.isCandleValid(candle)) {
       if (!(candle.timestamp instanceof Date)) {
         candle = { ...candle, timestamp: new Date(candle.timestamp ?? Date.now()) };
       }
-      return candle as Candle;
+      return candle;
     }
 
-    if (!this.allowSync) {
+    if (!this.deps.allowSync) {
       logger.warn("[LivePerceptionDataSource] skipping candle sync in read-only mode", {
         symbol: asset.symbol,
         timeframe,
@@ -473,10 +551,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     }
 
     await this.syncCandlesForAsset(asset, timeframe);
-    candle = await getLatestCandleForAsset({
-      assetId: asset.id,
-      timeframe,
-    });
+    candle = await this.deps.candles.findLatestByAsset(asset.id, timeframe, 1).then((rows) => rows[0] as CandleRow | undefined);
     if (!this.isCandleValid(candle)) {
       console.error(
         `[LivePerceptionDataSource] no candle available for ${asset.symbol} (${timeframe}) after fallback`,
@@ -485,47 +560,78 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     return candle;
   }
 
-  private async ensureSupplementalTimeframes(asset: Asset, base: MarketTimeframe) {
-    if (!this.allowSync) {
+  private async ensureSupplementalTimeframes(asset: AssetLike, base: MarketTimeframe) {
+    if (!this.deps.allowSync) {
       return;
     }
-    const configured = getTimeframesForAsset(asset);
+    const configured = this.deps.timeframeConfig.getTimeframesForAsset(asset);
     const extras = configured.filter((tf) => tf !== base);
     await Promise.all(extras.map((tf) => this.syncCandlesForAsset(asset, tf)));
   }
 
   private async buildSentimentMetricsForAsset(
-    asset: Asset,
+    asset: AssetLike,
     context: SentimentContext,
+    asOf: Date,
   ): Promise<SentimentMetrics> {
-    const provider = resolveSentimentProvider(asset);
-    if (!provider) {
-      return buildSentimentMetrics({ asset, sentiment: null });
-    }
-
     try {
-      const snapshot = await provider.fetchSentiment({ asset, context });
-      return buildSentimentMetrics({ asset, sentiment: snapshot });
+      const snapshot: SentimentSnapshot = await this.deps.sentiment.fetchSentiment({
+        assetId: asset.id,
+        asOf,
+      });
+      const sentimentAsset: SentimentAsset = {
+        id: asset.id,
+        symbol: asset.symbol,
+        assetClass: asset.assetClass ?? null,
+      };
+      const sentimentAssetFull: AssetForSentiment = {
+        id: sentimentAsset.id,
+        symbol: sentimentAsset.symbol,
+        displaySymbol: sentimentAsset.symbol,
+        name: sentimentAsset.symbol,
+        assetClass: sentimentAsset.assetClass ?? "unknown",
+        baseCurrency: null,
+        quoteCurrency: null,
+        isActive: true,
+        createdAt: null,
+        updatedAt: null,
+      };
+      return buildSentimentMetrics({
+        asset: sentimentAssetFull,
+        sentiment: snapshot.raw as SentimentRawSnapshot | null,
+      });
     } catch (error) {
       console.warn(
         `[LivePerceptionDataSource] failed to fetch sentiment for ${asset.symbol}`,
         error,
       );
-      return buildSentimentMetrics({ asset, sentiment: null });
+      const sentimentAssetFull: AssetForSentiment = {
+        id: asset.id,
+        symbol: asset.symbol,
+        displaySymbol: asset.symbol,
+        name: asset.symbol,
+        assetClass: asset.assetClass ?? "unknown",
+        baseCurrency: null,
+        quoteCurrency: null,
+        isActive: true,
+        createdAt: null,
+        updatedAt: null,
+      };
+      return buildSentimentMetrics({ asset: sentimentAssetFull, sentiment: null });
     }
   }
 
-  private async syncCandlesForAsset(asset: Asset, timeframe: MarketTimeframe) {
-    if (!this.allowSync) {
+  private async syncCandlesForAsset(asset: AssetLike, timeframe: MarketTimeframe) {
+    if (!this.deps.allowSync || !this.deps.syncCandles) {
       return;
     }
     const to = new Date();
-    const windowDays = TIMEFRAME_SYNC_WINDOWS[timeframe] ?? MARKETDATA_SYNC_WINDOW_DAYS;
+    const windowDays = this.deps.timeframeConfig.TIMEFRAME_SYNC_WINDOWS[timeframe] ?? MARKETDATA_SYNC_WINDOW_DAYS;
     const from = new Date(to);
     from.setDate(to.getDate() - windowDays + 1);
 
     try {
-      await syncDailyCandlesForAsset({
+      await this.deps.syncCandles({
         asset,
         timeframe,
         from,
@@ -539,7 +645,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     }
   }
 
-  private isCandleValid(candle?: Candle | null): candle is Candle {
+  private isCandleValid(candle?: CandleRow | null): candle is CandleRow {
     if (!candle) {
       return false;
     }
@@ -557,7 +663,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     if (!raw) return undefined;
     return {
       source: raw.source,
-      profileKey: raw.profileKey,
+      profileKey: raw.profileKey ?? undefined,
       timestamp: raw.timestamp?.toISOString(),
       baseScore: raw.baseScore ?? undefined,
       biasScore: raw.biasScore,
@@ -597,17 +703,18 @@ class LivePerceptionDataSource implements PerceptionDataSource {
   }
 }
 
-export function createPerceptionDataSource(config?: {
-  allowSync?: boolean;
-  profiles?: SetupProfile[];
-  assetFilter?: string[];
-}): PerceptionDataSource {
+export function createPerceptionDataSource(
+  deps: PerceptionDataSourceDeps,
+  config?: {
+    profiles?: SetupProfile[];
+    assetFilter?: string[];
+  },
+): PerceptionDataSource {
   const mode = getPerceptionDataMode();
-  const allowSync = config?.allowSync ?? false;
   const profiles = config?.profiles ?? (["SWING", "INTRADAY", "POSITION"] satisfies SetupProfile[]);
 
   if (mode === "live") {
-    return new LivePerceptionDataSource(allowSync, profiles, config?.assetFilter);
+    return new LivePerceptionDataSource(deps, profiles, config?.assetFilter);
   }
 
   return new MockPerceptionDataSource();

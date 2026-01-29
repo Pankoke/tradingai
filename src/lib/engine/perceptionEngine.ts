@@ -1,7 +1,7 @@
 import { applyBiasScoring } from "@/src/lib/engine/modules/biasScoring";
 import { applySentimentScoring } from "@/src/lib/engine/modules/sentimentScoring";
 import { sortSetupsForToday } from "@/src/lib/engine/modules/ranking";
-import { createPerceptionDataSource } from "@/src/lib/engine/perceptionDataSource";
+import { createPerceptionDataSourceFromContainer } from "@/src/server/perception/perceptionDataSourceFactory";
 import { computeSetupBalanceScore, computeSetupConfidence, computeSetupScore } from "@/src/lib/engine/scoring";
 import { perceptionSnapshotSchema, type AccessLevel, type PerceptionSnapshot, type Setup } from "@/src/lib/engine/types";
 import type { BiasSnapshot, Event as BiasEvent } from "@/src/lib/engine/eventsBiasTypes";
@@ -238,7 +238,7 @@ export async function buildPerceptionSnapshot(options?: {
   assetFilter?: string[];
 }): Promise<PerceptionSnapshot> {
   const asOf = options?.asOf ?? new Date();
-  const dataSource = createPerceptionDataSource({
+  const dataSource = createPerceptionDataSourceFromContainer({
     allowSync: options?.allowSync ?? false,
     profiles: options?.profiles,
     assetFilter: options?.assetFilter,

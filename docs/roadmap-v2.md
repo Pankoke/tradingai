@@ -93,6 +93,11 @@ Agentenmodus:
 
 Sehr stark (Refactor-Hilfe)
 
+Slice 2.1 (2026-01-29):
+- perceptionDataSource entkoppelt von server-imports (Ports + Container-Fabrik)
+- asOf wird an DataSource-Boundary geführt (deterministisch)
+- Container-Fabrik verfügbar für Live-Betrieb, Mock bleibt erhalten
+
 ================================================================
 PHASE 3 – MARKET DATA V2
 

@@ -13,7 +13,14 @@ export class SnapshotStoreAdapter implements SnapshotStorePort {
     if (params.asOf && snapshot.snapshot.snapshotTime > params.asOf) {
       return null;
     }
-    return snapshot;
+    return {
+      snapshot: {
+        ...snapshot.snapshot,
+        setups: (snapshot.snapshot.setups ?? []) as PerceptionSnapshot["snapshot"]["setups"],
+      },
+      items: snapshot.items as PerceptionSnapshot["items"],
+      setups: snapshot.setups as PerceptionSnapshot["setups"],
+    };
   }
 
   async storeSnapshot(snapshot: PerceptionSnapshot): Promise<void> {

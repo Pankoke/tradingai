@@ -11,11 +11,11 @@ export class CandleRepositoryAdapter implements CandleRepositoryPort {
     await upsertCandles(
       candles.map((candle) => ({
         ...candle,
-        open: Number(candle.open),
-        high: Number(candle.high),
-        low: Number(candle.low),
-        close: Number(candle.close),
-        volume: candle.volume != null ? Number(candle.volume) : undefined,
+        open: String(candle.open),
+        high: String(candle.high),
+        low: String(candle.low),
+        close: String(candle.close),
+        volume: candle.volume != null ? String(candle.volume) : undefined,
       })),
     );
 
@@ -23,19 +23,31 @@ export class CandleRepositoryAdapter implements CandleRepositoryPort {
   }
 
   async findLatestByAsset(assetId: string, timeframe: CandleTimeframe, limit: number): Promise<CandleRow[]> {
-    return getRecentCandlesForAsset({
+    const rows = await getRecentCandlesForAsset({
       assetId,
       timeframe,
       limit,
     });
+    return rows.map((row) => ({
+      ...row,
+      timeframe: row.timeframe as CandleTimeframe,
+      volume: row.volume ?? undefined,
+      createdAt: row.createdAt ?? undefined,
+    }));
   }
 
   async findRangeByAsset(assetId: string, timeframe: CandleTimeframe, from: Date, to: Date): Promise<CandleRow[]> {
-    return getCandlesForAsset({
+    const rows = await getCandlesForAsset({
       assetId,
       timeframe,
       from,
       to,
     });
+    return rows.map((row) => ({
+      ...row,
+      timeframe: row.timeframe as CandleTimeframe,
+      volume: row.volume ?? undefined,
+      createdAt: row.createdAt ?? undefined,
+    }));
   }
 }
