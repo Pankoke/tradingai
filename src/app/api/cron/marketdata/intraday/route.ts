@@ -8,9 +8,10 @@ import { syncDailyCandlesForAsset } from "@/src/features/marketData/syncDailyCan
 import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
 import type { MarketTimeframe } from "@/src/server/marketData/MarketDataProvider";
 import { logger } from "@/src/lib/logger";
-import { deriveCandlesForTimeframe } from "@/src/server/marketData/deriveTimeframes";
+import { deriveCandlesForTimeframe, type DeriveTimeframesResult } from "@/src/server/marketData/deriveTimeframes";
 import { getContainer } from "@/src/server/container";
 import { consumeThrottlerStats } from "@/src/server/marketData/requestThrottler";
+import { findDerivedPair } from "@/src/server/marketData/derived-config";
 
 const cronLogger = logger.child({ route: "cron-marketdata-intraday-sync" });
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -31,7 +32,20 @@ type SyncLog = {
   details: Partial<
     Record<
       MarketTimeframe,
-      { provider: string; fetched: number; persisted: number; reason?: string; fallbackUsed?: boolean; rateLimited?: boolean }
+      {
+        provider: string;
+        fetched: number;
+        persisted: number;
+        reason?: string;
+        fallbackUsed?: boolean;
+        rateLimited?: boolean;
+        derivedComputed?: number;
+        missingInputs?: number;
+        warnings?: string[];
+        durationMs?: number;
+        ok?: boolean;
+        error?: string;
+      }
     >
   >;
   errors?: string[];
@@ -58,6 +72,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   let rateLimitedCount = 0;
   let failures = 0;
   let binanceUsed = false;
+  const deriveResults: DeriveTimeframesResult[] = [];
 
   try {
     const assets = await getActiveAssets();
@@ -145,21 +160,54 @@ export async function POST(request: NextRequest): Promise<Response> {
         const container = getContainer();
         const latest4h = await getLatestCandleForAsset({ assetId: asset.id, timeframe: "4H" });
         const deriveFrom = computeFrom(latest4h?.timestamp, "4H", now);
-        const { derivedBuckets, upserted } = await deriveCandlesForTimeframe({
+        const pair = findDerivedPair("4H");
+        const deriveResult = await deriveCandlesForTimeframe({
           assetId: asset.id,
-          sourceTimeframe: "1H",
+          sourceTimeframe: pair?.source ?? "1H",
           targetTimeframe: "4H",
-          lookbackCount: Math.max(24, Math.ceil((now.getTime() - deriveFrom.getTime()) / (60 * 60 * 1000))),
+          lookbackCount:
+            pair?.lookbackCount ??
+            Math.max(24, Math.ceil((now.getTime() - deriveFrom.getTime()) / (60 * 60 * 1000))),
           asOf: now,
           candleRepo: container.candleRepo,
           sourceLabel: "derived",
+          derivedPair: pair,
         });
-        if (upserted > 0) {
-          timeframesDerived += 1;
-          log.derived.push("4H");
-          log.details["4H"] = { provider: "derived", fetched: derivedBuckets, persisted: upserted };
+        deriveResults.push(deriveResult);
+        if (deriveResult.ok) {
+          if (deriveResult.upserted > 0) {
+            timeframesDerived += 1;
+            log.derived.push("4H");
+          }
+          log.details["4H"] = {
+            provider: "derived",
+            fetched: deriveResult.derivedComputed,
+            persisted: deriveResult.upserted,
+            derivedComputed: deriveResult.derivedComputed,
+            missingInputs: deriveResult.missingInputs,
+            warnings: deriveResult.warnings,
+            durationMs: deriveResult.durationMs,
+            ok: true,
+          };
         } else {
-          log.details["4H"] = { provider: "derived", fetched: 0, persisted: 0, reason: "no_data" };
+          failures += 1;
+          log.errors = [...(log.errors ?? []), `4H:${deriveResult.error.message}`];
+          cronLogger.warn("intraday derive failed", {
+            symbol: asset.symbol,
+            timeframe: "4H",
+            error: deriveResult.error,
+          });
+          log.details["4H"] = {
+            provider: "derived",
+            fetched: 0,
+            persisted: 0,
+            reason: `derive_failed:${deriveResult.error.code}`,
+            durationMs: deriveResult.durationMs,
+            ok: false,
+            error: deriveResult.error.message,
+            warnings: deriveResult.warnings,
+            missingInputs: deriveResult.missingInputs,
+          };
         }
       }
 
@@ -180,6 +228,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       durationMs,
       binanceUsed,
       throttling: consumeThrottlerStats(),
+      deriveResults,
       logs: logs.slice(0, 50),
     };
 

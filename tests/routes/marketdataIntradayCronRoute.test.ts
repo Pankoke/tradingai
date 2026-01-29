@@ -82,7 +82,22 @@ describe("POST /api/cron/marketdata/intraday", () => {
       return { timestamp: new Date(now - 30 * 60 * 1000) }; // fresh -> skip
     });
     mockSync.mockResolvedValue(undefined);
-    mockDerive4h.mockResolvedValue({ derivedBuckets: 0, upserted: 0, updated: 0 });
+    mockDerive4h.mockResolvedValue({
+      ok: true,
+      derivedComputed: 0,
+      upserted: 0,
+      updated: 0,
+      missingInputs: 0,
+      warnings: [],
+      durationMs: 1,
+      params: {
+        assetId: "a1",
+        sourceTimeframe: "1H",
+        targetTimeframe: "4H",
+        lookbackCount: 1,
+        asOf: new Date(),
+      },
+    });
 
     const { POST } = await import("@/src/app/api/cron/marketdata/intraday/route");
     const req = new NextRequest("http://localhost/api/cron/marketdata/intraday", {
@@ -104,7 +119,22 @@ describe("POST /api/cron/marketdata/intraday", () => {
     mockGetTimeframesForAsset.mockReturnValue(["4H", "1H", "15m"]);
     mockGetLatestCandleForAsset.mockResolvedValue({ timestamp: new Date(0) });
     mockSync.mockResolvedValue(undefined);
-    mockDerive4h.mockResolvedValue({ derivedBuckets: 0, upserted: 0, updated: 0 });
+    mockDerive4h.mockResolvedValue({
+      ok: true,
+      derivedComputed: 0,
+      upserted: 0,
+      updated: 0,
+      missingInputs: 0,
+      warnings: [],
+      durationMs: 1,
+      params: {
+        assetId: "a2",
+        sourceTimeframe: "1H",
+        targetTimeframe: "4H",
+        lookbackCount: 1,
+        asOf: new Date(),
+      },
+    });
 
     const { POST } = await import("@/src/app/api/cron/marketdata/intraday/route");
     const req = new NextRequest("http://localhost/api/cron/marketdata/intraday", {

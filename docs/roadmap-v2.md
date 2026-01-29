@@ -144,6 +144,12 @@ Slice 3.2 (2026-01-29):
 - Derived Candles materialisiert (1H → 4H) via Domain-Services + Repo-Upsert (source="derived")
 - Intraday Cron ruft derivation nach 1H Sync auf, idempotent über Upsert
 - Test für deriveTimeframes (UTC-Buckets, OHLCV korrekt) ergänzt
+- Safety-net: deriveTimeframes liefert strukturiertes Result + Metriken, Cron gibt Teilfehler sichtbar zurück
+
+Slice 3.3 (2026-01-29):
+- Derived-Timeframes konfigurierbar (Derived-Pairs, aktuell 1H→4H, offen für Erweiterung)
+- Admin Endpoints: derived-health (read-only) + derived-backfill (chunked recompute) inkl. Metriken
+- Tests für Generalisierung und Backfill-Chunks hinzugefügt
 
 ================================================================
 PHASE 4 – EVENTS V2
