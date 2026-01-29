@@ -55,6 +55,10 @@ Port-Design
 
 Refactor-Vorschläge
 
+Status 2026-01-29:
+- Ports + Types für market-data, events, sentiment, strategy erstellt
+- Adapter + Composition Root (src/server/container.ts) angelegt, Smoke-Test hinzugefügt
+
 ================================================================
 PHASE 2 – ENGINE ENTKOPPLEN
 
