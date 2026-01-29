@@ -17,9 +17,8 @@ export class SnapshotStoreAdapter implements SnapshotStorePort {
   }
 
   async storeSnapshot(snapshot: PerceptionSnapshot): Promise<void> {
-    await saveSnapshotToStore({
-      snapshot: snapshot.snapshot as PerceptionSnapshotInput,
-      items: snapshot.items as PerceptionSnapshotItemInput[],
-    });
+    const snapshotInput = snapshot.snapshot as unknown as PerceptionSnapshotInput;
+    const itemInputs = snapshot.items as unknown as PerceptionSnapshotItemInput[];
+    await saveSnapshotToStore({ snapshot: snapshotInput, items: itemInputs });
   }
 }

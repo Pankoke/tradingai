@@ -8,7 +8,16 @@ export class CandleRepositoryAdapter implements CandleRepositoryPort {
       return { inserted: 0, updated: 0 };
     }
 
-    await upsertCandles(candles);
+    await upsertCandles(
+      candles.map((candle) => ({
+        ...candle,
+        open: Number(candle.open),
+        high: Number(candle.high),
+        low: Number(candle.low),
+        close: Number(candle.close),
+        volume: candle.volume != null ? Number(candle.volume) : undefined,
+      })),
+    );
 
     return { inserted: candles.length, updated: 0 };
   }
