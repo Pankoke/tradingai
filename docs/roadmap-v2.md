@@ -1,0 +1,140 @@
+ROADMAP V2 – UMSETZUNG DER ARCHITEKTUR
+
+================================================================
+
+ZIEL
+Diese Roadmap beschreibt die konkrete Umsetzung der in v1 definierten Architektur.
+
+================================================================
+PHASE 0 – STEUERUNG & BASIS
+
+Ziel:
+
+Architektur als Single Source of Truth etablieren
+
+Ergebnis:
+
+architecture-v1.md
+
+decisions-v1.md
+
+gaps-v1.md
+
+roadmap-v2.md
+
+Agentenmodus:
+
+Analyse
+
+Repo-Scan
+
+Architektur-Validierung
+
+================================================================
+PHASE 1 – PORTS & COMPOSITION ROOT
+
+Ziel:
+
+Einführung von Ports (Interfaces)
+
+Keine funktionalen Änderungen
+
+Ergebnis:
+
+domain/*/ports.ts
+
+infrastructure/* Adapter
+
+zentraler Container
+
+Agentenmodus:
+
+Import-Graph
+
+Port-Design
+
+Refactor-Vorschläge
+
+================================================================
+PHASE 2 – ENGINE ENTKOPPLEN
+
+Ziel:
+
+Entfernung aller servernahen Imports aus Engine
+
+asOf erzwingen
+
+Ergebnis:
+
+deterministische Engine
+
+Backtesting-fähig
+
+Agentenmodus:
+
+Sehr stark (Refactor-Hilfe)
+
+================================================================
+PHASE 3 – MARKET DATA V2
+
+Ziel:
+
+Saubere Ingestion
+
+Normalisierung
+
+Aggregation
+
+================================================================
+PHASE 4 – EVENTS V2
+
+Ziel:
+
+Event-Domäne
+
+Relevance, Modifier, Ring als Services
+
+================================================================
+PHASE 5 – SENTIMENT V2
+
+Ziel:
+
+Austauschbare Sentiment-Quellen
+
+Normierte Snapshots
+
+================================================================
+PHASE 6 – BACKTESTING MVP
+
+Ziel:
+
+Candle-Replay
+
+Order-Execution
+
+Persistente Ergebnisse
+
+================================================================
+PHASE 7 – UI: SIGNALS & JOURNALING
+
+Optional nach MVP
+
+================================================================
+ARBEITSWEISE
+
+Agentenmodus:
+
+Analyse
+
+Planung
+
+Refactor-Vorschläge
+
+Normaler Modus:
+
+Codex-Prompts
+
+Konkrete Implementierung
+
+================================================================
+ENDE DER DATEI
