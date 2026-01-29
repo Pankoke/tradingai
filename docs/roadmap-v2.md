@@ -135,6 +135,11 @@ Normalisierung
 
 Aggregation
 
+Slice 3.1 (2026-01-29):
+- Domain-Services für Market Data hinzugefügt (normalizeCandles, selectCandleWindow, aggregateCandles)
+- Aggregation 1H→4H mit UTC-Buckets + deterministischer Auswahl implementiert
+- Pure Tests für Aggregation/Fenster-Selektion hinzugefügt; minimale Integration via DataSource-Window-Selection
+
 ================================================================
 PHASE 4 – EVENTS V2
 

@@ -17,6 +17,7 @@ import {
   buildOrderflowMetrics,
   type OrderflowMode,
 } from "@/src/lib/engine/orderflowMetrics";
+import { selectCandleWindow } from "@/src/domain/market-data/services/selectCandleWindow";
 import { getPerceptionDataMode } from "@/src/lib/config/perceptionDataMode";
 import { buildSentimentMetrics, type SentimentMetrics } from "@/src/lib/engine/sentimentMetrics";
 import {
@@ -767,9 +768,11 @@ class LivePerceptionDataSource implements PerceptionDataSource {
       from,
       params.asOf,
     );
-    return rows
-      .slice()
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    return selectCandleWindow({
+      candles: rows,
+      asOf: params.asOf,
+      lookbackCount: params.lookback,
+    }) as CandleRow[];
   }
 }
 
