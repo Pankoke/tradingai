@@ -4,6 +4,7 @@ import { isPerceptionMockMode } from "@/src/lib/config/perceptionDataMode";
 import { loadLatestSnapshotForProfile } from "@/src/features/perception/cache/snapshotStore";
 import { logger } from "@/src/lib/logger";
 import { respondFail, respondOk } from "@/src/server/http/apiResponse";
+import type { Setup } from "@/src/lib/engine/types";
 
 type PerceptionTodayPayload = PerceptionSnapshotWithItems & { reused?: boolean };
 
@@ -74,7 +75,7 @@ async function buildEngineSnapshotResponse(mode: "mock" | "fallback"): Promise<P
   const fallbackSnapshotTime = new Date();
   const isoCreatedAt = fallbackSnapshotTime.toISOString();
   const snapshotId = `${mode}-${Date.now()}`;
-  const setupsWithMetadata = snapshot.setups.map((setup) => ({
+  const setupsWithMetadata = snapshot.setups.map((setup: Setup) => ({
     ...setup,
     snapshotId,
     snapshotCreatedAt: isoCreatedAt,

@@ -1,4 +1,5 @@
-import { buildPerceptionSnapshot, type PerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
+import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
+import type { PerceptionSnapshot } from "@/src/lib/engine/types";
 import { createPerceptionDataSourceFromContainer } from "@/src/server/perception/perceptionDataSourceFactory";
 import type { SetupProfile } from "@/src/lib/config/setupProfile";
 

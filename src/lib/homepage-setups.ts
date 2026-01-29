@@ -163,7 +163,7 @@ export async function getHomepageSetups(): Promise<HomepageSetups> {
   const snapshot = await buildPerceptionSnapshotWithContainer({ allowSync: false });
   const timestamp = snapshot.generatedAt;
 
-  const candidates: HomepageSetup[] = snapshot.setups.map((s) => mapSetup(s, timestamp));
+  const candidates: HomepageSetup[] = snapshot.setups.map((s: Setup) => mapSetup(s, timestamp));
 
   if (candidates.length === 0) {
     return { setupOfTheDay: null, secondarySetups: [] };
