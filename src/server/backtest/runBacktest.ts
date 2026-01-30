@@ -1,4 +1,4 @@
-import { promises as fs } from "fs";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "path";
 import { createPerceptionDataSource } from "@/src/lib/engine/perceptionDataSource";
 import { buildPerceptionSnapshot } from "@/src/lib/engine/perceptionEngine";
@@ -45,11 +45,21 @@ function addHours(date: Date, hours: number): Date {
   return new Date(date.getTime() + hours * 60 * 60 * 1000);
 }
 
+function sanitizeName(value: string) {
+  // Remove characters illegal on Windows filesystems.
+  return value.replace(/[^a-zA-Z0-9_.-]/g, "_");
+}
+
 function buildReportPath(assetId: string, fromIso: string, toIso: string, stepHours: number) {
-  const safeAsset = assetId.replace(/[^a-zA-Z0-9_-]/g, "_");
-  const safeFrom = fromIso.replace(/[^0-9T:-]/g, "_");
-  const safeTo = toIso.replace(/[^0-9T:-]/g, "_");
+  const safeAsset = sanitizeName(assetId);
+  const safeFrom = sanitizeName(fromIso);
+  const safeTo = sanitizeName(toIso);
   return path.join(process.cwd(), "reports", "backtests", safeAsset, `${safeFrom}-${safeTo}-step${stepHours}h.json`);
+}
+
+async function ensureDirExists(targetFilePath: string) {
+  const dir = path.dirname(targetFilePath);
+  await mkdir(dir, { recursive: true });
 }
 
 export async function runBacktest(params: {
@@ -115,8 +125,8 @@ export async function runBacktest(params: {
   const writeReport =
     params.deps?.writeReport ??
     (async (report: BacktestReport, target: string) => {
-      await fs.mkdir(path.dirname(target), { recursive: true });
-      await fs.writeFile(target, JSON.stringify(report, null, 2), "utf8");
+      await ensureDirExists(target);
+      await writeFile(target, JSON.stringify(report, null, 2), "utf8");
     });
 
   const buildSnapshot =

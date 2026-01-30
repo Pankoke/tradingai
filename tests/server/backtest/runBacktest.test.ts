@@ -1,8 +1,17 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { runBacktest } from "@/src/server/backtest/runBacktest";
 import type { SentimentSnapshotV2 } from "@/src/domain/sentiment/types";
 import type { PerceptionSnapshot } from "@/src/lib/engine/types";
 import type { PerceptionDataSource } from "@/src/lib/engine/perceptionDataSource";
+import * as fsPromises from "node:fs/promises";
+
+vi.mock("node:fs/promises", () => {
+  return {
+    mkdir: vi.fn(async () => {}),
+    writeFile: vi.fn(async () => {}),
+  };
+});
+
+let runBacktest: typeof import("@/src/server/backtest/runBacktest").runBacktest;
 
 const sentimentA: SentimentSnapshotV2 = {
   assetId: "A",
@@ -18,8 +27,11 @@ describe("runBacktest", () => {
   const loadSentimentSnapshot = vi.fn();
   const createDataSource = vi.fn();
 
-  beforeEach(() => {
-    vi.resetAllMocks();
+  beforeEach(async () => {
+    vi.resetModules();
+    vi.clearAllMocks();
+    const mod = await import("@/src/server/backtest/runBacktest");
+    runBacktest = mod.runBacktest;
     createDataSource.mockReturnValue({
       assets: { getActiveAssets: async () => [{ id: "A", symbol: "A" }] },
       events: {} as PerceptionDataSource["getEventsForWindow"],
@@ -68,5 +80,30 @@ describe("runBacktest", () => {
       stepHours: 1,
     });
     expect(result.ok).toBe(false);
+  });
+
+  it("creates directories before writing report", async () => {
+    const callOrder: string[] = [];
+    (fsPromises.mkdir as unknown as vi.Mock).mockImplementation(async () => {
+      callOrder.push("mkdir");
+    });
+    (fsPromises.writeFile as unknown as vi.Mock).mockImplementation(async () => {
+      callOrder.push("writeFile");
+    });
+
+    await runBacktest({
+      assetId: "A",
+      fromIso: "2025-01-01T00:00:00.000Z",
+      toIso: "2025-01-01T02:00:00.000Z",
+      stepHours: 2,
+      deps: {
+        createDataSource,
+        buildSnapshot,
+        loadSentimentSnapshot,
+      },
+    });
+
+    expect(callOrder[0]).toBe("mkdir");
+    expect(callOrder[1]).toBe("writeFile");
   });
 });
