@@ -20,6 +20,21 @@ export type BacktestStepResult = {
   label?: string | null;
   setups?: number;
   score?: number | null;
+  topSetup?: {
+    id: string;
+    grade?: string | null;
+    decision?: string | null;
+    direction?: string | null;
+    scoreTotal?: number | null;
+    confidence?: number | null;
+  } | null;
+  setupsSummary?: Array<{
+    id: string;
+    grade?: string | null;
+    decision?: string | null;
+    direction?: string | null;
+    scoreTotal?: number | null;
+  }>;
   warnings?: string[];
 };
 
@@ -30,6 +45,7 @@ export type BacktestReport = {
   stepHours: number;
   lookbackHours: number;
   steps: BacktestStepResult[];
+  summary: BacktestSummary;
 };
 
 export type RunBacktestDeps = {
@@ -48,6 +64,98 @@ function addHours(date: Date, hours: number): Date {
 function sanitizeName(value: string) {
   // Remove characters illegal on Windows filesystems.
   return value.replace(/[^a-zA-Z0-9_.-]/g, "_");
+}
+
+type SetupLike = {
+  id: string;
+  grade?: string | null;
+  decision?: string | null;
+  direction?: string | null;
+  balanceScore?: number;
+  sentimentScore?: number;
+  eventScore?: number;
+  biasScore?: number;
+  confidence?: number;
+};
+
+function scoreOf(setup: SetupLike): number | null {
+  const candidates = [
+    setup.balanceScore,
+    setup.sentimentScore,
+    setup.eventScore,
+    setup.biasScore,
+    setup.confidence,
+  ].filter((v) => typeof v === "number") as number[];
+  if (!candidates.length) return null;
+  return candidates[0];
+}
+
+function pickTopSetup(setups: SetupLike[]): SetupLike | null {
+  if (!setups.length) return null;
+  const sorted = [...setups].sort((a, b) => {
+    const sa = scoreOf(a);
+    const sb = scoreOf(b);
+    if (sa == null && sb == null) return 0;
+    if (sa == null) return 1;
+    if (sb == null) return -1;
+    return sb - sa;
+  });
+  return sorted[0];
+}
+
+export type BacktestSummary = {
+  totalSteps: number;
+  stepsWithTopSetup: number;
+  decisionCounts: Record<string, number>;
+  gradeCounts: Record<string, number>;
+  avgScoreTotal: number | null;
+  avgConfidence: number | null;
+  minScoreTotal: number | null;
+  maxScoreTotal: number | null;
+};
+
+export function computeBacktestSummary(steps: BacktestStepResult[]): BacktestSummary {
+  const decisionCounts: Record<string, number> = {};
+  const gradeCounts: Record<string, number> = {};
+  let scoreSum = 0;
+  let scoreCount = 0;
+  let confSum = 0;
+  let confCount = 0;
+  let minScore: number | null = null;
+  let maxScore: number | null = null;
+  let stepsWithTop = 0;
+
+  for (const step of steps) {
+    const top = step.topSetup;
+    if (top) {
+      stepsWithTop += 1;
+      const decision = (top.decision ?? "unknown").toLowerCase();
+      decisionCounts[decision] = (decisionCounts[decision] ?? 0) + 1;
+      const grade = top.grade ?? "unknown";
+      gradeCounts[grade] = (gradeCounts[grade] ?? 0) + 1;
+      if (typeof top.scoreTotal === "number") {
+        scoreSum += top.scoreTotal;
+        scoreCount += 1;
+        if (minScore == null || top.scoreTotal < minScore) minScore = top.scoreTotal;
+        if (maxScore == null || top.scoreTotal > maxScore) maxScore = top.scoreTotal;
+      }
+      if (typeof top.confidence === "number") {
+        confSum += top.confidence;
+        confCount += 1;
+      }
+    }
+  }
+
+  return {
+    totalSteps: steps.length,
+    stepsWithTopSetup: stepsWithTop,
+    decisionCounts,
+    gradeCounts,
+    avgScoreTotal: scoreCount ? scoreSum / scoreCount : null,
+    avgConfidence: confCount ? confSum / confCount : null,
+    minScoreTotal: minScore,
+    maxScoreTotal: maxScore,
+  };
 }
 
 function buildReportPath(assetId: string, fromIso: string, toIso: string, stepHours: number) {
@@ -142,11 +250,36 @@ export async function runBacktest(params: {
     const asOf = new Date(cursor);
     try {
       const snapshot = await buildSnapshot({ asOf, dataSource, assetFilter: [params.assetId] });
+      const setups = Array.isArray((snapshot as { setups?: unknown[] }).setups)
+        ? ((snapshot as { setups: SetupLike[] }).setups ?? [])
+        : [];
+      const topSetup = pickTopSetup(setups);
+      const score = topSetup ? scoreOf(topSetup) : null;
+      const label = topSetup?.decision ?? topSetup?.grade ?? (snapshot as { label?: string | null }).label ?? null;
+      const setupsSummary = setups.slice(0, 3).map((s) => ({
+        id: s.id,
+        grade: s.grade ?? null,
+        decision: s.decision ?? null,
+        direction: s.direction ?? null,
+        scoreTotal: scoreOf(s),
+      }));
+
       steps.push({
         asOfIso: asOf.toISOString(),
-        label: (snapshot as { label?: string | null }).label ?? null,
-        setups: Array.isArray((snapshot as { setups?: unknown[] }).setups) ? (snapshot as { setups?: unknown[] }).setups?.length : undefined,
-        score: (snapshot as { score?: number }).score ?? null,
+        label,
+        setups: setups.length || undefined,
+        score: score ?? (snapshot as { score?: number }).score ?? null,
+        topSetup: topSetup
+          ? {
+              id: topSetup.id,
+              grade: topSetup.grade ?? null,
+              decision: topSetup.decision ?? null,
+              direction: topSetup.direction ?? null,
+              scoreTotal: score,
+              confidence: typeof topSetup.confidence === "number" ? topSetup.confidence : null,
+            }
+          : null,
+        setupsSummary,
       });
     } catch (error) {
       steps.push({
@@ -166,6 +299,7 @@ export async function runBacktest(params: {
     stepHours: params.stepHours,
     lookbackHours,
     steps,
+    summary: computeBacktestSummary(steps),
   };
 
   const reportPath = buildReportPath(params.assetId, params.fromIso, params.toIso, params.stepHours);

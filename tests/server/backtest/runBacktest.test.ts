@@ -106,4 +106,37 @@ describe("runBacktest", () => {
     expect(callOrder[0]).toBe("mkdir");
     expect(callOrder[1]).toBe("writeFile");
   });
+
+  it("populates topSetup and setupsSummary with scores", async () => {
+    buildSnapshot.mockImplementation(async ({ asOf }) => ({
+      asOf,
+      setups: [
+        { id: "s1", grade: "A", decision: "buy", direction: "Long", balanceScore: 70, confidence: 80 },
+        { id: "s2", grade: "B", decision: "sell", direction: "Short", balanceScore: 40 },
+        { id: "s3", grade: "A", decision: "buy", direction: "Long", balanceScore: 65 },
+      ],
+      label: "snapshot-label",
+    }));
+
+    const result = await runBacktest({
+      assetId: "A",
+      fromIso: "2025-01-01T00:00:00.000Z",
+      toIso: "2025-01-01T02:00:00.000Z",
+      stepHours: 1,
+      deps: { createDataSource, buildSnapshot, loadSentimentSnapshot, writeReport },
+    });
+
+    expect(result.ok).toBe(true);
+    const callArgs = (writeReport as vi.Mock).mock.calls[0] as [unknown, string];
+    const writtenReport = callArgs[0] as {
+      steps: Array<{ topSetup?: { scoreTotal?: number | null }; setupsSummary?: unknown[]; score?: number | null; label?: string | null }>;
+      summary: { avgScoreTotal?: number | null };
+    };
+    const step = writtenReport.steps[0];
+    expect(step.topSetup?.scoreTotal).toBe(70);
+    expect(step.score).toBe(70);
+    expect(step.setupsSummary?.length).toBe(3);
+    expect(step.label).toBe("buy"); // from top setup decision
+    expect(writtenReport.summary?.avgScoreTotal).toBeGreaterThan(0);
+  });
 });

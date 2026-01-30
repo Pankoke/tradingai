@@ -247,6 +247,13 @@ Slice 6.1 (2026-01-30):
 - Tests: runBacktest.test.ts (deterministisches stepping, error range)
 - Status: done (Build/Test/Lint grün)
 
+Slice 6.2 (2026-01-30):
+- Backtest Report Summary/KPIs: decisionCounts, gradeCounts, avg/min/max scoreTotal, avg confidence
+- computeBacktestSummary (pure) erzeugt summary für steps
+- runBacktest schreibt summary ins Report JSON
+- Tests: computeBacktestSummary.test.ts + runBacktest.test.ts erweitert
+- Status: done (Build/Test/Lint grün)
+
 ================================================================
 PHASE 6 – BACKTESTING MVP
 

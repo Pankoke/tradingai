@@ -1,0 +1,1614 @@
+{
+  "assetId": "btc",
+  "fromIso": "2026-01-01T00:00:00.000Z",
+  "toIso": "2026-01-08T00:00:00.000Z",
+  "stepHours": 4,
+  "lookbackHours": 24,
+  "steps": [
+    {
+      "asOfIso": "2026-01-01T00:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 86,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 86,
+        "confidence": 46
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 86
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 86
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 86
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-01T04:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 86,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 86,
+        "confidence": 46
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 86
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 86
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 86
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-01T08:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 86,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 86,
+        "confidence": 46
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 86
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 86
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 86
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-01T12:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 86,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 86,
+        "confidence": 46
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 86
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 86
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 86
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-01T16:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 86,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 86,
+        "confidence": 46
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 86
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 86
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 86
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-01T20:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 86,
+      "topSetup": {
+        "id": "btc-trend_breakout",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 86,
+        "confidence": 46
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 86
+        },
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 86
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 86
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-02T00:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 89,
+      "topSetup": {
+        "id": "btc-trend_breakout",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 89,
+        "confidence": 56
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 89
+        },
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 89
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 89
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-02T04:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 89,
+      "topSetup": {
+        "id": "btc-trend_breakout",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 89,
+        "confidence": 56
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 89
+        },
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 89
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 89
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-02T08:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 89,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 89,
+        "confidence": 56
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 89
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 89
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 89
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-02T12:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 89,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 89,
+        "confidence": 56
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 89
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 89
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 89
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-02T16:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 89,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 89,
+        "confidence": 56
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 89
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 89
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 89
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-02T20:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 89,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 89,
+        "confidence": 56
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 89
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 89
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 89
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-03T00:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 81,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 81,
+        "confidence": 60
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 81
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 81
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 81
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-03T04:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 81,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 81,
+        "confidence": 60
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 81
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 81
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 81
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-03T08:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 81,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 81,
+        "confidence": 60
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 81
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 81
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 81
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-03T12:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 81,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 81,
+        "confidence": 60
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 81
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 81
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 81
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-03T16:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 81,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 81,
+        "confidence": 60
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 81
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 81
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 81
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-03T20:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 81,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 81,
+        "confidence": 60
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 81
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 81
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 81
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-04T00:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 84,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 84,
+        "confidence": 58
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 84
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 84
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 84
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-04T04:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 84,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 84,
+        "confidence": 58
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 84
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 84
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 84
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-04T08:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 84,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 84,
+        "confidence": 58
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 84
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 84
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 84
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-04T12:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 84,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 84,
+        "confidence": 58
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 84
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 84
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 84
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-04T16:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 84,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 84,
+        "confidence": 58
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 84
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 84
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 84
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-04T20:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 84,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 84,
+        "confidence": 58
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 84
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 84
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 84
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-05T00:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 76,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 76,
+        "confidence": 61
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-05T04:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 76,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 76,
+        "confidence": 61
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-05T08:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 76,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 76,
+        "confidence": 61
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-05T12:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 76,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 76,
+        "confidence": 61
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-05T16:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 76,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 76,
+        "confidence": 61
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-05T20:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 76,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 76,
+        "confidence": 61
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-06T00:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 76,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 76,
+        "confidence": 61
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-06T04:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 76,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 76,
+        "confidence": 61
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-06T08:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 76,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 76,
+        "confidence": 61
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-06T12:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 76,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 76,
+        "confidence": 61
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-06T16:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 76,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 76,
+        "confidence": 61
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-06T20:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 76,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 76,
+        "confidence": 61
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 76
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-07T00:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 85,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 85,
+        "confidence": 58
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 85
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 85
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 85
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-07T04:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 85,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 85,
+        "confidence": 58
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 85
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 85
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 85
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-07T08:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 85,
+      "topSetup": {
+        "id": "btc-trend_breakout-position",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 85,
+        "confidence": 58
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 85
+        },
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 85
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 85
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-07T12:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 85,
+      "topSetup": {
+        "id": "btc-trend_breakout",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 85,
+        "confidence": 58
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 85
+        },
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 85
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 85
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-07T16:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 85,
+      "topSetup": {
+        "id": "btc-trend_breakout",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 85,
+        "confidence": 58
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 85
+        },
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 85
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 85
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-07T20:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 85,
+      "topSetup": {
+        "id": "btc-trend_breakout",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 85,
+        "confidence": 58
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 85
+        },
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 85
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 85
+        }
+      ]
+    },
+    {
+      "asOfIso": "2026-01-08T00:00:00.000Z",
+      "label": null,
+      "setups": 3,
+      "score": 86,
+      "topSetup": {
+        "id": "btc-trend_breakout",
+        "grade": null,
+        "decision": null,
+        "direction": "Long",
+        "scoreTotal": 86,
+        "confidence": 58
+      },
+      "setupsSummary": [
+        {
+          "id": "btc-trend_breakout",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 86
+        },
+        {
+          "id": "btc-trend_breakout-position",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 86
+        },
+        {
+          "id": "btc-trend_breakout-intraday",
+          "grade": null,
+          "decision": null,
+          "direction": "Long",
+          "scoreTotal": 86
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "totalSteps": 43,
+    "stepsWithTopSetup": 43,
+    "decisionCounts": {
+      "unknown": 43
+    },
+    "gradeCounts": {
+      "unknown": 43
+    },
+    "avgScoreTotal": 82.51162790697674,
+    "avgConfidence": 57.16279069767442,
+    "minScoreTotal": 76,
+    "maxScoreTotal": 89
+  }
+}
