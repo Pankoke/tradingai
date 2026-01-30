@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildHealthSummary } from "@/src/server/health/buildHealthSummary";
+import { SENTIMENT_SOURCES } from "@/src/server/sentiment/sentimentSources";
 
 const now = new Date("2026-01-01T00:00:00Z");
 
@@ -22,6 +23,9 @@ describe("buildHealthSummary", () => {
           candidates: 2,
           lastEnrichedAt: new Date("2025-12-31T22:00:00Z"),
         }),
+        getSentimentSnapshotStats: async () => [
+          { sourceId: SENTIMENT_SOURCES[0].sourceId, lastTimestamp: new Date("2025-12-31T23:30:00Z") },
+        ],
       },
     });
 
@@ -38,7 +42,7 @@ describe("buildHealthSummary", () => {
     expect(events?.status).toBe("ok");
 
     const sentiment = results.find((r) => r.key === "sentiment");
-    expect(sentiment?.status).toBe("degraded");
-    expect(sentiment?.warnings).toContain("sentiment_stats_unavailable");
+    expect(sentiment?.status).toBe("ok");
+    expect(sentiment?.freshness?.latestTimestamp).toBe("2025-12-31T23:30:00.000Z");
   });
 });

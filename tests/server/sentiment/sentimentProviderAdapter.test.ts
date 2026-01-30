@@ -37,7 +37,7 @@ describe("SentimentProviderAdapter", () => {
     expect(snapshot.assetId).toBe("A");
     expect(snapshot.asOfIso).toBe(asOf.toISOString());
     expect(snapshot.window.toIso).toBe(asOf.toISOString());
-    expect(snapshot.sources[0].sourceId).toBe("mock-source");
+    expect(snapshot.sources[0].sourceId).toBe("primary");
     expect(snapshot.components.confidence).toBeLessThanOrEqual(1);
     expect(snapshot.meta?.warnings).toBeUndefined(); // no warnings expected for valid data
   });
@@ -53,6 +53,7 @@ describe("SentimentProviderAdapter", () => {
     const snapshot = await adapter.fetchSentiment({ assetId: "A", asOf });
 
     expect(snapshot.sources.length).toBeGreaterThanOrEqual(0);
-    expect(snapshot.meta?.warnings).toBeDefined();
+    const warningsBySource = snapshot.meta?.warningsBySource as Record<string, { warnings: string[] }> | undefined;
+    expect(warningsBySource?.primary?.warnings?.length ?? 0).toBeGreaterThan(0);
   });
 });

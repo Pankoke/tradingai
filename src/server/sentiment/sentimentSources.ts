@@ -49,7 +49,9 @@ export function validateSentimentSources(configs: SentimentSourceConfig[]): Sent
   return { ok: true };
 }
 
-export function pickPrimarySource(configs: SentimentSourceConfig[] = SENTIMENT_SOURCES): SentimentSourceConfig | null {
+export function pickPrimarySource(
+  configs: ReadonlyArray<SentimentSourceConfig> = SENTIMENT_SOURCES,
+): SentimentSourceConfig | null {
   const enabled = configs.filter((c) => c.enabled);
   if (!enabled.length) return null;
   return enabled.slice().sort((a, b) => a.priority - b.priority)[0];

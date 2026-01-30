@@ -4,7 +4,8 @@ import { normalizeSentimentRawToSnapshot } from "@/src/domain/sentiment/normaliz
 import { buildSentimentMetrics } from "@/src/lib/engine/sentimentMetrics";
 import { getAssetById } from "@/src/server/repositories/assetRepository";
 import { resolveSentimentProvider } from "@/src/server/sentiment/providerResolver";
-import { pickPrimarySource, toSourceRef } from "@/src/server/sentiment/sentimentSources";
+import { SENTIMENT_SOURCES, toSourceRef } from "@/src/server/sentiment/sentimentSources";
+import { buildSentimentSnapshotV2 } from "@/src/server/sentiment/buildSentimentSnapshotV2";
 
 export class SentimentProviderAdapter implements SentimentProviderPort {
   async fetchSentiment(params: { assetId: string; asOf: Date }): Promise<SentimentSnapshotV2> {
@@ -33,38 +34,46 @@ export class SentimentProviderAdapter implements SentimentProviderPort {
       granularity: "1H",
     };
 
-    const raw = provider ? await provider.fetchSentiment({ asset }) : null;
-    const normalized = normalizeSentimentRawToSnapshot(raw, {
+    const enabledSources = SENTIMENT_SOURCES.filter((s) => s.enabled);
+    if (!provider || enabledSources.length === 0) {
+      return {
+        assetId: params.assetId,
+        asOfIso,
+        window,
+        sources: enabledSources.map((s) => toSourceRef(s, asOfIso)),
+        components: { polarityScore: 0, confidence: 0 },
+        meta: { warnings: "no provider or no enabled sources" },
+      };
+    }
+
+    const built = await buildSentimentSnapshotV2({
       assetId: params.assetId,
-      asOfIso,
-      window,
+      asOf: params.asOf,
+      lookbackHours: 24,
+      sources: SENTIMENT_SOURCES,
+      fetchRawBySource: async () => provider.fetchSentiment({ asset }),
     });
 
-    const metrics = buildSentimentMetrics({ asset, sentiment: normalized.snapshot });
+    const metrics = buildSentimentMetrics({ asset, sentiment: built.snapshot });
     const confidence = metrics.flags?.includes("low_conviction") ? 0.25 : 0.75;
-
     const flagsStr = metrics.flags?.length ? metrics.flags.join(",") : undefined;
-    const primarySource = pickPrimarySource();
-    const sources = primarySource
-      ? [toSourceRef(primarySource, asOfIso)]
-      : normalized.snapshot.sources;
 
     return {
-      ...normalized.snapshot,
-      sources,
+      ...built.snapshot,
       components: {
-        ...normalized.snapshot.components,
+        ...built.snapshot.components,
         // keep compatibility with engine scoring (score ~ [-1,1])
-        polarityScore: metrics.score ? (metrics.score - 50) / 50 : normalized.snapshot.components.polarityScore,
-        confidence: confidence ?? normalized.snapshot.components.confidence,
+        polarityScore: metrics.score ? (metrics.score - 50) / 50 : built.snapshot.components.polarityScore,
+        confidence: confidence ?? built.snapshot.components.confidence,
       },
       meta: {
-        ...(normalized.snapshot.meta ?? {}),
+        ...(built.snapshot.meta ?? {}),
         label: metrics.label,
         ...(flagsStr ? { flags: flagsStr } : {}),
-        ...(normalized.warnings.length ? { warnings: normalized.warnings.join(",") } : {}),
+        ...(built.warnings.length ? { warnings: built.warnings.join(",") } : {}),
+        ...(Object.keys(built.perSource).length ? { warningsBySourceJson: JSON.stringify(built.perSource) } : {}),
       },
-      raw: raw ?? null,
+      raw: null,
     };
   }
 }

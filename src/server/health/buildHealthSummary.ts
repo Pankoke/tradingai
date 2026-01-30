@@ -3,11 +3,15 @@ import { getEventEnrichmentStats } from "@/src/server/repositories/eventReposito
 import { computeHealthStatus } from "@/src/server/health/computeHealthStatus";
 import { HEALTH_POLICIES } from "@/src/server/health/healthPolicy";
 import type { HealthCheckResult } from "./healthTypes";
+import { SENTIMENT_SOURCES } from "@/src/server/sentiment/sentimentSources";
 
 type HealthDeps = {
   getProviderCandleStats: typeof getProviderCandleStats;
   getAssetCandleStats: typeof getAssetCandleStats;
   getEventEnrichmentStats: typeof getEventEnrichmentStats;
+  getSentimentSnapshotStats: () => Promise<
+    Array<{ sourceId: string; lastTimestamp: Date | null }>
+  >;
 };
 
 type BuildParams = {
@@ -20,6 +24,7 @@ const defaultDeps: HealthDeps = {
   getProviderCandleStats,
   getAssetCandleStats,
   getEventEnrichmentStats,
+  getSentimentSnapshotStats: async () => [],
 };
 
 export async function buildHealthSummary(params: BuildParams = {}): Promise<HealthCheckResult[]> {
@@ -30,10 +35,11 @@ export async function buildHealthSummary(params: BuildParams = {}): Promise<Heal
   const windowLabel = `${windowHours}h`;
   const from = new Date(now.getTime() - windowHours * 60 * 60 * 1000);
 
-  const [providerStats, derivedStats, eventStats] = await Promise.all([
+  const [providerStats, derivedStats, eventStats, sentimentStats] = await Promise.all([
     deps.getProviderCandleStats({}),
     deps.getAssetCandleStats({ sources: ["derived"], timeframes: ["4H"] }),
     deps.getEventEnrichmentStats(14),
+    deps.getSentimentSnapshotStats(),
   ]);
 
   const marketLatest = providerStats.reduce<Date | null>((latest, row) => {
@@ -70,6 +76,29 @@ export async function buildHealthSummary(params: BuildParams = {}): Promise<Heal
     countRecent: eventStats.total,
     policy: HEALTH_POLICIES.events,
   });
+
+  const sentimentSources = SENTIMENT_SOURCES.map((src) => {
+    const stat = sentimentStats.find((s) => s.sourceId === src.sourceId) ?? null;
+    const latest = stat?.lastTimestamp ?? null;
+    const ageSeconds = latest ? Math.max(0, (now.getTime() - latest.getTime()) / 1000) : undefined;
+    const status = computeHealthStatus({
+      ageSeconds,
+      policy: HEALTH_POLICIES.sentiment,
+    });
+    return {
+      sourceId: src.sourceId,
+      enabled: src.enabled,
+      latestTimestamp: latest?.toISOString(),
+      ageSeconds,
+      status,
+      warnings: src.enabled && !latest ? ["sentiment_freshness_unknown"] : [],
+    };
+  });
+
+  const sentimentCombinedStatus = sentimentSources.reduce(
+    (acc, src) => computeHealthStatus({ ageSeconds: src.ageSeconds, policy: HEALTH_POLICIES.sentiment, errorsCount: 0 }),
+    computeHealthStatus({ ageSeconds: undefined, policy: HEALTH_POLICIES.sentiment }),
+  );
 
   const results: HealthCheckResult[] = [
     {
@@ -139,17 +168,18 @@ export async function buildHealthSummary(params: BuildParams = {}): Promise<Heal
     },
     {
       key: "sentiment",
-      status: computeHealthStatus({
-        ageSeconds: undefined,
-        policy: HEALTH_POLICIES.sentiment,
-      }),
+      status: sentimentCombinedStatus,
       asOf: asOfIso,
       durationMs: 0,
-      warnings: ["sentiment_stats_unavailable"],
+      warnings:
+        sentimentSources.length === 0
+          ? ["sentiment_stats_unavailable"]
+          : sentimentSources.flatMap((s) => s.warnings),
       errors: [],
       meta: {
         maxAgeOkSec: HEALTH_POLICIES.sentiment.maxAgeOkSec,
         maxAgeDegradedSec: HEALTH_POLICIES.sentiment.maxAgeDegradedSec,
+        sourcesJson: JSON.stringify(sentimentSources),
       },
     },
   ];

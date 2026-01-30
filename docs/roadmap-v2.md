@@ -209,6 +209,19 @@ Slice 5.2a (2026-01-30):
 - Adapter nutzt Registry-SourceId/Weight (weiterhin Single-Source, aber konfigurierbar)
 - Validator + Tests für Registry/SourceRef hinzugefügt
 
+Slice 5.2b-1 (2026-01-30):
+- mergeSentimentSnapshots.ts (Domain/Pure) implementiert
+- Deterministische Merge-Regeln: weighted avg, Label via höchstes Gewicht, assetId-Check, per-source Warnings
+- Tests: mergeSentimentSnapshots.pure.test.ts
+- Status: done (Build/Test/Lint grün)
+
+Slice 5.2b-2 (2026-01-30):
+- sentimentProviderAdapter nutzt Registry (enabled sources) + buildSentimentSnapshotV2
+- Jede Quelle wird normalisiert (normalizeSentimentRawToSnapshot) und via mergeSentimentSnapshots gemerged
+- Warnings/Fallback pro Quelle, empty snapshot wenn alle failen
+- Tests: buildSentimentSnapshotV2.test.ts (multi-source, failover)
+- Status: done (Build/Test/Lint grün)
+
 ================================================================
 PHASE 6 – BACKTESTING MVP
 
