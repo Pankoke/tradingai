@@ -111,9 +111,9 @@ describe("runBacktest", () => {
     buildSnapshot.mockImplementation(async ({ asOf }) => ({
       asOf,
       setups: [
-        { id: "s1", grade: "A", decision: "buy", direction: "Long", balanceScore: 70, confidence: 80 },
-        { id: "s2", grade: "B", decision: "sell", direction: "Short", balanceScore: 40 },
-        { id: "s3", grade: "A", decision: "buy", direction: "Long", balanceScore: 65 },
+        { id: "s1", setupGrade: "A", direction: "Long", balanceScore: 70, confidence: 80 },
+        { id: "s2", setupGrade: "B", direction: "Short", balanceScore: 40 },
+        { id: "s3", setupGrade: "A", direction: "Long", balanceScore: 65 },
       ],
       label: "snapshot-label",
     }));
@@ -134,9 +134,40 @@ describe("runBacktest", () => {
     };
     const step = writtenReport.steps[0];
     expect(step.topSetup?.scoreTotal).toBe(70);
+    expect(step.topSetup?.grade).toBe("A");
+    expect(step.topSetup?.decision).toBe("buy");
     expect(step.score).toBe(70);
     expect(step.setupsSummary?.length).toBe(3);
     expect(step.label).toBe("buy"); // from top setup decision
     expect(writtenReport.summary?.avgScoreTotal).toBeGreaterThan(0);
+  });
+
+  it("counts decisions and grades from setupGrade/direction fallbacks", async () => {
+    buildSnapshot.mockImplementation(async ({ asOf }) => ({
+      asOf,
+      setups: [
+        { id: "s1", setupGrade: "A", direction: "Long", balanceScore: 70 },
+        { id: "s2", setupGrade: "NO_TRADE", direction: "Long", balanceScore: 10 },
+      ],
+      label: "snapshot-label",
+    }));
+
+    const result = await runBacktest({
+      assetId: "A",
+      fromIso: "2025-01-01T00:00:00.000Z",
+      toIso: "2025-01-01T02:00:00.000Z",
+      stepHours: 2,
+      deps: { createDataSource, buildSnapshot, loadSentimentSnapshot, writeReport },
+    });
+
+    expect(result.ok).toBe(true);
+    const writtenReport = (writeReport as vi.Mock).mock.calls[0][0] as {
+      summary: { decisionCounts: Record<string, number>; gradeCounts: Record<string, number> };
+      steps: Array<{ topSetup?: { decision?: string | null; grade?: string | null } }>;
+    };
+    expect(writtenReport.steps[0].topSetup?.decision).toBe("buy");
+    expect(writtenReport.steps[0].topSetup?.grade).toBe("A");
+    expect(writtenReport.summary.decisionCounts.buy).toBeGreaterThan(0);
+    expect(writtenReport.summary.gradeCounts.A).toBeGreaterThan(0);
   });
 });

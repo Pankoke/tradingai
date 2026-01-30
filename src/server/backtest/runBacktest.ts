@@ -69,6 +69,7 @@ function sanitizeName(value: string) {
 type SetupLike = {
   id: string;
   grade?: string | null;
+  setupGrade?: string | null;
   decision?: string | null;
   direction?: string | null;
   balanceScore?: number;
@@ -77,6 +78,26 @@ type SetupLike = {
   biasScore?: number;
   confidence?: number;
 };
+
+function toDecision(setup?: Partial<SetupLike> | null): string | null {
+  if (!setup) return null;
+  if (typeof setup.decision === "string" && setup.decision.trim().length) {
+    return setup.decision;
+  }
+  const grade = setup.grade ?? setup.setupGrade ?? null;
+  if (grade === "NO_TRADE") return "no-trade";
+  const dir = setup.direction?.toLowerCase();
+  if (dir === "long") return "buy";
+  if (dir === "short") return "sell";
+  return null;
+}
+
+function toGrade(setup?: Partial<SetupLike> | null): string | null {
+  if (!setup) return null;
+  if (typeof setup.grade === "string" && setup.grade.trim().length) return setup.grade;
+  if (typeof setup.setupGrade === "string" && setup.setupGrade.trim().length) return setup.setupGrade;
+  return null;
+}
 
 function scoreOf(setup: SetupLike): number | null {
   const candidates = [
@@ -255,11 +276,12 @@ export async function runBacktest(params: {
         : [];
       const topSetup = pickTopSetup(setups);
       const score = topSetup ? scoreOf(topSetup) : null;
-      const label = topSetup?.decision ?? topSetup?.grade ?? (snapshot as { label?: string | null }).label ?? null;
+      const label =
+        toDecision(topSetup ?? {}) ?? toGrade(topSetup ?? {}) ?? (snapshot as { label?: string | null }).label ?? null;
       const setupsSummary = setups.slice(0, 3).map((s) => ({
         id: s.id,
-        grade: s.grade ?? null,
-        decision: s.decision ?? null,
+        grade: toGrade(s),
+        decision: toDecision(s),
         direction: s.direction ?? null,
         scoreTotal: scoreOf(s),
       }));
@@ -272,8 +294,8 @@ export async function runBacktest(params: {
         topSetup: topSetup
           ? {
               id: topSetup.id,
-              grade: topSetup.grade ?? null,
-              decision: topSetup.decision ?? null,
+              grade: toGrade(topSetup),
+              decision: toDecision(topSetup) ?? "no-trade",
               direction: topSetup.direction ?? null,
               scoreTotal: score,
               confidence: typeof topSetup.confidence === "number" ? topSetup.confidence : null,
