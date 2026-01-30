@@ -18,6 +18,8 @@ import {
   computeSentimentRankingAdjustment,
 } from "@/src/lib/engine/sentimentAdjustments";
 import { deriveBaseConfidenceScore } from "@/src/lib/engine/confidence";
+import { normalizeSentimentRawToSnapshot } from "@/src/domain/sentiment/normalizeSentiment";
+import type { SentimentSnapshotV2 } from "@/src/domain/sentiment/types";
 
 type CandleLike = {
   timestamp: Date;
@@ -127,11 +129,18 @@ export async function GET(request: Request) {
     );
   }
 
-  const normalizedRaw = {
-    ...raw,
-    timestamp: raw?.timestamp ? new Date(raw.timestamp).toISOString() : undefined,
+  const asOf = raw?.timestamp ? new Date(raw.timestamp) : new Date();
+  const window = {
+    fromIso: new Date(asOf.getTime() - 24 * 60 * 60 * 1000).toISOString(),
+    toIso: asOf.toISOString(),
+    granularity: "1H" as const,
   };
-  const sentimentMetrics = buildSentimentMetrics({ asset, sentiment: normalizedRaw });
+  const { snapshot: normalizedSnapshot, warnings: sentimentWarnings } = normalizeSentimentRawToSnapshot(raw, {
+    assetId: asset.id,
+    asOfIso: asOf.toISOString(),
+    window,
+  });
+  const sentimentMetrics = buildSentimentMetrics({ asset, sentiment: normalizedSnapshot as SentimentSnapshotV2 });
   const confidenceAdjustment = applySentimentConfidenceAdjustment({
     base: baseConfidence,
     sentiment: sentimentMetrics,
@@ -155,6 +164,7 @@ export async function GET(request: Request) {
     label: sentimentMetrics.label,
     reasonsPreview: sentimentMetrics.reasons.slice(0, 3),
     sentiment: sentimentMetrics,
+    sentimentWarnings,
     raw,
     inputs: normalizedInputs,
     contributions: sentimentMetrics.contributions ?? [],

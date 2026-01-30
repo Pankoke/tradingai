@@ -189,6 +189,26 @@ Austauschbare Sentiment-Quellen
 
 Normierte Snapshots
 
+Slice 5.1a (2026-01-30):
+- SentimentSnapshotV2 Domain Contract (ISO timestamps, window, sources, components)
+- Pure Normalizer (raw → snapshot) mit Warnings, keine server-Abhängigkeiten
+- Pure Tests für Normalisierung
+
+Slice 5.1b (2026-01-30):
+- Infrastruktur-Adapter emittiert SentimentSnapshotV2 (raw → normalizeSentimentRawToSnapshot)
+- Warnings werden via Meta propagiert; asOf/window deterministisch
+- Unit-Test für Adapter-Wiring hinzugefügt
+
+Slice 5.1c (2026-01-30):
+- Engine/Sentiment-Metrics konsumieren SentimentSnapshotV2 (components.*) statt Legacy-Rohdaten
+- PerceptionDataSource gibt SnapshotV2 in die Engine weiter
+- Neuer Pure-Test für sentimentMetrics; keine raw-Shapes mehr im Engine-Pfad
+
+Slice 5.2a (2026-01-30):
+- Sentiment Source Registry + Gewichtungskonfiguration eingeführt (SENTIMENT_SOURCES)
+- Adapter nutzt Registry-SourceId/Weight (weiterhin Single-Source, aber konfigurierbar)
+- Validator + Tests für Registry/SourceRef hinzugefügt
+
 ================================================================
 PHASE 6 – BACKTESTING MVP
 

@@ -29,7 +29,6 @@ import { createDefaultRings } from "@/src/lib/engine/rings";
 import { applyOrderflowConfidenceAdjustment } from "@/src/lib/engine/orderflowAdjustments";
 import { getSetupProfileConfig, type SetupProfile } from "@/src/lib/config/setupProfile";
 import { logger } from "@/src/lib/logger";
-import type { SentimentRawSnapshot } from "@/src/lib/engine/sentimentMetrics";
 
 export interface PerceptionDataSource {
   getSetupsForToday(params: { asOf: Date }): Promise<Setup[]>;
@@ -596,7 +595,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
 
   private async buildSentimentMetricsForAsset(
     asset: AssetLike,
-    context: SentimentContext,
+    _context: SentimentContext,
     asOf: Date,
   ): Promise<SentimentMetrics> {
     try {
@@ -623,7 +622,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
       };
       return buildSentimentMetrics({
         asset: sentimentAssetFull,
-        sentiment: snapshot.raw as SentimentRawSnapshot | null,
+        sentiment: snapshot,
       });
     } catch (error) {
       console.warn(
@@ -684,26 +683,27 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     return "high";
   }
 
-  private normalizeSentimentRaw(raw?: SentimentRawSnapshot | null) {
-    if (!raw) return undefined;
-    const timestamp =
-      typeof raw.timestamp === "string"
-        ? raw.timestamp
-        : undefined;
+  private normalizeSentimentRaw(raw?: unknown) {
+    if (!raw || typeof raw !== "object" || raw === null) return undefined;
+    const obj = raw as Record<string, unknown>;
+    const timestamp = typeof obj.timestamp === "string" ? obj.timestamp : undefined;
+    const profileKey = typeof obj.profileKey === "string" ? obj.profileKey : undefined;
+    const numberOrUndefined = (value: unknown) => (typeof value === "number" ? value : undefined);
+    const stringOrUndefined = (value: unknown) => (typeof value === "string" ? value : undefined);
     return {
-      source: raw.source,
-      profileKey: raw.profileKey ?? undefined,
+      source: stringOrUndefined(obj.source),
+      profileKey,
       timestamp,
-      baseScore: raw.baseScore ?? undefined,
-      biasScore: raw.biasScore,
-      trendScore: raw.trendScore,
-      momentumScore: raw.momentumScore,
-      orderflowScore: raw.orderflowScore,
-      eventScore: raw.eventScore,
-      rrr: raw.rrr,
-      riskPercent: raw.riskPercent,
-      volatilityLabel: raw.volatilityLabel,
-      driftPct: raw.driftPct,
+      baseScore: numberOrUndefined(obj.baseScore),
+      biasScore: numberOrUndefined(obj.biasScore),
+      trendScore: numberOrUndefined(obj.trendScore),
+      momentumScore: numberOrUndefined(obj.momentumScore),
+      orderflowScore: numberOrUndefined(obj.orderflowScore),
+      eventScore: numberOrUndefined(obj.eventScore),
+      rrr: numberOrUndefined(obj.rrr),
+      riskPercent: numberOrUndefined(obj.riskPercent),
+      volatilityLabel: stringOrUndefined(obj.volatilityLabel),
+      driftPct: numberOrUndefined(obj.driftPct),
     };
   }
 

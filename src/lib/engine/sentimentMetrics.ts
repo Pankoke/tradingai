@@ -1,32 +1,14 @@
-﻿import type {
+import type {
   SentimentDriverCategory,
   SentimentDriverSummary,
   SentimentFlag,
   SentimentLabel,
 } from "@/src/lib/engine/types";
 import { isEventModifierEnabled } from "@/src/lib/config/eventModifier";
+import type { SentimentSnapshotV2 } from "@/src/domain/sentiment/types";
 
 type SentimentAsset = {
   assetClass?: string | null;
-};
-
-export type SentimentRawSnapshot = {
-  source?: string;
-  profileKey?: string;
-  timestamp?: string;
-  baseScore?: number;
-  biasScore?: number;
-  trendScore?: number;
-  momentumScore?: number;
-  orderflowScore?: number;
-  eventScore?: number;
-  rrr?: number;
-  riskPercent?: number;
-  volatilityLabel?: string;
-  driftPct?: number;
-  reasons?: string[];
-  flags?: string[];
-  contributions?: unknown;
 };
 
 export type SentimentContributionId =
@@ -50,7 +32,7 @@ export type SentimentMetrics = {
   score: number;
   label: SentimentLabel;
   reasons: string[];
-  raw?: SentimentRawSnapshot | null;
+  raw?: SentimentSnapshotV2 | null;
   contributions?: SentimentContribution[];
   flags?: SentimentFlag[];
   dominantDrivers?: SentimentDriverSummary[];
@@ -122,7 +104,7 @@ export type SentimentProfile = {
 
 type BuildParams = {
   asset: SentimentAsset;
-  sentiment?: SentimentRawSnapshot | null;
+  sentiment?: SentimentSnapshotV2 | null;
 };
 
 const BASE_PROFILE: SentimentProfile = {
@@ -327,7 +309,7 @@ export function buildSentimentMetrics(params: BuildParams): SentimentMetrics {
     }
   }
 
-  const biasScore = normalizeScore(sentiment.biasScore);
+  const biasScore = normalizeScore(sentiment.components?.biasScore);
   if (typeof biasScore === "number") {
     if (biasScore >= profile.bias.veryStrong) {
       registerContribution("bias", profile.bias.veryStrongBonus, `Bias very strong (${biasScore}) supports direction`);
@@ -340,7 +322,7 @@ export function buildSentimentMetrics(params: BuildParams): SentimentMetrics {
     }
   }
 
-  const trendScore = normalizeScore(sentiment.trendScore);
+  const trendScore = normalizeScore(sentiment.components?.trendScore);
   if (typeof trendScore === "number") {
     if (trendScore >= profile.trend.strong) {
       registerContribution("trend", profile.trend.bonus, `Trend firm (${trendScore})`);
@@ -349,7 +331,7 @@ export function buildSentimentMetrics(params: BuildParams): SentimentMetrics {
     }
   }
 
-  const momentumScore = normalizeScore(sentiment.momentumScore);
+  const momentumScore = normalizeScore(sentiment.components?.momentumScore);
   if (typeof momentumScore === "number") {
     if (momentumScore >= profile.momentum.strong) {
       registerContribution("momentum", profile.momentum.bonus, `Momentum strong (${momentumScore})`);
@@ -358,7 +340,7 @@ export function buildSentimentMetrics(params: BuildParams): SentimentMetrics {
     }
   }
 
-  const orderflowScore = normalizeScore(sentiment.orderflowScore);
+  const orderflowScore = normalizeScore(sentiment.components?.orderflowScore);
   if (typeof orderflowScore === "number") {
     if (orderflowScore >= profile.orderflow.strong) {
       registerContribution("orderflow", profile.orderflow.bonus, `Orderflow supportive (${orderflowScore})`);
@@ -368,7 +350,7 @@ export function buildSentimentMetrics(params: BuildParams): SentimentMetrics {
   }
 
   if (!EVENT_MODIFIER_ENABLED) {
-    const eventScore = normalizeScore(sentiment.eventScore);
+    const eventScore = normalizeScore(sentiment.components?.eventScore);
     if (typeof eventScore === "number") {
       if (eventScore >= profile.event.elevated) {
         registerContribution("event", -profile.event.elevatedPenalty, `Event risk elevated (${eventScore})`);
@@ -378,35 +360,35 @@ export function buildSentimentMetrics(params: BuildParams): SentimentMetrics {
     }
   }
 
-  if (typeof sentiment.rrr === "number") {
-    if (sentiment.rrr >= profile.rrr.strong) {
-      registerContribution("rrr", profile.rrr.strongBonus, `RRR attractive (${sentiment.rrr.toFixed(2)}:1)`);
-    } else if (sentiment.rrr < profile.rrr.weak) {
-      registerContribution("rrr", -profile.rrr.weakPenalty, `RRR weak (${sentiment.rrr.toFixed(2)}:1)`);
+  if (typeof sentiment.components?.rrr === "number") {
+    if (sentiment.components?.rrr >= profile.rrr.strong) {
+      registerContribution("rrr", profile.rrr.strongBonus, `RRR attractive (${sentiment.components?.rrr.toFixed(2)}:1)`);
+    } else if (sentiment.components?.rrr < profile.rrr.weak) {
+      registerContribution("rrr", -profile.rrr.weakPenalty, `RRR weak (${sentiment.components?.rrr.toFixed(2)}:1)`);
     }
   }
 
-  if (typeof sentiment.riskPercent === "number") {
-    if (sentiment.riskPercent > profile.risk.high) {
-      registerContribution("riskPercent", -profile.risk.highPenalty, `Risk per trade high (${sentiment.riskPercent.toFixed(2)}%)`);
-    } else if (sentiment.riskPercent <= profile.risk.low) {
-      registerContribution("riskPercent", profile.risk.lowBonus, `Risk per trade moderate (${sentiment.riskPercent.toFixed(2)}%)`);
+  if (typeof sentiment.components?.riskPercent === "number") {
+    if (sentiment.components?.riskPercent > profile.risk.high) {
+      registerContribution("riskPercent", -profile.risk.highPenalty, `Risk per trade high (${sentiment.components?.riskPercent.toFixed(2)}%)`);
+    } else if (sentiment.components?.riskPercent <= profile.risk.low) {
+      registerContribution("riskPercent", profile.risk.lowBonus, `Risk per trade moderate (${sentiment.components?.riskPercent.toFixed(2)}%)`);
     }
   }
 
-  if (sentiment.volatilityLabel) {
-    if (sentiment.volatilityLabel === profile.volatility.highLabel) {
-      registerContribution("volatility", -profile.volatility.highPenalty, "Volatility high – stay tactical");
-    } else if (sentiment.volatilityLabel === profile.volatility.lowLabel) {
-      registerContribution("volatility", profile.volatility.lowBonus, "Volatility low – calm tape");
+  if (sentiment.components?.volatilityLabel) {
+    if (sentiment.components?.volatilityLabel === profile.volatility.highLabel) {
+      registerContribution("volatility", -profile.volatility.highPenalty, "Volatility high  stay tactical");
+    } else if (sentiment.components?.volatilityLabel === profile.volatility.lowLabel) {
+      registerContribution("volatility", profile.volatility.lowBonus, "Volatility low  calm tape");
     }
   }
 
   if (
-    typeof sentiment.driftPct === "number" &&
-    Math.abs(sentiment.driftPct) > profile.drift.thresholdPct
+    typeof sentiment.components?.driftPct === "number" &&
+    Math.abs(sentiment.components?.driftPct) > profile.drift.thresholdPct
   ) {
-    registerContribution("drift", -profile.drift.penalty, `Price drift ${sentiment.driftPct.toFixed(2)}% – re-check setup`);
+    registerContribution("drift", -profile.drift.penalty, `Price drift ${sentiment.components?.driftPct.toFixed(2)}%  re-check setup`);
   }
 
   const finalScore = clampScore(score);
@@ -416,14 +398,14 @@ export function buildSentimentMetrics(params: BuildParams): SentimentMetrics {
     reasons.push(`Overall sentiment ${label.replace("_", " ")} (${finalScore})`);
   }
 
-  const flags = buildFlags({ profile, label, score: finalScore, totals, raw: sentiment });
+  const flags = buildFlags({ profile, label, score: finalScore, totals });
   const dominantDrivers = buildDominantDrivers(totals);
 
   return {
     score: finalScore,
     label,
     reasons,
-    raw: { ...sentiment, profileKey: sentiment.profileKey ?? profile.key, baseScore: profile.baseScore },
+    raw: sentiment,
     contributions: contributions.length ? contributions : undefined,
     flags: flags.length ? flags : undefined,
     dominantDrivers: dominantDrivers.length ? dominantDrivers : undefined,
@@ -435,12 +417,11 @@ type FlagParams = {
   label: SentimentLabel;
   score: number;
   totals: Record<SentimentContributionId, number>;
-  raw: SentimentRawSnapshot;
 };
 
 function buildFlags(params: FlagParams): SentimentFlag[] {
   const flags: SentimentFlag[] = [];
-  const { label, totals, raw, score } = params;
+  const { label, totals, score } = params;
 
   const trendImpact = totals.trend;
   const biasImpact = totals.bias;
@@ -493,4 +474,16 @@ function mapContributionIdToDriver(id: SentimentContributionId): SentimentDriver
   if (id === "riskPercent") return "risk";
   return id;
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
