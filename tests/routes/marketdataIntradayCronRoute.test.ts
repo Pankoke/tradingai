@@ -125,7 +125,7 @@ describe("POST /api/cron/marketdata/intraday", () => {
     expect(res.status).toBe(200);
     const payload = await res.json();
     expect(payload.ok).toBe(true);
-    expect(payload.overallHealthStatus).toBe("ok");
+    expect(payload.data.overallHealthStatus).toBe("ok");
     expect(mockSync).not.toHaveBeenCalled();
     expect(mockDerive4h).toHaveBeenCalledTimes(1);
     expect(mockAudit).toHaveBeenCalledWith(expect.objectContaining({ action: "marketdata.intraday_sync" }));
