@@ -99,6 +99,13 @@ export async function buildHealthSummary(params: BuildParams = {}): Promise<Heal
     (acc, src) => computeHealthStatus({ ageSeconds: src.ageSeconds, policy: HEALTH_POLICIES.sentiment, errorsCount: 0 }),
     computeHealthStatus({ ageSeconds: undefined, policy: HEALTH_POLICIES.sentiment }),
   );
+  const sentimentLatest = sentimentSources.reduce<Date | null>((latest, src) => {
+    if (!src.latestTimestamp) return latest;
+    const ts = new Date(src.latestTimestamp);
+    if (!latest || ts > latest) return ts;
+    return latest;
+  }, null);
+  const sentimentAgeSeconds = sentimentLatest ? Math.max(0, (now.getTime() - sentimentLatest.getTime()) / 1000) : undefined;
 
   const results: HealthCheckResult[] = [
     {
@@ -171,6 +178,11 @@ export async function buildHealthSummary(params: BuildParams = {}): Promise<Heal
       status: sentimentCombinedStatus,
       asOf: asOfIso,
       durationMs: 0,
+      freshness: {
+        latestTimestamp: sentimentLatest?.toISOString(),
+        ageSeconds: sentimentAgeSeconds,
+        window: windowLabel,
+      },
       warnings:
         sentimentSources.length === 0
           ? ["sentiment_stats_unavailable"]

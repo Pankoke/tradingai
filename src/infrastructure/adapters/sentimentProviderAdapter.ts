@@ -57,6 +57,7 @@ export class SentimentProviderAdapter implements SentimentProviderPort {
     const metrics = buildSentimentMetrics({ asset, sentiment: built.snapshot });
     const confidence = metrics.flags?.includes("low_conviction") ? 0.25 : 0.75;
     const flagsStr = metrics.flags?.length ? metrics.flags.join(",") : undefined;
+    const warningsBySource = Object.keys(built.perSource).length ? built.perSource : undefined;
 
     return {
       ...built.snapshot,
@@ -71,7 +72,7 @@ export class SentimentProviderAdapter implements SentimentProviderPort {
         label: metrics.label,
         ...(flagsStr ? { flags: flagsStr } : {}),
         ...(built.warnings.length ? { warnings: built.warnings.join(",") } : {}),
-        ...(Object.keys(built.perSource).length ? { warningsBySourceJson: JSON.stringify(built.perSource) } : {}),
+        ...(warningsBySource ? { warningsBySourceJson: JSON.stringify(warningsBySource) } : {}),
       },
       raw: null,
     };

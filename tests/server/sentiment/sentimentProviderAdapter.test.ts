@@ -53,7 +53,8 @@ describe("SentimentProviderAdapter", () => {
     const snapshot = await adapter.fetchSentiment({ assetId: "A", asOf });
 
     expect(snapshot.sources.length).toBeGreaterThanOrEqual(0);
-    const warningsBySource = snapshot.meta?.warningsBySource as Record<string, { warnings: string[] }> | undefined;
-    expect(warningsBySource?.primary?.warnings?.length ?? 0).toBeGreaterThan(0);
+    const warningsBySourceJson = snapshot.meta?.warningsBySourceJson as string | undefined;
+    const parsed = warningsBySourceJson ? (JSON.parse(warningsBySourceJson) as Record<string, { warnings: string[] }>) : {};
+    expect(parsed?.primary?.warnings?.length ?? 0).toBeGreaterThan(0);
   });
 });

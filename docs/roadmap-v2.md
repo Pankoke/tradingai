@@ -222,6 +222,21 @@ Slice 5.2b-2 (2026-01-30):
 - Tests: buildSentimentSnapshotV2.test.ts (multi-source, failover)
 - Status: done (Build/Test/Lint grün)
 
+Slice 5.3a (2026-01-30):
+- buildHealthSummary berücksichtigt SENTIMENT_SOURCES + policy-driven Status für Sentiment
+- computeHealthStatus/policy für combined sentiment; per-source freshness + warnings in sourcesJson
+- optional getSentimentSnapshotStats Dependency (default empty) eingeführt
+- Admin/System UI zeigt Sentiment-Details (freshness/warnings)
+- Tests: buildHealthSummary.test.ts erweitert (frischer Timestamp => ok)
+- Status: done
+
+Slice 5.3b (2026-01-30):
+- Sentiment Backfill Service (chunked, idempotent) nutzt buildSentimentSnapshotV2 + SENTIMENT_SOURCES
+- Persistenz über file-basierte sentimentSnapshotRepository (JSON upsert, idempotent)
+- Admin Endpoint POST /api/admin/sentiment/backfill mit Chunk-Logs/Warnungen
+- Tests: backfillSentiment.test.ts (happy path, partial failure, invalid range)
+- Status: done (Build/Test/Lint grün)
+
 ================================================================
 PHASE 6 – BACKTESTING MVP
 
