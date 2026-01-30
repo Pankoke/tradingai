@@ -237,6 +237,16 @@ Slice 5.3b (2026-01-30):
 - Tests: backfillSentiment.test.ts (happy path, partial failure, invalid range)
 - Status: done (Build/Test/Lint grün)
 
+===============================================================
+PHASE 6 – BACKTESTING MVP
+
+Slice 6.1 (2026-01-30):
+- Backtest Runner (server-only) iteriert asOf in festen steps, bounded Inputs (candles/events/sentiment snapshots)
+- Resultate als JSON Report unter reports/backtests/<assetId>/... (idempotent overwrite)
+- Optional Admin Endpoint POST /api/admin/backtest/run mit summary
+- Tests: runBacktest.test.ts (deterministisches stepping, error range)
+- Status: done (Build/Test/Lint grün)
+
 ================================================================
 PHASE 6 – BACKTESTING MVP
 

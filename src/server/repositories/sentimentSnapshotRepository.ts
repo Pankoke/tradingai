@@ -48,6 +48,33 @@ export async function getLatestSentimentSnapshot(assetId: string): Promise<Senti
   }
 }
 
+export async function getLatestSentimentSnapshotAtOrBefore(
+  assetId: string,
+  asOf: Date,
+): Promise<SentimentSnapshotV2 | null> {
+  try {
+    const files = await fs.readdir(ROOT_DIR);
+    const prefix = assetId.replace(/[^a-zA-Z0-9_-]/g, "_");
+    const candidates = files
+      .filter((f) => f.startsWith(prefix))
+      .map((file) => path.join(ROOT_DIR, file));
+    let best: { iso: string; snapshot: SentimentSnapshotV2 } | null = null;
+    for (const full of candidates) {
+      const content = await fs.readFile(full, "utf8");
+      const snapshot = JSON.parse(content) as SentimentSnapshotV2;
+      if (snapshot.assetId !== assetId) continue;
+      const ts = new Date(snapshot.asOfIso);
+      if (Number.isNaN(ts.getTime()) || ts > asOf) continue;
+      if (!best || ts.toISOString() > best.iso) {
+        best = { iso: ts.toISOString(), snapshot };
+      }
+    }
+    return best?.snapshot ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function getSentimentSnapshotStats(): Promise<
   Array<{ assetId: string; latestTimestamp: string; sourceIds: string[] }>
 > {
