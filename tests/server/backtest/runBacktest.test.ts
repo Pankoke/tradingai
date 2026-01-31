@@ -142,6 +142,31 @@ describe("runBacktest", () => {
     expect(writtenReport.summary?.avgScoreTotal).toBeGreaterThan(0);
   });
 
+  it("derives grade from score when missing", async () => {
+    buildSnapshot.mockImplementation(async ({ asOf }) => ({
+      asOf,
+      setups: [{ id: "s1", direction: "Long", balanceScore: 82 }],
+    }));
+
+    const result = await runBacktest({
+      assetId: "A",
+      fromIso: "2025-01-01T00:00:00.000Z",
+      toIso: "2025-01-01T02:00:00.000Z",
+      stepHours: 1,
+      deps: { createDataSource, buildSnapshot, loadSentimentSnapshot, writeReport },
+    });
+
+    expect(result.ok).toBe(true);
+    const writtenReport = (writeReport as vi.Mock).mock.calls[0][0] as {
+      steps: Array<{ topSetup?: { grade?: string | null }; setupsSummary?: Array<{ grade?: string | null }> }>;
+      summary: { gradeCounts: Record<string, number> };
+    };
+    const step = writtenReport.steps[0];
+    expect(step.topSetup?.grade).toBe("B");
+    expect(step.setupsSummary?.[0]?.grade).toBe("B");
+    expect(writtenReport.summary.gradeCounts.B).toBeGreaterThan(0);
+  });
+
   it("counts decisions and grades from setupGrade/direction fallbacks", async () => {
     buildSnapshot.mockImplementation(async ({ asOf }) => ({
       asOf,
@@ -169,5 +194,39 @@ describe("runBacktest", () => {
     expect(writtenReport.steps[0].topSetup?.grade).toBe("A");
     expect(writtenReport.summary.decisionCounts.buy).toBeGreaterThan(0);
     expect(writtenReport.summary.gradeCounts.A).toBeGreaterThan(0);
+  });
+
+  it("applies decision fallback policy deterministically", async () => {
+    let call = 0;
+    buildSnapshot.mockImplementation(async ({ asOf }) => {
+      const datasets = [
+        [{ id: "s1", decision: "NO_TRADE", direction: "Long", balanceScore: 10 }],
+        [{ id: "s2", direction: "Short", balanceScore: 20 }],
+        [{ id: "s3", balanceScore: 30 }],
+      ];
+      const setups = datasets[call] ?? datasets[datasets.length - 1];
+      call += 1;
+      return { asOf, setups };
+    });
+
+    const result = await runBacktest({
+      assetId: "A",
+      fromIso: "2025-01-01T00:00:00.000Z",
+      toIso: "2025-01-01T02:00:00.000Z",
+      stepHours: 1,
+      deps: { createDataSource, buildSnapshot, loadSentimentSnapshot, writeReport },
+    });
+
+    expect(result.ok).toBe(true);
+    const report = (writeReport as vi.Mock).mock.calls[0][0] as {
+      steps: Array<{ topSetup?: { decision?: string | null } }>;
+      summary: { decisionCounts: Record<string, number> };
+    };
+    expect(report.steps[0].topSetup?.decision).toBe("no-trade");
+    expect(report.steps[1].topSetup?.decision).toBe("sell");
+    expect(report.steps[2].topSetup?.decision).toBe("unknown");
+    expect(report.summary.decisionCounts["no-trade"]).toBe(1);
+    expect(report.summary.decisionCounts.sell).toBe(1);
+    expect(report.summary.decisionCounts.unknown).toBe(1);
   });
 });

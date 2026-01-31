@@ -10,7 +10,7 @@ describe("computeBacktestSummary", () => {
       { asOfIso: "t3", topSetup: { id: "c", decision: "buy", grade: "A", scoreTotal: 40, confidence: 60 }, setups: 1 },
       { asOfIso: "t4", topSetup: null },
       { asOfIso: "t5" },
-      { asOfIso: "t6", topSetup: { id: "d", decision: "hold", grade: "C", scoreTotal: 50 } },
+      { asOfIso: "t6", topSetup: { id: "d", decision: "no-trade", grade: "C", scoreTotal: 50 } },
     ];
 
     const summary = computeBacktestSummary(steps);
@@ -19,7 +19,7 @@ describe("computeBacktestSummary", () => {
     expect(summary.stepsWithTopSetup).toBe(4);
     expect(summary.decisionCounts.buy).toBe(2);
     expect(summary.decisionCounts.sell).toBe(1);
-    expect(summary.decisionCounts.hold).toBe(1);
+    expect(summary.decisionCounts["no-trade"]).toBe(1);
     expect(summary.gradeCounts.A).toBe(2);
     expect(summary.gradeCounts.B).toBe(1);
     expect(summary.gradeCounts.C).toBe(1);

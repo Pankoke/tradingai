@@ -79,17 +79,30 @@ type SetupLike = {
   confidence?: number;
 };
 
+function hasDecision(value: Partial<SetupLike> | null | undefined): value is { decision: string } {
+  return typeof value?.decision === "string" && value.decision.trim().length > 0;
+}
+
+function normalizeDecision(decision: string): string | null {
+  const trimmed = decision.trim().toLowerCase();
+  if (!trimmed) return null;
+  if (["no_trade", "no-trade", "notrade", "none", "hold"].includes(trimmed)) return "no-trade";
+  if (trimmed === "buy" || trimmed === "long") return "buy";
+  if (trimmed === "sell" || trimmed === "short") return "sell";
+  return trimmed;
+}
+
 function toDecision(setup?: Partial<SetupLike> | null): string | null {
-  if (!setup) return null;
-  if (typeof setup.decision === "string" && setup.decision.trim().length) {
-    return setup.decision;
-  }
+  if (!setup) return "unknown";
+  const rawDecision = hasDecision(setup) ? setup.decision : null;
+  const normalized = rawDecision ? normalizeDecision(rawDecision) : null;
+  if (normalized) return normalized;
   const grade = setup.grade ?? setup.setupGrade ?? null;
   if (grade === "NO_TRADE") return "no-trade";
   const dir = setup.direction?.toLowerCase();
   if (dir === "long") return "buy";
   if (dir === "short") return "sell";
-  return null;
+  return "unknown";
 }
 
 function toGrade(setup?: Partial<SetupLike> | null): string | null {
@@ -97,6 +110,14 @@ function toGrade(setup?: Partial<SetupLike> | null): string | null {
   if (typeof setup.grade === "string" && setup.grade.trim().length) return setup.grade;
   if (typeof setup.setupGrade === "string" && setup.setupGrade.trim().length) return setup.setupGrade;
   return null;
+}
+
+function deriveGradeFromScore(score: number | null): string | null {
+  if (score == null) return null;
+  if (score >= 85) return "A";
+  if (score >= 75) return "B";
+  if (score >= 65) return "C";
+  return "D";
 }
 
 function scoreOf(setup: SetupLike): number | null {
@@ -276,11 +297,12 @@ export async function runBacktest(params: {
         : [];
       const topSetup = pickTopSetup(setups);
       const score = topSetup ? scoreOf(topSetup) : null;
+      const topGrade = topSetup ? toGrade(topSetup) ?? deriveGradeFromScore(score) : null;
       const label =
-        toDecision(topSetup ?? {}) ?? toGrade(topSetup ?? {}) ?? (snapshot as { label?: string | null }).label ?? null;
+        toDecision(topSetup ?? {}) ?? topGrade ?? (snapshot as { label?: string | null }).label ?? null;
       const setupsSummary = setups.slice(0, 3).map((s) => ({
         id: s.id,
-        grade: toGrade(s),
+        grade: toGrade(s) ?? deriveGradeFromScore(scoreOf(s)),
         decision: toDecision(s),
         direction: s.direction ?? null,
         scoreTotal: scoreOf(s),
@@ -294,7 +316,7 @@ export async function runBacktest(params: {
         topSetup: topSetup
           ? {
               id: topSetup.id,
-              grade: toGrade(topSetup),
+              grade: topGrade,
               decision: toDecision(topSetup) ?? "no-trade",
               direction: topSetup.direction ?? null,
               scoreTotal: score,
