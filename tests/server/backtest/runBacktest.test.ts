@@ -129,16 +129,25 @@ describe("runBacktest", () => {
     expect(result.ok).toBe(true);
     const callArgs = (writeReport as vi.Mock).mock.calls[0] as [unknown, string];
     const writtenReport = callArgs[0] as {
-      steps: Array<{ topSetup?: { scoreTotal?: number | null }; setupsSummary?: unknown[]; score?: number | null; label?: string | null }>;
+      steps: Array<{
+        topSetup?: { scoreTotal?: number | null; gradeSource?: string | null; decisionSource?: string | null };
+        setupsSummary?: Array<{ gradeSource?: string | null; decisionSource?: string | null }>;
+        score?: number | null;
+        label?: string | null;
+        sentimentSnapshotFound?: boolean;
+      }>;
       summary: { avgScoreTotal?: number | null };
     };
     const step = writtenReport.steps[0];
     expect(step.topSetup?.scoreTotal).toBe(70);
     expect(step.topSetup?.grade).toBe("A");
     expect(step.topSetup?.decision).toBe("buy");
+    expect(step.topSetup?.gradeSource).toBe("engine");
+    expect(step.topSetup?.decisionSource).toBe("direction");
     expect(step.score).toBe(70);
     expect(step.setupsSummary?.length).toBe(3);
     expect(step.label).toBe("buy"); // from top setup decision
+    expect(step.sentimentSnapshotFound).toBe(false);
     expect(writtenReport.summary?.avgScoreTotal).toBeGreaterThan(0);
   });
 
@@ -158,12 +167,17 @@ describe("runBacktest", () => {
 
     expect(result.ok).toBe(true);
     const writtenReport = (writeReport as vi.Mock).mock.calls[0][0] as {
-      steps: Array<{ topSetup?: { grade?: string | null }; setupsSummary?: Array<{ grade?: string | null }> }>;
+      steps: Array<{
+        topSetup?: { grade?: string | null; gradeSource?: string | null };
+        setupsSummary?: Array<{ grade?: string | null; gradeSource?: string | null }>;
+      }>;
       summary: { gradeCounts: Record<string, number> };
     };
     const step = writtenReport.steps[0];
     expect(step.topSetup?.grade).toBe("B");
+    expect(step.topSetup?.gradeSource).toBe("derived");
     expect(step.setupsSummary?.[0]?.grade).toBe("B");
+    expect(step.setupsSummary?.[0]?.gradeSource).toBe("derived");
     expect(writtenReport.summary.gradeCounts.B).toBeGreaterThan(0);
   });
 
@@ -188,7 +202,7 @@ describe("runBacktest", () => {
     expect(result.ok).toBe(true);
     const writtenReport = (writeReport as vi.Mock).mock.calls[0][0] as {
       summary: { decisionCounts: Record<string, number>; gradeCounts: Record<string, number> };
-      steps: Array<{ topSetup?: { decision?: string | null; grade?: string | null } }>;
+      steps: Array<{ topSetup?: { decision?: string | null; grade?: string | null; decisionSource?: string | null } }>;
     };
     expect(writtenReport.steps[0].topSetup?.decision).toBe("buy");
     expect(writtenReport.steps[0].topSetup?.grade).toBe("A");
@@ -223,10 +237,32 @@ describe("runBacktest", () => {
       summary: { decisionCounts: Record<string, number> };
     };
     expect(report.steps[0].topSetup?.decision).toBe("no-trade");
+    expect(report.steps[0].topSetup?.decisionSource).toBe("engine");
     expect(report.steps[1].topSetup?.decision).toBe("sell");
     expect(report.steps[2].topSetup?.decision).toBe("unknown");
     expect(report.summary.decisionCounts["no-trade"]).toBe(1);
     expect(report.summary.decisionCounts.sell).toBe(1);
     expect(report.summary.decisionCounts.unknown).toBe(1);
+  });
+
+  it("throws on sentiment lookahead in debug mode", async () => {
+    loadSentimentSnapshot.mockImplementation(async (_assetId: string, _asOf: Date) => ({
+      assetId: "A",
+      asOfIso: "2999-01-01T00:00:00.000Z",
+      window: { fromIso: "2998-12-31T00:00:00.000Z", toIso: "2999-01-01T00:00:00.000Z" },
+      sources: [],
+      components: { polarityScore: 0, confidence: 0 },
+    }));
+
+    await expect(
+      runBacktest({
+        assetId: "A",
+        fromIso: "2025-01-01T00:00:00.000Z",
+        toIso: "2025-01-01T02:00:00.000Z",
+        stepHours: 1,
+        deps: { createDataSource, buildSnapshot, loadSentimentSnapshot, writeReport },
+        debug: true,
+      }),
+    ).rejects.toThrow(/sentiment snapshot/);
   });
 });

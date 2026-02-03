@@ -23,7 +23,9 @@ export type BacktestStepResult = {
   topSetup?: {
     id: string;
     grade?: string | null;
+    gradeSource?: "engine" | "derived" | "unknown";
     decision?: string | null;
+    decisionSource?: "engine" | "grade" | "direction" | "unknown";
     direction?: string | null;
     scoreTotal?: number | null;
     confidence?: number | null;
@@ -31,11 +33,15 @@ export type BacktestStepResult = {
   setupsSummary?: Array<{
     id: string;
     grade?: string | null;
+    gradeSource?: "engine" | "derived" | "unknown";
     decision?: string | null;
+    decisionSource?: "engine" | "grade" | "direction" | "unknown";
     direction?: string | null;
     scoreTotal?: number | null;
   }>;
   warnings?: string[];
+  sentimentSnapshotFound?: boolean;
+  sentimentSnapshotAsOfIso?: string;
 };
 
 export type BacktestReport = {
@@ -92,17 +98,19 @@ function normalizeDecision(decision: string): string | null {
   return trimmed;
 }
 
-function toDecision(setup?: Partial<SetupLike> | null): string | null {
-  if (!setup) return "unknown";
+function toDecision(
+  setup?: Partial<SetupLike> | null,
+): { decision: string; decisionSource: "engine" | "grade" | "direction" | "unknown" } {
+  if (!setup) return { decision: "unknown", decisionSource: "unknown" };
   const rawDecision = hasDecision(setup) ? setup.decision : null;
   const normalized = rawDecision ? normalizeDecision(rawDecision) : null;
-  if (normalized) return normalized;
+  if (normalized) return { decision: normalized, decisionSource: "engine" };
   const grade = setup.grade ?? setup.setupGrade ?? null;
-  if (grade === "NO_TRADE") return "no-trade";
+  if (grade === "NO_TRADE") return { decision: "no-trade", decisionSource: "grade" };
   const dir = setup.direction?.toLowerCase();
-  if (dir === "long") return "buy";
-  if (dir === "short") return "sell";
-  return "unknown";
+  if (dir === "long") return { decision: "buy", decisionSource: "direction" };
+  if (dir === "short") return { decision: "sell", decisionSource: "direction" };
+  return { decision: "unknown", decisionSource: "unknown" };
 }
 
 function toGrade(setup?: Partial<SetupLike> | null): string | null {
@@ -220,6 +228,7 @@ export async function runBacktest(params: {
   lookbackHours?: number;
   timeframeFilter?: CandleTimeframe[];
   deps?: RunBacktestDeps;
+  debug?: boolean;
 }): Promise<{ ok: true; reportPath: string; steps: number } | { ok: false; error: string; code: string }> {
   const from = new Date(params.fromIso);
   const to = new Date(params.toIso);
@@ -235,10 +244,17 @@ export async function runBacktest(params: {
   const loadSentimentSnapshot =
     params.deps?.loadSentimentSnapshot ?? ((assetId: string, asOf: Date) => getLatestSentimentSnapshotAtOrBefore(assetId, asOf));
 
+  let lastSentimentFound = false;
+  let lastSentimentIso: string | undefined;
+
   const sentimentPort: SentimentProviderPort = {
     fetchSentiment: async ({ assetId, asOf }) => {
       const snap = await loadSentimentSnapshot(assetId, asOf);
-      if (snap) return snap;
+      if (snap) {
+        lastSentimentFound = true;
+        lastSentimentIso = snap.asOfIso;
+        return snap;
+      }
       const iso = asOf.toISOString();
       return {
         assetId,
@@ -287,9 +303,17 @@ export async function runBacktest(params: {
   const dataSource = createPerceptionDataSource(dataSourceDeps, { assetFilter: [params.assetId] });
 
   const steps: BacktestStepResult[] = [];
+  let lastAsOf: Date | null = null;
   let cursor = new Date(from);
   while (cursor <= to) {
     const asOf = new Date(cursor);
+    if (params.debug ?? process.env.NODE_ENV !== "production") {
+      if (lastAsOf && asOf.getTime() < lastAsOf.getTime()) {
+        throw new Error(`backtest_invariant: asOf not monotonic (prev ${lastAsOf.toISOString()} > ${asOf.toISOString()})`);
+      }
+    }
+    lastSentimentFound = false;
+    lastSentimentIso = undefined;
     try {
       const snapshot = await buildSnapshot({ asOf, dataSource, assetFilter: [params.assetId] });
       const setups = Array.isArray((snapshot as { setups?: unknown[] }).setups)
@@ -298,12 +322,14 @@ export async function runBacktest(params: {
       const topSetup = pickTopSetup(setups);
       const score = topSetup ? scoreOf(topSetup) : null;
       const topGrade = topSetup ? toGrade(topSetup) ?? deriveGradeFromScore(score) : null;
-      const label =
-        toDecision(topSetup ?? {}) ?? topGrade ?? (snapshot as { label?: string | null }).label ?? null;
-      const setupsSummary = setups.slice(0, 3).map((s) => ({
+      const topDecisionResult = toDecision(topSetup ?? {});
+      const label = topDecisionResult.decision ?? topGrade ?? (snapshot as { label?: string | null }).label ?? null;
+      const setupsSummary: NonNullable<BacktestStepResult["setupsSummary"]> = setups.slice(0, 3).map((s) => ({
         id: s.id,
         grade: toGrade(s) ?? deriveGradeFromScore(scoreOf(s)),
-        decision: toDecision(s),
+        gradeSource: toGrade(s) ? "engine" : deriveGradeFromScore(scoreOf(s)) ? "derived" : "unknown",
+        decision: toDecision(s).decision,
+        decisionSource: toDecision(s).decisionSource,
         direction: s.direction ?? null,
         scoreTotal: scoreOf(s),
       }));
@@ -317,15 +343,38 @@ export async function runBacktest(params: {
           ? {
               id: topSetup.id,
               grade: topGrade,
-              decision: toDecision(topSetup) ?? "no-trade",
+              gradeSource: topGrade && toGrade(topSetup) ? "engine" : topGrade ? "derived" : "unknown",
+              decision: topDecisionResult.decision ?? "unknown",
+              decisionSource: topDecisionResult.decisionSource,
               direction: topSetup.direction ?? null,
               scoreTotal: score,
               confidence: typeof topSetup.confidence === "number" ? topSetup.confidence : null,
             }
           : null,
         setupsSummary,
+        sentimentSnapshotFound: lastSentimentFound,
+        sentimentSnapshotAsOfIso: lastSentimentIso,
       });
+      if (params.debug ?? process.env.NODE_ENV !== "production") {
+        if (!lastSentimentFound) {
+          const probe = await loadSentimentSnapshot(params.assetId, asOf);
+          if (probe) {
+            lastSentimentFound = true;
+            lastSentimentIso = probe.asOfIso;
+          }
+        }
+        if (lastSentimentFound && lastSentimentIso) {
+          if (new Date(lastSentimentIso).getTime() > asOf.getTime()) {
+            throw new Error(
+              `backtest_invariant: sentiment snapshot ${lastSentimentIso} is after asOf ${asOf.toISOString()}`,
+            );
+          }
+        }
+      }
     } catch (error) {
+      if (params.debug ?? process.env.NODE_ENV !== "production") {
+        throw error;
+      }
       steps.push({
         asOfIso: asOf.toISOString(),
         label: null,
@@ -333,6 +382,7 @@ export async function runBacktest(params: {
         warnings: [`build_failed: ${String(error)}`],
       });
     }
+    lastAsOf = asOf;
     cursor = addHours(cursor, params.stepHours);
   }
 
