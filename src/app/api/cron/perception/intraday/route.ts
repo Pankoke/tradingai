@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 import { buildAndStorePerceptionSnapshot } from "@/src/features/perception/build/buildSetups";
+import { createSnapshotStore } from "@/src/features/perception/cache/snapshotStore";
+import { perceptionSnapshotStoreAdapter } from "@/src/server/adapters/perceptionSnapshotStoreAdapter";
 import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
 import { logger } from "@/src/lib/logger";
 import { db } from "@/src/server/db/db";
@@ -8,6 +10,8 @@ import { sql } from "drizzle-orm";
 import { gateCandlesPerAsset } from "@/src/server/health/freshnessGate";
 import { FRESHNESS_THRESHOLDS_MINUTES } from "@/src/server/health/freshnessThresholds";
 import { getActiveAssets } from "@/src/server/repositories/assetRepository";
+import { buildPerceptionSnapshotWithContainer } from "@/src/server/perception/perceptionEngineFactory";
+import { maybeEnhanceRingAiSummaryWithLLM } from "@/src/server/ai/ringSummaryOpenAi";
 
 const cronLogger = logger.child({ route: "cron-perception-intraday" });
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -83,6 +87,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     const snapshotTime = new Date();
+    const snapshotStore = createSnapshotStore(perceptionSnapshotStoreAdapter);
     const snapshot = await buildAndStorePerceptionSnapshot({
       source: "cron_intraday",
       allowSync: false,
@@ -90,6 +95,12 @@ export async function POST(request: NextRequest): Promise<Response> {
       label: "intraday",
       assetFilter: allowedAssetIds,
       snapshotTime,
+      snapshotStore,
+      deps: {
+        buildPerceptionSnapshot: buildPerceptionSnapshotWithContainer,
+        getActiveAssets,
+        maybeEnhanceRingAiSummaryWithLLM,
+      },
     });
     const setupsArr =
       Array.isArray((snapshot as { setups?: unknown }).setups)

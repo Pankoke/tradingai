@@ -254,6 +254,51 @@ describe("runBacktest", () => {
     expect(report.summary.decisionCounts.unknown).toBe(1);
   });
 
+  it("creates order intent and fills at next step open deterministically", async () => {
+    let call = 0;
+    buildSnapshot.mockImplementation(async ({ asOf }) => {
+      const idx = call;
+      call += 1;
+      return {
+        asOf,
+        setups: [{ id: `s${idx}`, decision: "buy", balanceScore: 50 + idx, candles: [{ timestamp: asOf, open: 100 + idx }] }],
+      };
+    });
+
+    await runBacktest({
+      assetId: "A",
+      fromIso: "2025-01-01T00:00:00.000Z",
+      toIso: "2025-01-01T02:00:00.000Z",
+      stepHours: 1,
+      deps: { createDataSource, buildSnapshot, loadSentimentSnapshot, writeReport },
+    });
+
+    const report = (writeReport as vi.Mock).mock.calls[0][0] as { steps: Array<{ executedEntry?: { status: string; fill?: { fillPrice: number } } }> };
+    expect(report.steps[0].executedEntry?.status).toBe("filled");
+    expect(report.steps[0].executedEntry?.fill?.fillPrice).toBe(101);
+    expect(report.steps[1].executedEntry?.status).toBe("filled");
+    expect(report.steps[2].executedEntry?.status).toBe("unfilled");
+  });
+
+  it("throws on candle lookahead in debug mode", async () => {
+    buildSnapshot.mockImplementation(async ({ asOf }) => ({
+      asOf,
+      setups: [{ id: "s1", decision: "buy", balanceScore: 10 }],
+      candles: [{ timestamp: new Date(asOf.getTime() + 60 * 60 * 1000), open: 123 }],
+    }));
+
+    await expect(
+      runBacktest({
+        assetId: "A",
+        fromIso: "2025-01-01T00:00:00.000Z",
+        toIso: "2025-01-01T01:00:00.000Z",
+        stepHours: 1,
+        deps: { createDataSource, buildSnapshot, loadSentimentSnapshot, writeReport },
+        debug: true,
+      }),
+    ).rejects.toThrow(/candle timestamp/);
+  });
+
   it("throws on sentiment lookahead in debug mode", async () => {
     loadSentimentSnapshot.mockImplementation(async (_assetId: string, _asOf: Date) => ({
       assetId: "A",

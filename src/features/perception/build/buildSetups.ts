@@ -1,22 +1,12 @@
-import { buildPerceptionSnapshotWithContainer } from "@/src/server/perception/perceptionEngineFactory";
 import { computeSetupConfidence, computeSetupScore } from "@/src/lib/engine/scoring";
-import type { PerceptionSnapshot } from "@/src/lib/engine/types";
-import type { Setup } from "@/src/lib/engine/types";
-import type {
-  PerceptionSnapshotItemInput,
-  PerceptionSnapshotInput,
-  PerceptionSnapshotWithItems,
-} from "@/src/server/repositories/perceptionSnapshotRepository";
-import { getSnapshotByTime } from "@/src/server/repositories/perceptionSnapshotRepository";
-import { saveSnapshotToStore } from "@/src/features/perception/cache/snapshotStore";
-import { getActiveAssets } from "@/src/server/repositories/assetRepository";
+import type { PerceptionSnapshot, Setup, RingAiSummary } from "@/src/lib/engine/types";
+import type { PerceptionSnapshotItemInput, PerceptionSnapshotInput, PerceptionSnapshotWithItems } from "@/src/domain/perception/types";
 import { computeRingsForSetup } from "@/src/lib/engine/rings";
 import {
   getPerceptionDataMode,
   type PerceptionDataMode,
 } from "@/src/lib/config/perceptionDataMode";
 import { buildRingAiSummaryForSetup } from "@/src/lib/engine/modules/ringAiSummary";
-import { maybeEnhanceRingAiSummaryWithLLM } from "@/src/server/ai/ringSummaryOpenAi";
 import { computeSentimentRankingAdjustment } from "@/src/lib/engine/sentimentAdjustments";
 import { clamp } from "@/src/lib/math";
 import type { SetupProfile } from "@/src/lib/config/setupProfile";
@@ -38,6 +28,30 @@ type BuildParams = {
   label?: string;
   assetFilter?: string[];
   snapshotId?: string;
+  snapshotStore: {
+    saveSnapshotToStore: (params: { snapshot: PerceptionSnapshotInput; items: PerceptionSnapshotItemInput[] }) => Promise<void>;
+    getSnapshotByTime: (params: { snapshotTime: Date }) => Promise<PerceptionSnapshotWithItems | undefined | null>;
+  };
+  deps: {
+    buildPerceptionSnapshot: (options: {
+      asOf: Date;
+      allowSync?: boolean;
+      profiles?: SetupProfile[];
+      assetFilter?: string[];
+    }) => Promise<PerceptionSnapshot>;
+    getActiveAssets: () => Promise<
+      Array<{
+        id: string;
+        symbol: string;
+        name?: string | null;
+        assetClass?: string | null;
+        baseCurrency?: string | null;
+        quoteCurrency?: string | null;
+        isActive?: boolean | null;
+      }>
+    >;
+    maybeEnhanceRingAiSummaryWithLLM?: (params: { setup: Setup; heuristic: RingAiSummary }) => Promise<RingAiSummary>;
+  };
 };
 
 const SNAPSHOT_VERSION = process.env.SETUP_ENGINE_VERSION ?? "v1.0.0";
@@ -119,7 +133,7 @@ export function normalizeProfileForTimeframe(profile: string | undefined | null,
 }
 
 export async function buildAndStorePerceptionSnapshot(
-  params: BuildParams = {},
+  params: BuildParams,
 ): Promise<PerceptionSnapshotWithItems> {
   const snapshotTime = params.snapshotTime;
   if (!snapshotTime) {
@@ -128,7 +142,7 @@ export async function buildAndStorePerceptionSnapshot(
   const mode: PerceptionDataMode = params.mode ?? getPerceptionDataMode();
 
   const start = Date.now();
-  const engineResult: PerceptionSnapshotEngineResult = await buildPerceptionSnapshotWithContainer({
+  const engineResult: PerceptionSnapshotEngineResult = await params.deps.buildPerceptionSnapshot({
     asOf: snapshotTime,
     allowSync: params.allowSync,
     profiles: params.profiles,
@@ -148,7 +162,7 @@ export async function buildAndStorePerceptionSnapshot(
     llmTargetIds.add(engineResult.setups[0].id);
   }
 
-  const activeAssets = await getActiveAssets();
+  const activeAssets = await params.deps.getActiveAssets();
   const symbolToAssetId = new Map(activeAssets.map((asset) => [asset.symbol, asset.id]));
   const symbolToAsset = new Map(activeAssets.map((asset) => [asset.symbol, asset]));
   const itemRankCounters = new Map<string, number>();
@@ -208,12 +222,13 @@ export async function buildAndStorePerceptionSnapshot(
           riskReward: setup.riskReward,
         },
       });
-      const enhancedRingAiSummary = llmTargetIds.has(setup.id)
-        ? await maybeEnhanceRingAiSummaryWithLLM({
-            setup: { ...setup, rings, riskReward: setup.riskReward },
-            heuristic: ringAiSummary,
-          })
-        : ringAiSummary;
+      const enhancedRingAiSummary =
+        llmTargetIds.has(setup.id) && params.deps.maybeEnhanceRingAiSummaryWithLLM
+          ? await params.deps.maybeEnhanceRingAiSummaryWithLLM({
+              setup: { ...setup, rings, riskReward: setup.riskReward },
+              heuristic: ringAiSummary,
+            })
+          : ringAiSummary;
 
     const profile = normalizeProfileForTimeframe(setup.profile, setup.timeframe);
     let { playbook, reason: playbookReason } = resolvePlaybookWithReason(
@@ -397,9 +412,9 @@ export async function buildAndStorePerceptionSnapshot(
     setups: setupsWithMetadata,
   };
 
-  await saveSnapshotToStore({ snapshot, items });
+  await params.snapshotStore.saveSnapshotToStore({ snapshot, items });
 
-  const persisted = await getSnapshotByTime({ snapshotTime });
+  const persisted = await params.snapshotStore.getSnapshotByTime({ snapshotTime });
   if (!persisted) {
     throw new Error("Failed to retrieve stored perception snapshot");
   }

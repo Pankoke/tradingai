@@ -11,13 +11,26 @@ const buildSetupsMock = vi.hoisted(() => ({
 
 const snapshotStoreMock = vi.hoisted(() => ({
   loadLatestSnapshotFromStore: vi.fn(async () => null as PerceptionSnapshotWithItems | null),
+  loadLatestSnapshotForProfile: vi.fn(async () => ({
+    snapshot: null,
+    fulfilledLabel: null,
+    requestedProfile: null,
+    requestedAvailable: false,
+    fallbackUsed: false,
+  })),
+  saveSnapshotToStore: vi.fn(),
+  getSnapshotByTime: vi.fn(async () => null),
+  deleteSnapshotFromStore: vi.fn(),
+  listSnapshotsFromStore: vi.fn(async () => []),
 }));
 
 const dbExecuteQueue = vi.hoisted(() => [] as Array<Array<Record<string, unknown>>>);
 const dbExecuteMock = vi.hoisted(() => vi.fn(async () => dbExecuteQueue.shift() ?? []));
 
 vi.mock("@/src/features/perception/build/buildSetups", () => buildSetupsMock);
-vi.mock("@/src/features/perception/cache/snapshotStore", () => snapshotStoreMock);
+vi.mock("@/src/features/perception/cache/snapshotStore", () => ({
+  createSnapshotStore: vi.fn(() => snapshotStoreMock),
+}));
 vi.mock("@/src/server/db/db", () => ({
   db: {
     execute: dbExecuteMock,
@@ -69,6 +82,7 @@ describe("snapshotBuildService", () => {
       expect.objectContaining({
         source: "cron",
         allowSync: false,
+        snapshotStore: expect.any(Object),
         snapshotTime: expect.any(Date),
       }),
     );
@@ -111,6 +125,7 @@ describe("snapshotBuildService", () => {
       expect.objectContaining({
         source: "ui",
         allowSync: false,
+        snapshotStore: expect.any(Object),
         snapshotTime: expect.any(Date),
       }),
     );

@@ -1,14 +1,14 @@
 import type { SnapshotStorePort } from "@/src/domain/strategy/ports";
 import type { PerceptionSnapshot } from "@/src/domain/strategy/types";
-import { loadLatestSnapshotFromStore, saveSnapshotToStore } from "@/src/features/perception/cache/snapshotStore";
-import type {
-  PerceptionSnapshotInput,
-  PerceptionSnapshotItemInput,
-} from "@/src/server/repositories/perceptionSnapshotRepository";
+import { createSnapshotStore } from "@/src/features/perception/cache/snapshotStore";
+import { perceptionSnapshotStoreAdapter } from "@/src/server/adapters/perceptionSnapshotStoreAdapter";
+import type { PerceptionSnapshotInput, PerceptionSnapshotItemInput } from "@/src/domain/perception/types";
 
 export class SnapshotStoreAdapter implements SnapshotStorePort {
+  private readonly store = createSnapshotStore(perceptionSnapshotStoreAdapter);
+
   async loadLatestSnapshot(params: { asOf?: Date }): Promise<PerceptionSnapshot | null> {
-    const snapshot = await loadLatestSnapshotFromStore();
+    const snapshot = await this.store.loadLatestSnapshotFromStore();
     if (!snapshot) return null;
     if (params.asOf && snapshot.snapshot.snapshotTime > params.asOf) {
       return null;
@@ -26,6 +26,6 @@ export class SnapshotStoreAdapter implements SnapshotStorePort {
   async storeSnapshot(snapshot: PerceptionSnapshot): Promise<void> {
     const snapshotInput = snapshot.snapshot as unknown as PerceptionSnapshotInput;
     const itemInputs = snapshot.items as unknown as PerceptionSnapshotItemInput[];
-    await saveSnapshotToStore({ snapshot: snapshotInput, items: itemInputs });
+    await this.store.saveSnapshotToStore({ snapshot: snapshotInput, items: itemInputs });
   }
 }

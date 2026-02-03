@@ -26,7 +26,7 @@ Dieses Dokument priorisiert die offenen Gaps und leitet daraus konkrete, **merge
 ### Story 1 – Engine-Boundary erzwingen
 
 **Ziel**  
-Engine server-frei machen; asOf/Determinismus ist bereits enforced.
+Engine server-frei machen; asOf/Determinismus erledigt, Feature-Layer Ports eingef�hrt.
 
 **Scope**
 - ESLint-Errors bei `src/lib/engine/** → src/server/**`
@@ -156,3 +156,5 @@ to prevent future boundary violations.
 ## Empfohlene Reihenfolge
 
 1 → 2 → 3 → 4 → 5 → 6
+
+> Update 2026-02-03: Execution MVP entries (next-step-open) implemented; next slice: positions/PnL/exit.

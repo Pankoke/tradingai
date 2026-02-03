@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { randomUUID } from "node:crypto";
-import { saveSnapshotToStore, loadLatestSnapshotFromStore, deleteSnapshotFromStore } from "@/src/features/perception/cache/snapshotStore";
+import { createSnapshotStore } from "@/src/features/perception/cache/snapshotStore";
+import { perceptionSnapshotStoreAdapter } from "@/src/server/adapters/perceptionSnapshotStoreAdapter";
 import { createAsset, deleteAsset, type Asset } from "@/src/server/repositories/assetRepository";
 import type { Setup } from "@/src/lib/engine/types";
 import { mockSetups } from "@/src/lib/mockSetups";
@@ -31,6 +32,7 @@ describeMaybe("snapshotStore", () => {
   });
 
   it("persists and returns the latest snapshot", async () => {
+    const store = createSnapshotStore(perceptionSnapshotStoreAdapter);
     const snapshotId = `vitest-snapshot-${randomUUID()}`;
     const snapshotTime = new Date("2099-01-01T00:00:00Z");
     const setupBase = mockSetups[0];
@@ -43,7 +45,7 @@ describeMaybe("snapshotStore", () => {
       snapshotCreatedAt: snapshotTime.toISOString(),
     };
 
-    await saveSnapshotToStore({
+    await store.saveSnapshotToStore({
       snapshot: {
         id: snapshotId,
         snapshotTime,
@@ -81,11 +83,11 @@ describeMaybe("snapshotStore", () => {
       ],
     });
 
-    const latest = await loadLatestSnapshotFromStore();
+    const latest = await store.loadLatestSnapshotFromStore();
     expect(latest).not.toBeNull();
     expect(latest?.snapshot.id).toBe(snapshotId);
     expect(latest?.items[0]?.setupId).toBe(setup.id);
 
-    await deleteSnapshotFromStore(snapshotId);
+    await store.deleteSnapshotFromStore(snapshotId);
   });
 });

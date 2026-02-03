@@ -83,6 +83,8 @@ Alle Aussagen zu „fertig / umgesetzt“ sind mit konkreten Fundstellen belegt.
 - Deterministischer Backtest-Runner
 - Snapshot-basierte Inputs
 - Report-Summary (KPIs)
+- Execution MVP v1: OrderIntent + next-step-open Entry-Fills (kein PnL)
+- Lookahead-Guard (Candle-Timestamps <= asOf in Debug)
 
 **Offen**
 - Keine Candle-Replay-Execution

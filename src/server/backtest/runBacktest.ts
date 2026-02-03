@@ -14,6 +14,7 @@ import { getLatestSentimentSnapshotAtOrBefore, getSentimentSnapshotStats } from 
 import type { SentimentProviderPort } from "@/src/domain/sentiment/ports";
 import type { SentimentSnapshotV2 } from "@/src/domain/sentiment/types";
 import type { CandleTimeframe } from "@/src/domain/market-data/types";
+import type { ExecutedEntry, OrderIntent, OrderSide } from "@/src/domain/backtest/types";
 
 export type BacktestStepResult = {
   asOfIso: string;
@@ -42,6 +43,7 @@ export type BacktestStepResult = {
   warnings?: string[];
   sentimentSnapshotFound?: boolean;
   sentimentSnapshotAsOfIso?: string;
+  executedEntry?: ExecutedEntry;
 };
 
 export type BacktestReport = {
@@ -83,6 +85,7 @@ type SetupLike = {
   eventScore?: number;
   biasScore?: number;
   confidence?: number;
+  candles?: Array<{ timestamp?: string | Date; open?: number | null }>;
 };
 
 function hasDecision(value: Partial<SetupLike> | null | undefined): value is { decision: string } {
@@ -151,6 +154,74 @@ function pickTopSetup(setups: SetupLike[]): SetupLike | null {
     return sb - sa;
   });
   return sorted[0];
+}
+
+type CandleMeta = { maxTimestampMs?: number; openPrice?: number; asOfIso?: string };
+
+function extractCandleMeta(snapshot: unknown, asOfIso: string): CandleMeta {
+  const result: CandleMeta = { asOfIso };
+  const maybeCandles =
+    (snapshot as { candles?: Array<{ timestamp?: string | Date; open?: number | null }> }).candles ??
+    (snapshot as { market?: { candles?: Array<{ timestamp?: string | Date; open?: number | null }> } }).market?.candles ??
+    [];
+  const setups = (snapshot as { setups?: SetupLike[] }).setups ?? [];
+  const timestamps: number[] = [];
+  const collectCandles = (candles: Array<{ timestamp?: string | Date; open?: number | null }> | undefined) => {
+    if (!Array.isArray(candles)) return;
+    for (const candle of candles) {
+      const rawTs = candle?.timestamp;
+      const ts =
+        rawTs instanceof Date
+          ? rawTs.getTime()
+          : typeof rawTs === "string"
+            ? new Date(rawTs).getTime()
+            : Number.NaN;
+      if (!Number.isNaN(ts)) timestamps.push(ts);
+      if (result.openPrice == null && typeof candle?.open === "number" && Number.isFinite(candle.open)) {
+        result.openPrice = candle.open;
+      }
+    }
+  };
+
+  collectCandles(maybeCandles);
+  for (const setup of setups) {
+    collectCandles(setup.candles);
+  }
+
+  if (timestamps.length) {
+    result.maxTimestampMs = Math.max(...timestamps);
+  }
+  return result;
+}
+
+function buildOrderIntent(step: BacktestStepResult, index: number, assetId: string): OrderIntent | null {
+  const decision = (step.topSetup?.decision ?? "").toLowerCase();
+  if (decision !== "buy" && decision !== "sell") return null;
+  const side: OrderSide = decision === "buy" ? "buy" : "sell";
+  return {
+    assetId,
+    side,
+    asOfIso: step.asOfIso,
+    entryPolicy: "next-step-open",
+    stepIndex: index,
+    reason: step.topSetup?.decisionSource ?? undefined,
+  };
+}
+
+function executeEntryAtNextStepOpen(intent: OrderIntent, nextMeta: CandleMeta | undefined): ExecutedEntry {
+  if (nextMeta?.openPrice != null && Number.isFinite(nextMeta.openPrice)) {
+    const fillIso = nextMeta.asOfIso ?? intent.asOfIso;
+    return {
+      intent,
+      status: "filled",
+      fill: {
+        fillIso,
+        fillPrice: nextMeta.openPrice,
+        source: "candle-open-next-step",
+      },
+    };
+  }
+  return { intent, status: "unfilled" };
 }
 
 export type BacktestSummary = {
@@ -303,6 +374,7 @@ export async function runBacktest(params: {
   const dataSource = createPerceptionDataSource(dataSourceDeps, { assetFilter: [params.assetId] });
 
   const steps: BacktestStepResult[] = [];
+  const candleMetas: CandleMeta[] = [];
   let lastAsOf: Date | null = null;
   let cursor = new Date(from);
   while (cursor <= to) {
@@ -316,6 +388,14 @@ export async function runBacktest(params: {
     lastSentimentIso = undefined;
     try {
       const snapshot = await buildSnapshot({ asOf, dataSource, assetFilter: [params.assetId] });
+      const candleMeta = extractCandleMeta(snapshot, asOf.toISOString());
+      if (params.debug ?? process.env.NODE_ENV !== "production") {
+        if (typeof candleMeta.maxTimestampMs === "number" && candleMeta.maxTimestampMs > asOf.getTime()) {
+          throw new Error(
+            `backtest_invariant: candle timestamp ${new Date(candleMeta.maxTimestampMs).toISOString()} is after asOf ${asOf.toISOString()}`,
+          );
+        }
+      }
       const setups = Array.isArray((snapshot as { setups?: unknown[] }).setups)
         ? ((snapshot as { setups: SetupLike[] }).setups ?? [])
         : [];
@@ -355,6 +435,7 @@ export async function runBacktest(params: {
         sentimentSnapshotFound: lastSentimentFound,
         sentimentSnapshotAsOfIso: lastSentimentIso,
       });
+      candleMetas.push(candleMeta);
       if (params.debug ?? process.env.NODE_ENV !== "production") {
         if (lastSentimentFound && lastSentimentIso) {
           if (new Date(lastSentimentIso).getTime() > asOf.getTime()) {
@@ -374,9 +455,17 @@ export async function runBacktest(params: {
         score: null,
         warnings: [`build_failed: ${String(error)}`],
       });
+      candleMetas.push({});
     }
     lastAsOf = asOf;
     cursor = addHours(cursor, params.stepHours);
+  }
+
+  for (let i = 0; i < steps.length; i += 1) {
+    const intent = buildOrderIntent(steps[i], i, params.assetId);
+    if (!intent) continue;
+    const executedEntry = executeEntryAtNextStepOpen(intent, candleMetas[i + 1]);
+    steps[i] = { ...steps[i], executedEntry };
   }
 
   const report: BacktestReport = {

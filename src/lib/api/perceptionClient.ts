@@ -93,12 +93,14 @@ export async function fetchPerceptionToday(params?: { profile?: string | null })
     return await fetcher(resolveUrl(url), perceptionTodaySchema);
   } catch (error) {
     if (typeof window === "undefined") {
-      const { loadLatestSnapshotForProfile } = await import("@/src/features/perception/cache/snapshotStore");
+      const { createSnapshotStore } = await import("@/src/features/perception/cache/snapshotStore");
+      const { perceptionSnapshotStoreAdapter } = await import("@/src/server/adapters/perceptionSnapshotStoreAdapter");
       const requestedProfile = params?.profile ?? null;
-      const fromStore = await loadLatestSnapshotForProfile(requestedProfile);
+      const snapshotStore = createSnapshotStore(perceptionSnapshotStoreAdapter);
+      const fromStore = await snapshotStore.loadLatestSnapshotForProfile(requestedProfile);
       if (fromStore.snapshot) {
         return {
-          ...mapSnapshotToResponse(fromStore.snapshot),
+          ...mapSnapshotToResponse(fromStore.snapshot as never),
           meta: {
             requestedProfile,
             fulfilledLabel: fromStore.fulfilledLabel,

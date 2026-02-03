@@ -1,6 +1,7 @@
 import type { Event, BiasSnapshot } from "@/src/lib/engine/eventsBiasTypes";
 import type { PerceptionSnapshot as EngineSnapshot, Setup } from "@/src/lib/engine/types";
-import { listSnapshotsFromStore } from "@/src/features/perception/cache/snapshotStore";
+import { createSnapshotStore } from "@/src/features/perception/cache/snapshotStore";
+import { perceptionSnapshotStoreAdapter } from "@/src/server/adapters/perceptionSnapshotStoreAdapter";
 
 export type PerceptionHistoryEntry = {
   id: string;
@@ -14,7 +15,8 @@ export type PerceptionHistoryEntry = {
  * @deprecated In-memory history is deprecated. This helper now reads from the database.
  */
 export async function getPerceptionHistory(limit?: number): Promise<PerceptionHistoryEntry[]> {
-  const snapshots = await listSnapshotsFromStore(limit ?? 20);
+  const snapshotStore = createSnapshotStore(perceptionSnapshotStoreAdapter);
+  const snapshots = await snapshotStore.listSnapshotsFromStore(limit ?? 20);
   return snapshots.map((snapshot) => ({
     id: snapshot.id,
     createdAt: (snapshot.createdAt ?? snapshot.snapshotTime).toISOString(),

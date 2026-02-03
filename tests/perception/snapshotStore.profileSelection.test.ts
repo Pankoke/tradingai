@@ -1,11 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { loadLatestSnapshotForProfile } from "@/src/features/perception/cache/snapshotStore";
+import { createSnapshotStore } from "@/src/features/perception/cache/snapshotStore";
+import type { PerceptionSnapshotStorePort } from "@/src/domain/perception/ports";
 
 const mockGetLatest = vi.hoisted(() => vi.fn());
-
-vi.mock("@/src/server/repositories/perceptionSnapshotRepository", () => ({
-  getLatestSnapshot: (...args: unknown[]) => mockGetLatest(...args),
-}));
 
 const intradaySnapshot = {
   snapshot: { id: "intraday", label: "intraday", snapshotTime: new Date(), setups: [] },
@@ -25,25 +22,38 @@ describe("loadLatestSnapshotForProfile", () => {
   });
 
   it("returns intraday snapshot when requested", async () => {
+    const store = createSnapshotStore(buildPort());
     mockGetLatest.mockImplementation(({ label }: { label?: string }) => {
       if (label === "intraday") return intradaySnapshot;
       return dailySnapshot;
     });
 
-    const result = await loadLatestSnapshotForProfile("intraday");
+    const result = await store.loadLatestSnapshotForProfile("intraday");
     expect(result.snapshot?.snapshot.id).toBe("intraday");
     expect(result.fulfilledLabel).toBe("intraday");
   });
 
   it("falls back to daily when intraday missing", async () => {
+    const store = createSnapshotStore(buildPort());
     mockGetLatest.mockImplementation(({ label, excludeLabel }: { label?: string; excludeLabel?: string }) => {
       if (label === "intraday") return undefined;
       if (excludeLabel === "intraday") return dailySnapshot;
       return dailySnapshot;
     });
 
-    const result = await loadLatestSnapshotForProfile("intraday");
+    const result = await store.loadLatestSnapshotForProfile("intraday");
     expect(result.snapshot?.snapshot.id).toBe("daily");
     expect(result.fulfilledLabel).not.toBe("intraday");
   });
 });
+
+function buildPort(): PerceptionSnapshotStorePort {
+  return {
+    insertSnapshotWithItems: async () => {},
+    getLatestSnapshot: async (filters) => mockGetLatest(filters ?? {}),
+    listRecentSnapshots: async () => [],
+    getSnapshotWithItems: async () => null,
+    getSnapshotByTime: async () => null,
+    deleteSnapshot: async () => {},
+  };
+}

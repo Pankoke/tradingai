@@ -169,6 +169,13 @@ export async function deleteSnapshotsByDayAndLabel(params: {
   return { deletedSnapshots: snapshotIds.length, deletedItems: snapshotIds.length };
 }
 
+export async function deleteSnapshotById(id: string): Promise<void> {
+  await db.transaction(async (tx) => {
+    await tx.delete(perceptionSnapshotItems).where(eq(perceptionSnapshotItems.snapshotId, id));
+    await tx.delete(perceptionSnapshots).where(eq(perceptionSnapshots.id, id));
+  });
+}
+
 export async function insertSnapshotWithItems(params: {
   snapshot: PerceptionSnapshotInput;
   items: PerceptionSnapshotItemInput[];

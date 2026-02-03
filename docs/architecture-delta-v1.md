@@ -59,7 +59,7 @@ SOLL-Architektur (`architecture-v1.md`) und dem realen Implementierungsstand.
 
 **Abweichung**
 - Importiert Infrastruktur
-- Server-Imports/Ports noch offen
+- Server-Imports/Ports noch offen (Features jetzt port-basiert, Engine folgt)
 
 ---
 
@@ -86,3 +86,5 @@ Nächste Version der Architektur sollte:
 - Backtesting explizit berücksichtigen
 - Event & Market-Data Domänen klar schneiden
 - Engine als „Pure Core“ definieren
+
+Update: Execution entry intents (next-step-open) und Lookahead-Guard (Candle <= asOf) umgesetzt; PnL/Exit folgen.

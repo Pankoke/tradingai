@@ -361,3 +361,5 @@ Review-Checkliste
 
 ================================================================
 ENDE DER DATEI
+
+Note: G-01 narrowed – Backtest Execution entries implemented; PnL/Exit remain open.

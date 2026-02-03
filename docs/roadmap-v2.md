@@ -241,9 +241,10 @@ Slice 5.3b (2026-01-30):
 PHASE 6 – BACKTESTING MVP
 
 Slice 6.1 (2026-01-30):
-- Backtest Runner (server-only) iteriert asOf in festen steps, bounded Inputs (candles/events/sentiment snapshots)
-- Resultate als JSON Report unter reports/backtests/<assetId>/... (idempotent overwrite)
-- Optional Admin Endpoint POST /api/admin/backtest/run mit summary
+  - Backtest Runner (server-only) iteriert asOf in festen steps, bounded Inputs (candles/events/sentiment snapshots)
+  - Resultate als JSON Report unter reports/backtests/<assetId>/... (idempotent overwrite)
+  - Optional Admin Endpoint POST /api/admin/backtest/run mit summary
+  - Perception Snapshot Store entkoppelt via Ports/Adapter (keine src/server Imports im Feature-Layer)
 - Tests: runBacktest.test.ts (deterministisches stepping, error range)
 - Status: done (Build/Test/Lint grün)
 
@@ -289,3 +290,5 @@ Konkrete Implementierung
 
 ================================================================
 ENDE DER DATEI
+
+- Phase 6: Execution MVP v1 (entry intents + next-step-open fills, lookahead guard) – done

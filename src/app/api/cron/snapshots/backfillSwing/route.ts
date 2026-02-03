@@ -1,11 +1,16 @@
 import { NextRequest } from "next/server";
 import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 import { buildAndStorePerceptionSnapshot } from "@/src/features/perception/build/buildSetups";
+import { createSnapshotStore } from "@/src/features/perception/cache/snapshotStore";
+import { perceptionSnapshotStoreAdapter } from "@/src/server/adapters/perceptionSnapshotStoreAdapter";
 import {
   deleteSnapshotsByDayAndLabel,
   findSnapshotByDayAndLabel,
 } from "@/src/server/repositories/perceptionSnapshotRepository";
 import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
+import { buildPerceptionSnapshotWithContainer } from "@/src/server/perception/perceptionEngineFactory";
+import { getActiveAssets } from "@/src/server/repositories/assetRepository";
+import { maybeEnhanceRingAiSummaryWithLLM } from "@/src/server/ai/ringSummaryOpenAi";
 
 function isAuthorized(request: Request): boolean {
   const token = process.env.CRON_SECRET;
@@ -72,6 +77,7 @@ export async function POST(request: NextRequest | Request): Promise<Response> {
         await deleteSnapshotsByDayAndLabel({ day: snapshotTime, label });
       }
 
+      const snapshotStore = createSnapshotStore(perceptionSnapshotStoreAdapter);
       const result = await buildAndStorePerceptionSnapshot({
         snapshotTime,
         allowSync: false,
@@ -79,6 +85,12 @@ export async function POST(request: NextRequest | Request): Promise<Response> {
         source: "cron",
         assetFilter,
         snapshotId: undefined,
+        snapshotStore,
+        deps: {
+          buildPerceptionSnapshot: buildPerceptionSnapshotWithContainer,
+          getActiveAssets,
+          maybeEnhanceRingAiSummaryWithLLM,
+        },
       });
       built += 1;
       if (existing) rebuilt += 1;

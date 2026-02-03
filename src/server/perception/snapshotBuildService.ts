@@ -1,7 +1,11 @@
 import { sql } from "drizzle-orm";
 import { buildAndStorePerceptionSnapshot, type SnapshotBuildSource } from "@/src/features/perception/build/buildSetups";
-import { loadLatestSnapshotFromStore } from "@/src/features/perception/cache/snapshotStore";
+import { createSnapshotStore } from "@/src/features/perception/cache/snapshotStore";
+import { perceptionSnapshotStoreAdapter } from "@/src/server/adapters/perceptionSnapshotStoreAdapter";
 import type { PerceptionSnapshotWithItems } from "@/src/server/repositories/perceptionSnapshotRepository";
+import { buildPerceptionSnapshotWithContainer } from "@/src/server/perception/perceptionEngineFactory";
+import { getActiveAssets } from "@/src/server/repositories/assetRepository";
+import { maybeEnhanceRingAiSummaryWithLLM } from "@/src/server/ai/ringSummaryOpenAi";
 import { db } from "@/src/server/db/db";
 import { logger } from "@/src/lib/logger";
 import { toErrorMessage } from "@/src/lib/utils";
@@ -160,8 +164,13 @@ export async function requestSnapshotBuild(params: {
   label?: string;
   assetFilter?: string[];
 }): Promise<{ snapshot: PerceptionSnapshotWithItems; reused: boolean }> {
-  const latest = await loadLatestSnapshotFromStore();
+  const snapshotStore = createSnapshotStore(perceptionSnapshotStoreAdapter);
+  const latest = await snapshotStore.loadLatestSnapshotFromStore();
   if (!params.force && latest && isSnapshotFromToday(latest.snapshot.snapshotTime)) {
+    const normalizedLatest = {
+      ...latest,
+      snapshot: { ...latest.snapshot, version: latest.snapshot.version ?? "unknown" },
+    } as unknown as PerceptionSnapshotWithItems;
     updateRunState({
       status: "succeeded",
       source: params.source,
@@ -170,7 +179,7 @@ export async function requestSnapshotBuild(params: {
       reused: true,
       error: null,
     });
-    return { snapshot: latest, reused: true };
+    return { snapshot: normalizedLatest, reused: true };
   }
 
   await acquireLock(params.source);
@@ -185,20 +194,31 @@ export async function requestSnapshotBuild(params: {
   try {
     const allowSync = params.allowSync ?? false;
     const snapshotTime = new Date();
+    const snapshotStore = createSnapshotStore(perceptionSnapshotStoreAdapter);
     const snapshot = await buildAndStorePerceptionSnapshot({
       source: params.source,
       allowSync,
       profiles: params.profiles,
       label: params.label,
       assetFilter: params.assetFilter,
+      snapshotStore,
       snapshotTime,
+      deps: {
+        buildPerceptionSnapshot: buildPerceptionSnapshotWithContainer,
+        getActiveAssets,
+        maybeEnhanceRingAiSummaryWithLLM,
+      },
     });
     updateRunState({
       status: "succeeded",
       finishedAt: new Date().toISOString(),
       reused: false,
     });
-    return { snapshot, reused: false };
+    const normalizedSnapshot = {
+      ...snapshot,
+      snapshot: { ...snapshot.snapshot, version: snapshot.snapshot.version ?? "unknown" },
+    } as unknown as PerceptionSnapshotWithItems;
+    return { snapshot: normalizedSnapshot, reused: false };
   } catch (error) {
     updateRunState({
       status: "failed",

@@ -1,7 +1,12 @@
 #!/usr/bin/env ts-node
 import "dotenv/config";
 import { buildAndStorePerceptionSnapshot } from "@/src/features/perception/build/buildSetups";
+import { createSnapshotStore } from "@/src/features/perception/cache/snapshotStore";
+import { perceptionSnapshotStoreAdapter } from "@/src/server/adapters/perceptionSnapshotStoreAdapter";
 import { getSnapshotByTime } from "@/src/server/repositories/perceptionSnapshotRepository";
+import { buildPerceptionSnapshotWithContainer } from "@/src/server/perception/perceptionEngineFactory";
+import { getActiveAssets } from "@/src/server/repositories/assetRepository";
+import { maybeEnhanceRingAiSummaryWithLLM } from "@/src/server/ai/ringSummaryOpenAi";
 
 type CliOptions = {
   days: number;
@@ -76,12 +81,19 @@ async function backfill() {
         continue;
       }
       try {
+        const snapshotStore = createSnapshotStore(perceptionSnapshotStoreAdapter);
         await buildAndStorePerceptionSnapshot({
           snapshotTime: asOf,
           allowSync: false,
           profiles: ["SWING"],
           source: "cron",
           assetFilter: opts.assetId ? [opts.assetId] : undefined,
+          snapshotStore,
+          deps: {
+            buildPerceptionSnapshot: buildPerceptionSnapshotWithContainer,
+            getActiveAssets,
+            maybeEnhanceRingAiSummaryWithLLM,
+          },
         });
         built += 1;
         console.log(`[backfill-swing] built snapshot ${asOf.toISOString()}`);

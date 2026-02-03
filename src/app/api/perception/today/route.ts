@@ -1,7 +1,8 @@
 import type { PerceptionSnapshotWithItems } from "@/src/server/repositories/perceptionSnapshotRepository";
 import { buildPerceptionSnapshotWithContainer } from "@/src/server/perception/perceptionEngineFactory";
 import { isPerceptionMockMode } from "@/src/lib/config/perceptionDataMode";
-import { loadLatestSnapshotForProfile } from "@/src/features/perception/cache/snapshotStore";
+import { createSnapshotStore } from "@/src/features/perception/cache/snapshotStore";
+import { perceptionSnapshotStoreAdapter } from "@/src/server/adapters/perceptionSnapshotStoreAdapter";
 import { logger } from "@/src/lib/logger";
 import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 import type { Setup } from "@/src/lib/engine/types";
@@ -17,7 +18,8 @@ export async function GET(request: Request): Promise<Response> {
   const profileParam = new URL(request.url).searchParams.get("profile");
   const startedAt = Date.now();
   try {
-    const fromStore = await loadLatestSnapshotForProfile(profileParam);
+    const snapshotStore = createSnapshotStore(perceptionSnapshotStoreAdapter);
+    const fromStore = await snapshotStore.loadLatestSnapshotForProfile(profileParam);
     if (fromStore.snapshot) {
       const meta = buildMeta(fromStore.snapshot.snapshot.snapshotTime, {
         requestedProfile: fromStore.requestedProfile,
@@ -25,10 +27,17 @@ export async function GET(request: Request): Promise<Response> {
         requestedAvailable: fromStore.requestedAvailable,
         fallbackUsed: fromStore.fallbackUsed,
       });
-      return respondOk<PerceptionTodayPayload & { meta: Record<string, unknown> }>({
+      const normalizedSnapshot = {
         ...fromStore.snapshot,
-        meta,
-      });
+        snapshot: {
+          ...fromStore.snapshot.snapshot,
+          version: fromStore.snapshot.snapshot.version ?? "unknown",
+          dataMode: fromStore.snapshot.snapshot.dataMode ?? "live",
+          setups: fromStore.snapshot.snapshot.setups ?? [],
+        },
+      } as unknown as PerceptionSnapshotWithItems;
+      const payload = { ...normalizedSnapshot, meta } as PerceptionTodayPayload & { meta: Record<string, unknown> };
+      return respondOk(payload);
     }
 
     const now = new Date();

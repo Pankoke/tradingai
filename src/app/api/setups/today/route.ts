@@ -1,5 +1,6 @@
 import type { Setup } from "@/src/lib/engine/types";
-import { loadLatestSnapshotFromStore, loadLatestSnapshotForProfile } from "@/src/features/perception/cache/snapshotStore";
+import { createSnapshotStore } from "@/src/features/perception/cache/snapshotStore";
+import { perceptionSnapshotStoreAdapter } from "@/src/server/adapters/perceptionSnapshotStoreAdapter";
 import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 
 type TodaySetupsResponse = {
@@ -9,13 +10,20 @@ type TodaySetupsResponse = {
 
 export async function GET(request: Request): Promise<Response> {
   try {
+    const snapshotStore = createSnapshotStore(perceptionSnapshotStoreAdapter);
     const profileParam = new URL(request.url).searchParams.get("profile");
-    const persistedResult = await loadLatestSnapshotForProfile(profileParam);
-    const persisted = persistedResult.snapshot ?? (await loadLatestSnapshotFromStore());
+    const persistedResult = await snapshotStore.loadLatestSnapshotForProfile(profileParam);
+    const persisted = persistedResult.snapshot ?? (await snapshotStore.loadLatestSnapshotFromStore());
     if (persisted) {
       const setups = (persisted.setups ?? []) as Setup[];
-      const setupOfTheDayId =
+      const setupOfTheDayIdCandidate =
         persisted.items.find((item) => item.isSetupOfTheDay)?.setupId ?? setups[0]?.id ?? persisted.snapshot.id;
+      const setupOfTheDayId =
+        typeof setupOfTheDayIdCandidate === "string"
+          ? setupOfTheDayIdCandidate
+          : setupOfTheDayIdCandidate
+            ? String(setupOfTheDayIdCandidate)
+            : "";
       return respondOk<TodaySetupsResponse>({ setups, setupOfTheDayId });
     }
 
