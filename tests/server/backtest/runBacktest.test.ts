@@ -26,20 +26,29 @@ describe("runBacktest", () => {
   const writeReport = vi.fn();
   const loadSentimentSnapshot = vi.fn();
   const createDataSource = vi.fn();
+  let capturedSentimentPort: { fetchSentiment: (args: { assetId: string; asOf: Date }) => Promise<unknown> } | null;
 
   beforeEach(async () => {
     vi.resetModules();
     vi.clearAllMocks();
+    capturedSentimentPort = null;
     const mod = await import("@/src/server/backtest/runBacktest");
     runBacktest = mod.runBacktest;
-    createDataSource.mockReturnValue({
-      assets: { getActiveAssets: async () => [{ id: "A", symbol: "A" }] },
-      events: {} as PerceptionDataSource["getEventsForWindow"],
-      candles: {} as never,
-      sentiment: { fetchSentiment: vi.fn() },
-      biasProvider: { getBiasSnapshot: vi.fn() },
-      timeframeConfig: { getProfileTimeframes: vi.fn(), getTimeframesForAsset: vi.fn(), TIMEFRAME_SYNC_WINDOWS: {} },
-      resolveProviderSymbol: vi.fn(),
+    createDataSource.mockImplementation((sentimentPort) => {
+      capturedSentimentPort = sentimentPort ?? null;
+      return {
+        assets: { getActiveAssets: async () => [{ id: "A", symbol: "A" }] },
+        events: {} as PerceptionDataSource["getEventsForWindow"],
+        candles: {} as never,
+        sentiment:
+          sentimentPort ??
+            ({
+              fetchSentiment: vi.fn(),
+            } as unknown as typeof sentimentPort),
+        biasProvider: { getBiasSnapshot: vi.fn() },
+        timeframeConfig: { getProfileTimeframes: vi.fn(), getTimeframesForAsset: vi.fn(), TIMEFRAME_SYNC_WINDOWS: {} },
+        resolveProviderSymbol: vi.fn(),
+      };
     });
     buildSnapshot.mockImplementation(async ({ asOf }) => ({
       asOf,
@@ -253,6 +262,12 @@ describe("runBacktest", () => {
       sources: [],
       components: { polarityScore: 0, confidence: 0 },
     }));
+    buildSnapshot.mockImplementation(async ({ asOf }) => {
+      if (capturedSentimentPort) {
+        await capturedSentimentPort.fetchSentiment({ assetId: "A", asOf });
+      }
+      return { asOf, setups: [] };
+    });
 
     await expect(
       runBacktest({
@@ -264,5 +279,31 @@ describe("runBacktest", () => {
         debug: true,
       }),
     ).rejects.toThrow(/sentiment snapshot/);
+  });
+
+  it("does not probe sentiment when snapshot missing (no extra IO in guard)", async () => {
+    loadSentimentSnapshot.mockResolvedValue(null);
+    buildSnapshot.mockImplementation(async ({ asOf }) => {
+      await loadSentimentSnapshot("A", asOf);
+      return {
+        asOf,
+        setups: [],
+        label: "ok",
+      };
+    });
+
+    await expect(
+      runBacktest({
+        assetId: "A",
+        fromIso: "2025-01-01T00:00:00.000Z",
+        toIso: "2025-01-01T02:00:00.000Z",
+        stepHours: 1,
+        deps: { createDataSource, buildSnapshot, loadSentimentSnapshot, writeReport },
+        debug: true,
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    // should only reflect the calls triggered by the sentiment port (no extra guard probes)
+    expect(loadSentimentSnapshot).toHaveBeenCalledTimes(3);
   });
 });

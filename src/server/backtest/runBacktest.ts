@@ -356,13 +356,6 @@ export async function runBacktest(params: {
         sentimentSnapshotAsOfIso: lastSentimentIso,
       });
       if (params.debug ?? process.env.NODE_ENV !== "production") {
-        if (!lastSentimentFound) {
-          const probe = await loadSentimentSnapshot(params.assetId, asOf);
-          if (probe) {
-            lastSentimentFound = true;
-            lastSentimentIso = probe.asOfIso;
-          }
-        }
         if (lastSentimentFound && lastSentimentIso) {
           if (new Date(lastSentimentIso).getTime() > asOf.getTime()) {
             throw new Error(
