@@ -10,15 +10,16 @@ const baseContext = {
 const setupFx = { symbol: "EURUSD=X", timeframe: "1H", category: "intraday" };
 const setupIndex = { symbol: "^GDAXI", timeframe: "1H", category: "trend" };
 const setupCrypto = { symbol: "BTC-USD", timeframe: "1H", category: "crypto" };
+const defaultNow = new Date("2025-01-01T10:00:00.000Z");
 
 describe("buildEventModifier relevance & classification", () => {
   it("returns none when there are no events", () => {
-    const modifier = buildEventModifier({ context: { ...baseContext, topEvents: [] }, setup: setupFx });
+    const modifier = buildEventModifier({ context: { ...baseContext, topEvents: [] }, setup: setupFx, now: defaultNow });
     expect(modifier.classification).toBe("none");
   });
 
   it("classifies EURUSD + US CPI in 30m as execution_critical with high relevance", () => {
-    const now = new Date("2025-01-01T10:00:00.000Z");
+    const now = defaultNow;
     const scheduledAt = new Date(now.getTime() + 30 * 60 * 1000).toISOString();
     const modifier = buildEventModifier({
       now,
@@ -33,7 +34,7 @@ describe("buildEventModifier relevance & classification", () => {
   });
 
   it("classifies DAX + US CPI in 30m as context_relevant", () => {
-    const now = new Date("2025-01-01T10:00:00.000Z");
+    const now = defaultNow;
     const scheduledAt = new Date(now.getTime() + 30 * 60 * 1000).toISOString();
     const modifier = buildEventModifier({
       now,
@@ -47,7 +48,7 @@ describe("buildEventModifier relevance & classification", () => {
   });
 
   it("classifies BTC + DE PMI in 30m as awareness_only (lower relevance)", () => {
-    const now = new Date("2025-01-01T10:00:00.000Z");
+    const now = defaultNow;
     const scheduledAt = new Date(now.getTime() + 30 * 60 * 1000).toISOString();
     const modifier = buildEventModifier({
       now,
@@ -63,6 +64,7 @@ describe("buildEventModifier relevance & classification", () => {
   it("penalizes missing country/currency and captures missingFields", () => {
     const modifier = buildEventModifier({
       setup: setupFx,
+      now: defaultNow,
       context: {
         ...baseContext,
         topEvents: [{ title: "Unnamed", impact: 2, scheduledAt: new Date().toISOString(), timeToEventMinutes: 90 }],
@@ -72,7 +74,7 @@ describe("buildEventModifier relevance & classification", () => {
   });
 
   it("keeps 1D context window long enough (13h) to mark context_relevant", () => {
-    const now = new Date("2025-01-01T10:00:00.000Z");
+    const now = defaultNow;
     const scheduledAt = new Date(now.getTime() + 13 * 60 * 60 * 1000).toISOString();
     const modifier = buildEventModifier({
       now,
@@ -86,7 +88,7 @@ describe("buildEventModifier relevance & classification", () => {
   });
 
   it("keeps 1D context window up to ~36-44h for high relevance events", () => {
-    const now = new Date("2025-01-01T10:00:00.000Z");
+    const now = defaultNow;
     const scheduledAt = new Date(now.getTime() + 40 * 60 * 60 * 1000).toISOString();
     const modifier = buildEventModifier({
       now,
@@ -100,7 +102,7 @@ describe("buildEventModifier relevance & classification", () => {
   });
 
   it("treats Gold with US CPI in 24-48h as context_relevant", () => {
-    const now = new Date("2025-01-01T10:00:00.000Z");
+    const now = defaultNow;
     const scheduledAt = new Date(now.getTime() + 30 * 60 * 60 * 1000).toISOString();
     const modifier = buildEventModifier({
       now,

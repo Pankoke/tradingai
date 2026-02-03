@@ -451,7 +451,7 @@ export async function buildPerceptionSnapshot(options: {
   const setupOfTheDay = rankedSetups[0];
 
   const candidate: PerceptionSnapshot = {
-    generatedAt: new Date().toISOString(),
+    generatedAt: asOf.toISOString(),
     universe: ["crypto", "fx", "commodities"],
     setups: rankedSetups,
     setupOfTheDayId: setupOfTheDay.id,

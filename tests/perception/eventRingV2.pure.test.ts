@@ -33,8 +33,14 @@ describe("eventRingV2 pure functions", () => {
   it("computes window deterministically from asOf", async () => {
     const asOf = new Date("2026-01-01T12:00:00Z");
     const window = resolveEventRingWindow(baseSetup, asOf);
-    expect(window.windowFrom.getTime()).toBeLessThan(asOf.getTime());
-    expect(window.windowTo.getTime()).toBeGreaterThan(asOf.getTime());
+    expect(window.windowFrom.getTime()).toBe(asOf.getTime() - 6 * 60 * 60 * 1000);
+    expect(window.windowTo.getTime()).toBe(asOf.getTime() + 24 * 60 * 60 * 1000);
+  });
+
+  it("throws for invalid now date", () => {
+    // @ts-expect-error intentional invalid date
+    const badDate = new Date("not-a-date");
+    expect(() => resolveEventRingWindow(baseSetup, badDate)).toThrowError();
   });
 
   it("analyzes events passed in without server access", async () => {

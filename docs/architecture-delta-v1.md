@@ -55,10 +55,11 @@ SOLL-Architektur (`architecture-v1.md`) und dem realen Implementierungsstand.
 **Ist**
 - Sehr mächtige Engine
 - Klare Scoring-Flows
+- generatedAt/asOf deterministisch (keine `new Date()`-Defaults mehr)
 
 **Abweichung**
 - Importiert Infrastruktur
-- `asOf` nicht überall enforced
+- Server-Imports/Ports noch offen
 
 ---
 

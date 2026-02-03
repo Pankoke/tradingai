@@ -6,7 +6,7 @@ Dieses Dokument priorisiert die offenen Gaps und leitet daraus konkrete, **merge
 
 ## Top-10 Gaps (priorisiert)
 
-1. **G-02 – Engine nicht sauber entkoppelt**  
+1. **G-02 – Engine nicht sauber entkoppelt**  (asOf/Determinismus erledigt, Imports offen)
 2. **G-01 – Fehlender Backtesting-Simulator (Execution/Replay)**  
 3. **G-03 – Kein klarer Market-Data-Ingestion-Layer**  
 4. **G-04 – Event-Domäne nicht sauber getrennt**  
@@ -26,11 +26,11 @@ Dieses Dokument priorisiert die offenen Gaps und leitet daraus konkrete, **merge
 ### Story 1 – Engine-Boundary erzwingen
 
 **Ziel**  
-Engine vollständig server-frei und deterministisch machen.
+Engine server-frei machen; asOf/Determinismus ist bereits enforced.
 
 **Scope**
 - ESLint-Errors bei `src/lib/engine/** → src/server/**`
-- `asOf` als Pflichtparameter
+- Ports/Adapter statt Server-Imports; Engine konsumiert nur Ports
 
 **Non-Scope**
 - Kein Feature-Change

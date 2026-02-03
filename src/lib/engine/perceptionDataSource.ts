@@ -363,14 +363,14 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     const levelCategory = resolveLevelCategory(template);
     const dataSourcePrimary = "unknown";
     const candle = await this.ensureLatestCandle(asset, baseTimeframe, evaluationDate);
-    await this.ensureSupplementalTimeframes(asset, baseTimeframe);
+    await this.ensureSupplementalTimeframes(asset, baseTimeframe, evaluationDate);
     if (profile === "INTRADAY" && isIntradayCandleStale(candle ?? null, evaluationDate, INTRADAY_STALE_MINUTES)) {
       logger.warn("[LivePerceptionDataSource] skipping intraday setup: stale/missing candle", {
         symbol: asset.symbol,
         timeframe: baseTimeframe,
         thresholdMinutes: INTRADAY_STALE_MINUTES,
         candleTimestamp: candle?.timestamp,
-        now: new Date(),
+        now: evaluationDate,
       });
       return null;
     }
@@ -553,11 +553,8 @@ class LivePerceptionDataSource implements PerceptionDataSource {
       timeframe,
       asOf,
       lookback: PRIMARY_CANDLE_LOOKBACK_COUNT,
-    }).then((rows) => rows[0] as CandleRow | undefined);
+    }).then((rows) => this.normalizeCandleTimestamp(rows[0] as CandleRow | undefined));
     if (this.isCandleValid(candle)) {
-      if (!(candle.timestamp instanceof Date)) {
-        candle = { ...candle, timestamp: new Date(candle.timestamp ?? Date.now()) };
-      }
       return candle;
     }
 
@@ -569,13 +566,13 @@ class LivePerceptionDataSource implements PerceptionDataSource {
       return candle;
     }
 
-    await this.syncCandlesForAsset(asset, timeframe);
+    await this.syncCandlesForAsset(asset, timeframe, asOf);
     candle = await this.getCandlesWindow({
       assetId: asset.id,
       timeframe,
       asOf,
       lookback: PRIMARY_CANDLE_LOOKBACK_COUNT,
-    }).then((rows) => rows[0] as CandleRow | undefined);
+    }).then((rows) => this.normalizeCandleTimestamp(rows[0] as CandleRow | undefined));
     if (!this.isCandleValid(candle)) {
       console.error(
         `[LivePerceptionDataSource] no candle available for ${asset.symbol} (${timeframe}) after fallback`,
@@ -584,13 +581,13 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     return candle;
   }
 
-  private async ensureSupplementalTimeframes(asset: AssetLike, base: MarketTimeframe) {
+  private async ensureSupplementalTimeframes(asset: AssetLike, base: MarketTimeframe, asOf: Date) {
     if (!this.deps.allowSync) {
       return;
     }
     const configured = this.deps.timeframeConfig.getTimeframesForAsset(asset);
     const extras = configured.filter((tf) => tf !== base);
-    await Promise.all(extras.map((tf) => this.syncCandlesForAsset(asset, tf)));
+    await Promise.all(extras.map((tf) => this.syncCandlesForAsset(asset, tf, asOf)));
   }
 
   private async buildSentimentMetricsForAsset(
@@ -645,11 +642,11 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     }
   }
 
-  private async syncCandlesForAsset(asset: AssetLike, timeframe: MarketTimeframe) {
+  private async syncCandlesForAsset(asset: AssetLike, timeframe: MarketTimeframe, asOf: Date) {
     if (!this.deps.allowSync || !this.deps.syncCandles) {
       return;
     }
-    const to = new Date();
+    const to = new Date(asOf);
     const windowDays = this.deps.timeframeConfig.TIMEFRAME_SYNC_WINDOWS[timeframe] ?? MARKETDATA_SYNC_WINDOW_DAYS;
     const from = new Date(to);
     from.setDate(to.getDate() - windowDays + 1);
@@ -669,12 +666,34 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     }
   }
 
+  private normalizeCandleTimestamp(candle?: CandleRow | null): CandleRow | null {
+    if (!candle) return null;
+    const ts = candle.timestamp;
+    if (ts instanceof Date && Number.isFinite(ts.getTime())) {
+      return candle;
+    }
+    if (typeof ts === "string" || typeof ts === "number") {
+      const parsed = new Date(ts);
+      if (Number.isFinite(parsed.getTime())) {
+        return { ...candle, timestamp: parsed };
+      }
+    }
+    logger.warn("[LivePerceptionDataSource] dropping candle with invalid timestamp", {
+      assetId: candle.assetId,
+      timeframe: candle.timeframe,
+      timestamp: ts,
+    });
+    return null;
+  }
+
   private isCandleValid(candle?: CandleRow | null): candle is CandleRow {
     if (!candle) {
       return false;
     }
     const close = Number(candle.close);
-    return Number.isFinite(close) && close > 0;
+    const ts = candle.timestamp;
+    const timestampOk = ts instanceof Date && Number.isFinite(ts.getTime());
+    return timestampOk && Number.isFinite(close) && close > 0;
   }
 
   private mapVolatilityLabel(score: number): VolatilityLabel {

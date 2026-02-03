@@ -82,12 +82,14 @@ export async function POST(request: NextRequest): Promise<Response> {
       });
     }
 
+    const snapshotTime = new Date();
     const snapshot = await buildAndStorePerceptionSnapshot({
       source: "cron_intraday",
       allowSync: false,
       profiles: ["INTRADAY"],
       label: "intraday",
       assetFilter: allowedAssetIds,
+      snapshotTime,
     });
     const setupsArr =
       Array.isArray((snapshot as { setups?: unknown }).setups)

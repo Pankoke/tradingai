@@ -184,12 +184,14 @@ export async function requestSnapshotBuild(params: {
   });
   try {
     const allowSync = params.allowSync ?? false;
+    const snapshotTime = new Date();
     const snapshot = await buildAndStorePerceptionSnapshot({
       source: params.source,
       allowSync,
       profiles: params.profiles,
       label: params.label,
       assetFilter: params.assetFilter,
+      snapshotTime,
     });
     updateRunState({
       status: "succeeded",

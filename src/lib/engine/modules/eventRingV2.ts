@@ -53,8 +53,11 @@ const IMPACT_SEVERITY: Record<number, "low" | "medium" | "high"> = {
 };
 
 export function resolveEventRingWindow(setup: Pick<Setup, "timeframe" | "category">, now: Date): EventRingWindow {
-  const kind = classifyWindowKind(setup);
   const nowMs = now.getTime();
+  if (!Number.isFinite(nowMs)) {
+    throw new Error("resolveEventRingWindow requires a valid Date for now");
+  }
+  const kind = classifyWindowKind(setup);
 
   const offsets: Record<RingTimeframe, { backMs: number; forwardMs: number }> = {
     intraday: { backMs: 30 * 60 * 1000, forwardMs: 6 * 60 * 60 * 1000 },

@@ -121,7 +121,10 @@ export function normalizeProfileForTimeframe(profile: string | undefined | null,
 export async function buildAndStorePerceptionSnapshot(
   params: BuildParams = {},
 ): Promise<PerceptionSnapshotWithItems> {
-  const snapshotTime = params.snapshotTime ?? new Date();
+  const snapshotTime = params.snapshotTime;
+  if (!snapshotTime) {
+    throw new Error("snapshotTime is required to build perception snapshot");
+  }
   const mode: PerceptionDataMode = params.mode ?? getPerceptionDataMode();
 
   const start = Date.now();

@@ -15,7 +15,7 @@ Alle Aussagen zu „fertig / umgesetzt“ sind mit konkreten Fundstellen belegt.
 | **Market Data Ingestion** | 🟡 Teilweise umgesetzt | `architecture-v1.md → Market Data (IST)`; Derived Candles vorhanden (`source="derived"`), aber kein klarer Ingestion-Layer |
 | **Event Integration** | 🟡 Funktional, architektonisch unsauber | `architecture-v1.md → Events (IST)`; Logik im Engine-Bereich |
 | **Sentiment** | 🟢 V2 umgesetzt | `roadmap-v2.md → Phase 5 – Sentiment V2 (Slices 5.1–5.3 done)` |
-| **Strategy / Perception Engine** | 🟡 Stark, aber nicht sauber entkoppelt | `architecture-v1.md → Strategy / Perception Engine (IST)` |
+| **Strategy / Perception Engine** | 🟡 Stark, asOf jetzt enforced | `architecture-v1.md → Strategy / Perception Engine (IST)` |
 | **Backtesting / Simulation** | 🟡 MVP vorhanden (deterministisch) | `roadmap-v2.md → Phase 6 – Backtesting MVP (Slices 6.1–6.2 done)` |
 | **UI (Dashboards/Admin)** | 🟢 Funktionsfähig | `architecture-v1.md → UI (IST)` |
 | **Data / Storage** | 🟢 Stabil | Drizzle/Postgres, Candle & Snapshot Persistenz |
@@ -67,11 +67,13 @@ Alle Aussagen zu „fertig / umgesetzt“ sind mit konkreten Fundstellen belegt.
 - Snapshot-basierte Engine
 - Klare Scoring-Flows
 - Playbooks & Grades
+- asOf in Engine/DataSource enforced (keine Zeit-Defaults)
+- EventRingV2 windowing strikt asOf-basiert (keine Echtzeit-Fallbacks)
 
 **Offen**
 - Imports aus `src/server/**`
-- `asOf` nicht überall erzwungen
-- Determinismus nicht garantiert  
+- Guardrails/Ports weiter härten
+- Guardrails/Ports weiter härten  
 📍 *Evidenz:* `architecture-v1.md → Probleme/Risiken (Engine)`
 
 ---

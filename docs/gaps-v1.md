@@ -92,7 +92,7 @@ AUSWIRKUNG
 
 Schwer testbar
 
-Nicht deterministisch
+Determinismus/asOf weitgehend enforced (Zeit-Defaults entfernt)
 
 Backtesting kaum möglich
 

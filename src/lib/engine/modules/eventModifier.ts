@@ -6,7 +6,7 @@ import { deriveSetupProfileFromTimeframe, getSetupProfileConfig, type SetupProfi
 type BuildParams = {
   context?: Setup["eventContext"] | null;
   setup?: Pick<Setup, "symbol" | "timeframe" | "category" | "profile">;
-  now?: Date;
+  now: Date;
 };
 
 const IMPACT_WEIGHT: Record<number, number> = { 1: 0.6, 2: 0.8, 3: 1 };
@@ -18,7 +18,7 @@ type WindowRule = { execution: number; context: number };
 type AssetClass = "fx" | "index" | "crypto" | "commodity" | "other";
 
 export function buildEventModifier(params: BuildParams): EventModifier {
-  const now = params.now ?? new Date();
+  const now = params.now;
   const ctx = params.context;
   const events = ctx?.topEvents ?? [];
   const eventCount = ctx?.eventCount ?? events.length ?? 0;

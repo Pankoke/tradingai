@@ -23,12 +23,14 @@ const stubDataSource: PerceptionDataSource = {
 
 describe("perceptionEngine (ports-based)", () => {
   it("builds snapshot using injected data source (no server imports required)", async () => {
+    const asOf = new Date("2024-01-01T00:00:00Z");
     const snapshot = await buildPerceptionSnapshot({
-      asOf: new Date("2024-01-01T00:00:00Z"),
+      asOf,
       dataSource: stubDataSource,
     });
 
     expect(snapshot.setups.length).toBeGreaterThan(0);
     expect(snapshot.version).toBe("0.1.0");
+    expect(snapshot.generatedAt).toBe(asOf.toISOString());
   });
 });

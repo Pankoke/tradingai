@@ -69,6 +69,7 @@ describe("snapshotBuildService", () => {
       expect.objectContaining({
         source: "cron",
         allowSync: false,
+        snapshotTime: expect.any(Date),
       }),
     );
     expect(dbExecuteMock).toHaveBeenCalledTimes(2);
@@ -110,6 +111,7 @@ describe("snapshotBuildService", () => {
       expect.objectContaining({
         source: "ui",
         allowSync: false,
+        snapshotTime: expect.any(Date),
       }),
     );
   });
