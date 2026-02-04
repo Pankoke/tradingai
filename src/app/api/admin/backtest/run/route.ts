@@ -23,6 +23,12 @@ export async function POST(request: NextRequest) {
   const fromIso = typeof body?.fromIso === "string" ? body.fromIso : "";
   const toIso = typeof body?.toIso === "string" ? body.toIso : "";
   const stepHours = typeof body?.stepHours === "number" && body.stepHours > 0 ? Math.floor(body.stepHours) : 4;
+  const feeBpsRaw = typeof body?.feeBps === "number" ? body.feeBps : 0;
+  const slippageBpsRaw = typeof body?.slippageBps === "number" ? body.slippageBps : 0;
+  const holdStepsRaw = typeof body?.holdSteps === "number" ? body.holdSteps : 3;
+  const feeBps = Math.min(1000, Math.max(0, Math.floor(feeBpsRaw)));
+  const slippageBps = Math.min(1000, Math.max(0, Math.floor(slippageBpsRaw)));
+  const holdSteps = Math.min(200, Math.max(1, Math.floor(holdStepsRaw)));
   if (!assetId || !fromIso || !toIso) {
     return NextResponse.json<BacktestResponse>(
       { ok: false, error: "assetId/fromIso/toIso required", code: "missing_params" },
@@ -30,7 +36,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const result = await runBacktest({ assetId, fromIso, toIso, stepHours });
+  const result = await runBacktest({
+    assetId,
+    fromIso,
+    toIso,
+    stepHours,
+    costsConfig: { feeBps, slippageBps },
+    exitPolicy: { kind: "hold-n-steps", holdSteps, price: "step-open" },
+  });
   const status = result.ok ? 200 : 400;
   return NextResponse.json<BacktestResponse>(result, { status });
 }

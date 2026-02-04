@@ -99,3 +99,9 @@ Update: Execution entry intents (next-step-open) und Lookahead-Guard (Candle <= 
 - Admin UI consumes backtest_runs list/detail APIs and provides run compare (KPIs delta, equity overlay) without extra server coupling.
 
 - Backtests: added migration for backtest_runs (runKey unique), Admin panel entry + run starter form using existing API.
+- Admin CSV export for backtest_runs (deterministic headers/orders) added; read-only.
+- Backtest admin run config surfaced (feeBps, slippageBps, holdSteps) and feeds runKey/backtest_runs.
+- Admin: compare delta CSV export added (kpis/summary/all) via /api/admin/backtest/compare/export; deterministic order/rounding.
+- Migration chain made reproducible: drizzle/meta/_journal.json now lists all migrations 0000-0009 matching files.
+- Standardized DB setup commands: db:status/db:migrate/db:reset (dev-only reset with CONFIRM_DB_RESET) + migration guide.
+- Admin tooling: client-side filters/sorts and analytics for backtests; trades pagination handled client-side (no schema changes).

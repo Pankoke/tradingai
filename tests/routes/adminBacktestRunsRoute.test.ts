@@ -6,6 +6,7 @@ const mockIsAdminSession = vi.fn();
 const mockValidateOrigin = vi.fn();
 const mockList = vi.fn();
 const mockGet = vi.fn();
+const mockRunBacktest = vi.fn();
 
 vi.mock("@/src/lib/admin/security", () => ({
   isAdminEnabled: () => mockIsAdminEnabled(),
@@ -19,6 +20,10 @@ vi.mock("@/src/lib/admin/auth", () => ({
 vi.mock("@/src/server/repositories/backtestRunRepository", () => ({
   listRecentBacktestRunsMeta: (...args: unknown[]) => mockList(...args),
   getBacktestRunByKey: (...args: unknown[]) => mockGet(...args),
+}));
+
+vi.mock("@/src/server/backtest/runBacktest", () => ({
+  runBacktest: (...args: unknown[]) => mockRunBacktest(...args),
 }));
 
 function buildRequest(url: string, method = "GET") {
@@ -67,5 +72,32 @@ describe("admin backtest runs routes", () => {
     const { GET } = await import("@/src/app/api/admin/backtest/runs/[runKey]/route");
     const res = await GET(buildRequest("http://localhost/api/admin/backtest/runs/absent"), { params: { runKey: "absent" } });
     expect(res.status).toBe(404);
+  });
+
+  it("run route passes fee/slippage/holdSteps", async () => {
+    mockRunBacktest.mockResolvedValue({ ok: true, reportPath: "x", steps: 1 });
+    const { POST } = await import("@/src/app/api/admin/backtest/run/route");
+    const body = {
+      assetId: "btc",
+      fromIso: "2026-01-01T00:00:00Z",
+      toIso: "2026-01-02T00:00:00Z",
+      stepHours: 4,
+      feeBps: 10,
+      slippageBps: 20,
+      holdSteps: 5,
+    };
+    const req = new NextRequest("http://localhost/api/admin/backtest/run", {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    expect(mockRunBacktest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        costsConfig: { feeBps: 10, slippageBps: 20 },
+        exitPolicy: { kind: "hold-n-steps", holdSteps: 5, price: "step-open" },
+      }),
+    );
   });
 });

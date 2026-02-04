@@ -326,6 +326,7 @@ export async function runBacktest(params: {
   lookbackHours?: number;
   timeframeFilter?: CandleTimeframe[];
   costsConfig?: ExecutionCostsConfig;
+  exitPolicy?: { kind: "hold-n-steps"; holdSteps: number; price: "step-open" };
   deps?: RunBacktestDeps;
   debug?: boolean;
 }): Promise<{ ok: true; reportPath: string; steps: number } | { ok: false; error: string; code: string }> {
@@ -573,7 +574,7 @@ export async function runBacktest(params: {
     toIso: params.toIso,
     stepHours: params.stepHours,
     costsConfig: params.costsConfig ?? defaultCostsConfig,
-    exitPolicy: DEFAULT_EXIT_POLICY,
+    exitPolicy: params.exitPolicy ?? DEFAULT_EXIT_POLICY,
   });
   await upsertBacktestRun({
     runKey,
@@ -582,7 +583,7 @@ export async function runBacktest(params: {
     toIso: params.toIso,
     stepHours: params.stepHours,
     costsConfig: params.costsConfig ?? defaultCostsConfig,
-    exitPolicy: DEFAULT_EXIT_POLICY,
+    exitPolicy: params.exitPolicy ?? DEFAULT_EXIT_POLICY,
     kpis,
     reportPath,
     trades: completedTrades,

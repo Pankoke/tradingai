@@ -303,3 +303,9 @@ ENDE DER DATEI
 - Phase 6: Admin backtest compare view delivered (KPI delta + equity overlay).
 
 - Phase 6: Backtest runs migration applied; Admin backtests nav + run form available.
+- Phase 6: CSV export for backtest runs done (admin API/UI).
+- Tooling: parameterized backtest runs (costs/exit policy) done.
+- Phase 6: Compare delta CSV export (kpis/summary/all) done; UI link on backtests compare view.
+- Tooling/Infra: Migration hygiene PR1 (journal aligned with files) completed.
+- Infra/Tooling: Migration hygiene PR2 completed (scripts + guide).
+- Tooling: Admin backtests UX improvements delivered (filters, sort, clone params, mini analytics).

@@ -130,3 +130,10 @@ Alle Aussagen zu „fertig / umgesetzt“ sind mit konkreten Fundstellen belegt.
 - UI: Admin backtest runs compare (primary + optional compare, KPIs & equity overlay).
 
 - Backtesting: backtest_runs migration added (0004), Admin Backtests page has nav link and run button (POST /api/admin/backtest/run).
+- Admin: CSV export for backtest runs (trades/kpis) via /api/admin/backtest/runs/[runKey]/export
+- Backtest Run Form now accepts feeBps/slippageBps/holdSteps for parameter studies.
+- Admin: Compare delta CSV export (kpis/summary/all) available via /api/admin/backtest/compare/export.
+- Admin: compare delta CSV export (read-only) shipped; deterministic headers/ordering.
+- Migration hygiene PR1: drizzle journal aligned with existing SQL (0000-0009) for reproducible fresh migrate.
+- Migration hygiene PR2: added db:status/db:migrate/db:reset scripts + db-migrations-v1 guide.
+- Admin backtests UX: filters/sort/limit, clone-to-form, mini analytics added (no schema change).

@@ -1,16 +1,30 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 
-type Props = {
-  locale: string;
+type Defaults = {
+  assetId?: string;
+  fromIso?: string;
+  toIso?: string;
+  stepHours?: number;
+  feeBps?: number;
+  slippageBps?: number;
+  holdSteps?: number;
 };
 
-export function RunBacktestForm({ locale }: Props) {
-  const [assetId, setAssetId] = useState("btc");
-  const [fromIso, setFromIso] = useState("");
-  const [toIso, setToIso] = useState("");
-  const [stepHours, setStepHours] = useState(4);
+type Props = {
+  locale: string;
+  defaultValues?: Defaults;
+};
+
+export function RunBacktestForm({ locale, defaultValues }: Props) {
+  const [assetId, setAssetId] = useState(defaultValues?.assetId ?? "btc");
+  const [fromIso, setFromIso] = useState(defaultValues?.fromIso ?? "");
+  const [toIso, setToIso] = useState(defaultValues?.toIso ?? "");
+  const [stepHours, setStepHours] = useState(defaultValues?.stepHours ?? 4);
+  const [feeBps, setFeeBps] = useState(defaultValues?.feeBps ?? 0);
+  const [slippageBps, setSlippageBps] = useState(defaultValues?.slippageBps ?? 0);
+  const [holdSteps, setHoldSteps] = useState(defaultValues?.holdSteps ?? 3);
   const [status, setStatus] = useState<string | null>(null);
 
   async function onSubmit(event: React.FormEvent) {
@@ -20,11 +34,11 @@ export function RunBacktestForm({ locale }: Props) {
       const res = await fetch("/api/admin/backtest/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assetId, fromIso, toIso, stepHours }),
+        body: JSON.stringify({ assetId, fromIso, toIso, stepHours, feeBps, slippageBps, holdSteps }),
       });
       const json = (await res.json()) as { ok: boolean; error?: string };
       if (json.ok) {
-        setStatus("done – refreshing...");
+        setStatus("done - refreshing...");
         window.location.href = `/${locale}/admin/backtests`;
       } else {
         setStatus(json.error ?? "failed");
@@ -76,6 +90,39 @@ export function RunBacktestForm({ locale }: Props) {
             className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-slate-100"
             value={stepHours}
             onChange={(e) => setStepHours(Number(e.target.value))}
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-slate-300">
+          Fee (bps)
+          <input
+            type="number"
+            min={0}
+            max={1000}
+            className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-slate-100"
+            value={feeBps}
+            onChange={(e) => setFeeBps(Number(e.target.value))}
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-slate-300">
+          Slippage (bps)
+          <input
+            type="number"
+            min={0}
+            max={1000}
+            className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-slate-100"
+            value={slippageBps}
+            onChange={(e) => setSlippageBps(Number(e.target.value))}
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-slate-300">
+          Hold Steps
+          <input
+            type="number"
+            min={1}
+            max={200}
+            className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-slate-100"
+            value={holdSteps}
+            onChange={(e) => setHoldSteps(Number(e.target.value))}
           />
         </label>
       </div>

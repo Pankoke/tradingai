@@ -374,3 +374,9 @@ Note 2026-02-03: Backtest Reports nicht mehr nur auf Disk – Runs werden zusätzli
 - Gap note: Operators can now compare backtest runs via admin UI; remaining gap is export/normalized trade analytics.
 
 - Gap resolved: backtest_runs table missing was fixed via migration 0004; nav entry and run starter present.
+- Tooling gap mitigated: Backtest CSV export available (trades/kpis).
+- Gap update: Operators can vary fee/slippage/holdSteps when starting backtests.
+- Gap note: compare delta CSV export available; remaining gap is normalized trade analytics/CSV per bucket.
+- Gap: drizzle journal drift mitigated (journal synced with migrations); remaining DX: reset/migrate scripts.
+- Gap closed: reproducible migrations now documented with scripts (status/migrate/reset).
+- Gap mitigated: operator UX improved for backtests (filters/sort/clone/export), remaining: normalized trade analytics.

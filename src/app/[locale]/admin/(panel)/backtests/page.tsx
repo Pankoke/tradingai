@@ -5,6 +5,7 @@ import enMessages from "@/src/messages/en.json";
 import type { BacktestRunMeta } from "@/src/server/repositories/backtestRunRepository";
 import { getBacktestRunByKey, listRecentBacktestRunsMeta } from "@/src/server/repositories/backtestRunRepository";
 import type { CompletedTrade } from "@/src/domain/backtest/types";
+import TradesTable from "./TradesTableClient";
 import { RunBacktestForm } from "./RunBacktestForm";
 
 type Props = {
@@ -90,6 +91,16 @@ function computeDelta(a: KpisLike | null, b: KpisLike | null): CompareDelta {
   return delta;
 }
 
+function clampLimit(raw?: string | string[]): number {
+  const n = typeof raw === "string" ? Number(raw) : Number.NaN;
+  if (!Number.isFinite(n)) return 50;
+  return Math.min(200, Math.max(1, Math.trunc(n)));
+}
+
+function unique<T>(items: T[]): T[] {
+  return Array.from(new Set(items));
+}
+
 async function safeGetRun(runKey: string) {
   try {
     return await getBacktestRunByKey(runKey);
@@ -105,10 +116,13 @@ export default async function AdminBacktestsPage({ params, searchParams }: Props
   const messages = locale === "de" ? deMessages : enMessages;
   const t = (key: string, fallback: string) => (messages as Record<string, string>)[key] ?? fallback;
 
+  const resolvedSearch = (await searchParams) ?? {};
+  const limit = clampLimit(resolvedSearch.limit);
+
   let runs: BacktestRunMeta[] = [];
   let loadError: string | null = null;
   try {
-    runs = await listRecentBacktestRunsMeta(50);
+    runs = await listRecentBacktestRunsMeta(limit);
   } catch (error) {
     const message = error instanceof Error ? error.message : "failed to load backtest runs";
     const lowered = message.toLowerCase();
@@ -119,12 +133,40 @@ export default async function AdminBacktestsPage({ params, searchParams }: Props
     }
   }
 
-  const resolvedSearch = (await searchParams) ?? {};
   const primaryKey = typeof resolvedSearch.runKey === "string" ? resolvedSearch.runKey : runs[0]?.runKey;
   const compareKey = typeof resolvedSearch.compare === "string" ? resolvedSearch.compare : undefined;
+  const prefillKey = typeof resolvedSearch.prefill === "string" ? resolvedSearch.prefill : undefined;
+  const assetFilter = typeof resolvedSearch.asset === "string" ? resolvedSearch.asset : "all";
+  const stepFilter = typeof resolvedSearch.step === "string" ? resolvedSearch.step : "all";
+  const sortKey = typeof resolvedSearch.sort === "string" ? resolvedSearch.sort : "createdAt";
+  const searchTerm = typeof resolvedSearch.q === "string" ? resolvedSearch.q.toLowerCase() : "";
 
   const primary = primaryKey ? await safeGetRun(primaryKey) : null;
   const secondary = compareKey ? await safeGetRun(compareKey) : null;
+  const prefill = prefillKey ? await safeGetRun(prefillKey) : null;
+
+  const filteredRuns = runs
+    .filter((run) => (assetFilter === "all" ? true : run.assetId === assetFilter))
+    .filter((run) => (stepFilter === "all" ? true : String(run.stepHours) === stepFilter))
+    .filter((run) =>
+      searchTerm
+        ? [run.runKey, run.fromIso ?? "", run.toIso ?? "", run.assetId ?? ""].some((v) => v.toLowerCase().includes(searchTerm))
+        : true,
+    );
+
+  const sorters: Record<string, (a: BacktestRunMeta, b: BacktestRunMeta) => number> = {
+    createdAt: (a, b) => {
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      if (tb !== ta) return tb - ta;
+      return (b.runKey ?? "").localeCompare(a.runKey ?? "");
+    },
+    netPnl: (a, b) => ((asKpis(b.kpis)?.netPnl ?? 0) - (asKpis(a.kpis)?.netPnl ?? 0)) || sorters.createdAt(a, b),
+    winRate: (a, b) => ((asKpis(b.kpis)?.winRate ?? 0) - (asKpis(a.kpis)?.winRate ?? 0)) || sorters.createdAt(a, b),
+    maxDrawdown: (a, b) => ((asKpis(a.kpis)?.maxDrawdown ?? 0) - (asKpis(b.kpis)?.maxDrawdown ?? 0)) || sorters.createdAt(a, b),
+  };
+  const sorter = sorters[sortKey] ?? sorters.createdAt;
+  const visibleRuns = [...filteredRuns].sort(sorter);
 
   const primaryTrades = (primary?.trades as CompletedTrade[] | undefined) ?? [];
   const secondaryTrades = (secondary?.trades as CompletedTrade[] | undefined) ?? [];
@@ -135,36 +177,99 @@ export default async function AdminBacktestsPage({ params, searchParams }: Props
   const delta = computeDelta(kpisA, kpisB);
   const summaryA = computeReasonCounts(primaryTrades);
   const summaryB = computeReasonCounts(secondaryTrades);
+  const buildExportUrl = (runKey: string, type: "trades" | "kpis") =>
+    `/${locale}/api/admin/backtest/runs/${encodeURIComponent(runKey)}/export?type=${type}`;
+  const buildCompareExportUrl = (a: string, b: string, type: "kpis" | "summary" | "all") =>
+    `/${locale}/api/admin/backtest/compare/export?primary=${encodeURIComponent(a)}&secondary=${encodeURIComponent(b)}&type=${type}`;
+
+  const formatCosts = (run: BacktestRunMeta | null) => {
+    if (!run) return "";
+    const costs = (run.costsConfig as { feeBps?: number; slippageBps?: number } | null | undefined) ?? null;
+    const exitPolicy = (run.exitPolicy as { holdSteps?: number } | null | undefined) ?? null;
+    const fee = costs?.feeBps ?? 0;
+    const slip = costs?.slippageBps ?? 0;
+    const hold = exitPolicy?.holdSteps ?? 3;
+    return `fee ${fee}bps | slip ${slip}bps | hold ${hold}`;
+  };
 
   return (
     <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
       <div className="space-y-3">
         <h1 className="text-xl font-semibold">{t("admin.backtest.runs.title", "Backtest Runs")}</h1>
-        <RunBacktestForm locale={locale} />
+        <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-sm text-[var(--text-secondary)] space-y-2">
+          <div className="text-base font-semibold text-white">Was diese Seite macht</div>
+          <ul className="list-disc pl-4 space-y-1">
+            <li>Backtest-Runs sind deterministische Simulationen. Der <code>runKey</code> ist die Identität aus Parametern (Asset, Zeitraum, Step, Kosten, Exit).</li>
+            <li>Links: Liste aller Runs mit Meta + KPIs, Detail mit Trades &amp; Equity, Compare-Ansicht (A/B + Delta).</li>
+            <li>Aktionen: neuen Run starten (Asset/Zeitraum/Step + Fee/Slippage + HoldSteps), Runs vergleichen, CSV-Export für Trades/KPIs oder Compare-Delta.</li>
+            <li>Hinweise: Wenn Trades = 0, gab es keine Entries im Zeitraum (kein Fehler). Gleiche Parameter ergeben denselben runKey (idempotent).</li>
+            <li>Falls keine Runs geladen werden: Datenbank-Migrationen prüfen (z.B. <code>npm run db:status</code> / <code>npm run db:migrate</code>).</li>
+          </ul>
+        </div>
+        <RunBacktestForm
+          locale={locale}
+          defaultValues={
+            prefill
+              ? {
+                  assetId: prefill.assetId ?? "btc",
+                  fromIso: prefill.fromIso ?? "",
+                  toIso: prefill.toIso ?? "",
+                  stepHours: prefill.stepHours ?? 4,
+                  feeBps: (prefill.costsConfig as { feeBps?: number } | null | undefined)?.feeBps ?? 0,
+                  slippageBps: (prefill.costsConfig as { slippageBps?: number } | null | undefined)?.slippageBps ?? 0,
+                  holdSteps: (prefill.exitPolicy as { holdSteps?: number } | null | undefined)?.holdSteps ?? 3,
+                }
+              : undefined
+          }
+        />
+
+        <FilterPanel
+          locale={locale}
+          assets={unique(runs.map((r) => r.assetId).filter(Boolean))}
+          stepHours={unique(runs.map((r) => String(r.stepHours)))}
+          current={{ asset: assetFilter, step: stepFilter, sort: sortKey, limit, search: searchTerm }}
+          runKey={primaryKey}
+          compareKey={compareKey}
+        />
+
         <div className="rounded-lg border border-white/10 bg-white/5 p-3 space-y-2">
           {loadError && <div className="text-sm text-rose-300">Error loading runs: {loadError}</div>}
-          {runs.length === 0 && !loadError && <div className="text-sm text-[var(--text-secondary)]">No runs found.</div>}
-          {runs.map((run) => {
-            const href = `/${locale}/admin/backtests?runKey=${encodeURIComponent(run.runKey)}${compareKey ? `&compare=${encodeURIComponent(compareKey)}` : ""}`;
-            const compareHref = `/${locale}/admin/backtests?runKey=${encodeURIComponent(primaryKey ?? run.runKey)}&compare=${encodeURIComponent(run.runKey)}`;
+          {visibleRuns.length === 0 && !loadError && <div className="text-sm text-[var(--text-secondary)]">No runs found.</div>}
+          {visibleRuns.map((run) => {
+            const baseParams = new URLSearchParams();
+            baseParams.set("runKey", run.runKey);
+            if (compareKey) baseParams.set("compare", compareKey);
+            baseParams.set("limit", String(limit));
+            const href = `/${locale}/admin/backtests?${baseParams.toString()}`;
+            const compareParams = new URLSearchParams();
+            compareParams.set("runKey", primaryKey ?? run.runKey);
+            compareParams.set("compare", run.runKey);
+            compareParams.set("limit", String(limit));
+            const compareHref = `/${locale}/admin/backtests?${compareParams.toString()}`;
+            const cloneParams = new URLSearchParams(baseParams);
+            cloneParams.set("prefill", run.runKey);
             const isActive = run.runKey === primaryKey;
             const kpis = asKpis(run.kpis);
+            const cardClass = `rounded-md px-3 py-2 transition ${
+              isActive ? "bg-white/10 border border-white/20" : "hover:bg-white/5"
+            }`;
             return (
-              <div key={run.runKey} className={`rounded-md px-3 py-2 transition ${isActive ? "bg-white/10 border border-white/20" : "hover:bg-white/5"}`}>
+              <div key={run.runKey} className={cardClass}>
                 <Link href={href} className="block">
                   <div className="flex items-center justify-between text-sm font-semibold">
                     <span>{run.assetId}</span>
                     <span className="text-[var(--text-secondary)]">{run.stepHours}h</span>
                   </div>
                   <div className="text-xs text-[var(--text-secondary)]">
-                    {run.fromIso} → {run.toIso}
+                    {run.fromIso} {"->"} {run.toIso}
                   </div>
                   <div className="text-xs text-[var(--text-secondary)]">
                     {formatDate(run.createdAt ?? null, locale)}
-                    {kpis?.netPnl != null ? ` · PnL ${formatNumber(kpis.netPnl)}` : ""}
+                    {kpis?.netPnl != null ? ` | PnL ${formatNumber(kpis.netPnl)}` : ""}
                   </div>
+                  <div className="text-[0.7rem] text-[var(--text-secondary)]">{formatCosts(run)}</div>
                 </Link>
-                <div className="mt-1 flex gap-2 text-[0.7rem] text-[var(--text-secondary)]">
+                <div className="mt-1 flex flex-wrap gap-3 text-[0.7rem] text-[var(--text-secondary)]">
                   <Link href={compareHref} className="underline">
                     Compare
                   </Link>
@@ -173,6 +278,9 @@ export default async function AdminBacktestsPage({ params, searchParams }: Props
                       Clear
                     </Link>
                   )}
+                  <Link href={`/${locale}/admin/backtests?${cloneParams.toString()}`} className="underline">
+                    Clone to form
+                  </Link>
                 </div>
               </div>
             );
@@ -192,12 +300,52 @@ export default async function AdminBacktestsPage({ params, searchParams }: Props
 
         {primary && (
           <>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-[var(--text-secondary)]">Exports:</span>
+              <a
+                className="rounded bg-white/10 px-2 py-1 text-xs hover:bg-white/20"
+                href={buildExportUrl(primary.runKey, "trades")}
+              >
+                Primary Trades CSV
+              </a>
+              <a
+                className="rounded bg-white/10 px-2 py-1 text-xs hover:bg-white/20"
+                href={buildExportUrl(primary.runKey, "kpis")}
+              >
+                Primary KPIs CSV
+              </a>
+              {compareKey && secondary && (
+                <>
+                  <a
+                    className="rounded bg-white/10 px-2 py-1 text-xs hover:bg-white/20"
+                    href={buildExportUrl(secondary.runKey, "trades")}
+                  >
+                    Compare Trades CSV
+                  </a>
+                  <a
+                    className="rounded bg-white/10 px-2 py-1 text-xs hover:bg-white/20"
+                    href={buildExportUrl(secondary.runKey, "kpis")}
+                  >
+                    Compare KPIs CSV
+                  </a>
+                  <a
+                    className="rounded bg-amber-500/20 px-2 py-1 text-xs text-amber-100 hover:bg-amber-500/30"
+                    href={buildCompareExportUrl(primary.runKey, secondary.runKey, "summary")}
+                  >
+                    Export Compare (summary CSV)
+                  </a>
+                </>
+              )}
+            </div>
+
             <KpiTable a={kpisA} b={kpisB} delta={delta} />
 
             <div className="rounded-lg border border-white/10 bg-white/5 p-4">
               <h3 className="mb-2 text-sm font-semibold">Equity Curve</h3>
               <EquityOverlay a={equityA} b={equityB} />
             </div>
+
+            <MiniSummary kpis={kpisA} />
 
             <TradeSummary label="Primary" summary={summaryA} />
             {compareKey && secondary && <TradeSummary label="Compare" summary={summaryB} />}
@@ -208,6 +356,90 @@ export default async function AdminBacktestsPage({ params, searchParams }: Props
         )}
       </div>
     </div>
+  );
+}
+
+function FilterPanel({
+  assets,
+  stepHours,
+  locale,
+  current,
+  runKey,
+  compareKey,
+}: {
+  assets: string[];
+  stepHours: string[];
+  locale: Locale;
+  current: { asset: string; step: string; sort: string; limit: number; search: string };
+  runKey?: string;
+  compareKey?: string;
+}) {
+  return (
+    <form method="get" className="rounded-lg border border-white/10 bg-white/5 p-3 space-y-2 text-xs">
+      {runKey && <input type="hidden" name="runKey" value={runKey} />}
+      {compareKey && <input type="hidden" name="compare" value={compareKey} />}
+      <div className="flex flex-wrap gap-2">
+        <label className="flex items-center gap-1">
+          Asset
+          <select name="asset" defaultValue={current.asset} className="rounded border border-white/10 bg-slate-900 px-2 py-1">
+            <option value="all">all</option>
+            {assets.map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-center gap-1">
+          Step
+          <select name="step" defaultValue={current.step} className="rounded border border-white/10 bg-slate-900 px-2 py-1">
+            <option value="all">all</option>
+            {stepHours.map((s) => (
+              <option key={s} value={s}>
+                {s}h
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-center gap-1">
+          Sort
+          <select name="sort" defaultValue={current.sort} className="rounded border border-white/10 bg-slate-900 px-2 py-1">
+            <option value="createdAt">createdAt desc</option>
+            <option value="netPnl">netPnl desc</option>
+            <option value="winRate">winRate desc</option>
+            <option value="maxDrawdown">maxDrawdown asc</option>
+          </select>
+        </label>
+        <label className="flex items-center gap-1">
+          Limit
+          <select name="limit" defaultValue={String(current.limit)} className="rounded border border-white/10 bg-slate-900 px-2 py-1">
+            {[25, 50, 100, 200].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-center gap-1 flex-1 min-w-[140px]">
+          Search
+          <input
+            name="q"
+            defaultValue={current.search}
+            className="flex-1 rounded border border-white/10 bg-slate-900 px-2 py-1"
+            placeholder="runKey or date"
+          />
+        </label>
+      </div>
+      <div className="flex gap-2">
+        <button type="submit" className="rounded bg-white/10 px-3 py-1 text-xs font-semibold hover:bg-white/20">
+          Apply
+        </button>
+        <Link href={`/${locale}/admin/backtests`} className="text-xs text-[var(--text-secondary)] underline">
+          Reset filters
+        </Link>
+      </div>
+      <div className="text-[0.65rem] text-[var(--text-secondary)]">Sort tie-breaker: createdAt desc, then runKey.</div>
+    </form>
   );
 }
 
@@ -275,7 +507,21 @@ function EquityOverlay({ a, b }: { a: number[]; b: number[] }) {
   );
 }
 
+function MiniSummary({ kpis }: { kpis: KpisLike | null }) {
+  if (!kpis) return null;
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-sm flex flex-wrap gap-3">
+      <span>Trades: {kpis.trades ?? "-"}</span>
+      <span>WinRate: {kpis.winRate != null ? `${formatNumber(kpis.winRate * 100, 1)}%` : "-"}</span>
+      <span>NetPnL: {kpis.netPnl != null ? formatNumber(kpis.netPnl) : "-"}</span>
+      <span>MaxDD: {kpis.maxDrawdown != null ? formatNumber(kpis.maxDrawdown) : "-"}</span>
+      <span>AvgPnL: {kpis.avgPnl != null ? formatNumber(kpis.avgPnl) : "-"}</span>
+    </div>
+  );
+}
+
 function TradeSummary({ label, summary }: { label: string; summary: SummaryCounts }) {
+  const total = summary.wins + summary.losses || Object.values(summary.reasons).reduce((a, b) => a + b, 0);
   return (
     <div className="rounded-lg border border-white/10 bg-white/5 p-4">
       <h3 className="mb-2 text-sm font-semibold">{label} summary</h3>
@@ -287,56 +533,16 @@ function TradeSummary({ label, summary }: { label: string; summary: SummaryCount
         Reasons:
         <ul className="mt-1 list-disc pl-4 text-[var(--text-secondary)]">
           {Object.keys(summary.reasons).length === 0 && <li>none</li>}
-          {Object.entries(summary.reasons).map(([reason, count]) => (
-            <li key={reason}>
-              {reason}: {count}
-            </li>
-          ))}
+          {Object.entries(summary.reasons).map(([reason, count]) => {
+            const pct = total > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
+            return (
+              <li key={reason}>
+                {reason}: {count} ({pct}%)
+              </li>
+            );
+          })}
         </ul>
       </div>
-    </div>
-  );
-}
-
-function TradesTable({ trades, title }: { trades: CompletedTrade[]; title: string }) {
-  return (
-    <div className="rounded-lg border border-white/10 bg-white/5 p-4">
-      <h3 className="mb-3 text-sm font-semibold">{title}</h3>
-      {trades.length === 0 && <div className="text-sm text-[var(--text-secondary)]">No trades</div>}
-      {trades.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="text-left text-[var(--text-secondary)]">
-              <tr>
-                <th className="px-2 py-1">Side</th>
-                <th className="px-2 py-1">Entry</th>
-                <th className="px-2 py-1">Exit</th>
-                <th className="px-2 py-1">Bars</th>
-                <th className="px-2 py-1">Reason</th>
-                <th className="px-2 py-1">Net PnL</th>
-              </tr>
-            </thead>
-            <tbody>
-              {trades.map((t, idx) => (
-                <tr key={`${t.entry.iso}-${idx}`} className="border-t border-white/5">
-                  <td className="px-2 py-1">{t.side}</td>
-                  <td className="px-2 py-1">
-                    <div>{t.entry.iso}</div>
-                    <div className="text-xs text-[var(--text-secondary)]">{formatNumber(t.entry.price, 4)}</div>
-                  </td>
-                  <td className="px-2 py-1">
-                    <div>{t.exit.iso}</div>
-                    <div className="text-xs text-[var(--text-secondary)]">{formatNumber(t.exit.price, 4)}</div>
-                  </td>
-                  <td className="px-2 py-1">{t.barsHeld}</td>
-                  <td className="px-2 py-1">{t.reason}</td>
-                  <td className="px-2 py-1">{formatNumber(t.pnl?.netPnl)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
     </div>
   );
 }

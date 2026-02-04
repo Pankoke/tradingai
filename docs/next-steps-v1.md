@@ -167,3 +167,10 @@ Update 2026-02-03b: Backtest runs werden jetzt in 'backtest_runs' (runKey-unique
 - Completed: Admin backtest compare view; Next: export/CSV and normalized trades table.
 
 - Done: Backtest migration + Nav link + Run button; Next: CSV/export & normalized trades table.
+- Done: Backtest CSV export (trades + kpis); Next: compare-export or normalized trades table.
+- Done: parameterized backtest run form (fee/slippage/holdSteps); Next: CSV compare/export or normalized trades.
+- Done: Compare CSV export; Next: normalized trades table or CSV compare by reason detail.
+- Done: Compare delta CSV export (admin); Next: normalized trades table / richer analytics.
+- Done: Migration hygiene PR1 (journal synced); Next: DX scripts/reset guidance.
+- Done: Migration hygiene PR2 (scripts+guide); Next: optional safety check before migrate on non-empty DB.
+- Done: Admin backtests UX slice (filters/sort/clone). Next: batch sweeps or normalized trades table.
