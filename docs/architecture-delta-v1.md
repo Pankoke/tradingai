@@ -92,3 +92,9 @@ Update: Execution entry intents (next-step-open) und Lookahead-Guard (Candle <= 
 
 - Added read-only admin API for backtest_runs; list route omits trades payload, detail keeps full row.
 
+
+- Admin UI now consumes read-only backtest_runs API (list/detail) and renders equity curve client-side when missing from report.
+
+
+- Admin UI consumes backtest_runs list/detail APIs and provides run compare (KPIs delta, equity overlay) without extra server coupling.
+

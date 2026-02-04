@@ -367,3 +367,9 @@ Note 2026-02-03: Backtest Reports nicht mehr nur auf Disk – Runs werden zusätzli
 
 - Gap G-Backtests: Runs now queryable via admin API; UI/persistence normalization remains future work.
 
+
+- Gap note: Backtest reports now viewable via admin page; remaining gap is UI for compare/export/normalized trades.
+
+
+- Gap note: Operators can now compare backtest runs via admin UI; remaining gap is export/normalized trade analytics.
+

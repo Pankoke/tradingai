@@ -296,3 +296,9 @@ ENDE DER DATEI
 
 - Phase 6: backtest_runs admin listing (read-only) done; UI still pending.
 
+
+- Phase 6: Admin backtest runs viewer delivered (list/detail, KPIs, trades table).
+
+
+- Phase 6: Admin backtest compare view delivered (KPI delta + equity overlay).
+

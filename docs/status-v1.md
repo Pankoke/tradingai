@@ -123,3 +123,9 @@ Alle Aussagen zu „fertig / umgesetzt“ sind mit konkreten Fundstellen belegt.
 > **TradingAI ist funktional stark, technisch weit entwickelt und nahe an Produktionsreife –  
 > die nächsten Schritte sind klar architektonisch, nicht feature-getrieben.**
 - Admin: backtest_runs read-only listing API available (list & detail, trades omitted in list).
+
+- UI: Admin backtest viewer (list + detail, equity curve) consuming backtest_runs APIs.
+
+
+- UI: Admin backtest runs compare (primary + optional compare, KPIs & equity overlay).
+
