@@ -174,3 +174,4 @@ Update 2026-02-03b: Backtest runs werden jetzt in 'backtest_runs' (runKey-unique
 - Done: Migration hygiene PR1 (journal synced); Next: DX scripts/reset guidance.
 - Done: Migration hygiene PR2 (scripts+guide); Next: optional safety check before migrate on non-empty DB.
 - Done: Admin backtests UX slice (filters/sort/clone). Next: batch sweeps or normalized trades table.
+- Added: Admin backtests run form now uses a date picker (UTC start/end) for from/to.

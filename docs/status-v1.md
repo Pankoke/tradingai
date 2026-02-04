@@ -136,4 +136,5 @@ Alle Aussagen zu „fertig / umgesetzt“ sind mit konkreten Fundstellen belegt.
 - Admin: compare delta CSV export (read-only) shipped; deterministic headers/ordering.
 - Migration hygiene PR1: drizzle journal aligned with existing SQL (0000-0009) for reproducible fresh migrate.
 - Migration hygiene PR2: added db:status/db:migrate/db:reset scripts + db-migrations-v1 guide.
-- Admin backtests UX: filters/sort/limit, clone-to-form, mini analytics added (no schema change).
+- Admin backtests UX: filters/sort/limit, clone-to-form, mini analytics, CSV exports, compare, info-block; Run-Form jetzt mit Datumspicker (UTC start/end) statt ISO-Text.
+- Admin Backtests: info-block + date picker (UTC), filters/sort/clone/export remain.

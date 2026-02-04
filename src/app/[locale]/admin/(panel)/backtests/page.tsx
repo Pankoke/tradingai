@@ -212,8 +212,8 @@ export default async function AdminBacktestsPage({ params, searchParams }: Props
             prefill
               ? {
                   assetId: prefill.assetId ?? "btc",
-                  fromIso: prefill.fromIso ?? "",
-                  toIso: prefill.toIso ?? "",
+                  fromDate: prefill.fromIso ? prefill.fromIso.slice(0, 10) : "",
+                  toDate: prefill.toIso ? prefill.toIso.slice(0, 10) : "",
                   stepHours: prefill.stepHours ?? 4,
                   feeBps: (prefill.costsConfig as { feeBps?: number } | null | undefined)?.feeBps ?? 0,
                   slippageBps: (prefill.costsConfig as { slippageBps?: number } | null | undefined)?.slippageBps ?? 0,

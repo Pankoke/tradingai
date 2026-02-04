@@ -309,3 +309,4 @@ ENDE DER DATEI
 - Tooling/Infra: Migration hygiene PR1 (journal aligned with files) completed.
 - Infra/Tooling: Migration hygiene PR2 completed (scripts + guide).
 - Tooling: Admin backtests UX improvements delivered (filters, sort, clone params, mini analytics).
+- Tooling: Backtests UX improvement (date picker, filters/sort/clone) delivered.

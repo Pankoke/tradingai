@@ -380,3 +380,4 @@ Note 2026-02-03: Backtest Reports nicht mehr nur auf Disk – Runs werden zusätzli
 - Gap: drizzle journal drift mitigated (journal synced with migrations); remaining DX: reset/migrate scripts.
 - Gap closed: reproducible migrations now documented with scripts (status/migrate/reset).
 - Gap mitigated: operator UX improved for backtests (filters/sort/clone/export), remaining: normalized trade analytics.
+- Operator UX gap further mitigated: Backtests page now has date picker instead of ISO text (UTC interpreted).

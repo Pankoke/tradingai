@@ -105,3 +105,4 @@ Update: Execution entry intents (next-step-open) und Lookahead-Guard (Candle <= 
 - Migration chain made reproducible: drizzle/meta/_journal.json now lists all migrations 0000-0009 matching files.
 - Standardized DB setup commands: db:status/db:migrate/db:reset (dev-only reset with CONFIRM_DB_RESET) + migration guide.
 - Admin tooling: client-side filters/sorts and analytics for backtests; trades pagination handled client-side (no schema changes).
+- Admin backtests UX: run form uses date picker -> ISO (UTC 00:00 / 23:59:59.999) mapping for deterministic ranges.
