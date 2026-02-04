@@ -13,13 +13,22 @@ type Defaults = {
   snapshotMode?: "live" | "playback";
 };
 
+type AssetOption = {
+  id: string;
+  symbol: string;
+  displaySymbol: string;
+  name: string;
+  assetClass: string;
+};
+
 type Props = {
   locale: string;
+  assets: AssetOption[];
   defaultValues?: Defaults;
 };
 
-export function RunBacktestForm({ locale, defaultValues }: Props) {
-  const [assetId, setAssetId] = useState(defaultValues?.assetId ?? "btc");
+export function RunBacktestForm({ locale, assets, defaultValues }: Props) {
+  const [assetId, setAssetId] = useState(defaultValues?.assetId ?? assets[0]?.id ?? "");
   const [fromDate, setFromDate] = useState(defaultValues?.fromDate ?? "");
   const [toDate, setToDate] = useState(defaultValues?.toDate ?? "");
   const [stepHours, setStepHours] = useState(defaultValues?.stepHours ?? 4);
@@ -81,13 +90,22 @@ export function RunBacktestForm({ locale, defaultValues }: Props) {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
         <label className="flex flex-col gap-1 text-xs text-slate-300">
           Asset
-          <input
+          <select
             className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-slate-100"
             value={assetId}
             onChange={(e) => setAssetId(e.target.value)}
-            placeholder="btc"
             required
-          />
+          >
+            <option value="" disabled>
+              Select asset
+            </option>
+            {assets.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name} ({a.displaySymbol})
+              </option>
+            ))}
+          </select>
+          <span className="text-[var(--text-secondary)] text-[11px]">Assets come from the system asset registry.</span>
         </label>
         <label className="flex flex-col gap-1 text-xs text-slate-300">
           From (UTC)

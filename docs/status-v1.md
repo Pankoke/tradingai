@@ -140,3 +140,4 @@ Alle Aussagen zu „fertig / umgesetzt“ sind mit konkreten Fundstellen belegt.
 - Admin backtests UX: filters/sort/limit, clone-to-form, mini analytics, CSV exports, compare, info-block; Run-Form jetzt mit Datumspicker (UTC start/end) statt ISO-Text.
 - Admin Backtests: info-block + date picker (UTC), filters/sort/clone/export remain.
 - Admin: Backtest Run-Form erlaubt Snapshot-Quelle (live vs playback), Default bleibt live.
+- Admin Backtests: Asset-Auswahl jetzt per Dropdown (aktive Assets), weniger Tippfehler.

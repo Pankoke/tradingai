@@ -312,3 +312,4 @@ ENDE DER DATEI
 - Tooling: Backtests UX improvement (date picker, filters/sort/clone) delivered.
 - Phase 6: Playback-Modus im Backtest-Runner (intern) abgeschlossen; API/UI Toggle folgt separat.
 - Phase 6: Playback-Option im Backtest Run API/UI umgesetzt (optional, live bleibt Standard).
+- Tooling: Backtest Admin UX verbessert (Asset-Dropdown, API /api/admin/assets).

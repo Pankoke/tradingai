@@ -383,3 +383,4 @@ Note 2026-02-03: Backtest Reports nicht mehr nur auf Disk – Runs werden zusätzli
 - Operator UX gap further mitigated: Backtests page now has date picker instead of ISO text (UTC interpreted).
 - G-01 Update: Playback nutzt gespeicherte Setups, Live bleibt Standard; Divergenzen zwischen gespeicherten Setups und Live-Builds reduziert.
 - Gap-Note: Persistierte Snapshots können jetzt per Playback gewählt werden; verbleibendes Risiko: Divergenz bei Live-Recompute nur wenn absichtlich live genutzt.
+- Operator UX Gap: manuelle Asset-Eingabe mitigiert durch Dropdown + Assets-API.

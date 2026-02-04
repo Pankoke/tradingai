@@ -108,3 +108,4 @@ Update: Execution entry intents (next-step-open) und Lookahead-Guard (Candle <= 
 - Admin backtests UX: run form uses date picker -> ISO (UTC 00:00 / 23:59:59.999) mapping for deterministic ranges.
 - Backtest: interner Playback-Mode (persistierte perception_snapshots/items) ergänzt; Default weiter live.
 - Admin Backtest Run API/Form akzeptiert snapshotMode (live|playback); Backend default bleibt live.
+- Admin Backtests: neue read-only API /api/admin/assets + Dropdown-Assetauswahl im Run-Formular (keine Schemaänderung).

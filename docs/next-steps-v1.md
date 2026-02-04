@@ -177,3 +177,4 @@ Update 2026-02-03b: Backtest runs werden jetzt in 'backtest_runs' (runKey-unique
 - Added: Admin backtests run form now uses a date picker (UTC start/end) for from/to.
 - New: Backtest runner kann intern Playback (persistierte perception_snapshots/items) nutzen; Next: API/UI Toggle expose.
 - Done: Backtest playback toggle (Admin run form/API); Next: expose playback in compare/export or default based on use case.
+- Done: Backtest Run-Form nutzt Asset-Dropdown aus /api/admin/assets; Next: optional Batch-Runs / Sweeps.

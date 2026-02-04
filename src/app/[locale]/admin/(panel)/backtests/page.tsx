@@ -5,6 +5,7 @@ import enMessages from "@/src/messages/en.json";
 import type { BacktestRunMeta } from "@/src/server/repositories/backtestRunRepository";
 import { getBacktestRunByKey, listRecentBacktestRunsMeta } from "@/src/server/repositories/backtestRunRepository";
 import type { CompletedTrade } from "@/src/domain/backtest/types";
+import { getActiveAssets } from "@/src/server/repositories/assetRepository";
 import TradesTable from "./TradesTableClient";
 import { RunBacktestForm } from "./RunBacktestForm";
 
@@ -34,6 +35,28 @@ type SummaryCounts = {
   losses: number;
   reasons: Record<string, number>;
 };
+
+type AssetOption = {
+  id: string;
+  symbol: string;
+  displaySymbol: string;
+  name: string;
+  assetClass: string;
+};
+
+function parseRunKey(runKey: string): { snapshotMode: "live" | "playback" | "unknown" } {
+  if (!runKey.startsWith("bk|")) return { snapshotMode: "unknown" };
+  const payload = runKey.slice(3);
+  try {
+    const json = JSON.parse(payload);
+    const mode = (json as { snapshotMode?: string }).snapshotMode;
+    if (mode === "playback") return { snapshotMode: "playback" };
+    if (mode === "live") return { snapshotMode: "live" };
+    return { snapshotMode: "live" };
+  } catch {
+    return { snapshotMode: "unknown" };
+  }
+}
 
 function asKpis(value: unknown): KpisLike | null {
   if (value && typeof value === "object") return value as KpisLike;
@@ -140,14 +163,28 @@ export default async function AdminBacktestsPage({ params, searchParams }: Props
   const stepFilter = typeof resolvedSearch.step === "string" ? resolvedSearch.step : "all";
   const sortKey = typeof resolvedSearch.sort === "string" ? resolvedSearch.sort : "createdAt";
   const searchTerm = typeof resolvedSearch.q === "string" ? resolvedSearch.q.toLowerCase() : "";
+  const modeFilter = typeof resolvedSearch.mode === "string" ? resolvedSearch.mode : "all";
 
   const primary = primaryKey ? await safeGetRun(primaryKey) : null;
   const secondary = compareKey ? await safeGetRun(compareKey) : null;
   const prefill = prefillKey ? await safeGetRun(prefillKey) : null;
 
+  const assetOptions: AssetOption[] = (await getActiveAssets()).map((a) => ({
+    id: a.id,
+    symbol: a.symbol,
+    displaySymbol: a.displaySymbol,
+    name: a.name,
+    assetClass: a.assetClass,
+  }));
+
   const filteredRuns = runs
     .filter((run) => (assetFilter === "all" ? true : run.assetId === assetFilter))
     .filter((run) => (stepFilter === "all" ? true : String(run.stepHours) === stepFilter))
+    .filter((run) => {
+      if (modeFilter === "all") return true;
+      const mode = parseRunKey(run.runKey).snapshotMode === "playback" ? "playback" : "live";
+      return mode === modeFilter;
+    })
     .filter((run) =>
       searchTerm
         ? [run.runKey, run.fromIso ?? "", run.toIso ?? "", run.assetId ?? ""].some((v) => v.toLowerCase().includes(searchTerm))
@@ -205,9 +242,26 @@ export default async function AdminBacktestsPage({ params, searchParams }: Props
             <li>Hinweise: Wenn Trades = 0, gab es keine Entries im Zeitraum (kein Fehler). Gleiche Parameter ergeben denselben runKey (idempotent).</li>
             <li>Falls keine Runs geladen werden: Datenbank-Migrationen prüfen (z.B. <code>npm run db:status</code> / <code>npm run db:migrate</code>).</li>
           </ul>
+          <div className="pt-2 text-base font-semibold text-white">Glossary</div>
+          <ul className="list-disc pl-4 space-y-1">
+            <li>Trades: Anzahl ausgeführter Trades (nur gefüllte Entries zählen).</li>
+            <li>Wins/Losses: Trades mit netPnl &gt; 0 / &lt; 0.</li>
+            <li>WinRate: Wins / Trades in Prozent.</li>
+            <li>NetPnL: Summe aller netPnl nach Fees/Slippage.</li>
+            <li>AvgPnL: Durchschnittlicher netPnl pro Trade.</li>
+            <li>MaxDD: Größter Rueckgang der Equity-Kurve vom Hoch zum Tief.</li>
+            <li>Fee (bps): Gebühr pro Ausführung in Basispunkten (1 bps = 0.01%), angewendet auf Entry und Exit.</li>
+            <li>Slippage (bps): Preisabweichung pro Ausführung in Basispunkten, angewendet auf Entry und Exit.</li>
+            <li>Hold Steps: Exit-Regel, Position wird nach N Steps geschlossen.</li>
+            <li>Step Hours: Abstand zwischen Backtest-Schritten (z.B. 4h), steuert Entry/Exit-Takt und Candle-Lookups.</li>
+            <li>Snapshot source: LIVE = recompute aus aktuellen Daten, PLAYBACK = nutzt gespeicherte Snapshot-Items.</li>
+            <li>runKey: deterministischer Schlüssel aus Parametern; gleiche Parameter ergeben denselben runKey.</li>
+            <li>0 trades: gültiges Ergebnis, wenn keine Signale oder kein Fill zustande kam.</li>
+          </ul>
         </div>
         <RunBacktestForm
           locale={locale}
+          assets={assetOptions}
           defaultValues={
             prefill
               ? {
@@ -227,7 +281,7 @@ export default async function AdminBacktestsPage({ params, searchParams }: Props
           locale={locale}
           assets={unique(runs.map((r) => r.assetId).filter(Boolean))}
           stepHours={unique(runs.map((r) => String(r.stepHours)))}
-          current={{ asset: assetFilter, step: stepFilter, sort: sortKey, limit, search: searchTerm }}
+          current={{ asset: assetFilter, step: stepFilter, sort: sortKey, limit, search: searchTerm, mode: modeFilter }}
           runKey={primaryKey}
           compareKey={compareKey}
         />
@@ -250,6 +304,7 @@ export default async function AdminBacktestsPage({ params, searchParams }: Props
             cloneParams.set("prefill", run.runKey);
             const isActive = run.runKey === primaryKey;
             const kpis = asKpis(run.kpis);
+            const mode = parseRunKey(run.runKey).snapshotMode === "playback" ? "playback" : "live";
             const cardClass = `rounded-md px-3 py-2 transition ${
               isActive ? "bg-white/10 border border-white/20" : "hover:bg-white/5"
             }`;
@@ -258,7 +313,12 @@ export default async function AdminBacktestsPage({ params, searchParams }: Props
                 <Link href={href} className="block">
                   <div className="flex items-center justify-between text-sm font-semibold">
                     <span>{run.assetId}</span>
-                    <span className="text-[var(--text-secondary)]">{run.stepHours}h</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[0.65rem] rounded px-2 py-[2px] border border-white/20 uppercase">
+                        {mode === "playback" ? "PLAYBACK" : "LIVE"}
+                      </span>
+                      <span className="text-[var(--text-secondary)]">{run.stepHours}h</span>
+                    </div>
                   </div>
                   <div className="text-xs text-[var(--text-secondary)]">
                     {run.fromIso} {"->"} {run.toIso}
@@ -370,7 +430,7 @@ function FilterPanel({
   assets: string[];
   stepHours: string[];
   locale: Locale;
-  current: { asset: string; step: string; sort: string; limit: number; search: string };
+  current: { asset: string; step: string; sort: string; limit: number; search: string; mode: string };
   runKey?: string;
   compareKey?: string;
 }) {
@@ -408,6 +468,14 @@ function FilterPanel({
             <option value="netPnl">netPnl desc</option>
             <option value="winRate">winRate desc</option>
             <option value="maxDrawdown">maxDrawdown asc</option>
+          </select>
+        </label>
+        <label className="flex items-center gap-1">
+          Mode
+          <select name="mode" defaultValue={current.mode} className="rounded border border-white/10 bg-slate-900 px-2 py-1">
+            <option value="all">all</option>
+            <option value="live">live</option>
+            <option value="playback">playback</option>
           </select>
         </label>
         <label className="flex items-center gap-1">
