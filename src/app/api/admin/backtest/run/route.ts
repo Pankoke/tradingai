@@ -26,12 +26,20 @@ export async function POST(request: NextRequest) {
   const feeBpsRaw = typeof body?.feeBps === "number" ? body.feeBps : 0;
   const slippageBpsRaw = typeof body?.slippageBps === "number" ? body.slippageBps : 0;
   const holdStepsRaw = typeof body?.holdSteps === "number" ? body.holdSteps : 3;
+  const snapshotModeRaw = typeof body?.snapshotMode === "string" ? body.snapshotMode : "live";
   const feeBps = Math.min(1000, Math.max(0, Math.floor(feeBpsRaw)));
   const slippageBps = Math.min(1000, Math.max(0, Math.floor(slippageBpsRaw)));
   const holdSteps = Math.min(200, Math.max(1, Math.floor(holdStepsRaw)));
+  const snapshotMode = snapshotModeRaw === "playback" || snapshotModeRaw === "live" ? snapshotModeRaw : null;
   if (!assetId || !fromIso || !toIso) {
     return NextResponse.json<BacktestResponse>(
       { ok: false, error: "assetId/fromIso/toIso required", code: "missing_params" },
+      { status: 400 },
+    );
+  }
+  if (!snapshotMode) {
+    return NextResponse.json<BacktestResponse>(
+      { ok: false, error: "snapshotMode must be 'live' or 'playback'", code: "invalid_snapshot_mode" },
       { status: 400 },
     );
   }
@@ -43,6 +51,7 @@ export async function POST(request: NextRequest) {
     stepHours,
     costsConfig: { feeBps, slippageBps },
     exitPolicy: { kind: "hold-n-steps", holdSteps, price: "step-open" },
+    snapshotMode,
   });
   const status = result.ok ? 200 : 400;
   return NextResponse.json<BacktestResponse>(result, { status });

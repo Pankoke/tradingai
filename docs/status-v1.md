@@ -87,6 +87,7 @@ Alle Aussagen zu „fertig / umgesetzt“ sind mit konkreten Fundstellen belegt.
 - Execution v2b: Trades mit PnL/Kosten + KPIs
 - Persistenz/Indexing: `backtest_runs` (runKey-unique, JSONB trades/kpis, idempotent)
 - Lookahead-Guard (Candle-Timestamps <= asOf in Debug)
+- Playback-Mode: Backtest kann persistierte Perception-Snapshots/Items lesen (optional, Default weiter live)
 
 **Offen**
 - Keine Candle-Replay-Execution / Positions-Management verfeinert
@@ -138,3 +139,4 @@ Alle Aussagen zu „fertig / umgesetzt“ sind mit konkreten Fundstellen belegt.
 - Migration hygiene PR2: added db:status/db:migrate/db:reset scripts + db-migrations-v1 guide.
 - Admin backtests UX: filters/sort/limit, clone-to-form, mini analytics, CSV exports, compare, info-block; Run-Form jetzt mit Datumspicker (UTC start/end) statt ISO-Text.
 - Admin Backtests: info-block + date picker (UTC), filters/sort/clone/export remain.
+- Admin: Backtest Run-Form erlaubt Snapshot-Quelle (live vs playback), Default bleibt live.

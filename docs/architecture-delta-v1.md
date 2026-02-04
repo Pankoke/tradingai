@@ -106,3 +106,5 @@ Update: Execution entry intents (next-step-open) und Lookahead-Guard (Candle <= 
 - Standardized DB setup commands: db:status/db:migrate/db:reset (dev-only reset with CONFIRM_DB_RESET) + migration guide.
 - Admin tooling: client-side filters/sorts and analytics for backtests; trades pagination handled client-side (no schema changes).
 - Admin backtests UX: run form uses date picker -> ISO (UTC 00:00 / 23:59:59.999) mapping for deterministic ranges.
+- Backtest: interner Playback-Mode (persistierte perception_snapshots/items) ergänzt; Default weiter live.
+- Admin Backtest Run API/Form akzeptiert snapshotMode (live|playback); Backend default bleibt live.

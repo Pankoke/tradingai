@@ -10,6 +10,7 @@ type Defaults = {
   feeBps?: number;
   slippageBps?: number;
   holdSteps?: number;
+  snapshotMode?: "live" | "playback";
 };
 
 type Props = {
@@ -25,6 +26,7 @@ export function RunBacktestForm({ locale, defaultValues }: Props) {
   const [feeBps, setFeeBps] = useState(defaultValues?.feeBps ?? 0);
   const [slippageBps, setSlippageBps] = useState(defaultValues?.slippageBps ?? 0);
   const [holdSteps, setHoldSteps] = useState(defaultValues?.holdSteps ?? 3);
+  const [snapshotMode, setSnapshotMode] = useState<"live" | "playback">(defaultValues?.snapshotMode ?? "live");
   const [status, setStatus] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -57,7 +59,7 @@ export function RunBacktestForm({ locale, defaultValues }: Props) {
       const res = await fetch("/api/admin/backtest/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assetId, fromIso, toIso, stepHours, feeBps, slippageBps, holdSteps }),
+        body: JSON.stringify({ assetId, fromIso, toIso, stepHours, feeBps, slippageBps, holdSteps, snapshotMode }),
       });
       const json = (await res.json()) as { ok: boolean; error?: string };
       if (json.ok) {
@@ -149,6 +151,20 @@ export function RunBacktestForm({ locale, defaultValues }: Props) {
             value={holdSteps}
             onChange={(e) => setHoldSteps(Number(e.target.value))}
           />
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-slate-300">
+          Snapshot source
+          <select
+            className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-slate-100"
+            value={snapshotMode}
+            onChange={(e) => setSnapshotMode(e.target.value === "playback" ? "playback" : "live")}
+          >
+            <option value="live">Live recompute (current)</option>
+            <option value="playback">Playback (persisted snapshots)</option>
+          </select>
+          <span className="text-[var(--text-secondary)] text-[11px]">
+            Live = Engine rechnet neu; Playback = nutzt gespeicherte Snapshot-Items (historische Sicht).
+          </span>
         </label>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300">

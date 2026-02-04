@@ -310,3 +310,5 @@ ENDE DER DATEI
 - Infra/Tooling: Migration hygiene PR2 completed (scripts + guide).
 - Tooling: Admin backtests UX improvements delivered (filters, sort, clone params, mini analytics).
 - Tooling: Backtests UX improvement (date picker, filters/sort/clone) delivered.
+- Phase 6: Playback-Modus im Backtest-Runner (intern) abgeschlossen; API/UI Toggle folgt separat.
+- Phase 6: Playback-Option im Backtest Run API/UI umgesetzt (optional, live bleibt Standard).

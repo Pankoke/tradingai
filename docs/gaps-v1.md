@@ -381,3 +381,5 @@ Note 2026-02-03: Backtest Reports nicht mehr nur auf Disk – Runs werden zusätzli
 - Gap closed: reproducible migrations now documented with scripts (status/migrate/reset).
 - Gap mitigated: operator UX improved for backtests (filters/sort/clone/export), remaining: normalized trade analytics.
 - Operator UX gap further mitigated: Backtests page now has date picker instead of ISO text (UTC interpreted).
+- G-01 Update: Playback nutzt gespeicherte Setups, Live bleibt Standard; Divergenzen zwischen gespeicherten Setups und Live-Builds reduziert.
+- Gap-Note: Persistierte Snapshots können jetzt per Playback gewählt werden; verbleibendes Risiko: Divergenz bei Live-Recompute nur wenn absichtlich live genutzt.

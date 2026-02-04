@@ -32,6 +32,12 @@ import {
 } from "@/src/server/backtest/kpis";
 import { buildBacktestRunKey } from "@/src/server/backtest/runKey";
 import { upsertBacktestRun } from "@/src/server/repositories/backtestRunRepository";
+import {
+  getLatestPerceptionSnapshotIdAtOrBefore,
+  listPerceptionSnapshotItemsForAsset,
+  mapItemsToSetups,
+  getCandleOpenAt,
+} from "@/src/server/backtest/perceptionPlayback";
 
 export type BacktestStepResult = {
   asOfIso: string;
@@ -81,6 +87,8 @@ export type RunBacktestDeps = {
   buildSnapshot?: (args: { asOf: Date; dataSource: ReturnType<typeof createPerceptionDataSource>; assetFilter?: string[] }) => Promise<PerceptionSnapshot>;
   loadSentimentSnapshot?: (assetId: string, asOf: Date) => Promise<SentimentSnapshotV2 | null>;
   writeReport?: (report: BacktestReport, targetPath: string) => Promise<void>;
+  loadPlaybackSetups?: (assetId: string, asOf: Date) => Promise<SetupLike[]>;
+  getCandleOpenPrice?: (assetId: string, timeframe: string, timestamp: Date) => Promise<number | null>;
 };
 
 const DEFAULT_LOOKBACK_HOURS = 24;
@@ -95,7 +103,7 @@ function sanitizeName(value: string) {
   return value.replace(/[^a-zA-Z0-9_.-]/g, "_");
 }
 
-type SetupLike = {
+export type SetupLike = {
   id: string;
   grade?: string | null;
   setupGrade?: string | null;
@@ -107,6 +115,7 @@ type SetupLike = {
   biasScore?: number;
   confidence?: number;
   candles?: Array<{ timestamp?: string | Date; open?: number | null }>;
+  scoreTotal?: number | null;
 };
 
 function hasDecision(value: Partial<SetupLike> | null | undefined): value is { decision: string } {
@@ -329,6 +338,7 @@ export async function runBacktest(params: {
   exitPolicy?: { kind: "hold-n-steps"; holdSteps: number; price: "step-open" };
   deps?: RunBacktestDeps;
   debug?: boolean;
+  snapshotMode?: "live" | "playback";
 }): Promise<{ ok: true; reportPath: string; steps: number } | { ok: false; error: string; code: string }> {
   const from = new Date(params.fromIso);
   const to = new Date(params.toIso);
@@ -340,6 +350,7 @@ export async function runBacktest(params: {
   }
 
   const lookbackHours = params.lookbackHours ?? DEFAULT_LOOKBACK_HOURS;
+  const snapshotMode = params.snapshotMode ?? "live";
 
   const loadSentimentSnapshot =
     params.deps?.loadSentimentSnapshot ?? ((assetId: string, asOf: Date) => getLatestSentimentSnapshotAtOrBefore(assetId, asOf));
@@ -388,6 +399,19 @@ export async function runBacktest(params: {
       };
     })();
 
+  const loadPlaybackSetups =
+    params.deps?.loadPlaybackSetups ??
+    (async (assetId: string, asOf: Date) => {
+      const snap = await getLatestPerceptionSnapshotIdAtOrBefore({ assetId, asOf });
+      if (!snap) return [];
+      const items = await listPerceptionSnapshotItemsForAsset({ snapshotId: snap.id, assetId });
+      return mapItemsToSetups(items);
+    });
+
+  const getCandleOpenPrice =
+    params.deps?.getCandleOpenPrice ??
+    ((assetId: string, timeframe: string, timestamp: Date) => getCandleOpenAt({ assetId, timeframe, timestamp }));
+
   const writeReport =
     params.deps?.writeReport ??
     (async (report: BacktestReport, target: string) => {
@@ -417,77 +441,149 @@ export async function runBacktest(params: {
     }
     lastSentimentFound = false;
     lastSentimentIso = undefined;
-    try {
-      const snapshot = await buildSnapshot({ asOf, dataSource, assetFilter: [params.assetId] });
-      const candleMeta = extractCandleMeta(snapshot, asOf.toISOString());
-      if (params.debug ?? process.env.NODE_ENV !== "production") {
-        if (typeof candleMeta.maxTimestampMs === "number" && candleMeta.maxTimestampMs > asOf.getTime()) {
-          throw new Error(
-            `backtest_invariant: candle timestamp ${new Date(candleMeta.maxTimestampMs).toISOString()} is after asOf ${asOf.toISOString()}`,
-          );
+    if (snapshotMode === "playback") {
+      try {
+        const setups = await loadPlaybackSetups(params.assetId, asOf);
+        const candleMeta: CandleMeta = { asOfIso: asOf.toISOString() };
+        const openPrice = await getCandleOpenPrice(params.assetId, `${params.stepHours}H`, asOf);
+        if (openPrice != null && Number.isFinite(openPrice)) {
+          candleMeta.openPrice = openPrice;
+          candleMeta.maxTimestampMs = asOf.getTime();
         }
-      }
-      const setups = Array.isArray((snapshot as { setups?: unknown[] }).setups)
-        ? ((snapshot as { setups: SetupLike[] }).setups ?? [])
-        : [];
-      const topSetup = pickTopSetup(setups);
-      const score = topSetup ? scoreOf(topSetup) : null;
-      const topGrade = topSetup ? toGrade(topSetup) ?? deriveGradeFromScore(score) : null;
-      const topDecisionResult = toDecision(topSetup ?? {});
-      const label = topDecisionResult.decision ?? topGrade ?? (snapshot as { label?: string | null }).label ?? null;
-      const setupsSummary: NonNullable<BacktestStepResult["setupsSummary"]> = setups.slice(0, 3).map((s) => ({
-        id: s.id,
-        grade: toGrade(s) ?? deriveGradeFromScore(scoreOf(s)),
-        gradeSource: toGrade(s) ? "engine" : deriveGradeFromScore(scoreOf(s)) ? "derived" : "unknown",
-        decision: toDecision(s).decision,
-        decisionSource: toDecision(s).decisionSource,
-        direction: s.direction ?? null,
-        scoreTotal: scoreOf(s),
-      }));
-
-      steps.push({
-        asOfIso: asOf.toISOString(),
-        label,
-        setups: setups.length || undefined,
-        score: score ?? (snapshot as { score?: number }).score ?? null,
-        topSetup: topSetup
-          ? {
-              id: topSetup.id,
-              grade: topGrade,
-              gradeSource: topGrade && toGrade(topSetup) ? "engine" : topGrade ? "derived" : "unknown",
-              decision: topDecisionResult.decision ?? "unknown",
-              decisionSource: topDecisionResult.decisionSource,
-              direction: topSetup.direction ?? null,
-              scoreTotal: score,
-              confidence: typeof topSetup.confidence === "number" ? topSetup.confidence : null,
-            }
-          : null,
-        setupsSummary,
-        sentimentSnapshotFound: lastSentimentFound,
-        sentimentSnapshotAsOfIso: lastSentimentIso,
-        openPosition,
-      });
-      candleMetas.push(candleMeta);
-      if (params.debug ?? process.env.NODE_ENV !== "production") {
-        if (lastSentimentFound && lastSentimentIso) {
-          if (new Date(lastSentimentIso).getTime() > asOf.getTime()) {
+        if (params.debug ?? process.env.NODE_ENV !== "production") {
+          if (typeof candleMeta.maxTimestampMs === "number" && candleMeta.maxTimestampMs > asOf.getTime()) {
             throw new Error(
-              `backtest_invariant: sentiment snapshot ${lastSentimentIso} is after asOf ${asOf.toISOString()}`,
+              `backtest_invariant: candle timestamp ${new Date(candleMeta.maxTimestampMs).toISOString()} is after asOf ${asOf.toISOString()}`,
             );
           }
         }
+        const topSetup = pickTopSetup(setups);
+        const scoreRaw = topSetup ? scoreOf(topSetup) : null;
+        const score = scoreRaw ?? (typeof topSetup?.scoreTotal === "number" ? topSetup.scoreTotal : null);
+        const topGrade = topSetup ? toGrade(topSetup) ?? deriveGradeFromScore(score) : null;
+        const topDecisionResult = toDecision(topSetup ?? {});
+        const label = topDecisionResult.decision ?? topGrade ?? null;
+        const setupsSummary: NonNullable<BacktestStepResult["setupsSummary"]> = setups.slice(0, 3).map((s) => {
+          const sScore = scoreOf(s) ?? (typeof s.scoreTotal === "number" ? s.scoreTotal : null);
+          return {
+            id: s.id,
+            grade: toGrade(s) ?? deriveGradeFromScore(sScore),
+            gradeSource: toGrade(s) ? "engine" : deriveGradeFromScore(sScore) ? "derived" : "unknown",
+            decision: toDecision(s).decision,
+            decisionSource: toDecision(s).decisionSource,
+            direction: s.direction ?? null,
+            scoreTotal: sScore,
+          };
+        });
+
+        steps.push({
+          asOfIso: asOf.toISOString(),
+          label,
+          setups: setups.length || undefined,
+          score,
+          topSetup: topSetup
+            ? {
+                id: topSetup.id,
+                grade: topGrade,
+                gradeSource: topGrade && toGrade(topSetup) ? "engine" : topGrade ? "derived" : "unknown",
+                decision: topDecisionResult.decision ?? "unknown",
+                decisionSource: topDecisionResult.decisionSource,
+                direction: topSetup.direction ?? null,
+                scoreTotal: score,
+                confidence: typeof topSetup.confidence === "number" ? topSetup.confidence : null,
+              }
+            : null,
+          setupsSummary,
+          sentimentSnapshotFound: false,
+          sentimentSnapshotAsOfIso: undefined,
+          openPosition,
+        });
+        candleMetas.push(candleMeta);
+      } catch (error) {
+        if (params.debug ?? process.env.NODE_ENV !== "production") {
+          throw error;
+        }
+        steps.push({
+          asOfIso: asOf.toISOString(),
+          label: null,
+          score: null,
+          warnings: [`playback_failed: ${String(error)}`],
+        });
+        candleMetas.push({});
       }
-    } catch (error) {
-      if (params.debug ?? process.env.NODE_ENV !== "production") {
-        throw error;
+    } else {
+      try {
+        const snapshot = await buildSnapshot({ asOf, dataSource, assetFilter: [params.assetId] });
+        const candleMeta = extractCandleMeta(snapshot, asOf.toISOString());
+        if (params.debug ?? process.env.NODE_ENV !== "production") {
+          if (typeof candleMeta.maxTimestampMs === "number" && candleMeta.maxTimestampMs > asOf.getTime()) {
+            throw new Error(
+              `backtest_invariant: candle timestamp ${new Date(candleMeta.maxTimestampMs).toISOString()} is after asOf ${asOf.toISOString()}`,
+            );
+          }
+        }
+        const setups = Array.isArray((snapshot as { setups?: unknown[] }).setups)
+          ? ((snapshot as { setups: SetupLike[] }).setups ?? [])
+          : [];
+        const topSetup = pickTopSetup(setups);
+        const score = topSetup ? scoreOf(topSetup) : null;
+        const topGrade = topSetup ? toGrade(topSetup) ?? deriveGradeFromScore(score) : null;
+        const topDecisionResult = toDecision(topSetup ?? {});
+        const label = topDecisionResult.decision ?? topGrade ?? (snapshot as { label?: string | null }).label ?? null;
+        const setupsSummary: NonNullable<BacktestStepResult["setupsSummary"]> = setups.slice(0, 3).map((s) => ({
+          id: s.id,
+          grade: toGrade(s) ?? deriveGradeFromScore(scoreOf(s)),
+          gradeSource: toGrade(s) ? "engine" : deriveGradeFromScore(scoreOf(s)) ? "derived" : "unknown",
+          decision: toDecision(s).decision,
+          decisionSource: toDecision(s).decisionSource,
+          direction: s.direction ?? null,
+          scoreTotal: scoreOf(s),
+        }));
+
+        steps.push({
+          asOfIso: asOf.toISOString(),
+          label,
+          setups: setups.length || undefined,
+          score: score ?? (snapshot as { score?: number }).score ?? null,
+          topSetup: topSetup
+            ? {
+                id: topSetup.id,
+                grade: topGrade,
+                gradeSource: topGrade && toGrade(topSetup) ? "engine" : topGrade ? "derived" : "unknown",
+                decision: topDecisionResult.decision ?? "unknown",
+                decisionSource: topDecisionResult.decisionSource,
+                direction: topSetup.direction ?? null,
+                scoreTotal: score,
+                confidence: typeof topSetup.confidence === "number" ? topSetup.confidence : null,
+              }
+            : null,
+          setupsSummary,
+          sentimentSnapshotFound: lastSentimentFound,
+          sentimentSnapshotAsOfIso: lastSentimentIso,
+          openPosition,
+        });
+        candleMetas.push(candleMeta);
+        if (params.debug ?? process.env.NODE_ENV !== "production") {
+          if (lastSentimentFound && lastSentimentIso) {
+            if (new Date(lastSentimentIso).getTime() > asOf.getTime()) {
+              throw new Error(
+                `backtest_invariant: sentiment snapshot ${lastSentimentIso} is after asOf ${asOf.toISOString()}`,
+              );
+            }
+          }
+        }
+      } catch (error) {
+        if (params.debug ?? process.env.NODE_ENV !== "production") {
+          throw error;
+        }
+        steps.push({
+          asOfIso: asOf.toISOString(),
+          label: null,
+          score: null,
+          warnings: [`build_failed: ${String(error)}`],
+        });
+        candleMetas.push({});
       }
-      steps.push({
-        asOfIso: asOf.toISOString(),
-        label: null,
-        score: null,
-        warnings: [`build_failed: ${String(error)}`],
-      });
-      candleMetas.push({});
     }
     lastAsOf = asOf;
     cursor = addHours(cursor, params.stepHours);

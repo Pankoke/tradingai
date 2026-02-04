@@ -85,6 +85,7 @@ describe("admin backtest runs routes", () => {
       feeBps: 10,
       slippageBps: 20,
       holdSteps: 5,
+      snapshotMode: "playback",
     };
     const req = new NextRequest("http://localhost/api/admin/backtest/run", {
       method: "POST",
@@ -97,6 +98,7 @@ describe("admin backtest runs routes", () => {
       expect.objectContaining({
         costsConfig: { feeBps: 10, slippageBps: 20 },
         exitPolicy: { kind: "hold-n-steps", holdSteps: 5, price: "step-open" },
+        snapshotMode: "playback",
       }),
     );
   });
