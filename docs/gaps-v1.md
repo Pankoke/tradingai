@@ -373,3 +373,4 @@ Note 2026-02-03: Backtest Reports nicht mehr nur auf Disk – Runs werden zusätzli
 
 - Gap note: Operators can now compare backtest runs via admin UI; remaining gap is export/normalized trade analytics.
 
+- Gap resolved: backtest_runs table missing was fixed via migration 0004; nav entry and run starter present.

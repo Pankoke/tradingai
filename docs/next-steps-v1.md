@@ -166,3 +166,4 @@ Update 2026-02-03b: Backtest runs werden jetzt in 'backtest_runs' (runKey-unique
 
 - Completed: Admin backtest compare view; Next: export/CSV and normalized trades table.
 
+- Done: Backtest migration + Nav link + Run button; Next: CSV/export & normalized trades table.

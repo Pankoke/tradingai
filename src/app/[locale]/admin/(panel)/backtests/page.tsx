@@ -5,6 +5,7 @@ import enMessages from "@/src/messages/en.json";
 import type { BacktestRunMeta } from "@/src/server/repositories/backtestRunRepository";
 import { getBacktestRunByKey, listRecentBacktestRunsMeta } from "@/src/server/repositories/backtestRunRepository";
 import type { CompletedTrade } from "@/src/domain/backtest/types";
+import { RunBacktestForm } from "./RunBacktestForm";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -109,7 +110,13 @@ export default async function AdminBacktestsPage({ params, searchParams }: Props
   try {
     runs = await listRecentBacktestRunsMeta(50);
   } catch (error) {
-    loadError = error instanceof Error ? error.message : "failed to load backtest runs";
+    const message = error instanceof Error ? error.message : "failed to load backtest runs";
+    const lowered = message.toLowerCase();
+    if (lowered.includes("backtest_runs") && lowered.includes("relation")) {
+      loadError = "DB table backtest_runs missing. Please run migrations (drizzle/0004_add_backtest_runs.sql).";
+    } else {
+      loadError = message;
+    }
   }
 
   const resolvedSearch = (await searchParams) ?? {};
@@ -133,6 +140,7 @@ export default async function AdminBacktestsPage({ params, searchParams }: Props
     <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
       <div className="space-y-3">
         <h1 className="text-xl font-semibold">{t("admin.backtest.runs.title", "Backtest Runs")}</h1>
+        <RunBacktestForm locale={locale} />
         <div className="rounded-lg border border-white/10 bg-white/5 p-3 space-y-2">
           {loadError && <div className="text-sm text-rose-300">Error loading runs: {loadError}</div>}
           {runs.length === 0 && !loadError && <div className="text-sm text-[var(--text-secondary)]">No runs found.</div>}

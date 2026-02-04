@@ -302,3 +302,4 @@ ENDE DER DATEI
 
 - Phase 6: Admin backtest compare view delivered (KPI delta + equity overlay).
 
+- Phase 6: Backtest runs migration applied; Admin backtests nav + run form available.

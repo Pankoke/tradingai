@@ -129,3 +129,4 @@ Alle Aussagen zu „fertig / umgesetzt“ sind mit konkreten Fundstellen belegt.
 
 - UI: Admin backtest runs compare (primary + optional compare, KPIs & equity overlay).
 
+- Backtesting: backtest_runs migration added (0004), Admin Backtests page has nav link and run button (POST /api/admin/backtest/run).

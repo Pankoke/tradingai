@@ -98,3 +98,4 @@ Update: Execution entry intents (next-step-open) und Lookahead-Guard (Candle <= 
 
 - Admin UI consumes backtest_runs list/detail APIs and provides run compare (KPIs delta, equity overlay) without extra server coupling.
 
+- Backtests: added migration for backtest_runs (runKey unique), Admin panel entry + run starter form using existing API.
