@@ -292,3 +292,7 @@ Konkrete Implementierung
 ENDE DER DATEI
 
 - Phase 6: Execution MVP v1 (entry intents + next-step-open fills, lookahead guard) â€“ done
+- Phase 6: Backtest Persistenz/Indexing (runKey, backtest_runs JSONB trades/kpis) – done.
+
+- Phase 6: backtest_runs admin listing (read-only) done; UI still pending.
+

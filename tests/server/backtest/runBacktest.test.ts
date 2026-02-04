@@ -11,6 +11,10 @@ vi.mock("node:fs/promises", () => {
   };
 });
 
+vi.mock("@/src/server/repositories/backtestRunRepository", () => ({
+  upsertBacktestRun: vi.fn(async () => {}),
+}));
+
 let runBacktest: typeof import("@/src/server/backtest/runBacktest").runBacktest;
 
 const sentimentA: SentimentSnapshotV2 = {
@@ -273,11 +277,16 @@ describe("runBacktest", () => {
       deps: { createDataSource, buildSnapshot, loadSentimentSnapshot, writeReport },
     });
 
-    const report = (writeReport as vi.Mock).mock.calls[0][0] as { steps: Array<{ executedEntry?: { status: string; fill?: { fillPrice: number } } }> };
+    const report = (writeReport as vi.Mock).mock.calls[0][0] as {
+      steps: Array<{ executedEntry?: { status: string; fill?: { fillPrice: number } } }>;
+      trades?: Array<{ entry: { price: number }; exit: { price: number }; barsHeld: number; reason: string }>;
+    };
     expect(report.steps[0].executedEntry?.status).toBe("filled");
     expect(report.steps[0].executedEntry?.fill?.fillPrice).toBe(101);
     expect(report.steps[1].executedEntry?.status).toBe("filled");
     expect(report.steps[2].executedEntry?.status).toBe("unfilled");
+    expect(report.trades?.[0]?.barsHeld).toBe(2);
+    expect(report.trades?.[0]?.exit.price).toBe(102);
   });
 
   it("throws on candle lookahead in debug mode", async () => {
@@ -297,6 +306,25 @@ describe("runBacktest", () => {
         debug: true,
       }),
     ).rejects.toThrow(/candle timestamp/);
+  });
+
+  it("closes position at end-of-range when not enough steps for exit", async () => {
+    buildSnapshot.mockImplementation(async ({ asOf }) => ({
+      asOf,
+      setups: [{ id: "s1", decision: "buy", balanceScore: 60, candles: [{ timestamp: asOf, open: 110 }] }],
+    }));
+
+    await runBacktest({
+      assetId: "A",
+      fromIso: "2025-01-01T00:00:00.000Z",
+      toIso: "2025-01-01T01:00:00.000Z",
+      stepHours: 1,
+      deps: { createDataSource, buildSnapshot, loadSentimentSnapshot, writeReport },
+    });
+
+    const report = (writeReport as vi.Mock).mock.calls[0][0] as { trades?: Array<{ reason: string; exit: { price: number } }> };
+    expect(report.trades?.[0]?.reason).toBe("end-of-range");
+    expect(report.trades?.[0]?.exit.price).toBe(110);
   });
 
   it("throws on sentiment lookahead in debug mode", async () => {

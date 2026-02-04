@@ -158,3 +158,5 @@ to prevent future boundary violations.
 1 → 2 → 3 → 4 → 5 → 6
 
 > Update 2026-02-03: Execution MVP entries (next-step-open) implemented; next slice: positions/PnL/exit.
+Update 2026-02-03b: Backtest runs werden jetzt in 'backtest_runs' (runKey-unique, JSONB trades/kpis) persistiert; n�chster Schritt: UI/Explorer und ggf. normalisierte trades-Tabelle.
+- Completed: Admin API for backtest_runs listing/detail. Next: UI viewer for runs/trades.

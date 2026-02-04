@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { buildAndStorePerceptionSnapshot, type SnapshotBuildSource } from "@/src/features/perception/build/buildSetups";
 import { createSnapshotStore } from "@/src/features/perception/cache/snapshotStore";
 import { perceptionSnapshotStoreAdapter } from "@/src/server/adapters/perceptionSnapshotStoreAdapter";
-import type { PerceptionSnapshotWithItems } from "@/src/server/repositories/perceptionSnapshotRepository";
+import type { PerceptionSnapshotWithItems } from "@/src/domain/perception/types";
 import { buildPerceptionSnapshotWithContainer } from "@/src/server/perception/perceptionEngineFactory";
 import { getActiveAssets } from "@/src/server/repositories/assetRepository";
 import { maybeEnhanceRingAiSummaryWithLLM } from "@/src/server/ai/ringSummaryOpenAi";
@@ -167,10 +167,9 @@ export async function requestSnapshotBuild(params: {
   const snapshotStore = createSnapshotStore(perceptionSnapshotStoreAdapter);
   const latest = await snapshotStore.loadLatestSnapshotFromStore();
   if (!params.force && latest && isSnapshotFromToday(latest.snapshot.snapshotTime)) {
-    const normalizedLatest = {
-      ...latest,
-      snapshot: { ...latest.snapshot, version: latest.snapshot.version ?? "unknown" },
-    } as unknown as PerceptionSnapshotWithItems;
+    if (latest.snapshot.version == null) {
+      latest.snapshot.version = "unknown";
+    }
     updateRunState({
       status: "succeeded",
       source: params.source,
@@ -179,7 +178,7 @@ export async function requestSnapshotBuild(params: {
       reused: true,
       error: null,
     });
-    return { snapshot: normalizedLatest, reused: true };
+    return { snapshot: latest, reused: true };
   }
 
   await acquireLock(params.source);
@@ -214,11 +213,10 @@ export async function requestSnapshotBuild(params: {
       finishedAt: new Date().toISOString(),
       reused: false,
     });
-    const normalizedSnapshot = {
-      ...snapshot,
-      snapshot: { ...snapshot.snapshot, version: snapshot.snapshot.version ?? "unknown" },
-    } as unknown as PerceptionSnapshotWithItems;
-    return { snapshot: normalizedSnapshot, reused: false };
+    if (snapshot.snapshot.version == null) {
+      snapshot.snapshot.version = "unknown";
+    }
+    return { snapshot, reused: false };
   } catch (error) {
     updateRunState({
       status: "failed",

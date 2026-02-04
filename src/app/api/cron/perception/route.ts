@@ -89,6 +89,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     const setups = (snapshotRecord.setups ?? []) as Setup[];
     const snapshot: PerceptionSnapshot = {
       ...snapshotRecord,
+      version: snapshotRecord.version ?? "unknown",
       setups,
       generatedAt: snapshotTime.toISOString(),
       universe: setups.map((setup) => setup.symbol).filter(Boolean),

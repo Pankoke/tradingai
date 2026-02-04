@@ -4,7 +4,10 @@ import { NextRequest } from "next/server";
 const mockLoad = vi.fn();
 
 vi.mock("@/src/features/perception/cache/snapshotStore", () => ({
-  loadLatestSnapshotForProfile: (...args: unknown[]) => mockLoad(...args),
+  createSnapshotStore: () => ({
+    loadLatestSnapshotForProfile: (...args: unknown[]) => mockLoad(...args),
+    loadLatestSnapshotFromStore: (...args: unknown[]) => mockLoad(...args),
+  }),
 }));
 
 describe("GET /api/perception/today (read-only)", () => {

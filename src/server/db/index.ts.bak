@@ -5,7 +5,6 @@ import { candles } from "./schema/candles";
 import { events } from "./schema/events";
 import { perceptionSnapshotItems } from "./schema/perceptionSnapshotItems";
 import { perceptionSnapshots } from "./schema/perceptionSnapshots";
-import { backtestRuns } from "./schema/backtestRuns";
 
 export { db };
 export { assets };
@@ -14,7 +13,6 @@ export { candles };
 export { events };
 export { perceptionSnapshotItems };
 export { perceptionSnapshots };
-export { backtestRuns };
 
 export const tables = {
   assets,
@@ -22,8 +20,7 @@ export const tables = {
   candles,
   events,
   perceptionSnapshots,
-  perceptionSnapshotItems,
-  backtestRuns,
+  perceptionSnapshotItems
 };
 
 export type Tables = typeof tables;

@@ -88,3 +88,7 @@ Nächste Version der Architektur sollte:
 - Engine als „Pure Core“ definieren
 
 Update: Execution entry intents (next-step-open) und Lookahead-Guard (Candle <= asOf) umgesetzt; PnL/Exit folgen.
+- Backtesting: runs werden zus�tzlich zur Datei in DB Tabelle backtest_runs (runKey unique, JSONB trades/kpis) gespeichert; idempotent via Upsert.
+
+- Added read-only admin API for backtest_runs; list route omits trades payload, detail keeps full row.
+

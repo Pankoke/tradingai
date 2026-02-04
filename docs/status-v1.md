@@ -84,12 +84,14 @@ Alle Aussagen zu „fertig / umgesetzt“ sind mit konkreten Fundstellen belegt.
 - Snapshot-basierte Inputs
 - Report-Summary (KPIs)
 - Execution MVP v1: OrderIntent + next-step-open Entry-Fills (kein PnL)
+- Execution v2b: Trades mit PnL/Kosten + KPIs
+- Persistenz/Indexing: `backtest_runs` (runKey-unique, JSONB trades/kpis, idempotent)
 - Lookahead-Guard (Candle-Timestamps <= asOf in Debug)
 
 **Offen**
-- Keine Candle-Replay-Execution
-- Keine Order-Simulation
-- Keine Trade-Persistenz  
+- Keine Candle-Replay-Execution / Positions-Management verfeinert
+- Keine UI/Explorer für Backtest-Runs
+- Trades noch nicht normalisiert (JSONB-only)  
 📍 *Evidenz:* `gaps-v1.md → G-01`
 
 ---
@@ -120,3 +122,4 @@ Alle Aussagen zu „fertig / umgesetzt“ sind mit konkreten Fundstellen belegt.
 
 > **TradingAI ist funktional stark, technisch weit entwickelt und nahe an Produktionsreife –  
 > die nächsten Schritte sind klar architektonisch, nicht feature-getrieben.**
+- Admin: backtest_runs read-only listing API available (list & detail, trades omitted in list).

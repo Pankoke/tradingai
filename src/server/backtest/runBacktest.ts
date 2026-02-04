@@ -10,11 +10,28 @@ import { getActiveAssets } from "@/src/server/repositories/assetRepository";
 import { getProfileTimeframes, getTimeframesForAsset, TIMEFRAME_SYNC_WINDOWS } from "@/src/server/marketData/timeframeConfig";
 import { resolveProviderSymbolForSource } from "@/src/server/marketData/providerDisplay";
 import type { MarketDataSource } from "@/src/server/marketData/MarketDataProvider";
-import { getLatestSentimentSnapshotAtOrBefore, getSentimentSnapshotStats } from "@/src/server/repositories/sentimentSnapshotRepository";
+import { getLatestSentimentSnapshotAtOrBefore } from "@/src/server/repositories/sentimentSnapshotRepository";
 import type { SentimentProviderPort } from "@/src/domain/sentiment/ports";
 import type { SentimentSnapshotV2 } from "@/src/domain/sentiment/types";
 import type { CandleTimeframe } from "@/src/domain/market-data/types";
-import type { ExecutedEntry, OrderIntent, OrderSide } from "@/src/domain/backtest/types";
+import type {
+  ClosedTrade,
+  CompletedTrade,
+  ExecutedEntry,
+  ExecutionCostsConfig,
+  OpenPosition,
+  OrderIntent,
+  OrderSide,
+  PositionSide,
+  BacktestKpis,
+} from "@/src/domain/backtest/types";
+import {
+  computeBacktestKpis,
+  defaultCostsConfig,
+  enrichTradesWithPnl,
+} from "@/src/server/backtest/kpis";
+import { buildBacktestRunKey } from "@/src/server/backtest/runKey";
+import { upsertBacktestRun } from "@/src/server/repositories/backtestRunRepository";
 
 export type BacktestStepResult = {
   asOfIso: string;
@@ -44,6 +61,7 @@ export type BacktestStepResult = {
   sentimentSnapshotFound?: boolean;
   sentimentSnapshotAsOfIso?: string;
   executedEntry?: ExecutedEntry;
+  openPosition?: OpenPosition | null;
 };
 
 export type BacktestReport = {
@@ -54,6 +72,8 @@ export type BacktestReport = {
   lookbackHours: number;
   steps: BacktestStepResult[];
   summary: BacktestSummary;
+  trades?: CompletedTrade[];
+  kpis?: BacktestKpis;
 };
 
 export type RunBacktestDeps = {
@@ -64,6 +84,7 @@ export type RunBacktestDeps = {
 };
 
 const DEFAULT_LOOKBACK_HOURS = 24;
+const DEFAULT_EXIT_POLICY = { kind: "hold-n-steps", holdSteps: 3, price: "step-open" } as const;
 
 function addHours(date: Date, hours: number): Date {
   return new Date(date.getTime() + hours * 60 * 60 * 1000);
@@ -224,6 +245,12 @@ function executeEntryAtNextStepOpen(intent: OrderIntent, nextMeta: CandleMeta | 
   return { intent, status: "unfilled" };
 }
 
+function toPositionSide(decision: string): PositionSide | null {
+  if (decision === "buy") return "long";
+  if (decision === "sell") return "short";
+  return null;
+}
+
 export type BacktestSummary = {
   totalSteps: number;
   stepsWithTopSetup: number;
@@ -298,6 +325,7 @@ export async function runBacktest(params: {
   stepHours: number;
   lookbackHours?: number;
   timeframeFilter?: CandleTimeframe[];
+  costsConfig?: ExecutionCostsConfig;
   deps?: RunBacktestDeps;
   debug?: boolean;
 }): Promise<{ ok: true; reportPath: string; steps: number } | { ok: false; error: string; code: string }> {
@@ -375,6 +403,8 @@ export async function runBacktest(params: {
 
   const steps: BacktestStepResult[] = [];
   const candleMetas: CandleMeta[] = [];
+  const closedTrades: ClosedTrade[] = [];
+  let openPosition: OpenPosition | null = null;
   let lastAsOf: Date | null = null;
   let cursor = new Date(from);
   while (cursor <= to) {
@@ -434,6 +464,7 @@ export async function runBacktest(params: {
         setupsSummary,
         sentimentSnapshotFound: lastSentimentFound,
         sentimentSnapshotAsOfIso: lastSentimentIso,
+        openPosition,
       });
       candleMetas.push(candleMeta);
       if (params.debug ?? process.env.NODE_ENV !== "production") {
@@ -466,7 +497,61 @@ export async function runBacktest(params: {
     if (!intent) continue;
     const executedEntry = executeEntryAtNextStepOpen(intent, candleMetas[i + 1]);
     steps[i] = { ...steps[i], executedEntry };
+    if (executedEntry.status === "filled" && !openPosition) {
+      const side = toPositionSide(intent.side);
+      if (side) {
+        openPosition = {
+          assetId: intent.assetId,
+          side,
+          entryIso: executedEntry.fill.fillIso,
+          entryPrice: executedEntry.fill.fillPrice,
+          entryStepIndex: i + 1, // entry fill happens on next step
+        };
+      }
+    }
+    if (openPosition) {
+      const barsHeld = i - openPosition.entryStepIndex + 1;
+      const shouldExit = barsHeld >= 3;
+      if (shouldExit) {
+        const exitMeta = candleMetas[i] ?? candleMetas[i - 1];
+        const exitPrice =
+          exitMeta?.openPrice != null && Number.isFinite(exitMeta.openPrice) ? exitMeta.openPrice : openPosition.entryPrice;
+        const exitIso = (exitMeta?.asOfIso ?? steps[i].asOfIso)!;
+        closedTrades.push({
+          assetId: openPosition.assetId,
+          side: openPosition.side,
+          entry: { iso: openPosition.entryIso, price: openPosition.entryPrice },
+          exit: { iso: exitIso, price: exitPrice },
+          barsHeld,
+          reason: exitMeta?.openPrice != null ? "time-exit" : "end-of-range",
+        });
+        openPosition = null;
+      }
+    }
   }
+
+  if (openPosition) {
+    const lastMeta = candleMetas[candleMetas.length - 1];
+    const exitPrice =
+      lastMeta?.openPrice != null && Number.isFinite(lastMeta.openPrice) ? lastMeta.openPrice : openPosition.entryPrice;
+    const exitIso = (lastMeta?.asOfIso ?? steps[steps.length - 1]?.asOfIso)!;
+    const barsHeld = steps.length - openPosition.entryStepIndex;
+    closedTrades.push({
+      assetId: openPosition.assetId,
+      side: openPosition.side,
+      entry: { iso: openPosition.entryIso, price: openPosition.entryPrice },
+      exit: { iso: exitIso, price: exitPrice },
+      barsHeld,
+      reason: "end-of-range",
+    });
+    openPosition = null;
+  }
+
+  const completedTrades: CompletedTrade[] = enrichTradesWithPnl(
+    closedTrades,
+    params.costsConfig ?? defaultCostsConfig,
+  );
+  const kpis = computeBacktestKpis(completedTrades);
 
   const report: BacktestReport = {
     assetId: params.assetId,
@@ -475,10 +560,32 @@ export async function runBacktest(params: {
     stepHours: params.stepHours,
     lookbackHours,
     steps,
+    trades: completedTrades,
     summary: computeBacktestSummary(steps),
+    kpis,
   };
 
   const reportPath = buildReportPath(params.assetId, params.fromIso, params.toIso, params.stepHours);
   await writeReport(report, reportPath);
+  const runKey = buildBacktestRunKey({
+    assetId: params.assetId,
+    fromIso: params.fromIso,
+    toIso: params.toIso,
+    stepHours: params.stepHours,
+    costsConfig: params.costsConfig ?? defaultCostsConfig,
+    exitPolicy: DEFAULT_EXIT_POLICY,
+  });
+  await upsertBacktestRun({
+    runKey,
+    assetId: params.assetId,
+    fromIso: params.fromIso,
+    toIso: params.toIso,
+    stepHours: params.stepHours,
+    costsConfig: params.costsConfig ?? defaultCostsConfig,
+    exitPolicy: DEFAULT_EXIT_POLICY,
+    kpis,
+    reportPath,
+    trades: completedTrades,
+  });
   return { ok: true, reportPath, steps: steps.length };
 }

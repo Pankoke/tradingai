@@ -363,3 +363,7 @@ Review-Checkliste
 ENDE DER DATEI
 
 Note: G-01 narrowed â€“ Backtest Execution entries implemented; PnL/Exit remain open.
+Note 2026-02-03: Backtest Reports nicht mehr nur auf Disk – Runs werden zusätzlich in backtest_runs (runKey unique, JSONB trades/kpis) persistiert; verbleibend: Trades normalisieren & UI.
+
+- Gap G-Backtests: Runs now queryable via admin API; UI/persistence normalization remains future work.
+

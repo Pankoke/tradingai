@@ -29,3 +29,45 @@ export type ExecutedEntry =
       fill?: undefined;
     };
 
+export type PositionSide = "long" | "short";
+
+export type OpenPosition = {
+  assetId: string;
+  side: PositionSide;
+  entryIso: string;
+  entryPrice: number;
+  entryStepIndex: number;
+};
+
+export type ClosedTrade = {
+  assetId: string;
+  side: PositionSide;
+  entry: { iso: string; price: number };
+  exit: { iso: string; price: number };
+  barsHeld: number;
+  reason: "time-exit" | "end-of-range";
+};
+
+export type ExecutionCostsConfig = {
+  feeBps: number;
+  slippageBps: number;
+};
+
+export type TradePnl = {
+  grossPnl: number;
+  fees: number;
+  slippage: number;
+  netPnl: number;
+};
+
+export type CompletedTrade = ClosedTrade & { pnl: TradePnl };
+
+export type BacktestKpis = {
+  trades: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+  netPnl: number;
+  avgPnl: number;
+  maxDrawdown: number;
+};
