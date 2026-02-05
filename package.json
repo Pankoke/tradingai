@@ -27,6 +27,8 @@
     "outcomes:purge": "ts-node --project scripts/tsconfig.scripts.json -r dotenv/config -r tsconfig-paths/register scripts/outcomes_purge_v16.ts",
     "assets:sanity": "ts-node --project scripts/tsconfig.scripts.json -r dotenv/config -r tsconfig-paths/register scripts/asset_candle_sanity_v12.ts",
     "setup:trace": "ts-node --project scripts/tsconfig.scripts.json -r dotenv/config -r tsconfig-paths/register scripts/setup_trace_v12.ts",
+    "audit:swing-coverage": "ts-node --project scripts/tsconfig.scripts.json -r tsconfig-paths/register scripts/swingCoverageAudit.ts",
+    "audit:swing-snapshots": "ts-node --project scripts/tsconfig.scripts.json -r dotenv/config -r tsconfig-paths/register scripts/auditSwingSnapshots.ts",
     "db:status": "node scripts/db-status.cjs",
     "db:migrate": "npx drizzle-kit migrate",
     "db:reset": "node scripts/db-reset.cjs"
