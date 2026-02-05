@@ -412,6 +412,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
       referencePrice,
       timeframes,
       now: evaluationDate,
+      profile,
     });
     const orderflow = await buildOrderflowMetrics({
       candlesByTimeframe,
@@ -419,6 +420,8 @@ class LivePerceptionDataSource implements PerceptionDataSource {
       trendScore: metrics.trendScore,
       biasScore: normalizedBiasScore,
       assetClass: asset.assetClass ?? null,
+      now: evaluationDate,
+      neutralizeStaleMinutes: profile === "SWING" ? INTRADAY_STALE_MINUTES : undefined,
     });
     const orderflowMode =
       LivePerceptionDataSource.ORDERFLOW_MODE_MAPPING[orderflow.mode];
@@ -447,7 +450,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
       volatilityLabel,
     };
 
-    let confidence = deriveBaseConfidenceScore(metrics);
+    let confidence = deriveBaseConfidenceScore(metrics, { profile });
     const sentimentAdjustment = this.adjustConfidenceForSentiment(confidence, sentiment);
     confidence = sentimentAdjustment.adjusted;
     const orderflowAdjustment = applyOrderflowConfidenceAdjustment({

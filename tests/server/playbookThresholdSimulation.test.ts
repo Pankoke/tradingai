@@ -40,7 +40,7 @@ describe("threshold relaxation simulation", () => {
       debug: true,
     });
 
-    expect(res.baseline.count).toBe(1); // only s1 passes 80/55
+    expect(res.baseline.count).toBe(2); // s1,s2 pass baseline 65/50
     const row = res.grid.find((r) => r.sqMin === 55);
     expect(row).toBeDefined();
     expect(row?.eligibleCount).toBe(1); // sqMin=55: nur s1

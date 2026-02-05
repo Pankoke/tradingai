@@ -30,21 +30,21 @@
 
 3) **Grade/NO_TRADE (Gold-Swing v0.2)** (`src/lib/engine/playbooks/index.ts`, evaluateGoldSwing)
    - Basis-Gates (NO_TRADE, erste Verletzung gewinnt):
-     - biasScore < 70 → NO_TRADE ("Bias too weak (<70)")
-     - trendScore < 50 → NO_TRADE
-     - signalQuality < 55 → NO_TRADE
+     - biasScore < 65 → NO_TRADE ("Bias too weak (<65)"); A-Schwelle 75
+     - trendScore < 45 → NO_TRADE
+     - signalQuality < 50 → NO_TRADE
      - fehlende Levels/RiskReward → NO_TRADE
-     - eventModifier execution_critical im 48h-Fenster → NO_TRADE
-   - Hard Knockouts → NO_TRADE:
-     - trend/bias Konflikt + orderflow negativ
-     - signalQuality unter Schwelle
-     - riskReward rrr < 1
-   - Soft Negatives → Downgrade zu B:
-     - orderflow negativ
-     - trend/bias Divergenz (soft)
-     - sentiment schwach
+    - eventModifier execution_critical im 24h-Fenster → NO_TRADE
+  - Hard Knockouts → NO_TRADE:
+    - signalQuality unter Schwelle
+    - riskReward rrr < 1
+  - Soft Negatives → Downgrade zu B:
+    - trend/bias Konflikt + orderflow negativ (nur bei vorhandenem Orderflow)
+    - orderflow negativ
+    - trend/bias Divergenz (soft, ab Δ ≥ 25)
+    - sentiment schwach
    - A: Alle Basis ok, keine Soft-Negatives. B: Basis ok, aber Soft-Negatives vorhanden.
-   - SetupType: pullback_continuation (trend>=50 & bias>=70), range_bias (bias>=70), sonst unknown.
+   - SetupType: pullback_continuation (trend>=45 & bias>=65), range_bias (bias>=65), sonst unknown.
 
 4) **Engine-Version**
    - Snapshot-Feld `version` aus `SNAPSHOT_VERSION` (derzeit `v1.0.0`).
@@ -57,6 +57,15 @@
 - Reference Price: aus Perception-Engine (nicht in dieser Datei ersichtlich, aber als `referencePrice` an computeLevelsForSetup übergeben).
 - EventModifier: classification + primaryEvent Minuten bis Event.
 - Orderflow Flags/Reasons: negativ, Konflikte etc.
+
+## Default Swing Gates (evaluateDefault)
+- Bias >= 65 und Trend >= 40 → Grade B.
+- Darunter: NO_TRADE, aber Richtung wird weiterhin aus Bias abgeleitet (LONG bei Bias ≥ 50, sonst SHORT).
+
+## SPX/DAX/NDX/DOW Swing Gates (volatility & thresholds)
+- Regime muss TREND sein; RANGE bleibt WATCH (keine harten Blocks).
+- Volatilität: `high` → NO_TRADE (hard); `medium` → soft (kein Hard-KO, ggf. Watch/Downgrade).
+- Schwellen: Bias ≥ 65, Trend ≥ 55, SignalQuality ≥ 50, Confirmation (orderflow) ≥ 50.
 
 ## Offene Risiken/Unklarheiten
 - Reference Price Herkunft: in buildSetups aus Perception Engine, Quelle (welcher Feed) nicht direkt dokumentiert.

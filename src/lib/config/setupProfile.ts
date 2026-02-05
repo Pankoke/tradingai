@@ -31,7 +31,7 @@ const PROFILE_CONFIG: Record<SetupProfile, SetupProfileConfig> = {
     profile: "SWING",
     primaryTimeframe: "1D",
     confirmTimeframe: undefined,
-    eventWindows: { execMinutes: 120, contextMinutes: 2880, postMinutes: 180 },
+    eventWindows: { execMinutes: 120, contextMinutes: 1440, postMinutes: 180 },
   },
   POSITION: {
     profile: "POSITION",

@@ -101,7 +101,7 @@ describe("buildEventModifier relevance & classification", () => {
     expect(modifier.classification === "context_relevant" || modifier.classification === "awareness_only").toBe(true);
   });
 
-  it("treats Gold with US CPI in 24-48h as context_relevant", () => {
+  it("treats Gold with US CPI in 24-48h as awareness_only (outside 24h swing window)", () => {
     const now = defaultNow;
     const scheduledAt = new Date(now.getTime() + 30 * 60 * 60 * 1000).toISOString();
     const modifier = buildEventModifier({
@@ -112,7 +112,7 @@ describe("buildEventModifier relevance & classification", () => {
         topEvents: [{ title: "US CPI", impact: 3, scheduledAt, timeToEventMinutes: 30 * 60, country: "US", currency: "USD", category: "macro" }],
       },
     });
-    expect(modifier.classification === "context_relevant" || modifier.classification === "execution_critical").toBe(true);
+    expect(modifier.classification === "awareness_only").toBe(true);
   });
 
   it("downshifts classification when macro fields are missing (reliability low)", () => {

@@ -50,4 +50,22 @@ describe("buildOrderflowMetrics (pure)", () => {
     expect(result.flowScore).toBe(50);
     expect(result.reasons).toContain("Insufficient intraday data for orderflow");
   });
+
+  it("neutralises stale intraday data when requested", async () => {
+    const candlesByTimeframe = {
+      "15m": [makeCandle("2024-01-01T18:00:00Z", 100)],
+    } satisfies Partial<Record<(typeof ORDERFLOW_TIMEFRAMES)[number], CandleLike[]>>;
+
+    const result = await buildOrderflowMetrics({
+      candlesByTimeframe,
+      assetClass: "crypto",
+      timeframes: ORDERFLOW_TIMEFRAMES,
+      now: new Date("2024-01-02T01:00:00Z"), // > 7h gap
+      neutralizeStaleMinutes: 180,
+    });
+
+    expect(result.flowScore).toBe(50);
+    expect(result.flags).toBeUndefined();
+    expect(result.reasons?.join(" ")).toContain("Stale intraday orderflow");
+  });
 });

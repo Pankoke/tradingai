@@ -68,3 +68,8 @@ curl http://localhost:3000/api/health/perception
 - `/api/perception/today` liefert leer → Cron ausgeführt? Health-Endpoint prüfen.
 - Bias überall 50 → Health-Warnings checken (Bias-Neutral-Check).
 - Mock-Modus ohne Effekt → `NEXT_PUBLIC_PERCEPTION_DATA_MODE` auf `"mock"` setzen, Badge im Panel sichtbar?
+
+## Swing-spezifische Confidence-Regeln
+- Swing (4H/1D) toleriert Price-Drift bis ±8 %; erst darüber erfolgt eine graduelle Confidence-Reduktion.
+- STALE-Markierungen bleiben als Reason sichtbar, beeinflussen aber die Swing-Confidence nicht (keine Strafpunkte).
+- Intraday bleibt unverändert (Drift-Gate 5 %, Stale-Penalty aktiv).

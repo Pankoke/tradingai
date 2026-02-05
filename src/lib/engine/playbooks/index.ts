@@ -52,16 +52,15 @@ type PlaybookResolution = {
   reason: string;
 };
 
-const SWING_EVENT_WINDOW_MINUTES = 48 * 60;
+const SWING_EVENT_WINDOW_MINUTES = 24 * 60;
 const ORDERFLOW_NEGATIVE_THRESHOLD = 30;
 const SIGNAL_QUALITY_FLOOR = 40;
-const SIGNAL_QUALITY_BASE = 55;
-// Phase0 (30d, gold) showed WATCH TP/SL win-rate ~83% (5/1) with many bias KOs.
-// Keep A strict, loosen B bias gate: A uses 80, B uses 70.
-const BIAS_MIN_A = 80;
-const BIAS_MIN_B = 70;
-const TREND_MIN = 50;
-const SOFT_TREND_BIAS_DELTA = 20;
+const SIGNAL_QUALITY_BASE = 50;
+// Updated swing tuning: relax bias/trend thresholds to reduce false NO_TRADE.
+const BIAS_MIN_A = 75;
+const BIAS_MIN_B = 65;
+const TREND_MIN = 45;
+const SOFT_TREND_BIAS_DELTA = 25;
 const GOLD_PLAYBOOK_ID = "gold-swing-v0.2";
 const INDEX_PLAYBOOK_ID = "index-swing-v0.1";
 const SPX_PLAYBOOK_ID = "spx-swing-v0.1";
@@ -353,7 +352,7 @@ function evaluateGoldSwing(context: PlaybookContext): PlaybookEvaluation {
   if (!flags.trendOk) baseFailures.push({ key: "trend", reason: "Trend too weak (<50)" });
   if (!flags.signalQualityOk) baseFailures.push({ key: "signalQuality", reason: "Signal quality too low (<55)" });
   if (!flags.levelsOk) baseFailures.push({ key: "levels", reason: "Levels missing/invalid" });
-  if (flags.executionCritical) baseFailures.push({ key: "event", reason: "Execution-critical event within 48h" });
+  if (flags.executionCritical) baseFailures.push({ key: "event", reason: "Execution-critical event within 24h" });
 
   if (baseFailures.length > 0) {
     const reason = baseFailures[0].reason;
@@ -368,7 +367,7 @@ function evaluateGoldSwing(context: PlaybookContext): PlaybookEvaluation {
   }
 
   const hardKnockouts: string[] = [];
-  if (flags.tbConflictHard && flags.orderflowNegative) hardKnockouts.push("tb_conflict+of_negative");
+  // For swing we treat orderflow conflicts as soft; no hard knockout.
   if (!flags.signalQualityOk && typeof signalQuality?.score === "number" && signalQuality.score < SIGNAL_QUALITY_BASE)
     hardKnockouts.push("signal_quality_low");
   if (flags.rrrUnattractive) hardKnockouts.push("rrr_unattractive");
@@ -385,6 +384,7 @@ function evaluateGoldSwing(context: PlaybookContext): PlaybookEvaluation {
 
   const softNegatives: string[] = [];
   if (flags.orderflowNegative) softNegatives.push("orderflow_negative");
+  if (flags.tbConflictHard) softNegatives.push("orderflow_conflict");
   if (flags.tbSoftDivergence && !flags.tbConflictHard) softNegatives.push("trend_bias_divergence");
   if (flags.sentimentWeak) softNegatives.push("sentiment_weak");
   if (!flags.biasOkA) softNegatives.push("bias_below_A");
@@ -421,7 +421,7 @@ function evaluateGoldSwing(context: PlaybookContext): PlaybookEvaluation {
 
 function evaluateDefault(context: PlaybookContext): PlaybookEvaluation {
   const { rings } = context;
-  if (rings.biasScore >= 70 && rings.trendScore >= 45) {
+  if (rings.biasScore >= 65 && rings.trendScore >= 40) {
     return {
       setupGrade: "B",
       setupType: deriveSetupType(rings),
@@ -456,10 +456,10 @@ const indexSwingPlaybook: Playbook = {
 // --- SPX Swing Playbook (Phase-0 monitoring) ---
 const SPX_VOL_HARD_LABEL = "high";
 const SPX_VOL_SOFT_LABEL = "medium";
-const SPX_TREND_MIN = 60;
-const SPX_BIAS_MIN = 70;
-const SPX_SIGNAL_QUALITY_MIN = 55;
-const SPX_CONFIRMATION_MIN = 55;
+const SPX_TREND_MIN = 55;
+const SPX_BIAS_MIN = 65;
+const SPX_SIGNAL_QUALITY_MIN = 50;
+const SPX_CONFIRMATION_MIN = 50;
 
 type SpxWatchSegment =
   | "WATCH_FAILS_REGIME_CONFIRMATION"
@@ -532,7 +532,8 @@ function evaluateSpxSwing(context: PlaybookContext): PlaybookEvaluation {
   }
 
   if (volSoft) {
-    return assignWatch("WATCH_FAILS_VOLATILITY", "Volatility elevated (soft gate)");
+    // Medium volatility: soft gate only, do not hard-block.
+    rationale.push("Volatility elevated (medium)");
   }
 
   if (regime !== "TREND") {

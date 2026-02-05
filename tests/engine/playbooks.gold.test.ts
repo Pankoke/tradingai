@@ -96,7 +96,7 @@ describe("gold swing playbook v0.2", () => {
     expect(result.debugReason).toContain("base:trend");
   });
 
-  it("forces NO_TRADE on hard conflict plus orderflow negative", () => {
+  it("treats orderflow conflict + negative as soft downgrade (no hard KO)", () => {
     const result = evaluateGoldSwing({
       asset: goldAsset,
       profile: "swing",
@@ -106,8 +106,36 @@ describe("gold swing playbook v0.2", () => {
       signalQuality: { grade: "B", score: 60, labelKey: "ok", reasons: [] },
       levels: baseLevels,
     });
+    expect(result.setupGrade).toBe("B");
+    expect(result.debugReason).toContain("orderflow_conflict");
+  });
+
+  it("grades B when just above relaxed thresholds", () => {
+    const result = evaluateGoldSwing({
+      asset: goldAsset,
+      profile: "swing",
+      rings: { biasScore: 66, trendScore: 46, sentimentScore: 60, orderflowScore: 55 },
+      orderflow: { flags: ["neutral"] },
+      eventModifier: null,
+      signalQuality: baseSignalQuality,
+      levels: baseLevels,
+    });
+    expect(result.setupGrade).toBe("B");
+    expect(result.noTradeReason).toBeUndefined();
+  });
+
+  it("stays NO_TRADE when below relaxed thresholds", () => {
+    const result = evaluateGoldSwing({
+      asset: goldAsset,
+      profile: "swing",
+      rings: { biasScore: 64, trendScore: 46, sentimentScore: 60, orderflowScore: 55 },
+      orderflow: { flags: ["neutral"] },
+      eventModifier: null,
+      signalQuality: baseSignalQuality,
+      levels: baseLevels,
+    });
     expect(result.setupGrade).toBe("NO_TRADE");
-    expect(result.debugReason).toContain("hard:tb_conflict+of_negative");
+    expect(result.noTradeReason?.toLowerCase() ?? "").toContain("bias");
   });
 
   it("returns NO_TRADE when levels are missing", () => {

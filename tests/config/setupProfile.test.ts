@@ -15,6 +15,6 @@ describe("setupProfile config", () => {
   it("returns config with event windows per profile", () => {
     const swing = getSetupProfileConfig("SWING");
     expect(swing.eventWindows.execMinutes).toBe(120);
-    expect(swing.eventWindows.contextMinutes).toBe(2880);
+    expect(swing.eventWindows.contextMinutes).toBe(1440);
   });
 });

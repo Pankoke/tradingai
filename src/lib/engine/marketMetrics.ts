@@ -86,6 +86,7 @@ export async function buildMarketMetrics(params: {
   referencePrice: number;
   timeframes: MarketTimeframe[];
   now: Date;
+  profile?: "SWING" | "INTRADAY" | "POSITION";
 }): Promise<MarketMetrics> {
   const candlesByTimeframe = new Map<MarketTimeframe, NormalizedCandle[]>();
 
@@ -135,6 +136,7 @@ export async function buildMarketMetrics(params: {
       : 0;
 
   const reasons: string[] = [];
+  const driftTolerancePct = params.profile === "SWING" ? 8 : 5;
   if (!dailyCandles.length && !fourHour.length && !oneHour.length) {
     reasons.push("No market data for trend");
   }
@@ -144,7 +146,7 @@ export async function buildMarketMetrics(params: {
   if (oneHour.length && !isFresh(oneHour[0].timestamp, 90 * 60 * 1000, params.now)) {
     reasons.push("1H candle outdated");
   }
-  if (Math.abs(priceDriftPct) > 5 && lastPrice) {
+  if (Math.abs(priceDriftPct) > driftTolerancePct && lastPrice) {
     reasons.push(`Price drift ${priceDriftPct.toFixed(1)}% from reference`);
   }
 

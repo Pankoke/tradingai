@@ -262,6 +262,7 @@ export async function buildOrderflowMetrics(params: {
   biasScore?: number | null;
   assetClass?: string | null;
   now?: Date;
+  neutralizeStaleMinutes?: number;
 }): Promise<OrderflowMetrics> {
   const profileId = resolveOrderflowProfile(params.assetClass);
 
@@ -297,6 +298,17 @@ export async function buildOrderflowMetrics(params: {
   const fifteen = candleMap.get("15m") ?? [];
   const oneHour = candleMap.get("1H") ?? [];
   const fourHour = candleMap.get("4H") ?? [];
+  const latestIntradayTs = Math.max(
+    ...(fifteen.map((c) => c.timestamp.getTime()) ?? []),
+    ...(oneHour.map((c) => c.timestamp.getTime()) ?? []),
+    ...(fourHour.map((c) => c.timestamp.getTime()) ?? []),
+  );
+
+  const isStale =
+    Number.isFinite(latestIntradayTs) &&
+    typeof params.neutralizeStaleMinutes === "number" &&
+    params.now instanceof Date &&
+    params.now.getTime() - latestIntradayTs > params.neutralizeStaleMinutes * 60 * 1000;
 
   if (!fifteen.length && !oneHour.length && !fourHour.length) {
     return {
@@ -310,6 +322,26 @@ export async function buildOrderflowMetrics(params: {
       reasonDetails: [
         { category: "structure", text: "Insufficient intraday data for orderflow" },
       ],
+      meta: {
+        profile: profileId,
+        timeframeSamples,
+        context: {
+          trendScore: params.trendScore ?? null,
+          biasScore: params.biasScore ?? null,
+        },
+      },
+    };
+  }
+
+  if (isStale) {
+    return {
+      flowScore: 50,
+      mode: "balanced",
+      clv: 0,
+      relVolume: 1,
+      expansion: 0,
+      consistency: 50,
+      reasons: ["Stale intraday orderflow data"],
       meta: {
         profile: profileId,
         timeframeSamples,
