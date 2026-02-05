@@ -3,7 +3,9 @@ import type { MarketTimeframe } from "./MarketDataProvider";
 import { filterAllowedTimeframes } from "@/src/lib/config/candleTimeframes";
 import type { SetupProfile } from "@/src/lib/config/setupProfile";
 
-const BASE_TIMEFRAMES: MarketTimeframe[] = ["1D", "1W"];
+const SWING_CORE_TIMEFRAMES: MarketTimeframe[] = ["1D", "1W"];
+const SWING_REFINEMENT_TIMEFRAMES: MarketTimeframe[] = ["4H"];
+const BASE_TIMEFRAMES: MarketTimeframe[] = SWING_CORE_TIMEFRAMES;
 const CRYPTO_TIMEFRAMES: MarketTimeframe[] = ["1D", "1W", "4H", "1H"];
 const INTRADAY_WHITELIST_SYMBOLS = new Set<string>([
   "GC=F",
@@ -41,9 +43,24 @@ export function getTimeframesForAsset(asset: Asset): MarketTimeframe[] {
   return filterAllowedTimeframes(BASE_TIMEFRAMES);
 }
 
-export function getProfileTimeframes(profile: SetupProfile, asset: Asset): MarketTimeframe[] {
+export function getSwingCoreTimeframes(): MarketTimeframe[] {
+  return [...SWING_CORE_TIMEFRAMES];
+}
+
+export function getSwingRefinementTimeframes(): MarketTimeframe[] {
+  return [...SWING_REFINEMENT_TIMEFRAMES];
+}
+
+export function getAllowedTimeframesForProfile(
+  profile: SetupProfile,
+  options?: { includeRefinement?: boolean },
+): MarketTimeframe[] {
   if (profile === "SWING") {
-    return ["1D", "1W"];
+    const includeRefinement = options?.includeRefinement === true;
+    const frames = includeRefinement
+      ? [...SWING_CORE_TIMEFRAMES, ...SWING_REFINEMENT_TIMEFRAMES]
+      : [...SWING_CORE_TIMEFRAMES];
+    return frames;
   }
   if (profile === "POSITION") {
     return ["1W"];
@@ -51,5 +68,10 @@ export function getProfileTimeframes(profile: SetupProfile, asset: Asset): Marke
   if (profile === "INTRADAY") {
     return ["1H", "4H"];
   }
-  return ["1D", "1W"];
+  return [...SWING_CORE_TIMEFRAMES];
+}
+
+export function getProfileTimeframes(profile: SetupProfile, asset: Asset): MarketTimeframe[] {
+  void asset; // asset currently unused; kept for signature compatibility
+  return getAllowedTimeframesForProfile(profile);
 }

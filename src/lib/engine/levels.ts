@@ -25,6 +25,13 @@ export interface ComputedLevels {
   stopLoss: string | null;
   takeProfit: string | null;
   debug: {
+    refinementUsed?: boolean;
+    refinementSource?: "4H" | null;
+    refinementEffect?: {
+      bandPctMultiplier?: number | null;
+      avgRangePct?: number | null;
+      sampleSize?: number | null;
+    } | null;
     bandPct: number | null;
     referencePrice: number | null;
     category: SetupLevelCategory;
@@ -151,6 +158,14 @@ export function computeLevelsForSetup(params: {
   category?: SetupLevelCategory;
   profile?: SetupProfile;
   bandScale?: number;
+  refinement4H?: {
+    candles: {
+      high: number | string;
+      low: number | string;
+      close: number | string;
+      timestamp: Date;
+    }[];
+  };
 }): ComputedLevels {
   const price = Number(params.referencePrice);
   const category = params.category ?? "unknown";
@@ -199,7 +214,8 @@ export function computeLevelsForSetup(params: {
       : params.profile === "POSITION"
         ? 1.05
         : 1);
-  const bandPctRaw = baseBand * profileBandScale * volFactor;
+  const refinementResult = computeRefinementMultiplierForSwing(params);
+  const bandPctRaw = baseBand * profileBandScale * volFactor * refinementResult.multiplier;
   const bandPct = clamp(bandPctRaw, 0.001, 0.05);
   const stopBand = clamp(bandPct * stopFactor, 0.001, 0.03);
   const targetBand = clamp(bandPct * targetFactor, 0.001, 0.05);
@@ -343,6 +359,15 @@ export function computeLevelsForSetup(params: {
     stopLoss: formatPrice(stopLossValue, precision),
     takeProfit: formatPrice(takeProfitValue, precision),
     debug: {
+      refinementUsed: refinementResult.used,
+      refinementSource: refinementResult.used ? "4H" : null,
+      refinementEffect: refinementResult.used
+        ? {
+            bandPctMultiplier: refinementResult.multiplier,
+            avgRangePct: refinementResult.avgRangePct,
+            sampleSize: refinementResult.sampleSize,
+          }
+        : null,
       bandPct,
       referencePrice: price,
       category,
@@ -357,5 +382,49 @@ export function computeLevelsForSetup(params: {
       confidenceScoreUsed: confidenceScore,
     },
     riskReward,
+  };
+}
+
+function computeRefinementMultiplierForSwing(params: {
+  profile?: SetupProfile;
+  refinement4H?: {
+    candles: {
+      high: number | string;
+      low: number | string;
+      close: number | string;
+      timestamp: Date;
+    }[];
+  };
+}): { multiplier: number; used: boolean; avgRangePct: number | null; sampleSize: number | null } {
+  if (params.profile !== "SWING") {
+    return { multiplier: 1, used: false, avgRangePct: null, sampleSize: null };
+  }
+  const candles = params.refinement4H?.candles ?? [];
+  if (!candles.length) {
+    return { multiplier: 1, used: false, avgRangePct: null, sampleSize: null };
+  }
+  const ranges = candles
+    .map((candle) => {
+      const high = Number(candle.high);
+      const low = Number(candle.low);
+      const close = Number(candle.close);
+      if (!Number.isFinite(high) || !Number.isFinite(low) || !Number.isFinite(close) || close === 0) return null;
+      return (high - low) / close;
+    })
+    .filter((v): v is number => v !== null && Number.isFinite(v));
+
+  if (!ranges.length) {
+    return { multiplier: 1, used: false, avgRangePct: null, sampleSize: 0 };
+  }
+
+  const avgRange = ranges.reduce((sum, v) => sum + v, 0) / ranges.length;
+  const deviation = avgRange - 0.01; // 1% baseline for swing refinement
+  const multiplier = clamp(1 + deviation * 5, 0.8, 1.2);
+
+  return {
+    multiplier,
+    used: true,
+    avgRangePct: avgRange,
+    sampleSize: ranges.length,
   };
 }

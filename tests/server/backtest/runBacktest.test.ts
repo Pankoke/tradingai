@@ -50,7 +50,14 @@ describe("runBacktest", () => {
               fetchSentiment: vi.fn(),
             } as unknown as typeof sentimentPort),
         biasProvider: { getBiasSnapshot: vi.fn() },
-        timeframeConfig: { getProfileTimeframes: vi.fn(), getTimeframesForAsset: vi.fn(), TIMEFRAME_SYNC_WINDOWS: {} },
+        timeframeConfig: {
+          getProfileTimeframes: vi.fn(),
+          getTimeframesForAsset: vi.fn(),
+          TIMEFRAME_SYNC_WINDOWS: {},
+          getSwingCoreTimeframes: vi.fn(() => ["1D", "1W"]),
+          getSwingRefinementTimeframes: vi.fn(() => ["4H"]),
+          getAllowedTimeframesForProfile: vi.fn(() => ["1D", "1W"]),
+        },
         resolveProviderSymbol: vi.fn(),
       };
     });

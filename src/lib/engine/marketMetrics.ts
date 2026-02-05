@@ -95,19 +95,24 @@ export async function buildMarketMetrics(params: {
     candlesByTimeframe.set(timeframe, normalizeCandles(raw));
   }
 
-  const trendSeries: number[] = [];
-  const momentumSeries: number[] = [];
-  const volatilitySeries: number[] = [];
-
+  const profile = params.profile ?? "INTRADAY";
+  const useSwingCore = profile === "SWING";
   const dailyCandles = candlesByTimeframe.get("1D") ?? [];
+  const weeklyCandles = candlesByTimeframe.get("1W") ?? [];
+  const fourHour = useSwingCore ? [] : candlesByTimeframe.get("4H") ?? [];
+  const oneHour = useSwingCore ? [] : candlesByTimeframe.get("1H") ?? [];
+  const fifteenMin = useSwingCore ? [] : candlesByTimeframe.get("15m") ?? [];
+
+  const trendSeries: number[] = [];
+  const volatilitySeries: number[] = [];
   if (dailyCandles.length) {
     trendSeries.push(...dailyCandles.map((c) => c.close));
     volatilitySeries.push(...dailyCandles.map((c) => c.close));
   }
-
-  const fourHour = candlesByTimeframe.get("4H") ?? [];
-  const oneHour = candlesByTimeframe.get("1H") ?? [];
-  const fifteenMin = candlesByTimeframe.get("15m") ?? [];
+  if (weeklyCandles.length) {
+    trendSeries.push(...weeklyCandles.map((c) => c.close));
+    volatilitySeries.push(...weeklyCandles.map((c) => c.close));
+  }
 
   const aggregatedTrendScore = (() => {
     const scores: number[] = [];
@@ -120,15 +125,23 @@ export async function buildMarketMetrics(params: {
 
   const aggregatedMomentumScore = (() => {
     const scores: number[] = [];
-    if (oneHour.length) scores.push(computeMomentumScore(oneHour.map((c) => c.close)));
-    if (fifteenMin.length) scores.push(computeMomentumScore(fifteenMin.map((c) => c.close)));
+    if (useSwingCore) {
+      if (dailyCandles.length) {
+        scores.push(computeMomentumScore(dailyCandles.map((c) => c.close)));
+      }
+    } else {
+      if (oneHour.length) scores.push(computeMomentumScore(oneHour.map((c) => c.close)));
+      if (fifteenMin.length) scores.push(computeMomentumScore(fifteenMin.map((c) => c.close)));
+    }
     if (!scores.length) return 50;
     return scores.reduce((sum, val) => sum + val, 0) / scores.length;
   })();
 
   const volatilityScore = volatilitySeries.length ? computeVolatilityScore(volatilitySeries) : 50;
 
-  const latestPriceSource = fifteenMin[0] ?? oneHour[0] ?? fourHour[0] ?? dailyCandles[0];
+  const latestPriceSource = useSwingCore
+    ? dailyCandles[0] ?? weeklyCandles[0]
+    : fifteenMin[0] ?? oneHour[0] ?? fourHour[0] ?? dailyCandles[0];
   const lastPrice = latestPriceSource?.close ?? null;
   const priceDriftPct =
     params.referencePrice > 0 && lastPrice
@@ -136,14 +149,15 @@ export async function buildMarketMetrics(params: {
       : 0;
 
   const reasons: string[] = [];
-  const driftTolerancePct = params.profile === "SWING" ? 8 : 5;
-  if (!dailyCandles.length && !fourHour.length && !oneHour.length) {
+  const driftTolerancePct = profile === "SWING" ? 8 : 5;
+  const hasTrendData = dailyCandles.length || weeklyCandles.length || fourHour.length || oneHour.length;
+  if (!hasTrendData) {
     reasons.push("No market data for trend");
   }
   if (dailyCandles.length && !isFresh(dailyCandles[0].timestamp, 2 * 24 * 60 * 60 * 1000, params.now)) {
     reasons.push("Daily candle outdated");
   }
-  if (oneHour.length && !isFresh(oneHour[0].timestamp, 90 * 60 * 1000, params.now)) {
+  if (!useSwingCore && oneHour.length && !isFresh(oneHour[0].timestamp, 90 * 60 * 1000, params.now)) {
     reasons.push("1H candle outdated");
   }
   if (Math.abs(priceDriftPct) > driftTolerancePct && lastPrice) {

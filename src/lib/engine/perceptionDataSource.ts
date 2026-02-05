@@ -94,6 +94,12 @@ type TimeframeConfigDeps = {
   getProfileTimeframes(profile: SetupProfile, asset: AssetLike): MarketTimeframe[];
   getTimeframesForAsset(asset: AssetLike): MarketTimeframe[];
   TIMEFRAME_SYNC_WINDOWS: Record<MarketTimeframe, number>;
+  getSwingCoreTimeframes?: () => MarketTimeframe[];
+  getSwingRefinementTimeframes?: () => MarketTimeframe[];
+  getAllowedTimeframesForProfile?: (
+    profile: SetupProfile,
+    options?: { includeRefinement?: boolean },
+  ) => MarketTimeframe[];
 };
 
 export type PerceptionDataSourceDeps = {
@@ -349,6 +355,49 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     return "1D";
   }
 
+  private assertSwingTimeframes(core: MarketTimeframe[], refinement: MarketTimeframe[]) {
+    const invalidCore = core.filter((tf) => tf === "15m" || tf === "1H" || tf === "4H");
+    if (invalidCore.length) {
+      throw new Error(`Invalid timeframe for SWING core: ${invalidCore.join(",")}`);
+    }
+    const unsupportedCore = core.filter((tf) => tf !== "1D" && tf !== "1W");
+    if (unsupportedCore.length) {
+      throw new Error(`Unsupported timeframe for SWING core: ${unsupportedCore.join(",")}`);
+    }
+    const invalidRefinement = refinement.filter((tf) => tf !== "4H");
+    if (invalidRefinement.length) {
+      throw new Error(`Invalid timeframe for SWING refinement: ${invalidRefinement.join(",")}`);
+    }
+    const overlap = core.filter((tf) => refinement.includes(tf));
+    if (overlap.length) {
+      throw new Error(`Swing core/refinement overlap not allowed: ${overlap.join(",")}`);
+    }
+  }
+
+  private async ensureTimeframesForProfile(
+    asset: AssetLike,
+    base: MarketTimeframe,
+    asOf: Date,
+    profile: SetupProfile,
+  ) {
+    if (!this.deps.allowSync) {
+      return;
+    }
+    if (profile === "SWING") {
+      const coreTfs =
+        this.deps.timeframeConfig.getSwingCoreTimeframes?.() ??
+        this.deps.timeframeConfig.getProfileTimeframes(profile, asset);
+      const refinementTfs = this.deps.timeframeConfig.getSwingRefinementTimeframes?.() ?? [];
+      const allowed = [...coreTfs, ...refinementTfs];
+      const extras = allowed.filter((tf) => tf !== base);
+      await Promise.all(extras.map((tf) => this.syncCandlesForAsset(asset, tf, asOf)));
+      return;
+    }
+    const configured = this.deps.timeframeConfig.getTimeframesForAsset(asset);
+    const extras = configured.filter((tf) => tf !== base);
+    await Promise.all(extras.map((tf) => this.syncCandlesForAsset(asset, tf, asOf)));
+  }
+
   private async buildSetupForProfile(params: {
     asset: AssetLike;
     template: SetupDefinition;
@@ -363,7 +412,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     const levelCategory = resolveLevelCategory(template);
     const dataSourcePrimary = "unknown";
     const candle = await this.ensureLatestCandle(asset, baseTimeframe, evaluationDate);
-    await this.ensureSupplementalTimeframes(asset, baseTimeframe, evaluationDate);
+    await this.ensureTimeframesForProfile(asset, baseTimeframe, evaluationDate, profile);
     if (profile === "INTRADAY" && isIntradayCandleStale(candle ?? null, evaluationDate, INTRADAY_STALE_MINUTES)) {
       logger.warn("[LivePerceptionDataSource] skipping intraday setup: stale/missing candle", {
         symbol: asset.symbol,
@@ -388,15 +437,6 @@ class LivePerceptionDataSource implements PerceptionDataSource {
       );
     }
 
-    const computedLevels = computeLevelsForSetup({
-      direction: normalizedDirection,
-      referencePrice,
-      volatilityScore: 50,
-      category: levelCategory,
-      profile,
-      bandScale: profileConfig.levelsDefaults?.bandScale,
-    });
-
     const biasSnapshot = await this.deps.biasProvider.getBiasSnapshot({
       assetId: asset.id,
       date: evaluationDate,
@@ -404,19 +444,51 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     });
     const normalizedBiasScore = this.normalizeBiasScore(biasSnapshot?.biasScore);
 
-    const timeframes = this.deps.timeframeConfig.getProfileTimeframes(profile, asset);
-    const candlesByTimeframe = await this.loadCandlesForTimeframes(asset, timeframes, evaluationDate);
+    const coreTimeframes =
+      profile === "SWING" && this.deps.timeframeConfig.getSwingCoreTimeframes
+        ? this.deps.timeframeConfig.getSwingCoreTimeframes()
+        : this.deps.timeframeConfig.getProfileTimeframes(profile, asset);
+    const refinementTimeframes =
+      profile === "SWING" && this.deps.timeframeConfig.getSwingRefinementTimeframes
+        ? this.deps.timeframeConfig.getSwingRefinementTimeframes()
+        : [];
+    if (profile === "SWING") {
+      this.assertSwingTimeframes(coreTimeframes, refinementTimeframes);
+    }
+    const swingAwareTimeframes = profile === "SWING" ? [...coreTimeframes, ...refinementTimeframes] : coreTimeframes;
+
+    const coreCandlesByTimeframe = await this.loadCandlesForTimeframes(asset, coreTimeframes, evaluationDate);
+    const refinementCandlesByTimeframe =
+      refinementTimeframes.length > 0
+        ? await this.loadCandlesForTimeframes(asset, refinementTimeframes, evaluationDate)
+        : ({} as Record<MarketTimeframe, CandleRow[]>);
+    const candlesByTimeframe = {
+      ...coreCandlesByTimeframe,
+      ...refinementCandlesByTimeframe,
+    };
+
+    const computedLevels = computeLevelsForSetup({
+      direction: normalizedDirection,
+      referencePrice,
+      volatilityScore: 50,
+      category: levelCategory,
+      profile,
+      bandScale: profileConfig.levelsDefaults?.bandScale,
+      refinement4H: refinementTimeframes.includes("4H")
+        ? { candles: refinementCandlesByTimeframe["4H"] ?? [] }
+        : undefined,
+    });
 
     const metrics = await buildMarketMetrics({
       candlesByTimeframe,
       referencePrice,
-      timeframes,
+      timeframes: coreTimeframes,
       now: evaluationDate,
       profile,
     });
     const orderflow = await buildOrderflowMetrics({
       candlesByTimeframe,
-      timeframes,
+      timeframes: swingAwareTimeframes,
       trendScore: metrics.trendScore,
       biasScore: normalizedBiasScore,
       assetClass: asset.assetClass ?? null,
@@ -582,15 +654,6 @@ class LivePerceptionDataSource implements PerceptionDataSource {
       );
     }
     return candle;
-  }
-
-  private async ensureSupplementalTimeframes(asset: AssetLike, base: MarketTimeframe, asOf: Date) {
-    if (!this.deps.allowSync) {
-      return;
-    }
-    const configured = this.deps.timeframeConfig.getTimeframesForAsset(asset);
-    const extras = configured.filter((tf) => tf !== base);
-    await Promise.all(extras.map((tf) => this.syncCandlesForAsset(asset, tf, asOf)));
   }
 
   private async buildSentimentMetricsForAsset(

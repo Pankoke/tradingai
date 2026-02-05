@@ -70,8 +70,10 @@ curl http://localhost:3000/api/health/perception
 - Mock-Modus ohne Effekt → `NEXT_PUBLIC_PERCEPTION_DATA_MODE` auf `"mock"` setzen, Badge im Panel sichtbar?
 
 ## Swing-spezifische Confidence-Regeln
-- Swing (4H/1D) toleriert Price-Drift bis ±8 %; erst darüber erfolgt eine graduelle Confidence-Reduktion.
+- Swing-Core nutzt 1D/1W als autoritative Timeframes; 4H ist ein optionales Refinement-Signal (Timing/Texture), nie Fallback.
+- Swing toleriert Price-Drift bis ±8 % (Core 1D/1W); erst darüber erfolgt eine graduelle Confidence-Reduktion.
 - STALE-Markierungen bleiben als Reason sichtbar, beeinflussen aber die Swing-Confidence nicht (keine Strafpunkte).
+- 4H-Refinement fehlt/ist stale → neutral (kein Block, keine Strafpunkte), nur Debug/Reason.
 - Intraday bleibt unverändert (Drift-Gate 5 %, Stale-Penalty aktiv).
 
 ## Swing vs. Intraday – Orderflow Handling

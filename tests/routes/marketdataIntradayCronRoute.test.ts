@@ -20,6 +20,9 @@ vi.mock("@/src/server/repositories/assetRepository", () => ({
 vi.mock("@/src/server/marketData/timeframeConfig", () => ({
   getTimeframesForAsset: (...args: unknown[]) => mockGetTimeframesForAsset(...args),
   getProfileTimeframes: () => ["1D", "1W"],
+  getSwingCoreTimeframes: () => ["1D", "1W"],
+  getSwingRefinementTimeframes: () => ["4H"],
+  getAllowedTimeframesForProfile: () => ["1D", "1W"],
 }));
 
 vi.mock("@/src/lib/config/candleTimeframes", () => ({

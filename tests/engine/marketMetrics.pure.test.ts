@@ -31,24 +31,41 @@ describe("buildMarketMetrics", () => {
     const daily: CandleLike[] = [
       { timestamp: new Date("2024-01-01T00:00:00Z"), open: 100, high: 110, low: 95, close: 105 },
     ];
-    const fourHour: CandleLike[] = [
-      { timestamp: new Date("2024-01-01T20:00:00Z"), open: 102, high: 107, low: 101, close: 106 },
-    ];
-    const fifteen: CandleLike[] = [
-      { timestamp: new Date("2024-01-01T23:45:00Z"), open: 105, high: 107, low: 104, close: 106 },
-    ];
 
     const metrics = await buildMarketMetrics({
-      candlesByTimeframe: { "1D": daily, "4H": fourHour, "15m": fifteen },
+      candlesByTimeframe: { "1D": daily, "4H": [{ ...daily[0], timeframe: "4H" } as CandleLike] },
       referencePrice: 100,
-      timeframes: ["1D", "4H", "15m"],
+      timeframes: ["1D", "4H"],
       now: asOf,
       profile: "SWING",
     });
 
-    expect(metrics.priceDriftPct).toBeCloseTo(6, 1);
+    expect(metrics.priceDriftPct).toBeCloseTo(5, 1);
     expect(metrics.isStale).toBe(false);
     expect(metrics.reasons.length).toBe(0);
+  });
+
+  it("ignores intraday inputs for swing profile", async () => {
+    const asOf = new Date("2024-01-02T00:00:00Z");
+    const daily: CandleLike[] = [
+      { timestamp: new Date("2024-01-01T00:00:00Z"), open: 100, high: 110, low: 95, close: 101 },
+    ];
+    const hourly: CandleLike[] = [
+      { timestamp: new Date("2024-01-01T23:00:00Z"), open: 130, high: 135, low: 129, close: 134 },
+    ];
+
+    const metrics = await buildMarketMetrics({
+      candlesByTimeframe: { "1D": daily, "1H": hourly, "15m": hourly },
+      referencePrice: 100,
+      timeframes: ["1D", "1H", "15m"],
+      now: asOf,
+      profile: "SWING",
+    });
+
+    expect(metrics.lastPrice).toBeCloseTo(101);
+    expect(metrics.priceDriftPct).toBeCloseTo(1, 1);
+    expect(metrics.isStale).toBe(false);
+    expect(metrics.reasons.some((r) => r.includes("1H"))).toBe(false);
   });
 
   it("keeps intraday drift >5% as a stale reason", async () => {

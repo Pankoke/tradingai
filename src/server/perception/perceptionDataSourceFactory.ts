@@ -3,7 +3,14 @@ import type { SetupProfile } from "@/src/lib/config/setupProfile";
 import { getContainer } from "@/src/server/container";
 import { DbBiasProvider } from "@/src/server/providers/biasProvider";
 import { getActiveAssets } from "@/src/server/repositories/assetRepository";
-import { getProfileTimeframes, getTimeframesForAsset, TIMEFRAME_SYNC_WINDOWS } from "@/src/server/marketData/timeframeConfig";
+import {
+  getAllowedTimeframesForProfile,
+  getProfileTimeframes,
+  getSwingCoreTimeframes,
+  getSwingRefinementTimeframes,
+  getTimeframesForAsset,
+  TIMEFRAME_SYNC_WINDOWS,
+} from "@/src/server/marketData/timeframeConfig";
 import { resolveProviderSymbolForSource } from "@/src/server/marketData/providerDisplay";
 import type { MarketDataSource } from "@/src/server/marketData/MarketDataProvider";
 import { syncDailyCandlesForAsset } from "@/src/features/marketData/syncDailyCandles";
@@ -25,6 +32,9 @@ export function createPerceptionDataSourceFromContainer(config?: {
       getProfileTimeframes,
       getTimeframesForAsset,
       TIMEFRAME_SYNC_WINDOWS,
+      getSwingCoreTimeframes,
+      getSwingRefinementTimeframes,
+      getAllowedTimeframesForProfile,
     },
     resolveProviderSymbol: (asset, source) =>
       resolveProviderSymbolForSource(asset as never, source as MarketDataSource),

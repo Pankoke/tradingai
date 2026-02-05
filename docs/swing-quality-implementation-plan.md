@@ -2,7 +2,7 @@
 Stand: 2026-02-05 (Step 0, nur Dokumentation)
 
 ## Scope & Constraints
-- Fokus: Swing 4H/1D Pipeline End-to-End (Marketdata → Outcomes) auf Basis bestehender Artefakte.
+- Fokus: Swing Core (1D/1W) + optionales 4H-Refinement End-to-End (Marketdata → Outcomes) auf Basis bestehender Artefakte.
 - Keine neuen Assets oder Backtest-Runs; nur Lesen/Auswertung vorhandener Daten.
 - Shorts erlaubt; TypeScript-Änderungen später, strikt typisiert; heute nur Docs.
 - Messbasis: vorhandene Reports/Artefakte, keine neuen Berechnungen.
@@ -42,6 +42,8 @@ Weitere Baselines (Referenzen, keine neuen Zahlen):
 | SQ-009 | Docs-Sync Schwellen/Regeln aktualisieren | `docs/setup-generation-audit.md`, `docs/perception-pipeline.md`, `docs/decisions-v1.md`, `docs/outcomes-audit.md`, `docs/model-a-forward-outcomes.md`, `docs/cron-schedules.md` | Low | ↑Clarity (indirekt ↓Noise) | Documentation diff; cross-check against code | DONE |
 | SQ-011 | NoiseRate Baseline ableiten | Docs | Low | Datenlücke schließen / dokumentieren | Suche nach Decision-Distribution-Artefakt; falls nicht vorhanden, Dokumentation des Gaps | DONE |
 | SQ-010 | Tests ergänzen: Playbook-Gates, Event-Window, Volatilität, Drift, Orderflow-neutral, Outcomes ambiguous | `src/lib/engine/__tests__/…`, API-Tests falls vorhanden | High (Test debt) | Stabilisiert KPIs, misst Noise/TradeRate/Winrate | Vitest suites for engine + API evaluate route | TODO |
+| SQ-000 | Docs: Swing-Core (1D/1W) vs. 4H-Refinement klarstellen (kein 15m/1H im Swing) | `docs/perception-pipeline.md`, `docs/setup-generation-audit.md` | Low | ↑Clarity, kein KPI-Effekt | Docs review only | DONE |
+| SQ-012 | Guardrails: Swing-Core vs. Refinement Timeframes, keine 15m/1H im Swing-Core | `src/lib/engine/perceptionDataSource.ts`, `src/server/perception/perceptionDataSourceFactory.ts`, `tests/engine/perceptionDataSource.swingGuard.test.ts` | Low | Governance/Safety, verhindert stille Leaks | Unit: swing guard test, full test suite | DONE |
 
 ## Arbeitsmodus (Slice-Regeln)
 - Jede Implementations-Stufe = ein kleiner Codex-Slice: minimaler Scope, Tests grün (`npm test`, `npm run build`), Plan/Doc-Status aktualisieren.
@@ -62,3 +64,5 @@ Weitere Baselines (Referenzen, keine neuen Zahlen):
 | 2026-02-05 | SQ-011 | NoiseRate Baseline: nicht ableitbar aus vorhandenen Artefakten (keine Swing-Decision-Distribution); Gap dokumentiert | Transparenz über fehlende Kennzahl, nächster Schritt ist Artefakt/Export mit Decision-Verteilung | docs/swing-quality-implementation-plan.md (Baseline/Changelog) |
 | 2026-02-05 | SQ-005 | Swing SignalQuality: Divergenz erst ab Δ≥25 + Konflikt, Low-Confidence max. Downgrade auf B; Intraday unverändert | Weniger aggressive Abwertungen bei legitimen Swing-Signalen, reduziert False Negatives | docs/swing-quality-implementation-plan.md (Status/Changelog), docs/setup-generation-audit.md |
 | 2026-02-05 | SQ-004 | Swing Confidence: Price-Drift-Threshold auf 8 % angehoben; STALE-Daten neutralisiert (keine Confidence-Strafe); intraday unverändert | Swing-Volatilität realistischer abbilden, unnötige Abwertungen vermeiden | docs/swing-quality-implementation-plan.md (Status/Changelog), docs/perception-pipeline.md |
+| 2026-02-05 | SQ-000 | Docs-Sync Timeframes: Swing-Core 1D/1W, 4H nur Refinement (soft, neutral wenn fehlend/stale), kein 15m/1H im Swing | Dokumentation an Code-Stand (setupProfile/timeframeConfig) angepasst, Verwechslungen vermieden | docs/perception-pipeline.md, docs/setup-generation-audit.md, docs/swing-quality-implementation-plan.md |
+| 2026-02-05 | SQ-012 | Guardrails Swing vs. Intraday: Core=1D/1W strikt, 4H nur Refinement; 15m/1H werden für Swing fail-fast blockiert | Verhindert stille Timeframe-Leaks in PerceptionDataSource; macht Fehlkonfiguration sichtbar | docs/swing-quality-implementation-plan.md (Status/Changelog); code guard + tests |

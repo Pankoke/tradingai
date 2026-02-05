@@ -26,11 +26,21 @@ vi.mock("@/src/server/marketData/timeframeConfig", () => ({
     "15m": 7,
   },
   getTimeframesForAsset: vi.fn(() => ["1D", "1W", "4H", "1H"]),
+  getAllowedTimeframesForProfile: vi.fn((profile: string, options?: { includeRefinement?: boolean }) => {
+    if (profile === "SWING") {
+      return options?.includeRefinement ? ["1D", "1W", "4H"] : ["1D", "1W"];
+    }
+    if (profile === "INTRADAY") return ["1H", "4H"];
+    if (profile === "POSITION") return ["1W"];
+    return ["1D", "1W"];
+  }),
   getProfileTimeframes: vi.fn((profile: string) => {
     if (profile === "INTRADAY") return ["1H", "4H"];
     if (profile === "POSITION") return ["1W"];
     return ["1D", "1W"];
   }),
+  getSwingCoreTimeframes: vi.fn(() => ["1D", "1W"]),
+  getSwingRefinementTimeframes: vi.fn(() => ["4H"]),
 }));
 
 vi.mock("@/src/lib/engine/marketMetrics", () => ({

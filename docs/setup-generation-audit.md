@@ -57,6 +57,7 @@
 - Reference Price: aus Perception-Engine (nicht in dieser Datei ersichtlich, aber als `referencePrice` an computeLevelsForSetup übergeben).
 - EventModifier: classification + primaryEvent Minuten bis Event.
 - Orderflow Flags/Reasons: negativ, Konflikte etc.
+- Timeframes: Swing-Core 1D/1W (autoritative Basis für Direction/Bias/Gates); optionales 4H-Refinement nur als soft/timing Layer, kein Fallback. Intraday bleibt 1H/4H (keine 15m/1H Nutzung im Swing-Profil).
 
 ## Default Swing Gates (evaluateDefault)
 - Bias >= 65 und Trend >= 40 → Grade B.
