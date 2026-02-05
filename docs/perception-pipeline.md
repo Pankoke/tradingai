@@ -73,3 +73,7 @@ curl http://localhost:3000/api/health/perception
 - Swing (4H/1D) toleriert Price-Drift bis ±8 %; erst darüber erfolgt eine graduelle Confidence-Reduktion.
 - STALE-Markierungen bleiben als Reason sichtbar, beeinflussen aber die Swing-Confidence nicht (keine Strafpunkte).
 - Intraday bleibt unverändert (Drift-Gate 5 %, Stale-Penalty aktiv).
+
+## Swing vs. Intraday – Orderflow Handling
+- Swing: fehlender oder als stale markierter Intraday-Orderflow wird neutral gesetzt (Score 50, keine negativen Flags); Konflikt-Flags wirken nur als Soft-Negative.
+- Intraday: unverändert, fehlende/stale Intraday-Daten können weiterhin zu Skips/Negativbewertungen führen (siehe Engine-Tests).

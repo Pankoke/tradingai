@@ -36,6 +36,45 @@ const ENGINE_VERSION = process.env.SETUP_ENGINE_VERSION ?? "unknown";
 const GUARDRAIL_RATIO_MIN = 0.8;
 const GUARDRAIL_RATIO_MAX = 1.2;
 
+type Direction = "Long" | "Short";
+
+export function resolveSameCandleHit(params: {
+  direction: Direction;
+  candle: { open: number; high: number; low: number; close: number };
+  tpLevel: number;
+  slLevel: number;
+}): "hit_tp" | "hit_sl" | null {
+  const { direction, candle, tpLevel, slLevel } = params;
+  const { open, high, low, close } = candle;
+
+  if (direction === "Long") {
+    if (open <= slLevel && open >= tpLevel) return null;
+    if (open <= slLevel) return "hit_sl";
+    if (open >= tpLevel) return "hit_tp";
+    const tpHit = high >= tpLevel;
+    const slHit = low <= slLevel;
+    if (tpHit && slHit) {
+      if (close > open) return "hit_tp";
+      if (close < open) return "hit_sl";
+      return null;
+    }
+    return null;
+  }
+
+  // Short
+  if (open >= slLevel && open <= tpLevel) return null;
+  if (open >= slLevel) return "hit_sl";
+  if (open <= tpLevel) return "hit_tp";
+  const tpHitShort = low <= tpLevel;
+  const slHitShort = high >= slLevel;
+  if (tpHitShort && slHitShort) {
+    if (close < open) return "hit_tp";
+    if (close > open) return "hit_sl";
+    return null;
+  }
+  return null;
+}
+
 export function parseZone(value?: string | null): { min: number | null; max: number | null } {
   if (!value) {
     return { min: null, max: null };
@@ -135,6 +174,26 @@ export function computeSwingOutcome(params: {
         : high >= slValue;
 
     if (tpHit && slHit) {
+      const resolution = resolveSameCandleHit({
+        direction: params.setup.direction === "Long" ? "Long" : "Short",
+        candle: {
+          open: Number(candle.open),
+          high,
+          low,
+          close: Number(candle.close),
+        },
+        tpLevel: tpValue,
+        slLevel: slValue,
+      });
+      if (resolution === "hit_tp" || resolution === "hit_sl") {
+        return {
+          outcomeStatus: resolution,
+          outcomeAt: candle.timestamp,
+          barsToOutcome: i + 1,
+          reason: "tp_and_sl_same_candle_resolved",
+          usedCandles,
+        };
+      }
       return {
         outcomeStatus: "ambiguous",
         outcomeAt: candle.timestamp,

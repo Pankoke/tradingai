@@ -14,6 +14,7 @@
 - Snapshots haben `version` (SNAPSHOT_VERSION).
 - Outcomes speichern `setupEngineVersion` (Snapshot-Version oder `SETUP_ENGINE_VERSION` Fallback).
 - `gradeDebugReason` tr\u00e4gt `engine=<version>`.
+- Single Source of Truth: Outcomes liegen in der DB (`setup_outcomes`); Artefakte sind nur historische Snapshots (siehe `docs/single-source-of-truth.md`).
 
 ## Runner / Commands
 - Outcome-Runner nutzt Policy (Stichtag) und setzt `setupEngineVersion` beim Upsert.
@@ -27,6 +28,7 @@
 ## Interpretation
 - HitRate = TP/(TP+SL), ExpiryRate = Expired/Closed, Coverage = Closed/Total.
 - `invalid` bedeutet Preis-Skalen-Mismatch oder Dateninkonsistenz \u2192 wird aus Kennzahlen ausgeschlossen.
+- Ambiguous bei TP&SL in derselben Candle: konservative Gap-/Body-Regel versucht Reihenfolge; nur falls unentscheidbar bleibt `ambiguous` (Details in outcomes-audit).
 
 ## Nicht-Ziele
 - Keine automatische L\u00f6schung alter Outcomes.

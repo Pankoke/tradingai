@@ -5,11 +5,11 @@
    - Ruft `buildPerceptionSnapshot` auf (Perception-Engine).
    - Snapshot-Metadaten: `version` = `SNAPSHOT_VERSION` (`v1.0.0`), `dataMode`, `snapshotTime`, `label`.
    - Active Assets werden geladen (`getActiveAssets`), Symbol→assetId Mapping wird verwendet.
-   - Ring-Berechnungen: `computeRingsForSetup`, `computeSetupScore`, `computeSetupConfidence`, `computeSignalQuality`, `buildRingAiSummaryForSetup`.
-   - Levels: `computeLevelsForSetup` (siehe unten) → `entryZone`, `stopLoss`, `takeProfit`, `riskReward`, Debug.
-   - Playbook: `resolvePlaybookWithReason` (abgeleitet aus asset.id/symbol/name + profile). Ergebnis `setupPlaybookId`.
-   - Grade: `evaluateSetup` per Playbook (z. B. Gold Swing v0.2).
-   - Persistenz: Snapshot (`perception_snapshots`) + Items (`perception_snapshot_items`).
+- Ring-Berechnungen: `computeRingsForSetup`, `computeSetupScore`, `computeSetupConfidence`, `computeSignalQuality`, `buildRingAiSummaryForSetup`.
+- Levels: `computeLevelsForSetup` (siehe unten) → `entryZone`, `stopLoss`, `takeProfit`, `riskReward`, Debug.
+- Playbook: `resolvePlaybookWithReason` (abgeleitet aus asset.id/symbol/name + profile). Ergebnis `setupPlaybookId`.
+- Grade: `evaluateSetup` per Playbook (z. B. Gold Swing v0.2).
+- Persistenz: Snapshot (`perception_snapshots`) + Items (`perception_snapshot_items`).
 
 2) **Setup-Level-Berechnung** (`src/lib/engine/levels.ts`)
    - Inputs:
@@ -66,6 +66,13 @@
 - Regime muss TREND sein; RANGE bleibt WATCH (keine harten Blocks).
 - Volatilität: `high` → NO_TRADE (hard); `medium` → soft (kein Hard-KO, ggf. Watch/Downgrade).
 - Schwellen: Bias ≥ 65, Trend ≥ 55, SignalQuality ≥ 50, Confirmation (orderflow) ≥ 50.
+- SignalQuality (Swing-spezifisch):
+  - Trend↔Bias Divergenz wirkt erst ab Δ ≥ 25 UND nur, wenn ein Konflikt-Indikator vorliegt (z. B. orderflow_*_conflict Flag oder vorhandener Konflikt-Reason).
+  - Reine Divergenz ohne Konflikt erzeugt kein hartes Downgrade (bleibt max. B).
+  - Niedrige Confidence (<≈40–45) downgrades Swing höchstens auf B; Intraday bleibt unverändert (alte Regeln).
+- Orderflow (Swing):
+  - fehlend/stale Intraday-Orderflow → neutral (Score 50, keine negativen Flags), Konflikt-Flags nur Soft-Negative.
+  - Intraday-Profil bleibt unverändert (fehlende Daten können dort weiter negativ wirken/skippen).
 
 ## Offene Risiken/Unklarheiten
 - Reference Price Herkunft: in buildSetups aus Perception Engine, Quelle (welcher Feed) nicht direkt dokumentiert.

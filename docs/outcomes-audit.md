@@ -21,7 +21,10 @@
    - Per Candle (long/short jeweils High/Low-Check):  
      - `tpHit`: Long `high >= tp`, Short `low <= tp`  
      - `slHit`: Long `low <= sl`, Short `high >= sl`  
-     - Beide gleichzeitig → **ambiguous**, Reason `tp_and_sl_same_candle`, `outcomeAt = candle.timestamp`, `barsToOutcome = i+1`. Keine Reihenfolge-Heuristik.  
+     - Beide gleichzeitig → konservative Auflösung:  
+       - Gap entscheidet zuerst (Long: open ≤ SL ⇒ SL, open ≥ TP ⇒ TP; Short gespiegelt).  
+       - Falls Gap nicht entscheidet, Candle-Richtung entscheidet (bullish: Long→TP / Short→SL; bearish: Long→SL / Short→TP; Doji bleibt ambiguous).  
+       - Keine Entscheidung → **ambiguous** mit Reason `tp_and_sl_same_candle`.  
      - Nur TP → **hit_tp**; nur SL → **hit_sl** (gleiche Zeitmarkierung).  
    - Nach Fensterende ohne Treffer → **expired** (outcomeAt null, reason null).
 
@@ -34,7 +37,7 @@
    - Engine-Version wird pro Outcome gespeichert (`setupEngineVersion`) und im Debug-Reason (`engine=<...>`) mitgeführt, damit Versionen vergleichbar bleiben.
 
 ## Mögliche Fehlerquellen / Risiken
-- **Ambiguous Candle**: TP & SL im selben Bar → immer `ambiguous`, keine Reihenfolge nach Open/Close.  
+- **Ambiguous Candle**: TP & SL im selben Bar → jetzt deterministische Heuristik (Gap > Body-Richtung), sonst weiter `ambiguous`. Keine Intrabar-Fantasie/Sequenzannahmen.  
 - **Off-by-one Start**: Setup-Candle wird ausgeschlossen (`snapshotTime + 1ms`). Ist `snapshotTime` exakt 00:00 UTC, wird die nächste 1D-Candle genutzt.  
 - **Candle-Fenster**: Es werden nur die ersten `windowBars` Candles nach Sortierung genutzt. Späte Candles (nach >windowBars) werden ignoriert.  
 - **Timezone**: Candle-Zeiten werden als `Date` (mit TZ) verarbeitet; Abgleich erfolgt auf UTC-Timestamps. Falsche TZ der Datenquelle könnte Verschiebungen bewirken.  
@@ -55,6 +58,7 @@
   - Outcomes: `src/server/repositories/setupOutcomeRepository.ts`
   - Candles: `src/server/repositories/candleRepository.ts`
 - Schema: `src/server/db/schema/setupOutcomes.ts`
+- SoT: Outcomes werden ausschließlich aus der DB gelesen/geschrieben (siehe `docs/single-source-of-truth.md`).
 
 ## Candle-Reihenfolge & Policy (Kurzfassung)
 - Sortierung: aufsteigend nach `timestamp`.

@@ -57,7 +57,7 @@ describe("computeSwingOutcome", () => {
     expect(result.outcomeStatus).toBe("hit_sl");
   });
 
-  it("marks ambiguous when tp and sl touched in same candle (long)", () => {
+  it("resolves tp+sl same candle via gap/range (long)", () => {
     const result = computeSwingOutcome({
       setup: baseSetup,
       candles: [
@@ -67,8 +67,8 @@ describe("computeSwingOutcome", () => {
       ],
       windowBars: 3,
     });
-    expect(result.outcomeStatus).toBe("ambiguous");
-    expect(result.reason).toBe("tp_and_sl_same_candle");
+    expect(result.outcomeStatus).toBe("hit_sl");
+    expect(result.reason).toBe("tp_and_sl_same_candle_resolved");
   });
 
   it("expires when window elapses without touch", () => {
