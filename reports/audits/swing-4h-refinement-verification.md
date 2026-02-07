@@ -1,9 +1,59 @@
-# Swing Snapshots Metrics (read-only)
+# Swing 4H Refinement Verification (read-only)
 
-Quelle: perception_snapshots (DB), Zeitraum: letzte 60 Tage (falls vorhanden)
-Abfragezeit: 2026-02-07T16:22:03.496Z
+Quelle: perception_snapshots (DB), Zeitraum: letzte 60 Tage
+Abfragezeit: 2026-02-07T16:22:03.497Z
 
-## Pro Asset
+## Kennzahlen (gesamt)
+- Setups total: 953
+- refinementUsed: 0
+- refinementApplied: 0 (0%)
+- boundsMode ATR1D/PCT: 0/0
+### Alerts
+- refinementAppliedRate < 5%: Not effective yet (moegliche Ursachen: fehlende 4H-Candles, Freshness-Gate, Telemetry nicht vorhanden, ATR-Bounds zu strikt).
+
+## Decision Coupling Check
+- dax: applied(0) [TRADE: 0, WATCH: 0, NO_TRADE: 0, BLOCKED: 0] | notApplied(59) [TRADE: 7 (11.9%), WATCH: 2 (3.4%), NO_TRADE: 50 (84.7%), BLOCKED: 0 (0%)]
+- dow: applied(0) [TRADE: 0, WATCH: 0, NO_TRADE: 0, BLOCKED: 0] | notApplied(58) [TRADE: 4 (6.9%), WATCH: 11 (19%), NO_TRADE: 43 (74.1%), BLOCKED: 0 (0%)]
+- eth: applied(0) [TRADE: 0, WATCH: 0, NO_TRADE: 0, BLOCKED: 0] | notApplied(64) [TRADE: 0 (0%), WATCH: 43 (67.2%), NO_TRADE: 21 (32.8%), BLOCKED: 0 (0%)]
+- eurjpy: applied(0) [TRADE: 0, WATCH: 0, NO_TRADE: 0, BLOCKED: 0] | notApplied(61) [TRADE: 6 (9.8%), WATCH: 34 (55.7%), NO_TRADE: 21 (34.4%), BLOCKED: 0 (0%)]
+- eurusd: applied(0) [TRADE: 0, WATCH: 0, NO_TRADE: 0, BLOCKED: 0] | notApplied(61) [TRADE: 0 (0%), WATCH: 40 (65.6%), NO_TRADE: 21 (34.4%), BLOCKED: 0 (0%)]
+- gbpusd: applied(0) [TRADE: 0, WATCH: 0, NO_TRADE: 0, BLOCKED: 0] | notApplied(61) [TRADE: 33 (54.1%), WATCH: 7 (11.5%), NO_TRADE: 21 (34.4%), BLOCKED: 0 (0%)]
+- gold: applied(0) [TRADE: 0, WATCH: 0, NO_TRADE: 0, BLOCKED: 0] | notApplied(61) [TRADE: 0 (0%), WATCH: 40 (65.6%), NO_TRADE: 21 (34.4%), BLOCKED: 0 (0%)]
+- ndx: applied(0) [TRADE: 0, WATCH: 0, NO_TRADE: 0, BLOCKED: 0] | notApplied(58) [TRADE: 0 (0%), WATCH: 10 (17.2%), NO_TRADE: 48 (82.8%), BLOCKED: 0 (0%)]
+- silver: applied(0) [TRADE: 0, WATCH: 0, NO_TRADE: 0, BLOCKED: 0] | notApplied(174) [TRADE: 78 (44.8%), WATCH: 0 (0%), NO_TRADE: 96 (55.2%), BLOCKED: 0 (0%)]
+- spx: applied(0) [TRADE: 0, WATCH: 0, NO_TRADE: 0, BLOCKED: 0] | notApplied(58) [TRADE: 2 (3.4%), WATCH: 12 (20.7%), NO_TRADE: 44 (75.9%), BLOCKED: 0 (0%)]
+- usdjpy: applied(0) [TRADE: 0, WATCH: 0, NO_TRADE: 0, BLOCKED: 0] | notApplied(61) [TRADE: 31 (50.8%), WATCH: 9 (14.8%), NO_TRADE: 21 (34.4%), BLOCKED: 0 (0%)]
+- wti: applied(0) [TRADE: 0, WATCH: 0, NO_TRADE: 0, BLOCKED: 0] | notApplied(177) [TRADE: 137 (77.4%), WATCH: 0 (0%), NO_TRADE: 40 (22.6%), BLOCKED: 0 (0%)]
+
+## Refinement Reasons Breakdown
+- dax: missing:59
+- dow: missing:58
+- eth: missing:64
+- eurjpy: missing:61
+- eurusd: missing:61
+- gbpusd: missing:61
+- gold: missing:61
+- ndx: missing:58
+- silver: missing:174
+- spx: missing:58
+- usdjpy: missing:61
+- wti: missing:177
+
+## Bounds Mode Breakdown
+- dax: ATR1D=0, PCT=0
+- dow: ATR1D=0, PCT=0
+- eth: ATR1D=0, PCT=0
+- eurjpy: ATR1D=0, PCT=0
+- eurusd: ATR1D=0, PCT=0
+- gbpusd: ATR1D=0, PCT=0
+- gold: ATR1D=0, PCT=0
+- ndx: ATR1D=0, PCT=0
+- silver: ATR1D=0, PCT=0
+- spx: ATR1D=0, PCT=0
+- usdjpy: ATR1D=0, PCT=0
+- wti: ATR1D=0, PCT=0
+
+## Per-Asset Tabelle
 | assetId | playbookId | TRADE | WATCH | NO_TRADE | BLOCKED | top 3 reasons | has4H | refinement applied/used | p50 entryDelta | p90 entryDelta | bounds ATR/PCT |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | dax | dax-swing-v0.1 | 11.9% (7) | 3.4% (2) | 84.7% (50) | 0% (0) | Regime range/chop (trend confirmation missing) (35); spx:WATCH_RANGE_CONSTRUCTIVE (35); Regime TREND (7) | no | 0/0 | n/a | n/a | 0/0 |
@@ -18,14 +68,3 @@ Abfragezeit: 2026-02-07T16:22:03.496Z
 | spx | spx-swing-v0.1 | 3.4% (2) | 20.7% (12) | 75.9% (44) | 0% (0) | Regime range/chop (trend confirmation missing) (30); spx:WATCH_RANGE_CONSTRUCTIVE (30); Alignment derived (index fallback LONG) (12) | no | 0/0 | n/a | n/a | 0/0 |
 | usdjpy | usdjpy-swing-v0.1 | 50.8% (31) | 14.8% (9) | 34.4% (21) | 0% (0) | Default alignment: bias & trend supportive (31); Derived alignment LONG; bias/trend below defaults (13); Alignment derived (LONG) from bias/trend (13) | no | 0/0 | n/a | n/a | 0/0 |
 | wti | energy-swing-v0.1 | 77.4% (137) | 0% (0) | 22.6% (40) | 0% (0) | Default alignment: bias & trend supportive (137); Alignment derived (LONG) from bias/trend (20); Derived alignment LONG; bias/trend below defaults (20) | no | 0/0 | n/a | n/a | 0/0 |
-
-## Zusammenfassung
-### Höchster WATCH-Anteil (Top 5)
-- eth: WATCH 67.2% (43)
-- eurusd: WATCH 65.6% (40)
-- gold: WATCH 65.6% (40)
-- eurjpy: WATCH 55.7% (34)
-- spx: WATCH 20.7% (12)
-
-### Top BLOCKED-Reasons
-- n/a

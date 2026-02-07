@@ -471,7 +471,7 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     const refinement4hCandles = refinementCandlesByTimeframe["4H"] ?? [];
     const latest4hTs = refinement4hCandles[0]?.timestamp instanceof Date ? refinement4hCandles[0].timestamp : null;
     const is4hFresh =
-      latest4hTs != null && Math.abs(evaluationDate.getTime() - latest4hTs.getTime()) <= 8 * 60 * 60 * 1000;
+      latest4hTs != null && Math.abs(evaluationDate.getTime() - latest4hTs.getTime()) <= 12 * 60 * 60 * 1000;
 
     const computedLevels = computeLevelsForSetup({
       direction: normalizedDirection,

@@ -45,6 +45,18 @@ describe("computeLevelsForSetup refinement (Swing)", () => {
     expect(missingRefinement.debug.refinementUsed).toBe(false);
     expect(missingRefinement.debug.levelsRefinementApplied).toBe(false);
     expect(missingRefinement.debug.levelsRefinementReason).toBe("missing");
+    expect(missingRefinement.debug.refinementAttempted).toBe(true);
+    expect(missingRefinement.debug.refinementAttemptReason).toBe("missing");
+  });
+
+  it("does not attempt refinement when no refinement input provided", () => {
+    const res = computeLevelsForSetup({
+      ...baseParams,
+      atr1dCandles: [make1DCandle(100)],
+      refinement4H: undefined,
+    });
+    expect(res.debug.refinementAttempted).toBe(false);
+    expect(res.debug.refinementSkippedReason).toBe("no_refinement_input");
   });
 
   it("applies refinement within ATR bounds when 4H range is higher", () => {
@@ -72,6 +84,8 @@ describe("computeLevelsForSetup refinement (Swing)", () => {
     expect(refined.debug.refinementUsed).toBe(true);
     expect(refined.debug.levelsRefinementApplied).toBe(true);
     expect(refined.debug.levelsRefinementReason).toBe("applied");
+    expect(refined.debug.refinementAttempted).toBe(true);
+    expect(refined.debug.refinementAttemptReason).toBe("applied");
     expect(refined.debug.refinementEffect?.bandPctMultiplier).toBeLessThanOrEqual(1.2);
     expect(refined.debug.refinementEffect?.boundsMode).toBe("ATR1D");
     expect(refinedBand).toBeGreaterThan(coreBand);
@@ -104,5 +118,7 @@ describe("computeLevelsForSetup refinement (Swing)", () => {
       refinement4H: { candles: [make4HCandle(110, 100)] },
     });
     expect(withRefinement.debug.refinementUsed).toBe(false);
+    expect(withRefinement.debug.refinementAttempted).toBe(false);
+    expect(withRefinement.debug.refinementSkippedReason).toBe("no_refinement_input");
   });
 });

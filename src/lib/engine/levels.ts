@@ -370,6 +370,7 @@ export function computeLevelsForSetup(params: {
   const stopDelta = Math.abs(candidate.stopLossValue - base.stopLossValue);
   const tpDelta = Math.abs(candidate.takeProfitValue - base.takeProfitValue);
 
+  const refinementAttempted = params.profile === "SWING" && params.refinement4H !== undefined;
   const refinementApplied =
     refinementResult.used &&
     entryDelta <= entryCap &&
@@ -377,6 +378,7 @@ export function computeLevelsForSetup(params: {
     tpDelta <= tpCap;
 
   const fallbackReason = (() => {
+    if (!refinementAttempted) return "trigger_skipped";
     if (!refinementResult.used) return refinementResult.reason ?? "missing";
     if (!refinementApplied) return "bounds_exceeded";
     return "applied";
@@ -399,6 +401,9 @@ export function computeLevelsForSetup(params: {
     debug: {
       refinementUsed: refinementResult.used,
       refinementApplied,
+      refinementAttempted,
+      refinementAttemptReason: refinementAttempted ? refinementResult.reason ?? null : "no_refinement_input",
+      refinementSkippedReason: refinementAttempted ? null : "no_refinement_input",
       refinementSource: refinementResult.used ? "4H" : null,
       refinementReason: fallbackReason,
       levelsRefinementApplied: refinementApplied,
