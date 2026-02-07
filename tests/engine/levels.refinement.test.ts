@@ -46,7 +46,8 @@ describe("computeLevelsForSetup refinement (Swing)", () => {
     expect(missingRefinement.debug.levelsRefinementApplied).toBe(false);
     expect(missingRefinement.debug.levelsRefinementReason).toBe("missing");
     expect(missingRefinement.debug.refinementAttempted).toBe(true);
-    expect(missingRefinement.debug.refinementAttemptReason).toBe("missing");
+    expect(missingRefinement.debug.refinementAttemptReason).toBe("has_levels");
+    expect(missingRefinement.debug.refinementSkippedReason).toBe("missing");
   });
 
   it("does not attempt refinement when no refinement input provided", () => {
@@ -56,7 +57,7 @@ describe("computeLevelsForSetup refinement (Swing)", () => {
       refinement4H: undefined,
     });
     expect(res.debug.refinementAttempted).toBe(false);
-    expect(res.debug.refinementSkippedReason).toBe("no_refinement_input");
+    expect(res.debug.refinementSkippedReason).toBe("trigger_skipped");
   });
 
   it("applies refinement within ATR bounds when 4H range is higher", () => {
@@ -85,7 +86,8 @@ describe("computeLevelsForSetup refinement (Swing)", () => {
     expect(refined.debug.levelsRefinementApplied).toBe(true);
     expect(refined.debug.levelsRefinementReason).toBe("applied");
     expect(refined.debug.refinementAttempted).toBe(true);
-    expect(refined.debug.refinementAttemptReason).toBe("applied");
+    expect(refined.debug.refinementAttemptReason).toBe("has_levels");
+    expect(refined.debug.refinementSkippedReason).toBeNull();
     expect(refined.debug.refinementEffect?.bandPctMultiplier).toBeLessThanOrEqual(1.2);
     expect(refined.debug.refinementEffect?.boundsMode).toBe("ATR1D");
     expect(refinedBand).toBeGreaterThan(coreBand);
@@ -119,6 +121,6 @@ describe("computeLevelsForSetup refinement (Swing)", () => {
     });
     expect(withRefinement.debug.refinementUsed).toBe(false);
     expect(withRefinement.debug.refinementAttempted).toBe(false);
-    expect(withRefinement.debug.refinementSkippedReason).toBe("no_refinement_input");
+    expect(withRefinement.debug.refinementSkippedReason).toBe("trigger_skipped");
   });
 });

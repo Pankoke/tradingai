@@ -238,6 +238,20 @@ function renderRefinementReasons(aggs: AssetAgg[]): string {
     .join("\n");
 }
 
+function renderTopRefinementReasons(aggs: AssetAgg[]): string {
+  const totals: Record<string, number> = {};
+  for (const agg of aggs) {
+    for (const [reason, count] of Object.entries(agg.refinementReasons)) {
+      totals[reason] = (totals[reason] ?? 0) + count;
+    }
+  }
+  return Object.entries(totals)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([reason, count]) => `- ${reason}: ${count}`)
+    .join("\n");
+}
+
 function renderBoundsMode(aggs: AssetAgg[]): string {
   return aggs
     .map((a) => `- ${a.assetId}: ATR1D=${a.boundsModeCount.ATR1D}, PCT=${a.boundsModeCount.PCT}`)
@@ -333,6 +347,7 @@ async function main() {
     `- boundsMode ATR1D/PCT: ${globalBoundsAtr}/${globalBoundsPct}\n` +
     `${alerts.length ? "### Alerts\n" + alerts.join("\n") + "\n\n" : ""}` +
     `## Decision Coupling Check\n${renderDecisionCoupling(aggs)}\n\n` +
+    `## Top Skipped/Failed Reasons\n${renderTopRefinementReasons(aggs) || "- n/a"}\n\n` +
     `## Refinement Reasons Breakdown\n${renderRefinementReasons(aggs)}\n\n` +
     `## Bounds Mode Breakdown\n${renderBoundsMode(aggs)}\n\n` +
     `## Per-Asset Tabelle\n${table}\n`;

@@ -18,6 +18,7 @@ import {
   type OrderflowMode,
 } from "@/src/lib/engine/orderflowMetrics";
 import { selectCandleWindow } from "@/src/domain/market-data/services/selectCandleWindow";
+import { aggregateCandles } from "@/src/domain/market-data/services/aggregateCandles";
 import { getPerceptionDataMode } from "@/src/lib/config/perceptionDataMode";
 import { buildSentimentMetrics, type SentimentMetrics } from "@/src/lib/engine/sentimentMetrics";
 import {
@@ -459,9 +460,11 @@ class LivePerceptionDataSource implements PerceptionDataSource {
 
     const coreCandlesByTimeframe = await this.loadCandlesForTimeframes(asset, coreTimeframes, evaluationDate);
     const refinementCandlesByTimeframe =
-      refinementTimeframes.length > 0
-        ? await this.loadCandlesForTimeframes(asset, refinementTimeframes, evaluationDate)
-        : ({} as Record<MarketTimeframe, CandleRow[]>);
+      profile === "SWING" && refinementTimeframes.length > 0
+        ? await this.loadSwingRefinementCandles(asset, refinementTimeframes, evaluationDate)
+        : refinementTimeframes.length > 0
+          ? await this.loadCandlesForTimeframes(asset, refinementTimeframes, evaluationDate)
+          : ({} as Record<MarketTimeframe, CandleRow[]>);
     const candlesByTimeframe = {
       ...coreCandlesByTimeframe,
       ...refinementCandlesByTimeframe,
@@ -844,6 +847,46 @@ class LivePerceptionDataSource implements PerceptionDataSource {
     );
 
     return result;
+  }
+
+  private async loadSwingRefinementCandles(
+    asset: AssetLike,
+    timeframes: MarketTimeframe[],
+    asOf: Date,
+  ): Promise<Record<MarketTimeframe, CandleRow[]>> {
+    const candles = await this.loadCandlesForTimeframes(asset, timeframes, asOf);
+    if (!timeframes.includes("4H")) {
+      return candles;
+    }
+    const current4h = candles["4H"] ?? [];
+    if (current4h.length > 0) {
+      return candles;
+    }
+
+    const oneHourRows = await this.getCandlesWindow({
+      assetId: asset.id,
+      timeframe: "1H",
+      asOf,
+      lookback: (CANDLE_LOOKBACK_COUNT["4H"] ?? 90) * 4,
+    });
+    if (!oneHourRows.length) {
+      return candles;
+    }
+
+    const derived4h = aggregateCandles({
+      candles: oneHourRows,
+      sourceTimeframe: "1H",
+      targetTimeframe: "4H",
+      asOf,
+    }) as CandleRow[];
+
+    candles["4H"] = selectCandleWindow({
+      candles: derived4h,
+      asOf,
+      lookbackCount: CANDLE_LOOKBACK_COUNT["4H"] ?? 90,
+    }) as CandleRow[];
+
+    return candles;
   }
 
   private async getCandlesWindow(params: {

@@ -25,12 +25,56 @@ const fourHourFresh: CandleRow = {
   timestamp: new Date("2026-02-01T08:00:00Z"),
 };
 
-function buildDeps(options: { include4h: boolean }): PerceptionDataSourceDeps {
+const oneHourCandles: CandleRow[] = [
+  {
+    ...dailyCandle,
+    id: "GC-1H-1",
+    timeframe: "1H",
+    timestamp: new Date("2026-02-01T09:00:00Z"),
+    open: 103.8,
+    high: 104.3,
+    low: 103.5,
+    close: 104.0,
+  },
+  {
+    ...dailyCandle,
+    id: "GC-1H-2",
+    timeframe: "1H",
+    timestamp: new Date("2026-02-01T10:00:00Z"),
+    open: 104.0,
+    high: 104.4,
+    low: 103.7,
+    close: 104.1,
+  },
+  {
+    ...dailyCandle,
+    id: "GC-1H-3",
+    timeframe: "1H",
+    timestamp: new Date("2026-02-01T11:00:00Z"),
+    open: 104.1,
+    high: 104.5,
+    low: 103.9,
+    close: 104.2,
+  },
+  {
+    ...dailyCandle,
+    id: "GC-1H-4",
+    timeframe: "1H",
+    timestamp: new Date("2026-02-01T12:00:00Z"),
+    open: 104.2,
+    high: 104.6,
+    low: 104.0,
+    close: 104.3,
+  },
+];
+
+function buildDeps(options: { include4h: boolean; include1h?: boolean }): PerceptionDataSourceDeps {
   const findRangeByAsset = vi.fn(
     async (_assetId: string, timeframe: string): Promise<CandleRow[]> => {
       if (timeframe === "1D") return [dailyCandle];
       if (timeframe === "1W") return [];
       if (timeframe === "4H" && options.include4h) return [fourHourFresh];
+      if (timeframe === "1H" && options.include1h) return oneHourCandles;
       return [];
     },
   );
@@ -98,10 +142,30 @@ describe("perceptionDataSource swing integration guards", () => {
     const dsWith4h = createPerceptionDataSource(depsWith4h, { profiles: ["SWING"] });
     const setupsWith4h = await dsWith4h.getSetupsForToday({ asOf });
     expect(setupsWith4h.length).toBeGreaterThan(0);
+    const with4h = setupsWith4h[0];
 
     const depsWithout4h = buildDeps({ include4h: false });
     const dsWithout4h = createPerceptionDataSource(depsWithout4h, { profiles: ["SWING"] });
     const setupsWithout4h = await dsWithout4h.getSetupsForToday({ asOf });
     expect(setupsWithout4h.length).toBeGreaterThan(0);
+    const without4h = setupsWithout4h[0];
+
+    // Refinement must not change decision-grade semantics.
+    expect(with4h.decision ?? null).toBe(without4h.decision ?? null);
+    expect(with4h.grade ?? null).toBe(without4h.grade ?? null);
+  });
+
+  it("derives 4H from 1H for swing refinement when direct 4H candles are missing", async () => {
+    const deps = buildDeps({ include4h: false, include1h: true });
+    const ds = createPerceptionDataSource(deps, { profiles: ["SWING"] });
+    const setups = await ds.getSetupsForToday({ asOf });
+    expect(setups.length).toBeGreaterThan(0);
+
+    const setup = setups[0];
+    expect(setup.levelDebug?.refinementAttempted).toBe(true);
+    expect(setup.levelDebug?.refinementAttemptReason).toBe("has_levels");
+    expect(setup.levelDebug?.refinementSource).toBe("4H");
+    expect(setup.levelDebug?.levelsRefinementReason).toBe("applied");
+    expect(setup.levelDebug?.refinementEffect?.boundsMode).toBeDefined();
   });
 });
