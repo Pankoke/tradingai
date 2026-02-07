@@ -26,11 +26,23 @@ export interface ComputedLevels {
   takeProfit: string | null;
   debug: {
     refinementUsed?: boolean;
+    refinementApplied?: boolean;
+    refinementAttempted?: boolean;
+    refinementAttemptReason?: string | null;
+    refinementSkippedReason?: string | null;
     refinementSource?: "4H" | null;
+    refinementReason?: string | null;
+    levelsRefinementApplied?: boolean;
+    levelsRefinementTimeframe?: "4H" | null;
+    levelsRefinementReason?: string | null;
     refinementEffect?: {
       bandPctMultiplier?: number | null;
       avgRangePct?: number | null;
       sampleSize?: number | null;
+      entryDeltaPct?: number | null;
+      stopDeltaPct?: number | null;
+      tpDeltaPct?: number | null;
+      boundsMode?: "ATR1D" | "PCT" | null;
     } | null;
     bandPct: number | null;
     referencePrice: number | null;
@@ -361,10 +373,11 @@ export function computeLevelsForSetup(params: {
   const candidate = buildLevels(candidateBandPct);
 
   const atr1d = computeAtr(params.atr1dCandles ?? []);
-  const boundsMode: "ATR1D" | "PCT" = Number.isFinite(atr1d) && atr1d !== null && atr1d > 0 ? "ATR1D" : "PCT";
-  const entryCap = boundsMode === "ATR1D" ? atr1d * 0.5 : base.entryPrice * 0.12;
-  const stopCap = boundsMode === "ATR1D" ? atr1d * 0.75 : base.entryPrice * 0.12;
-  const tpCap = boundsMode === "ATR1D" ? atr1d * 1.0 : base.entryPrice * 0.12;
+  const atr1dValue = atr1d !== null && Number.isFinite(atr1d) && atr1d > 0 ? atr1d : null;
+  const boundsMode: "ATR1D" | "PCT" = atr1dValue !== null ? "ATR1D" : "PCT";
+  const entryCap = atr1dValue !== null ? atr1dValue * 0.5 : base.entryPrice * 0.12;
+  const stopCap = atr1dValue !== null ? atr1dValue * 0.75 : base.entryPrice * 0.12;
+  const tpCap = atr1dValue !== null ? atr1dValue * 1.0 : base.entryPrice * 0.12;
 
   const entryDelta = Math.abs(candidate.entryPrice - base.entryPrice);
   const stopDelta = Math.abs(candidate.stopLossValue - base.stopLossValue);
