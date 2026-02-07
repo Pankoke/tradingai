@@ -26,6 +26,8 @@ type AssetAgg = {
   topReasons: { reason: string; count: number }[];
   gradeCounts?: Record<string, number>;
   has4h?: boolean;
+  refinementUsed: number;
+  refinementApplied: number;
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -63,7 +65,12 @@ function aggregate(setups: Setup[]): AssetAgg[] {
         decisionPerc: { TRADE: 0, WATCH: 0, NO_TRADE: 0, BLOCKED: 0 },
         topReasons: [],
         gradeCounts: {},
-        has4h: Boolean(setup.orderflow?.meta?.timeframeSamples?.["4H"]),
+        has4h:
+          Boolean(setup.orderflow?.meta?.timeframeSamples?.["4H"]) ||
+          setup.levelDebug?.levelsRefinementTimeframe === "4H" ||
+          setup.levelDebug?.refinementSource === "4H",
+        refinementUsed: 0,
+        refinementApplied: 0,
       });
     }
     const agg = map.get(key)!;
@@ -83,6 +90,12 @@ function aggregate(setups: Setup[]): AssetAgg[] {
       });
     }
     agg.playbookMode = setup.playbookId ?? agg.playbookMode;
+    if (setup.levelDebug?.refinementUsed) {
+      agg.refinementUsed += 1;
+    }
+    if (setup.levelDebug?.levelsRefinementApplied) {
+      agg.refinementApplied += 1;
+    }
   });
 
   Array.from(map.values()).forEach((agg) => {
@@ -101,12 +114,13 @@ function aggregate(setups: Setup[]): AssetAgg[] {
 
 function renderTable(aggs: AssetAgg[]): string {
   const header =
-    "| assetId | playbookId | TRADE | WATCH | NO_TRADE | BLOCKED | top 3 reasons | has4H |\n" +
-    "| --- | --- | --- | --- | --- | --- | --- | --- |";
+    "| assetId | playbookId | TRADE | WATCH | NO_TRADE | BLOCKED | top 3 reasons | has4H | refinement applied/used |\n" +
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |";
   const rows = aggs
     .map((a) => {
       const top = a.topReasons.slice(0, 3).map((r) => `${r.reason} (${r.count})`).join("; ");
-      return `| ${a.assetId} | ${a.playbookMode} | ${a.decisionPerc.TRADE}% (${a.decisionCounts.TRADE}) | ${a.decisionPerc.WATCH}% (${a.decisionCounts.WATCH}) | ${a.decisionPerc.NO_TRADE}% (${a.decisionCounts.NO_TRADE}) | ${a.decisionPerc.BLOCKED}% (${a.decisionCounts.BLOCKED}) | ${top || "—"} | ${a.has4h ? "yes" : "no"} |`;
+      const refinementText = a.refinementUsed > 0 ? `${a.refinementApplied}/${a.refinementUsed}` : "0/0";
+      return `| ${a.assetId} | ${a.playbookMode} | ${a.decisionPerc.TRADE}% (${a.decisionCounts.TRADE}) | ${a.decisionPerc.WATCH}% (${a.decisionCounts.WATCH}) | ${a.decisionPerc.NO_TRADE}% (${a.decisionCounts.NO_TRADE}) | ${a.decisionPerc.BLOCKED}% (${a.decisionCounts.BLOCKED}) | ${top || "—"} | ${a.has4h ? "yes" : "no"} | ${refinementText} |`;
     })
     .join("\n");
   return `${header}\n${rows}`;

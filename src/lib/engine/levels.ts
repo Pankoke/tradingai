@@ -158,6 +158,7 @@ export function computeLevelsForSetup(params: {
   category?: SetupLevelCategory;
   profile?: SetupProfile;
   bandScale?: number;
+  atr1dCandles?: { high: number | string; low: number | string; close: number | string; timestamp: Date }[];
   refinement4H?: {
     candles: {
       high: number | string;
@@ -165,6 +166,8 @@ export function computeLevelsForSetup(params: {
       close: number | string;
       timestamp: Date;
     }[];
+    fresh?: boolean;
+    evaluationTime?: Date;
   };
 }): ComputedLevels {
   const price = Number(params.referencePrice);
@@ -214,161 +217,205 @@ export function computeLevelsForSetup(params: {
       : params.profile === "POSITION"
         ? 1.05
         : 1);
+  const baseBandPct = clamp(baseBand * profileBandScale * volFactor, 0.001, 0.05);
+
+  const buildLevels = (bandPct: number) => {
+    const stopBand = clamp(bandPct * stopFactor, 0.001, 0.03);
+    const targetBand = clamp(bandPct * targetFactor, 0.001, 0.05);
+    let entryLow = price;
+    let entryHigh = price;
+    let stopLossValue = price;
+    let takeProfitValue = price;
+    const direction = params.direction;
+    const longStop = (mult: number) => price * (1 - stopBand * mult);
+    const shortStop = (mult: number) => price * (1 + stopBand * mult);
+    const longTarget = (mult: number) => price * (1 + targetBand * mult);
+    const shortTarget = (mult: number) => price * (1 - targetBand * mult);
+
+    switch (category) {
+      case "pullback": {
+        if (direction === "long") {
+          entryLow = price * (1 - bandPct * 1.3);
+          entryHigh = price * (1 - bandPct * 0.3);
+          stopLossValue = longStop(2.0);
+          takeProfitValue = longTarget(3.0);
+        } else if (direction === "short") {
+          entryLow = price * (1 + bandPct * 0.3);
+          entryHigh = price * (1 + bandPct * 1.3);
+          stopLossValue = shortStop(2.0);
+          takeProfitValue = shortTarget(3.0);
+        } else {
+          entryLow = price * (1 - bandPct * 1.0);
+          entryHigh = price * (1 + bandPct * 1.0);
+          stopLossValue = longStop(2.0);
+          takeProfitValue = longTarget(2.0);
+        }
+        break;
+      }
+
+      case "breakout": {
+        if (direction === "long") {
+          entryLow = price * (1 + bandPct * 0.2);
+          entryHigh = price * (1 + bandPct * 1.2);
+          stopLossValue = longStop(1.5);
+          takeProfitValue = longTarget(3.0);
+        } else if (direction === "short") {
+          entryLow = price * (1 - bandPct * 1.2);
+          entryHigh = price * (1 - bandPct * 0.2);
+          stopLossValue = shortStop(1.5);
+          takeProfitValue = shortTarget(3.0);
+        } else {
+          entryLow = price * (1 - bandPct * 0.5);
+          entryHigh = price * (1 + bandPct * 0.5);
+          stopLossValue = longStop(1.5);
+          takeProfitValue = longTarget(1.5);
+        }
+        break;
+      }
+
+      case "range": {
+        entryLow = price * (1 - bandPct * 0.6);
+        entryHigh = price * (1 + bandPct * 0.6);
+        if (direction === "short") {
+          stopLossValue = shortStop(1.5);
+          takeProfitValue = shortTarget(2.0);
+        } else if (direction === "long") {
+          stopLossValue = longStop(1.5);
+          takeProfitValue = longTarget(2.0);
+        } else {
+          stopLossValue = longStop(1.2);
+          takeProfitValue = longTarget(1.2);
+        }
+        break;
+      }
+
+      case "trendContinuation": {
+        entryLow = price * (1 - bandPct * 0.4);
+        entryHigh = price * (1 + bandPct * 0.4);
+        if (direction === "short") {
+          stopLossValue = shortStop(1.8);
+          takeProfitValue = shortTarget(2.5);
+        } else if (direction === "long") {
+          stopLossValue = longStop(1.8);
+          takeProfitValue = longTarget(2.5);
+        } else {
+          stopLossValue = longStop(1.4);
+          takeProfitValue = longTarget(1.4);
+        }
+        break;
+      }
+
+      case "liquidityGrab": {
+        if (direction === "long") {
+          entryLow = price * (1 - bandPct * 1.8);
+          entryHigh = price * (1 - bandPct * 0.8);
+          stopLossValue = longStop(3.5);
+          takeProfitValue = longTarget(3.5);
+        } else if (direction === "short") {
+          entryLow = price * (1 + bandPct * 0.8);
+          entryHigh = price * (1 + bandPct * 1.8);
+          stopLossValue = shortStop(3.5);
+          takeProfitValue = shortTarget(3.5);
+        } else {
+          entryLow = price * (1 - bandPct * 1.2);
+          entryHigh = price * (1 + bandPct * 1.2);
+          stopLossValue = longStop(2.5);
+          takeProfitValue = longTarget(2.5);
+        }
+        break;
+      }
+
+      case "unknown":
+      default: {
+        entryLow = price * (1 - bandPct / 2);
+        entryHigh = price * (1 + bandPct / 2);
+        if (direction === "short") {
+          stopLossValue = shortStop(2);
+          takeProfitValue = shortTarget(3);
+        } else if (direction === "long") {
+          stopLossValue = longStop(2);
+          takeProfitValue = longTarget(3);
+        } else {
+          stopLossValue = longStop(1);
+          takeProfitValue = longTarget(1);
+        }
+      }
+    }
+    const [finalEntryLow, finalEntryHigh] = ensureOrder([entryLow, entryHigh]);
+    const entryPrice = (finalEntryLow + finalEntryHigh) / 2;
+    return {
+      bandPct,
+      stopBand,
+      targetBand,
+      entryLow: finalEntryLow,
+      entryHigh: finalEntryHigh,
+      entryPrice,
+      stopLossValue,
+      takeProfitValue,
+    };
+  };
+
+  const base = buildLevels(baseBandPct);
   const refinementResult = computeRefinementMultiplierForSwing(params);
-  const bandPctRaw = baseBand * profileBandScale * volFactor * refinementResult.multiplier;
-  const bandPct = clamp(bandPctRaw, 0.001, 0.05);
-  const stopBand = clamp(bandPct * stopFactor, 0.001, 0.03);
-  const targetBand = clamp(bandPct * targetFactor, 0.001, 0.05);
+  const candidateBandPct = clamp(baseBandPct * refinementResult.multiplier, 0.001, 0.05);
+  const candidate = buildLevels(candidateBandPct);
 
-  let entryLow = price;
-  let entryHigh = price;
-  let stopLossValue = price;
-  let takeProfitValue = price;
+  const atr1d = computeAtr(params.atr1dCandles ?? []);
+  const boundsMode: "ATR1D" | "PCT" = Number.isFinite(atr1d) && atr1d !== null && atr1d > 0 ? "ATR1D" : "PCT";
+  const entryCap = boundsMode === "ATR1D" ? atr1d * 0.5 : base.entryPrice * 0.12;
+  const stopCap = boundsMode === "ATR1D" ? atr1d * 0.75 : base.entryPrice * 0.12;
+  const tpCap = boundsMode === "ATR1D" ? atr1d * 1.0 : base.entryPrice * 0.12;
 
-  const direction = params.direction;
+  const entryDelta = Math.abs(candidate.entryPrice - base.entryPrice);
+  const stopDelta = Math.abs(candidate.stopLossValue - base.stopLossValue);
+  const tpDelta = Math.abs(candidate.takeProfitValue - base.takeProfitValue);
 
-  const longStop = (mult: number) => price * (1 - stopBand * mult);
-  const shortStop = (mult: number) => price * (1 + stopBand * mult);
-  const longTarget = (mult: number) => price * (1 + targetBand * mult);
-  const shortTarget = (mult: number) => price * (1 - targetBand * mult);
+  const refinementApplied =
+    refinementResult.used &&
+    entryDelta <= entryCap &&
+    stopDelta <= stopCap &&
+    tpDelta <= tpCap;
 
-  switch (category) {
-    case "pullback": {
-      if (direction === "long") {
-        entryLow = price * (1 - bandPct * 1.3);
-        entryHigh = price * (1 - bandPct * 0.3);
-        stopLossValue = longStop(2.0);
-        takeProfitValue = longTarget(3.0);
-      } else if (direction === "short") {
-        entryLow = price * (1 + bandPct * 0.3);
-        entryHigh = price * (1 + bandPct * 1.3);
-        stopLossValue = shortStop(2.0);
-        takeProfitValue = shortTarget(3.0);
-      } else {
-        entryLow = price * (1 - bandPct * 1.0);
-        entryHigh = price * (1 + bandPct * 1.0);
-        stopLossValue = longStop(2.0);
-        takeProfitValue = longTarget(2.0);
-      }
-      break;
-    }
+  const fallbackReason = (() => {
+    if (!refinementResult.used) return refinementResult.reason ?? "missing";
+    if (!refinementApplied) return "bounds_exceeded";
+    return "applied";
+  })();
 
-    case "breakout": {
-      if (direction === "long") {
-        entryLow = price * (1 + bandPct * 0.2);
-        entryHigh = price * (1 + bandPct * 1.2);
-        stopLossValue = longStop(1.5);
-        takeProfitValue = longTarget(3.0);
-      } else if (direction === "short") {
-        entryLow = price * (1 - bandPct * 1.2);
-        entryHigh = price * (1 - bandPct * 0.2);
-        stopLossValue = shortStop(1.5);
-        takeProfitValue = shortTarget(3.0);
-      } else {
-        entryLow = price * (1 - bandPct * 0.5);
-        entryHigh = price * (1 + bandPct * 0.5);
-        stopLossValue = longStop(1.5);
-        takeProfitValue = longTarget(1.5);
-      }
-      break;
-    }
-
-    case "range": {
-      entryLow = price * (1 - bandPct * 0.6);
-      entryHigh = price * (1 + bandPct * 0.6);
-      if (direction === "short") {
-        stopLossValue = shortStop(1.5);
-        takeProfitValue = shortTarget(2.0);
-      } else if (direction === "long") {
-        stopLossValue = longStop(1.5);
-        takeProfitValue = longTarget(2.0);
-      } else {
-        stopLossValue = longStop(1.2);
-        takeProfitValue = longTarget(1.2);
-      }
-      break;
-    }
-
-    case "trendContinuation": {
-      entryLow = price * (1 - bandPct * 0.4);
-      entryHigh = price * (1 + bandPct * 0.4);
-      if (direction === "short") {
-        stopLossValue = shortStop(1.8);
-        takeProfitValue = shortTarget(2.5);
-      } else if (direction === "long") {
-        stopLossValue = longStop(1.8);
-        takeProfitValue = longTarget(2.5);
-      } else {
-        stopLossValue = longStop(1.4);
-        takeProfitValue = longTarget(1.4);
-      }
-      break;
-    }
-
-    case "liquidityGrab": {
-      if (direction === "long") {
-        entryLow = price * (1 - bandPct * 1.8);
-        entryHigh = price * (1 - bandPct * 0.8);
-        stopLossValue = longStop(3.5);
-        takeProfitValue = longTarget(3.5);
-      } else if (direction === "short") {
-        entryLow = price * (1 + bandPct * 0.8);
-        entryHigh = price * (1 + bandPct * 1.8);
-        stopLossValue = shortStop(3.5);
-        takeProfitValue = shortTarget(3.5);
-      } else {
-        entryLow = price * (1 - bandPct * 1.2);
-        entryHigh = price * (1 + bandPct * 1.2);
-        stopLossValue = longStop(2.5);
-        takeProfitValue = longTarget(2.5);
-      }
-      break;
-    }
-
-    case "unknown":
-    default: {
-      entryLow = price * (1 - bandPct / 2);
-      entryHigh = price * (1 + bandPct / 2);
-      if (direction === "short") {
-        stopLossValue = shortStop(2);
-        takeProfitValue = shortTarget(3);
-      } else if (direction === "long") {
-        stopLossValue = longStop(2);
-        takeProfitValue = longTarget(3);
-      } else {
-        stopLossValue = longStop(1);
-        takeProfitValue = longTarget(1);
-      }
-    }
-  }
-
-  const [finalEntryLow, finalEntryHigh] = ensureOrder([entryLow, entryHigh]);
+  const levels = refinementApplied ? candidate : base;
   const precision = determinePrecision(price);
-  const entryZoneText = `${formatPrice(finalEntryLow, precision)} - ${formatPrice(finalEntryHigh, precision)}`;
-  const entryPrice = (finalEntryLow + finalEntryHigh) / 2;
   const riskReward = computeRiskReward({
-    direction,
-    entryPrice,
-    stopLossValue,
-    takeProfitValue,
+    direction: params.direction,
+    entryPrice: levels.entryPrice,
+    stopLossValue: levels.stopLossValue,
+    takeProfitValue: levels.takeProfitValue,
     volatilityScore,
   });
 
   return {
-    entryZone: entryZoneText,
-    stopLoss: formatPrice(stopLossValue, precision),
-    takeProfit: formatPrice(takeProfitValue, precision),
+    entryZone: `${formatPrice(levels.entryLow, precision)} - ${formatPrice(levels.entryHigh, precision)}`,
+    stopLoss: formatPrice(levels.stopLossValue, precision),
+    takeProfit: formatPrice(levels.takeProfitValue, precision),
     debug: {
       refinementUsed: refinementResult.used,
+      refinementApplied,
       refinementSource: refinementResult.used ? "4H" : null,
+      refinementReason: fallbackReason,
+      levelsRefinementApplied: refinementApplied,
+      levelsRefinementTimeframe: refinementResult.used ? "4H" : null,
+      levelsRefinementReason: fallbackReason,
       refinementEffect: refinementResult.used
         ? {
             bandPctMultiplier: refinementResult.multiplier,
             avgRangePct: refinementResult.avgRangePct,
             sampleSize: refinementResult.sampleSize,
+            entryDeltaPct: base.entryPrice ? entryDelta / base.entryPrice : null,
+            stopDeltaPct: base.stopLossValue ? stopDelta / base.stopLossValue : null,
+            tpDeltaPct: base.takeProfitValue ? tpDelta / base.takeProfitValue : null,
+            boundsMode,
           }
         : null,
-      bandPct,
+      bandPct: levels.bandPct,
       referencePrice: price,
       category,
       volatilityScore,
@@ -394,14 +441,25 @@ function computeRefinementMultiplierForSwing(params: {
       close: number | string;
       timestamp: Date;
     }[];
+    fresh?: boolean;
+    evaluationTime?: Date;
   };
-}): { multiplier: number; used: boolean; avgRangePct: number | null; sampleSize: number | null } {
+}): {
+  multiplier: number;
+  used: boolean;
+  avgRangePct: number | null;
+  sampleSize: number | null;
+  reason?: string;
+} {
   if (params.profile !== "SWING") {
-    return { multiplier: 1, used: false, avgRangePct: null, sampleSize: null };
+    return { multiplier: 1, used: false, avgRangePct: null, sampleSize: null, reason: "not_swing" };
   }
   const candles = params.refinement4H?.candles ?? [];
   if (!candles.length) {
-    return { multiplier: 1, used: false, avgRangePct: null, sampleSize: null };
+    return { multiplier: 1, used: false, avgRangePct: null, sampleSize: null, reason: "missing" };
+  }
+  if (params.refinement4H?.fresh === false) {
+    return { multiplier: 1, used: false, avgRangePct: null, sampleSize: candles.length, reason: "stale" };
   }
   const ranges = candles
     .map((candle) => {
@@ -414,7 +472,7 @@ function computeRefinementMultiplierForSwing(params: {
     .filter((v): v is number => v !== null && Number.isFinite(v));
 
   if (!ranges.length) {
-    return { multiplier: 1, used: false, avgRangePct: null, sampleSize: 0 };
+    return { multiplier: 1, used: false, avgRangePct: null, sampleSize: candles.length, reason: "quality_failed" };
   }
 
   const avgRange = ranges.reduce((sum, v) => sum + v, 0) / ranges.length;
@@ -426,5 +484,38 @@ function computeRefinementMultiplierForSwing(params: {
     used: true,
     avgRangePct: avgRange,
     sampleSize: ranges.length,
+    reason: "applied",
   };
+}
+
+function computeAtr(candles: { high: number | string; low: number | string; close: number | string }[]): number | null {
+  if (!candles.length) return null;
+  const sorted = [...candles].sort((a, b) => {
+    const ta = (a as { timestamp?: Date }).timestamp instanceof Date ? (a as { timestamp?: Date }).timestamp!.getTime() : 0;
+    const tb = (b as { timestamp?: Date }).timestamp instanceof Date ? (b as { timestamp?: Date }).timestamp!.getTime() : 0;
+    return tb - ta;
+  });
+  const window = sorted.slice(0, 20);
+  let prevClose: number | null = null;
+  const trs: number[] = [];
+  for (const candle of window) {
+    const high = Number(candle.high);
+    const low = Number(candle.low);
+    const close = Number(candle.close);
+    if (!Number.isFinite(high) || !Number.isFinite(low) || !Number.isFinite(close)) continue;
+    const range = high - low;
+    const trCandidates = [range];
+    if (prevClose !== null) {
+      trCandidates.push(Math.abs(high - prevClose));
+      trCandidates.push(Math.abs(low - prevClose));
+    }
+    const tr = Math.max(...trCandidates);
+    if (Number.isFinite(tr)) {
+      trs.push(tr);
+    }
+    prevClose = close;
+  }
+  if (!trs.length) return null;
+  const avgTr = trs.reduce((sum, v) => sum + v, 0) / trs.length;
+  return avgTr;
 }

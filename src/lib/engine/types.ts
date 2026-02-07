@@ -225,6 +225,25 @@ const levelDebugSchema = z.object({
   category: z.string(),
   volatilityScore: z.number().nullable(),
   scoreVolatility: z.number().nullable(),
+  refinementUsed: z.boolean().optional(),
+  refinementApplied: z.boolean().optional(),
+  refinementSource: z.string().nullable().optional(),
+  refinementReason: z.string().nullable().optional(),
+  levelsRefinementApplied: z.boolean().optional(),
+  levelsRefinementTimeframe: z.string().nullable().optional(),
+  levelsRefinementReason: z.string().nullable().optional(),
+  refinementEffect: z
+    .object({
+      bandPctMultiplier: z.number().nullable().optional(),
+      avgRangePct: z.number().nullable().optional(),
+      sampleSize: z.number().nullable().optional(),
+      entryDeltaPct: z.number().nullable().optional(),
+      stopDeltaPct: z.number().nullable().optional(),
+      tpDeltaPct: z.number().nullable().optional(),
+      boundsMode: z.enum(["ATR1D", "PCT"]).nullable().optional(),
+    })
+    .nullable()
+    .optional(),
 });
 
 const volatilityLabelEnum = z.enum(["low", "medium", "high"]);

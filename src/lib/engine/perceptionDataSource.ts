@@ -467,6 +467,12 @@ class LivePerceptionDataSource implements PerceptionDataSource {
       ...refinementCandlesByTimeframe,
     };
 
+    const core1dCandles = coreCandlesByTimeframe["1D"] ?? [];
+    const refinement4hCandles = refinementCandlesByTimeframe["4H"] ?? [];
+    const latest4hTs = refinement4hCandles[0]?.timestamp instanceof Date ? refinement4hCandles[0].timestamp : null;
+    const is4hFresh =
+      latest4hTs != null && Math.abs(evaluationDate.getTime() - latest4hTs.getTime()) <= 8 * 60 * 60 * 1000;
+
     const computedLevels = computeLevelsForSetup({
       direction: normalizedDirection,
       referencePrice,
@@ -474,8 +480,9 @@ class LivePerceptionDataSource implements PerceptionDataSource {
       category: levelCategory,
       profile,
       bandScale: profileConfig.levelsDefaults?.bandScale,
+      atr1dCandles: core1dCandles,
       refinement4H: refinementTimeframes.includes("4H")
-        ? { candles: refinementCandlesByTimeframe["4H"] ?? [] }
+        ? { candles: refinement4hCandles, fresh: is4hFresh, evaluationTime: evaluationDate }
         : undefined,
     });
 

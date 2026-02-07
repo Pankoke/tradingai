@@ -18,11 +18,24 @@ function make4HCandle(high: number, low: number) {
   };
 }
 
+function make1DCandle(close: number, range = 1) {
+  return {
+    high: close + range / 2,
+    low: close - range / 2,
+    close,
+    timestamp: new Date(),
+  };
+}
+
 describe("computeLevelsForSetup refinement (Swing)", () => {
   it("keeps levels identical when 4H refinement is missing", () => {
-    const coreOnly = computeLevelsForSetup(baseParams);
+    const coreOnly = computeLevelsForSetup({
+      ...baseParams,
+      atr1dCandles: [make1DCandle(100)],
+    });
     const missingRefinement = computeLevelsForSetup({
       ...baseParams,
+      atr1dCandles: [make1DCandle(100)],
       refinement4H: { candles: [] },
     });
 
@@ -30,18 +43,26 @@ describe("computeLevelsForSetup refinement (Swing)", () => {
     expect(missingRefinement.stopLoss).toEqual(coreOnly.stopLoss);
     expect(missingRefinement.takeProfit).toEqual(coreOnly.takeProfit);
     expect(missingRefinement.debug.refinementUsed).toBe(false);
+    expect(missingRefinement.debug.levelsRefinementApplied).toBe(false);
+    expect(missingRefinement.debug.levelsRefinementReason).toBe("missing");
   });
 
-  it("widens bands moderately (<=20%) when 4H refinement has higher range", () => {
-    const coreOnly = computeLevelsForSetup(baseParams);
+  it("applies refinement within ATR bounds when 4H range is higher", () => {
+    const atrCandles = Array.from({ length: 20 }, (_, idx) => make1DCandle(100 - idx * 0.2, 2));
+    const coreOnly = computeLevelsForSetup({
+      ...baseParams,
+      atr1dCandles: atrCandles,
+    });
     const refined = computeLevelsForSetup({
       ...baseParams,
+      atr1dCandles: atrCandles,
       refinement4H: {
         candles: [
           make4HCandle(110, 100), // 10% range
           make4HCandle(108, 100),
           make4HCandle(112, 102),
         ],
+        fresh: true,
       },
     });
 
@@ -49,9 +70,31 @@ describe("computeLevelsForSetup refinement (Swing)", () => {
     const refinedBand = refined.debug.bandPct ?? 0;
 
     expect(refined.debug.refinementUsed).toBe(true);
+    expect(refined.debug.levelsRefinementApplied).toBe(true);
+    expect(refined.debug.levelsRefinementReason).toBe("applied");
     expect(refined.debug.refinementEffect?.bandPctMultiplier).toBeLessThanOrEqual(1.2);
+    expect(refined.debug.refinementEffect?.boundsMode).toBe("ATR1D");
     expect(refinedBand).toBeGreaterThan(coreBand);
     expect(refinedBand / coreBand).toBeLessThanOrEqual(1.2);
+  });
+
+  it("falls back to base when bounds exceeded (tiny ATR caps)", () => {
+    const tinyAtrCandles = Array.from({ length: 20 }, () => make1DCandle(100, 0.05));
+    const refined = computeLevelsForSetup({
+      ...baseParams,
+      atr1dCandles: tinyAtrCandles,
+      refinement4H: {
+        candles: [
+          make4HCandle(120, 90), // very wide → multiplier near upper clamp
+          make4HCandle(121, 88),
+        ],
+        fresh: true,
+      },
+    });
+
+    expect(refined.debug.refinementUsed).toBe(true);
+    expect(refined.debug.levelsRefinementApplied).toBe(false);
+    expect(refined.debug.levelsRefinementReason).toBe("bounds_exceeded");
   });
 
   it("does not apply refinement for non-swing profiles even if provided", () => {
