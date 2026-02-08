@@ -37,12 +37,20 @@ export default async function AdminAssetsPage({ params }: Props) {
           notice={messages["admin.assets.notice"]}
           variant="info"
         />
-        <Link
-          href={`/${locale}/admin/assets/new`}
-          className="rounded-lg bg-sky-500/80 px-4 py-2 text-sm font-semibold text-white"
-        >
-          {messages["admin.assets.new"]}
-        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href={`/${locale}/admin/assets/new`}
+            className="rounded-lg bg-sky-500/80 px-4 py-2 text-sm font-semibold text-white"
+          >
+            {messages["admin.assets.new"]}
+          </Link>
+          <Link
+            href="/api/admin/assets/export"
+            className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 hover:border-slate-500"
+          >
+            {messages["admin.assets.exportCsv"]}
+          </Link>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/40">

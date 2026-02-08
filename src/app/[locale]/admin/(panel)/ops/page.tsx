@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { OpsActionsPanel } from "@/src/components/admin/OpsActionsPanel";
 import type { LockStatusState } from "@/src/components/admin/OpsActionsPanel";
 import { EventsIngestionPanel } from "@/src/components/admin/EventsIngestionPanel";
@@ -22,6 +23,9 @@ import {
 import type { SnapshotBuildSource } from "@/src/features/perception/build/buildSetups";
 import { AdminSectionHeader } from "@/src/components/admin/AdminSectionHeader";
 import { buildOpsGovernanceRelatedLinks } from "@/src/components/admin/relatedLinks";
+import { mapAuditRunToRow, type AuditRowViewModel } from "@/src/lib/admin/audit/viewModel";
+import { buildAuditHref } from "@/src/lib/admin/audit/links";
+import { OPS_ACTION_DEFINITIONS, getLastRunByAction } from "@/src/lib/admin/ops/auditMapping";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -31,13 +35,14 @@ export default async function AdminOpsPage({ params }: Props) {
   const resolvedParams = await params;
   const locale = resolvedParams.locale as Locale;
   const messages = locale === "de" ? deMessages : enMessages;
-  const [latestSnapshot, rawLockStatus, eventsAudit, enrichmentAudit, enrichmentStats, dedupAudit] = await Promise.all([
+  const [latestSnapshot, rawLockStatus, eventsAudit, enrichmentAudit, enrichmentStats, dedupAudit, opsAuditRuns] = await Promise.all([
     getLatestSnapshot(),
     getSnapshotBuildStatus(),
     listAuditRuns({ filters: { action: "events.ingest" }, limit: 1 }),
     listAuditRuns({ filters: { action: "events.enrich" }, limit: 1 }),
     getEventEnrichmentStats(),
     listAuditRuns({ filters: { action: "events.dedup_sweep" }, limit: 1 }),
+    listAuditRuns({ limit: 200 }),
   ]);
   const latestSnapshotInfo = latestSnapshot
     ? {
@@ -259,6 +264,14 @@ export default async function AdminOpsPage({ params }: Props) {
     systemHealth: messages["admin.nav.system"],
   });
 
+  const opsRows: AuditRowViewModel[] = opsAuditRuns.runs.map((run) => mapAuditRunToRow(run));
+  const lastRuns = getLastRunByAction(opsRows);
+
+  function formatDateTime(isoLike: Date | string): string {
+    const formatterLocale = locale === "de" ? "de-DE" : "en-US";
+    return new Date(isoLike).toLocaleString(formatterLocale);
+  }
+
   return (
     <div className="space-y-6">
       <AdminSectionHeader
@@ -270,6 +283,53 @@ export default async function AdminOpsPage({ params }: Props) {
         notice={messages["admin.ops.notice"]}
         variant="actions"
       />
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+        <h2 className="text-sm font-semibold text-slate-100">{messages["admin.ops.lastRun.label"]}</h2>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          {OPS_ACTION_DEFINITIONS.map((definition) => {
+            const run = lastRuns[definition.key];
+            const modeLabel = run?.authMode
+              ? messages[`admin.audit.filters.mode.${run.authMode}` as keyof typeof messages]
+              : "—";
+            const statusLabel = run ? (run.resultOk ? messages["admin.audit.status.ok"] : messages["admin.audit.status.fail"]) : "—";
+            const statusClass = run
+              ? run.resultOk
+                ? "bg-emerald-500/15 text-emerald-200 border-emerald-400/40"
+                : "bg-rose-500/15 text-rose-200 border-rose-400/40"
+              : "bg-slate-800 text-slate-300 border-slate-700";
+
+            return (
+              <div key={definition.key} className="rounded-xl border border-slate-800 bg-slate-950/40 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-slate-100">{messages[definition.labelKey as keyof typeof messages]}</p>
+                  <span className={`rounded border px-2 py-0.5 text-xs ${statusClass}`}>{statusLabel}</span>
+                </div>
+                <p className="mt-2 text-xs text-slate-300">
+                  {messages["admin.ops.lastRun.label"]}: {run ? formatDateTime(run.createdAt) : messages["admin.ops.lastRun.none"]}
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  {messages["admin.audit.columns.mode"]}: {modeLabel}
+                  {run?.actorLabel ? ` • ${messages["admin.audit.columns.actor"]}: ${run.actorLabel}` : ""}
+                </p>
+                <div className="mt-2 flex gap-3 text-xs">
+                  <Link
+                    href={buildAuditHref(locale, { kind: "ops", q: definition.query })}
+                    className="text-sky-300 hover:text-sky-200"
+                  >
+                    {messages["admin.ops.viewInAudit"]}
+                  </Link>
+                  <Link
+                    href={buildAuditHref(locale, { kind: "ops", status: "failed", q: definition.query })}
+                    className="text-rose-300 hover:text-rose-200"
+                  >
+                    {messages["admin.ops.viewFailedInAudit"]}
+                  </Link>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
       <OpsActionsPanel
         locale={locale}
         messages={opsMessages}

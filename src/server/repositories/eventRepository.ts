@@ -91,6 +91,10 @@ export async function listRecentEvents(limit = 100): Promise<Event[]> {
   return db.select().from(events).orderBy(desc(events.scheduledAt)).limit(limit);
 }
 
+export async function getAllEvents(): Promise<Event[]> {
+  return db.select().from(events).orderBy(desc(events.scheduledAt));
+}
+
 export async function listEventsForEnrichment(params: {
   from: Date;
   to: Date;

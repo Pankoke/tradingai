@@ -16,6 +16,7 @@ import {
   type AuditRowViewModel,
   type AuditStatusFilter,
 } from "@/src/lib/admin/audit/viewModel";
+import { parseAuditLinkQuery } from "@/src/lib/admin/audit/links";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -95,13 +96,11 @@ function toArrayValue(value: string | string[] | undefined): string | undefined 
 function parseSearchParams(raw: Record<string, string | string[] | undefined>): ParsedSearch {
   const action = toArrayValue(raw.action)?.trim();
   const source = toArrayValue(raw.source)?.trim();
-  const rawStatus = toArrayValue(raw.status)?.trim();
-  const status: AuditStatusFilter = rawStatus === "ok" || rawStatus === "failed" ? rawStatus : "all";
-  const rawAuthMode = toArrayValue(raw.authMode)?.trim();
-  const authMode: AuditAuthModeFilter = rawAuthMode === "admin" || rawAuthMode === "cron" ? rawAuthMode : "all";
-  const rawKind = toArrayValue(raw.kind)?.trim();
-  const kind: AuditKindFilter = rawKind === "exports" || rawKind === "ops" ? rawKind : "all";
-  const query = toArrayValue(raw.query)?.trim();
+  const fromLinks = parseAuditLinkQuery(raw);
+  const status: AuditStatusFilter = fromLinks.status;
+  const authMode: AuditAuthModeFilter = fromLinks.mode;
+  const kind: AuditKindFilter = fromLinks.kind;
+  const query = fromLinks.q;
   const page = Math.max(1, Number(toArrayValue(raw.page) ?? "1") || 1);
   const pageSize = Math.min(100, Math.max(5, Number(toArrayValue(raw.pageSize) ?? "20") || 20));
   const freshness = toArrayValue(raw.freshness) === "1";
@@ -128,9 +127,9 @@ function buildQueryString(
   if (current.action) params.set("action", current.action);
   if (current.source) params.set("source", current.source);
   if (current.status !== "all") params.set("status", current.status);
-  if (current.authMode !== "all") params.set("authMode", current.authMode);
+  if (current.authMode !== "all") params.set("mode", current.authMode);
   if (current.kind !== "all") params.set("kind", current.kind);
-  if (current.query) params.set("query", current.query);
+  if (current.query) params.set("q", current.query);
   if (current.freshness) params.set("freshness", "1");
   if (current.gate) params.set("gate", current.gate);
   params.set("page", current.page.toString());
@@ -288,9 +287,9 @@ export default async function AdminAuditPage({ params, searchParams }: PageProps
             </select>
           </label>
           <label className="space-y-1 text-sm text-slate-200">
-            <span>{messages["admin.audit.filters.mode"]}</span>
+              <span>{messages["admin.audit.filters.mode"]}</span>
             <select
-              name="authMode"
+              name="mode"
               defaultValue={resolvedSearch.authMode}
               className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white"
             >
@@ -318,9 +317,9 @@ export default async function AdminAuditPage({ params, searchParams }: PageProps
             </select>
           </label>
           <label className="space-y-1 text-sm text-slate-200">
-            <span>{messages["admin.audit.filters.search"]}</span>
+              <span>{messages["admin.audit.filters.search"]}</span>
             <input
-              name="query"
+              name="q"
               defaultValue={resolvedSearch.query ?? ""}
               placeholder={messages["admin.audit.search.placeholder"]}
               className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white placeholder:text-slate-500"
