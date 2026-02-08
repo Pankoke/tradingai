@@ -1,12 +1,14 @@
 import clsx from "clsx";
 import type { JSX } from "react";
 import type { Locale } from "@/i18n";
+import Link from "next/link";
 import deMessages from "@/src/messages/de.json";
 import enMessages from "@/src/messages/en.json";
 import { loadCoverageMatrix } from "@/src/server/admin/coverageService";
 import { classifyTimeframeStatus, type TimeframeStatus } from "@/src/lib/admin/coverageRules";
 import { AdminSectionHeader } from "@/src/components/admin/AdminSectionHeader";
 import { buildDataMonitoringRelatedLinks } from "@/src/components/admin/relatedLinks";
+import { buildArtifactsHref } from "@/src/lib/admin/artifacts/links";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -51,6 +53,12 @@ export default async function CoveragePage({ params }: Props): Promise<JSX.Eleme
         notice={messages["admin.coverage.notice"]}
         variant="info"
       />
+      <div className="text-xs text-slate-400">
+        {messages["admin.artifacts.tools.label"]}:{" "}
+        <Link href={buildArtifactsHref(localeParam)} className="text-sky-300 hover:text-sky-100">
+          {messages["admin.artifacts.tools.link"]}
+        </Link>
+      </div>
 
       <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/40">
         <table className="min-w-full text-sm text-slate-100">

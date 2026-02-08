@@ -14,6 +14,8 @@ import { OutcomesHeader } from "@/src/components/admin/outcomes/OutcomesHeader";
 import { buildOutcomesRelatedLinks } from "@/src/components/admin/outcomes/relatedLinks";
 import deMessages from "@/src/messages/de.json";
 import enMessages from "@/src/messages/en.json";
+import { ARTIFACT_TYPES } from "@/src/lib/admin/artifacts/registry";
+import { buildArtifactsHref } from "@/src/lib/admin/artifacts/links";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -73,7 +75,7 @@ export default async function OutcomesDiagnosticsPage({ params }: PageProps) {
         currentKey="diagnostics"
       />
       <div className="text-xs">
-        <Link href={`/${locale}/admin/artifacts`} className="text-sky-300 hover:text-sky-100">
+        <Link href={buildArtifactsHref(locale, ARTIFACT_TYPES.SWING_OUTCOME_ANALYSIS)} className="text-sky-300 hover:text-sky-100">
           {messages["admin.artifacts.linkHistory"]}
         </Link>
       </div>

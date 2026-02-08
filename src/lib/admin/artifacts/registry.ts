@@ -2,6 +2,11 @@ import { promises as fs } from "fs";
 import path from "path";
 
 export type ArtifactTypeId = "swing-outcome-analysis" | "join-stats" | "swing-performance-breakdown";
+export const ARTIFACT_TYPES = {
+  SWING_OUTCOME_ANALYSIS: "swing-outcome-analysis",
+  JOIN_STATS: "join-stats",
+  SWING_PERFORMANCE_BREAKDOWN: "swing-performance-breakdown",
+} as const;
 
 type ArtifactTypeConfig = {
   id: ArtifactTypeId;
@@ -46,21 +51,21 @@ export type ArtifactSummaryDiff = {
   numericDeltas: Array<{ key: string; left: number; right: number; delta: number }>;
 };
 
-const ARTIFACT_TYPES: ArtifactTypeConfig[] = [
+const ARTIFACT_TYPE_CONFIGS: ArtifactTypeConfig[] = [
   {
-    id: "swing-outcome-analysis",
+    id: ARTIFACT_TYPES.SWING_OUTCOME_ANALYSIS,
     labelKey: "admin.artifacts.type.swingOutcomeAnalysis.label",
     baseDir: "artifacts/phase1",
     filenamePatterns: [/^swing-outcome-analysis-.*\.json$/],
   },
   {
-    id: "join-stats",
+    id: ARTIFACT_TYPES.JOIN_STATS,
     labelKey: "admin.artifacts.type.joinStats.label",
     baseDir: "artifacts/phase1",
     filenamePatterns: [/^join-stats-.*\.json$/],
   },
   {
-    id: "swing-performance-breakdown",
+    id: ARTIFACT_TYPES.SWING_PERFORMANCE_BREAKDOWN,
     labelKey: "admin.artifacts.type.swingPerformanceBreakdown.label",
     baseDir: "artifacts/phase1",
     filenamePatterns: [/^swing-performance-breakdown-.*\.json$/],
@@ -79,7 +84,7 @@ type ResolveOptions = {
 };
 
 function getTypeConfig(typeId: ArtifactTypeId): ArtifactTypeConfig {
-  const config = ARTIFACT_TYPES.find((candidate) => candidate.id === typeId);
+  const config = ARTIFACT_TYPE_CONFIGS.find((candidate) => candidate.id === typeId);
   if (!config) {
     throw new Error(`Unsupported artifact type: ${typeId}`);
   }
@@ -190,11 +195,15 @@ function buildNotable(typeId: ArtifactTypeId, json: unknown): Array<{ key: strin
 }
 
 export function listArtifactTypeIds(): ArtifactTypeId[] {
-  return ARTIFACT_TYPES.map((type) => type.id);
+  return ARTIFACT_TYPE_CONFIGS.map((type) => type.id);
 }
 
 export function listArtifactTypeConfigs(): ArtifactTypeConfig[] {
-  return [...ARTIFACT_TYPES];
+  return [...ARTIFACT_TYPE_CONFIGS];
+}
+
+export function isArtifactTypeId(value: string): value is ArtifactTypeId {
+  return listArtifactTypeIds().includes(value as ArtifactTypeId);
 }
 
 export async function listArtifactsByType(options: ListOptions = {}): Promise<ArtifactTypeGroup[]> {
@@ -202,7 +211,7 @@ export async function listArtifactsByType(options: ListOptions = {}): Promise<Ar
   const maxPerType = options.maxPerType ?? 10;
 
   const groups = await Promise.all(
-    ARTIFACT_TYPES.map(async (typeConfig) => {
+    ARTIFACT_TYPE_CONFIGS.map(async (typeConfig) => {
       const baseAbs = path.resolve(rootDir, typeConfig.baseDir);
       let filenames: string[] = [];
       let baseDirExists = true;

@@ -8,6 +8,7 @@ import { getLatestFreshnessRuns } from "@/src/server/admin/freshnessAuditService
 import Link from "next/link";
 import { AdminSectionHeader } from "@/src/components/admin/AdminSectionHeader";
 import { buildDataMonitoringRelatedLinks } from "@/src/components/admin/relatedLinks";
+import { buildArtifactsHref } from "@/src/lib/admin/artifacts/links";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -84,6 +85,12 @@ export default async function AdminMarketDataPage({ params }: Props) {
         notice={messages["admin.marketdata.notice"]}
         variant="info"
       />
+      <div className="text-xs text-slate-400">
+        {messages["admin.artifacts.tools.label"]}:{" "}
+        <Link href={buildArtifactsHref(locale)} className="text-sky-300 hover:text-sky-100">
+          {messages["admin.artifacts.tools.link"]}
+        </Link>
+      </div>
 
       <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">

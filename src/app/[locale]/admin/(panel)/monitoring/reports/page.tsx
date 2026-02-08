@@ -7,6 +7,7 @@ import deMessages from "@/src/messages/de.json";
 import enMessages from "@/src/messages/en.json";
 import { AdminSectionHeader } from "@/src/components/admin/AdminSectionHeader";
 import { buildDataMonitoringRelatedLinks } from "@/src/components/admin/relatedLinks";
+import { buildArtifactsHref } from "@/src/lib/admin/artifacts/links";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -49,6 +50,12 @@ export default async function ReportsIndexPage({ params }: PageProps) {
           notice={messages["admin.reports.notice"]}
           variant="info"
         />
+        <div className="text-xs text-slate-400">
+          {messages["admin.artifacts.tools.label"]}:{" "}
+          <Link href={buildArtifactsHref(typedLocale)} className="text-sky-300 hover:text-sky-100">
+            {messages["admin.artifacts.tools.link"]}
+          </Link>
+        </div>
         <p className="text-sm text-slate-400">{messages["admin.reports.empty"]}</p>
       </div>
     );
@@ -65,6 +72,12 @@ export default async function ReportsIndexPage({ params }: PageProps) {
         notice={messages["admin.reports.notice"]}
         variant="info"
       />
+      <div className="text-xs text-slate-400">
+        {messages["admin.artifacts.tools.label"]}:{" "}
+        <Link href={buildArtifactsHref(typedLocale)} className="text-sky-300 hover:text-sky-100">
+          {messages["admin.artifacts.tools.link"]}
+        </Link>
+      </div>
 
       <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60">
         <table className="min-w-full divide-y divide-slate-800 text-sm text-slate-200">
