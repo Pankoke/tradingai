@@ -1,9 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isAdminEnabled, validateAdminRequestOrigin } from "@/src/lib/admin/security";
-import { isAdminSessionFromRequest } from "@/src/lib/admin/auth";
 import { getBacktestRunByKey } from "@/src/server/repositories/backtestRunRepository";
 import { escapeCsvCell, toCsv } from "@/src/server/utils/csv";
 import type { CompletedTrade, BacktestKpis } from "@/src/domain/backtest/types";
+import { asUnauthorizedResponse, requireAdminOrCron } from "@/src/lib/admin/auth/requireAdminOrCron";
+import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
+import { buildAuditMeta } from "@/src/lib/admin/audit/buildAuditMeta";
 
 type ExportType = "trades" | "kpis" | "all";
 
@@ -119,13 +121,19 @@ function buildAllCsv(
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ runKey: string }> }) {
   const resolvedParams = await params;
+  const startedAt = Date.now();
   if (!isAdminEnabled()) {
     return NextResponse.json({ ok: false, error: "Admin disabled" }, { status: 404 });
   }
-  if (!isAdminSessionFromRequest(request)) {
+  let auth;
+  try {
+    auth = await requireAdminOrCron(request, { allowCron: true, allowAdminToken: true });
+  } catch (error) {
+    const unauthorized = asUnauthorizedResponse(error);
+    if (unauthorized) return unauthorized;
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
-  if (!validateAdminRequestOrigin(request)) {
+  if (auth.mode === "admin" && !validateAdminRequestOrigin(request)) {
     return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
   }
 
@@ -159,6 +167,20 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const filename = `backtest_${escapeCsvCell(run.assetId)}_${escapeCsvCell(run.fromIso)}_${escapeCsvCell(
     run.toIso,
   )}_${run.stepHours}_${type}.csv`.replace(/"/g, "");
+  await createAuditRun({
+    action: "admin_backtest_run_export",
+    source: auth.mode,
+    ok: true,
+    durationMs: Date.now() - startedAt,
+    message: "backtest_run_export_success",
+    meta: buildAuditMeta({
+      auth,
+      request: { method: request.method, url: request.url },
+      params: { runKey, type },
+      result: { ok: true, rows: type === "kpis" ? 1 : trades.length, bytes: csv.length },
+    }),
+  });
+
   return new NextResponse(csv, {
     status: 200,
     headers: {

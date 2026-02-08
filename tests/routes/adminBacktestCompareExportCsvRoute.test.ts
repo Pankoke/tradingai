@@ -20,7 +20,10 @@ vi.mock("@/src/server/repositories/backtestRunRepository", () => ({
 }));
 
 function buildRequest(url: string) {
-  return new NextRequest(url, { method: "GET", headers: { host: "localhost" } });
+  return new NextRequest(url, {
+    method: "GET",
+    headers: { host: "localhost", authorization: "Bearer cron-secret", "x-cron-secret": "cron-secret" },
+  });
 }
 
 const runA = {
@@ -57,6 +60,8 @@ const runB = {
 describe("admin backtest compare export csv route", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    process.env.CRON_SECRET = "cron-secret";
+    process.env.ADMIN_API_TOKEN = "admin-secret";
     mockIsAdminEnabled.mockReturnValue(true);
     mockIsAdminSession.mockReturnValue(true);
     mockValidateOrigin.mockReturnValue(true);
@@ -70,8 +75,28 @@ describe("admin backtest compare export csv route", () => {
   it("rejects unauthorized", async () => {
     mockIsAdminSession.mockReturnValue(false);
     const { GET } = await import("@/src/app/api/admin/backtest/compare/export/route");
-    const res = await GET(buildRequest("http://localhost/api/admin/backtest/compare/export?primary=A&secondary=B"));
+    const res = await GET(
+      new NextRequest("http://localhost/api/admin/backtest/compare/export?primary=A&secondary=B", { method: "GET" }),
+    );
     expect(res.status).toBe(401);
+  });
+
+  it("rejects when origin invalid in admin mode", async () => {
+    mockValidateOrigin.mockReturnValue(false);
+    const { GET } = await import("@/src/app/api/admin/backtest/compare/export/route");
+    const res = await GET(
+      new NextRequest("http://localhost/api/admin/backtest/compare/export?primary=A&secondary=B", {
+        method: "GET",
+        headers: { authorization: "Bearer admin-secret" },
+      }),
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("allows cron mode without origin", async () => {
+    const { GET } = await import("@/src/app/api/admin/backtest/compare/export/route");
+    const res = await GET(buildRequest("http://localhost/api/admin/backtest/compare/export?primary=A&secondary=B"));
+    expect(res.status).toBe(200);
   });
 
   it("requires params", async () => {

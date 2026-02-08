@@ -6,6 +6,9 @@ import { perceptionSnapshots } from "@/src/server/db/schema/perceptionSnapshots"
 import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 import { recomputeDecisionsInSetups } from "@/src/server/admin/recomputeDecisions";
 import type { Setup } from "@/src/lib/engine/types";
+import { asUnauthorizedResponse, requireAdminOrCron } from "@/src/lib/admin/auth/requireAdminOrCron";
+import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
+import { buildAuditMeta } from "@/src/lib/admin/audit/buildAuditMeta";
 
 export const runtime = "nodejs";
 
@@ -20,47 +23,18 @@ function normalizeDecision(value: string | null | undefined): DecisionContract |
   return null;
 }
 
-function isAuthorized(request: NextRequest): { ok: boolean; debug?: Record<string, unknown> } {
-  const cronSecret = process.env.CRON_SECRET;
-  const adminToken = process.env.ADMIN_API_TOKEN;
-  const header = request.headers.get("authorization") ?? "";
-  const bearer = header.startsWith("Bearer ") ? header.slice("Bearer ".length).trim() : null;
-  const usedAdmin = !!adminToken && bearer === adminToken;
-  const usedCron = !!cronSecret && bearer === cronSecret;
-  if (usedAdmin || usedCron) return { ok: true };
-
-  if (process.env.NODE_ENV !== "production") {
-    return {
-      ok: false,
-      debug: {
-        hasCronSecret: Boolean(cronSecret),
-        hasAdminToken: Boolean(adminToken),
-        cronSecretLen: cronSecret?.length ?? 0,
-        adminTokenLen: adminToken?.length ?? 0,
-        authHeaderPresent: header.length > 0,
-        bearerPresent: Boolean(bearer),
-        bearerLen: bearer?.length ?? 0,
-      },
-    };
-  }
-
-  return { ok: false };
-}
-
-export async function POST(request: NextRequest): Promise<NextResponse> {
-  const auth = isAuthorized(request);
-  if (!auth.ok) {
+export async function POST(request: NextRequest): Promise<Response> {
+  const startedAt = Date.now();
+  let auth;
+  try {
+    auth = await requireAdminOrCron(request, { allowCron: true, allowAdminToken: true });
+  } catch (error) {
     const headers = new Headers();
     headers.set("x-recompute-route", "hit");
-    if (process.env.NODE_ENV !== "production" && auth.debug) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: { code: "UNAUTHORIZED", message: "Unauthorized" },
-          debug: auth.debug,
-        },
-        { status: 401, headers },
-      );
+    const unauthorized = asUnauthorizedResponse(error);
+    if (unauthorized) {
+      unauthorized.headers.set("x-recompute-route", "hit");
+      return unauthorized;
     }
     const res = respondFail("UNAUTHORIZED", "Unauthorized", 401);
     res.headers.set("x-recompute-route", "hit");
@@ -175,41 +149,54 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const headers = new Headers([["x-recompute-route", "hit"]]);
-  return NextResponse.json(
-    {
-      ok: true,
-      meta: {
-        assetId,
-        timeframe,
-        days: effectiveDays,
-        from: from.toISOString(),
-        snapshotsConsidered,
-        snapshotsUpdated,
-        setupsConsidered,
-        setupsUpdated,
-        decisionDistribution,
-        updatedIds: process.env.NODE_ENV === "production" ? undefined : updatedIds.slice(0, 5),
-        postCheck: await buildPostCheck({ assetId, timeframe, from, label, labelIsNull }),
-        labelsInWindowTop: Object.fromEntries(
-          Object.entries(labelCounts)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 10),
-        ),
-        totalSnapshotsInTable,
-        snapshotsInWindowBySnapshotTime,
-        snapshotsInWindowByCreatedAt,
-        minMaxSnapshotTime:
-          process.env.NODE_ENV !== "production"
-            ? {
-                min: toIsoOrNull(minSnapshotTime),
-                max: toIsoOrNull(maxSnapshotTime),
-              }
-            : undefined,
-        sampleSetups: process.env.NODE_ENV !== "production" ? sampleSetups : undefined,
-      },
+  const responseBody = {
+    ok: true,
+    meta: {
+      assetId,
+      timeframe,
+      days: effectiveDays,
+      from: from.toISOString(),
+      snapshotsConsidered,
+      snapshotsUpdated,
+      setupsConsidered,
+      setupsUpdated,
+      decisionDistribution,
+      updatedIds: process.env.NODE_ENV === "production" ? undefined : updatedIds.slice(0, 5),
+      postCheck: await buildPostCheck({ assetId, timeframe, from, label, labelIsNull }),
+      labelsInWindowTop: Object.fromEntries(
+        Object.entries(labelCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10),
+      ),
+      totalSnapshotsInTable,
+      snapshotsInWindowBySnapshotTime,
+      snapshotsInWindowByCreatedAt,
+      minMaxSnapshotTime:
+        process.env.NODE_ENV !== "production"
+          ? {
+              min: toIsoOrNull(minSnapshotTime),
+              max: toIsoOrNull(maxSnapshotTime),
+            }
+          : undefined,
+      sampleSetups: process.env.NODE_ENV !== "production" ? sampleSetups : undefined,
     },
-    { status: 200, headers },
-  );
+  };
+
+  await createAuditRun({
+    action: "admin_recompute_decisions",
+    source: auth.mode,
+    ok: true,
+    durationMs: Date.now() - startedAt,
+    message: "admin_recompute_decisions_success",
+    meta: buildAuditMeta({
+      auth,
+      request: { method: request.method, url: request.url },
+      params: { assetId, timeframe, days: effectiveDays, label },
+      result: { ok: true, rows: setupsUpdated },
+    }),
+  });
+
+  return NextResponse.json(responseBody, { status: 200, headers });
 }
 
 export async function GET(): Promise<NextResponse> {

@@ -6,9 +6,10 @@ import {
   getSnapshotBuildStatus,
 } from "@/src/server/perception/snapshotBuildService";
 import { getLatestSnapshot } from "@/src/server/repositories/perceptionSnapshotRepository";
-import { isAdminSessionFromRequest } from "@/src/lib/admin/auth";
 import { isAdminEnabled, validateAdminRequestOrigin } from "@/src/lib/admin/security";
 import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
+import { asUnauthorizedResponse, requireAdminOrCron } from "@/src/lib/admin/auth/requireAdminOrCron";
+import { buildAuditMeta } from "@/src/lib/admin/audit/buildAuditMeta";
 
 type ActionSuccess = {
   ok: true;
@@ -56,10 +57,15 @@ export async function POST(request: NextRequest) {
   if (!isAdminEnabled()) {
     return disabledResponse();
   }
-  if (!isAdminSessionFromRequest(request)) {
+  let auth;
+  try {
+    auth = await requireAdminOrCron(request, { allowCron: true, allowAdminToken: true });
+  } catch (error) {
+    const unauthorized = asUnauthorizedResponse(error);
+    if (unauthorized) return unauthorized;
     return unauthorizedResponse("Missing or invalid admin session");
   }
-  if (!validateAdminRequestOrigin(request)) {
+  if (auth.mode === "admin" && !validateAdminRequestOrigin(request)) {
     return forbiddenResponse("Invalid request origin");
   }
 
@@ -100,22 +106,33 @@ export async function POST(request: NextRequest) {
     };
     await createAuditRun({
       action: "snapshot_build",
-      source: "admin",
+      source: auth.mode,
       ok: true,
       durationMs,
       message: response.message,
-      meta: { snapshotId: snapshot.id, reused: result.reused, force },
+      meta: buildAuditMeta({
+        auth,
+        request: { method: request.method, url: request.url },
+        params: { force, profiles },
+        result: { ok: true },
+      }),
     });
     return NextResponse.json(response);
   } catch (error) {
     if (error instanceof SnapshotBuildInProgressError) {
       await createAuditRun({
         action: "snapshot_build",
-        source: "admin",
+        source: auth.mode,
         ok: false,
         durationMs: Date.now() - startedAt.getTime(),
         message: "lock_in_progress",
-        meta: { force },
+        meta: buildAuditMeta({
+          auth,
+          request: { method: request.method, url: request.url },
+          params: { force, profiles },
+          result: { ok: false },
+          error: "lock_in_progress",
+        }),
       });
       const body: ActionError = {
         ok: false,
@@ -128,12 +145,18 @@ export async function POST(request: NextRequest) {
     console.error("[admin.ops.perception] failed", error);
     await createAuditRun({
       action: "snapshot_build",
-      source: "admin",
+      source: auth.mode,
       ok: false,
       durationMs: Date.now() - startedAt.getTime(),
       message: "snapshot_build_failed",
       error: error instanceof Error ? error.message : "unknown error",
-      meta: { force },
+      meta: buildAuditMeta({
+        auth,
+        request: { method: request.method, url: request.url },
+        params: { force, profiles },
+        result: { ok: false },
+        error,
+      }),
     });
     const body: ActionError = {
       ok: false,
@@ -149,10 +172,15 @@ export async function GET(request: NextRequest) {
   if (!isAdminEnabled()) {
     return disabledResponse();
   }
-  if (!isAdminSessionFromRequest(request)) {
+  let auth;
+  try {
+    auth = await requireAdminOrCron(request, { allowCron: true, allowAdminToken: true });
+  } catch (error) {
+    const unauthorized = asUnauthorizedResponse(error);
+    if (unauthorized) return unauthorized;
     return unauthorizedResponse("Missing or invalid admin session");
   }
-  if (!validateAdminRequestOrigin(request)) {
+  if (auth.mode === "admin" && !validateAdminRequestOrigin(request)) {
     return forbiddenResponse("Invalid request origin");
   }
 

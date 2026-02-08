@@ -35,11 +35,19 @@ vi.mock("@/src/server/admin/calibrationService", () => ({
   })),
 }));
 
+vi.mock("@/src/server/repositories/auditRunRepository", () => ({
+  createAuditRun: vi.fn(async () => undefined),
+}));
+
 function buildRequest(url: string) {
-  return new Request(new URL(url, "http://localhost"));
+  return new Request(new URL(url, "http://localhost"), {
+    headers: { authorization: "Bearer cron-secret", "x-cron-secret": "cron-secret" },
+  });
 }
 
 describe("admin playbook calibration export route", () => {
+  process.env.CRON_SECRET = "cron-secret";
+
   it("returns json when format=json", async () => {
     const res = await GET(buildRequest("http://localhost/api/admin/playbooks/calibration/export?format=json"));
     expect(res.status).toBe(200);

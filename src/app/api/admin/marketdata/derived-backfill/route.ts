@@ -1,11 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isAdminEnabled, validateAdminRequestOrigin } from "@/src/lib/admin/security";
-import { isAdminSessionFromRequest } from "@/src/lib/admin/auth";
 import { getActiveAssets } from "@/src/server/repositories/assetRepository";
 import { findDerivedPair } from "@/src/server/marketData/derived-config";
 import { deriveCandlesForTimeframe, type DeriveTimeframesResult } from "@/src/server/marketData/deriveTimeframes";
 import { getContainer } from "@/src/server/container";
 import type { CandleTimeframe } from "@/src/domain/market-data/types";
+import { asUnauthorizedResponse, requireAdminOrCron } from "@/src/lib/admin/auth/requireAdminOrCron";
+import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
+import { buildAuditMeta } from "@/src/lib/admin/audit/buildAuditMeta";
 
 type BackfillChunkResult = DeriveTimeframesResult & { chunkFrom: string; chunkTo: string };
 
@@ -22,19 +24,25 @@ type BackfillResponse =
 const DEFAULT_CHUNK_HOURS = 24;
 
 export async function POST(request: NextRequest) {
+  const startedAt = Date.now();
   if (!isAdminEnabled()) {
     return NextResponse.json<BackfillResponse>(
       { ok: false, errorCode: "admin_disabled", message: "Admin operations disabled" },
       { status: 404 },
     );
   }
-  if (!isAdminSessionFromRequest(request)) {
+  let auth;
+  try {
+    auth = await requireAdminOrCron(request, { allowCron: true, allowAdminToken: true });
+  } catch (error) {
+    const unauthorized = asUnauthorizedResponse(error);
+    if (unauthorized) return unauthorized;
     return NextResponse.json<BackfillResponse>(
       { ok: false, errorCode: "unauthorized", message: "Missing or invalid admin session" },
       { status: 401 },
     );
   }
-  if (!validateAdminRequestOrigin(request)) {
+  if (auth.mode === "admin" && !validateAdminRequestOrigin(request)) {
     return NextResponse.json<BackfillResponse>(
       { ok: false, errorCode: "forbidden", message: "Invalid request origin" },
       { status: 403 },
@@ -93,13 +101,28 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  return NextResponse.json<BackfillResponse>({
+  const response: BackfillResponse = {
     ok: true,
     targetTimeframe,
     assetIds: selectedAssets.map((a) => a.id),
     chunkHours,
     chunks,
+  };
+  await createAuditRun({
+    action: "admin_derived_backfill",
+    source: auth.mode,
+    ok: true,
+    durationMs: Date.now() - startedAt,
+    message: "admin_derived_backfill_success",
+    meta: buildAuditMeta({
+      auth,
+      request: { method: request.method, url: request.url },
+      params: { targetTimeframe, fromIso, toIso, chunkHours, assetId: assetIdInput || "all" },
+      result: { ok: true, rows: chunks.length },
+    }),
   });
+
+  return NextResponse.json<BackfillResponse>(response);
 }
 
 export function GET() {

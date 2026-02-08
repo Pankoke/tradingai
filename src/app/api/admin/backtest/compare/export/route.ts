@@ -1,9 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isAdminEnabled, validateAdminRequestOrigin } from "@/src/lib/admin/security";
-import { isAdminSessionFromRequest } from "@/src/lib/admin/auth";
 import { getBacktestRunByKey } from "@/src/server/repositories/backtestRunRepository";
 import { toCsv } from "@/src/server/utils/csv";
 import type { BacktestKpis, CompletedTrade } from "@/src/domain/backtest/types";
+import { asUnauthorizedResponse, requireAdminOrCron } from "@/src/lib/admin/auth/requireAdminOrCron";
+import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
+import { buildAuditMeta } from "@/src/lib/admin/audit/buildAuditMeta";
 
 type ExportType = "kpis" | "summary" | "all";
 
@@ -82,13 +84,19 @@ function sectionCsv(title: string, headers: string[], rows: string[][]): string 
 }
 
 export async function GET(request: NextRequest) {
+  const startedAt = Date.now();
   if (!isAdminEnabled()) {
     return NextResponse.json({ ok: false, error: "Admin disabled" }, { status: 404 });
   }
-  if (!isAdminSessionFromRequest(request)) {
+  let auth;
+  try {
+    auth = await requireAdminOrCron(request, { allowCron: true, allowAdminToken: true });
+  } catch (error) {
+    const unauthorized = asUnauthorizedResponse(error);
+    if (unauthorized) return unauthorized;
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
-  if (!validateAdminRequestOrigin(request)) {
+  if (auth.mode === "admin" && !validateAdminRequestOrigin(request)) {
     return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
   }
 
@@ -152,6 +160,19 @@ export async function GET(request: NextRequest) {
   }
 
   const filename = `backtest_compare_${a.assetId}_${a.fromIso}_${a.toIso}__vs__${b.assetId}_${b.fromIso}_${b.toIso}_${type}.csv`.replace(/[^a-zA-Z0-9_.-]/g, "_");
+  await createAuditRun({
+    action: "admin_backtest_compare_export",
+    source: auth.mode,
+    ok: true,
+    durationMs: Date.now() - startedAt,
+    message: "backtest_compare_export_success",
+    meta: buildAuditMeta({
+      auth,
+      request: { method: request.method, url: request.url },
+      params: { primaryKey, secondaryKey, type },
+      result: { ok: true, bytes: body.length },
+    }),
+  });
   return new NextResponse(body, {
     status: 200,
     headers: {

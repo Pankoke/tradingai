@@ -20,12 +20,17 @@ vi.mock("@/src/server/repositories/backtestRunRepository", () => ({
 }));
 
 function buildRequest(url: string, method = "GET") {
-  return new NextRequest(url, { method, headers: { host: "localhost" } });
+  return new NextRequest(url, {
+    method,
+    headers: { host: "localhost", authorization: "Bearer cron-secret", "x-cron-secret": "cron-secret" },
+  });
 }
 
 describe("admin backtest export csv route", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    process.env.CRON_SECRET = "cron-secret";
+    process.env.ADMIN_API_TOKEN = "admin-secret";
     mockIsAdminEnabled.mockReturnValue(true);
     mockIsAdminSession.mockReturnValue(true);
     mockValidateOrigin.mockReturnValue(true);

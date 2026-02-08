@@ -1,46 +1,26 @@
 import { NextRequest } from "next/server";
 import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 import { loadOutcomeExportRows } from "@/src/server/admin/outcomeService";
+import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
+import { asUnauthorizedResponse, requireAdminOrCron } from "@/src/lib/admin/auth/requireAdminOrCron";
+import { buildAuditMeta } from "@/src/lib/admin/audit/buildAuditMeta";
 
 type OutcomeRow = Awaited<ReturnType<typeof loadOutcomeExportRows>>[number];
 
-function authCheck(request: Request): { ok: boolean; meta: Record<string, unknown> } {
-  const adminToken = process.env.ADMIN_API_TOKEN;
-  const cronToken = process.env.CRON_SECRET;
-  const header = request.headers.get("authorization");
-  const bearer = header?.replace("Bearer", "").trim();
-  const cookies = request.headers.get("cookie") ?? "";
-  const clerkStatus = request.headers.get("x-clerk-auth-status");
-  const alt = request.headers.get("x-cron-secret");
-  const env = process.env.NODE_ENV;
-  const isLocal = env === "development" || env === "test";
-  const usedCron = !!cronToken && (bearer === cronToken || alt === cronToken);
-  const sessionCookie =
-    cookies.includes("__session=") || cookies.includes("__client_uat=") || cookies.includes("__clerk_session");
-  const usedAdminToken = !!adminToken && bearer === adminToken;
-  const usedSession = !!clerkStatus && clerkStatus !== "signed-out" ? true : sessionCookie;
-  const usedAdmin = usedAdminToken || usedSession;
-
-  if (adminToken) {
-    return { ok: usedAdmin || usedCron, meta: { hasAdmin: true, hasCron: !!cronToken, usedAdmin, usedCron } };
-  }
-  if (isLocal && !adminToken) {
-    return { ok: true, meta: { localMode: true, hasCron: !!cronToken, usedCron, usedAdmin } };
-  }
-  return { ok: usedCron, meta: { hasAdmin: false, hasCron: !!cronToken, usedCron, usedAdmin } };
-}
-
-export async function GET(request: NextRequest | Request): Promise<Response> {
-  const auth = authCheck(request);
-  if (!auth.ok) {
-    const env = process.env.NODE_ENV;
-    const details = env === "development" || env === "test" ? auth.meta : undefined;
-    return respondFail("UNAUTHORIZED", "Unauthorized", 401, details);
+export async function GET(request: NextRequest): Promise<Response> {
+  const startedAt = Date.now();
+  let auth;
+  try {
+    auth = await requireAdminOrCron(request, { allowCron: true, allowAdminToken: true });
+  } catch (error) {
+    const unauthorized = asUnauthorizedResponse(error);
+    if (unauthorized) return unauthorized;
+    return respondFail("UNAUTHORIZED", "Unauthorized", 401);
   }
 
   const params =
-    "nextUrl" in request && (request as NextRequest).nextUrl
-      ? (request as NextRequest).nextUrl.searchParams
+    "nextUrl" in request && request.nextUrl
+      ? request.nextUrl.searchParams
       : new URL(request.url).searchParams;
   const days = parseInt(params.get("days") ?? "30", 10);
   const assetId = params.get("assetId") ?? undefined;
@@ -67,7 +47,7 @@ export async function GET(request: NextRequest | Request): Promise<Response> {
     }, {});
     const distinctSetupIdsDb = new Set(totals.map((r) => r.outcome.setupId)).size;
 
-    return respondOk({
+    const payload = {
       rows: rows.map((r) => mapRow(r)),
       countsByPlaybookId_returned: countsByPlaybookIdReturned,
       countsByPlaybookId_totalInDb: countsByPlaybookIdDb,
@@ -75,11 +55,38 @@ export async function GET(request: NextRequest | Request): Promise<Response> {
       totalRowsInDb: totals.length,
       distinctSetupIdsReturned,
       distinctSetupIdsInDb: distinctSetupIdsDb,
+    };
+    await createAuditRun({
+      action: "admin_outcomes_export",
+      source: auth.mode,
+      ok: true,
+      durationMs: Date.now() - startedAt,
+      message: "outcomes_export_debug_json_success",
+      meta: buildAuditMeta({
+        auth,
+        request: { method: request.method, url: request.url },
+        params: { days, assetId, playbookId, format, mode, debug },
+        result: { ok: true, rows: rows.length, bytes: JSON.stringify(payload).length },
+      }),
     });
+    return respondOk(payload);
   }
   const data = rows.map((row) => mapRow(row));
 
   if (format === "json") {
+    await createAuditRun({
+      action: "admin_outcomes_export",
+      source: auth.mode,
+      ok: true,
+      durationMs: Date.now() - startedAt,
+      message: "outcomes_export_json_success",
+      meta: buildAuditMeta({
+        auth,
+        request: { method: request.method, url: request.url },
+        params: { days, assetId, playbookId, format, mode, debug },
+        result: { ok: true, rows: data.length, bytes: JSON.stringify(data).length },
+      }),
+    });
     return respondOk(data);
   }
 
@@ -152,6 +159,20 @@ export async function GET(request: NextRequest | Request): Promise<Response> {
   }
 
   const body = csvLines.join("\n");
+  const durationMs = Date.now() - startedAt;
+  await createAuditRun({
+    action: "admin_outcomes_export",
+    source: auth.mode,
+    ok: true,
+    durationMs,
+    message: "outcomes_export_success",
+    meta: buildAuditMeta({
+      auth,
+      request: { method: request.method, url: request.url },
+      params: { days, assetId, playbookId, format, mode, debug },
+      result: { ok: true, rows: rows.length, bytes: body.length },
+    }),
+  });
   return new Response(body, {
     status: 200,
     headers: {

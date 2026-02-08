@@ -48,11 +48,19 @@ vi.mock("@/src/server/admin/outcomeService", () => ({
   ]),
 }));
 
+vi.mock("@/src/server/repositories/auditRunRepository", () => ({
+  createAuditRun: vi.fn(async () => undefined),
+}));
+
 function buildRequest(url: string) {
-  return new Request(new URL(url, "http://localhost"));
+  return new Request(new URL(url, "http://localhost"), {
+    headers: { authorization: "Bearer cron-secret", "x-cron-secret": "cron-secret" },
+  });
 }
 
 describe("admin outcomes export route", () => {
+  process.env.CRON_SECRET = "cron-secret";
+
   it("returns json when format=json", async () => {
     const res = await GET(buildRequest("http://localhost/api/admin/outcomes/export?format=json"));
     expect(res.status).toBe(200);

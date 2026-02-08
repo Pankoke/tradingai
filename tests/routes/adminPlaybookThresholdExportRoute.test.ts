@@ -18,16 +18,30 @@ vi.mock("@/src/server/admin/playbookThresholdService", () => ({
   })),
 }));
 
+vi.mock("@/src/server/repositories/auditRunRepository", () => ({
+  createAuditRun: vi.fn(async () => undefined),
+}));
+
 describe("admin playbook thresholds export route", () => {
+  process.env.CRON_SECRET = "cron-secret";
+
   it("returns json", async () => {
-    const res = await GET(new Request("http://localhost/api/admin/playbooks/thresholds/export?format=json"));
+    const res = await GET(
+      new Request("http://localhost/api/admin/playbooks/thresholds/export?format=json", {
+        headers: { authorization: "Bearer cron-secret", "x-cron-secret": "cron-secret" },
+      }),
+    );
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.data.current.biasMin).toBe(80);
   });
 
   it("returns csv by default", async () => {
-    const res = await GET(new Request("http://localhost/api/admin/playbooks/thresholds/export"));
+    const res = await GET(
+      new Request("http://localhost/api/admin/playbooks/thresholds/export", {
+        headers: { authorization: "Bearer cron-secret", "x-cron-secret": "cron-secret" },
+      }),
+    );
     expect(res.status).toBe(200);
     const text = await res.text();
     expect(text).toContain("metric,current,recommended");

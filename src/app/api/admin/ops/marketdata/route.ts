@@ -1,9 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { syncDailyCandlesForAsset } from "@/src/features/marketData/syncDailyCandles";
 import { getActiveAssets } from "@/src/server/repositories/assetRepository";
-import { isAdminSessionFromRequest } from "@/src/lib/admin/auth";
 import { isAdminEnabled, validateAdminRequestOrigin } from "@/src/lib/admin/security";
 import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
+import { asUnauthorizedResponse, requireAdminOrCron } from "@/src/lib/admin/auth/requireAdminOrCron";
+import { buildAuditMeta } from "@/src/lib/admin/audit/buildAuditMeta";
 
 type ActionSuccess = {
   ok: true;
@@ -35,13 +36,18 @@ export async function POST(request: NextRequest) {
       { status: 404 },
     );
   }
-  if (!isAdminSessionFromRequest(request)) {
+  let auth;
+  try {
+    auth = await requireAdminOrCron(request, { allowCron: true, allowAdminToken: true });
+  } catch (error) {
+    const unauthorized = asUnauthorizedResponse(error);
+    if (unauthorized) return unauthorized;
     return NextResponse.json(
       { ok: false, errorCode: "unauthorized", message: "Missing or invalid admin session" },
       { status: 401 },
     );
   }
-  if (!validateAdminRequestOrigin(request)) {
+  if (auth.mode === "admin" && !validateAdminRequestOrigin(request)) {
     return NextResponse.json({ ok: false, errorCode: "forbidden", message: "Invalid request origin" }, { status: 403 });
   }
 
@@ -62,11 +68,17 @@ export async function POST(request: NextRequest) {
     const body: ActionError = { ok: false, errorCode: "unknown_symbol", message: `No asset for ${symbolInput}` };
     await createAuditRun({
       action: "marketdata_sync",
-      source: "admin",
+      source: auth.mode,
       ok: false,
       durationMs: 0,
       message: "unknown_symbol",
-      meta: { symbol: symbolInput },
+      meta: buildAuditMeta({
+        auth,
+        request: { method: request.method, url: request.url },
+        params: { symbol: symbolInput, lookbackDays },
+        result: { ok: false },
+        error: "unknown_symbol",
+      }),
     });
     return NextResponse.json(body, { status: 400 });
   }
@@ -118,28 +130,34 @@ export async function POST(request: NextRequest) {
 
     await createAuditRun({
       action: "marketdata_sync",
-      source: "admin",
+      source: auth.mode,
       ok: true,
       durationMs: response.durationMs,
       message: response.message,
-      meta: {
-        symbol: symbolInput || "all",
-        processed,
-        failed,
-        lookbackDays,
-      },
+      meta: buildAuditMeta({
+        auth,
+        request: { method: request.method, url: request.url },
+        params: { symbol: symbolInput || "all", lookbackDays },
+        result: { ok: true },
+      }),
     });
 
     return NextResponse.json(response);
   } catch (error) {
     await createAuditRun({
       action: "marketdata_sync",
-      source: "admin",
+      source: auth.mode,
       ok: false,
       durationMs: Date.now() - startedAt.getTime(),
       message: "marketdata_sync_failed",
       error: error instanceof Error ? error.message : "unknown error",
-      meta: { symbol: symbolInput || "all", lookbackDays },
+      meta: buildAuditMeta({
+        auth,
+        request: { method: request.method, url: request.url },
+        params: { symbol: symbolInput || "all", lookbackDays },
+        result: { ok: false },
+        error,
+      }),
     });
     return NextResponse.json(
       { ok: false, errorCode: "marketdata_failed", message: error instanceof Error ? error.message : "Failed" },

@@ -1,18 +1,18 @@
 import { NextRequest } from "next/server";
 import { respondFail, respondOk } from "@/src/server/http/apiResponse";
 import { loadCalibrationStats } from "@/src/server/admin/calibrationService";
+import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
+import { asUnauthorizedResponse, requireAdminOrCron } from "@/src/lib/admin/auth/requireAdminOrCron";
+import { buildAuditMeta } from "@/src/lib/admin/audit/buildAuditMeta";
 
-function isAuthorized(request: Request): boolean {
-  const token = process.env.ADMIN_API_TOKEN;
-  if (!token) return true;
-  const header = request.headers.get("authorization");
-  if (!header) return false;
-  const value = header.replace("Bearer", "").trim();
-  return value === token;
-}
-
-export async function GET(request: NextRequest | Request): Promise<Response> {
-  if (!isAuthorized(request)) {
+export async function GET(request: NextRequest): Promise<Response> {
+  const startedAt = Date.now();
+  let auth;
+  try {
+    auth = await requireAdminOrCron(request, { allowCron: true, allowAdminToken: true });
+  } catch (error) {
+    const unauthorized = asUnauthorizedResponse(error);
+    if (unauthorized) return unauthorized;
     return respondFail("UNAUTHORIZED", "Unauthorized", 401);
   }
 
@@ -30,6 +30,19 @@ export async function GET(request: NextRequest | Request): Promise<Response> {
   const rows = stats.recent;
 
   if (format === "json") {
+    await createAuditRun({
+      action: "admin_calibration_export",
+      source: auth.mode,
+      ok: true,
+      durationMs: Date.now() - startedAt,
+      message: "calibration_export_json_success",
+      meta: buildAuditMeta({
+        auth,
+        request: { method: request.method, url: request.url },
+        params: { playbook, profile, days, assetId, format },
+        result: { ok: true, rows: rows.length, bytes: JSON.stringify(rows).length },
+      }),
+    });
     return respondOk(rows);
   }
 
@@ -88,6 +101,19 @@ export async function GET(request: NextRequest | Request): Promise<Response> {
   }
 
   const body = csvLines.join("\n");
+  await createAuditRun({
+    action: "admin_calibration_export",
+    source: auth.mode,
+    ok: true,
+    durationMs: Date.now() - startedAt,
+    message: "calibration_export_csv_success",
+    meta: buildAuditMeta({
+      auth,
+      request: { method: request.method, url: request.url },
+      params: { playbook, profile, days, assetId, format },
+      result: { ok: true, rows: rows.length, bytes: body.length },
+    }),
+  });
   return new Response(body, {
     status: 200,
     headers: {

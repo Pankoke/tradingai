@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isAdminEnabled, validateAdminRequestOrigin } from "@/src/lib/admin/security";
-import { isAdminSessionFromRequest } from "@/src/lib/admin/auth";
 import { backfillSentimentSnapshots } from "@/src/server/sentiment/backfillSentimentSnapshots";
+import { asUnauthorizedResponse, requireAdminOrCron } from "@/src/lib/admin/auth/requireAdminOrCron";
+import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
+import { buildAuditMeta } from "@/src/lib/admin/audit/buildAuditMeta";
 
 type BackfillResponse =
   | {
@@ -27,19 +29,25 @@ const DEFAULT_STEP_HOURS = 4;
 const DEFAULT_LOOKBACK_HOURS = 24;
 
 export async function POST(request: NextRequest) {
+  const startedAt = Date.now();
   if (!isAdminEnabled()) {
     return NextResponse.json<BackfillResponse>(
       { ok: false, error: "Admin disabled", code: "admin_disabled" },
       { status: 404 },
     );
   }
-  if (!isAdminSessionFromRequest(request)) {
+  let auth;
+  try {
+    auth = await requireAdminOrCron(request, { allowCron: true, allowAdminToken: true });
+  } catch (error) {
+    const unauthorized = asUnauthorizedResponse(error);
+    if (unauthorized) return unauthorized;
     return NextResponse.json<BackfillResponse>(
       { ok: false, error: "Unauthorized", code: "unauthorized" },
       { status: 401 },
     );
   }
-  if (!validateAdminRequestOrigin(request)) {
+  if (auth.mode === "admin" && !validateAdminRequestOrigin(request)) {
     return NextResponse.json<BackfillResponse>(
       { ok: false, error: "Forbidden", code: "forbidden" },
       { status: 403 },
@@ -73,10 +81,25 @@ export async function POST(request: NextRequest) {
   });
 
   if (!result.ok) {
+    await createAuditRun({
+      action: "admin_sentiment_backfill",
+      source: auth.mode,
+      ok: false,
+      durationMs: Date.now() - startedAt,
+      message: "admin_sentiment_backfill_failed",
+      error: result.error,
+      meta: buildAuditMeta({
+        auth,
+        request: { method: request.method, url: request.url },
+        params: { assetId, fromIso, toIso, stepHours, lookbackHours },
+        result: { ok: false },
+        error: result.error,
+      }),
+    });
     return NextResponse.json<BackfillResponse>(result, { status: 400 });
   }
 
-  return NextResponse.json<BackfillResponse>({
+  const response: BackfillResponse = {
     ok: true,
     assetId: result.assetId,
     processed: result.processed,
@@ -92,7 +115,23 @@ export async function POST(request: NextRequest) {
       error: c.error,
       writeResultNote: c.writeResult.note,
     })),
+  };
+
+  await createAuditRun({
+    action: "admin_sentiment_backfill",
+    source: auth.mode,
+    ok: true,
+    durationMs: Date.now() - startedAt,
+    message: "admin_sentiment_backfill_success",
+    meta: buildAuditMeta({
+      auth,
+      request: { method: request.method, url: request.url },
+      params: { assetId, fromIso, toIso, stepHours, lookbackHours },
+      result: { ok: true, rows: result.processed },
+    }),
   });
+
+  return NextResponse.json<BackfillResponse>(response);
 }
 
 export function GET() {

@@ -1,20 +1,28 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isAdminEnabled, validateAdminRequestOrigin } from "@/src/lib/admin/security";
-import { isAdminSessionFromRequest } from "@/src/lib/admin/auth";
 import { runBacktest } from "@/src/server/backtest/runBacktest";
+import { asUnauthorizedResponse, requireAdminOrCron } from "@/src/lib/admin/auth/requireAdminOrCron";
+import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
+import { buildAuditMeta } from "@/src/lib/admin/audit/buildAuditMeta";
 
 type BacktestResponse =
   | { ok: true; reportPath: string; steps: number }
   | { ok: false; error: string; code: string };
 
 export async function POST(request: NextRequest) {
+  const startedAt = Date.now();
   if (!isAdminEnabled()) {
     return NextResponse.json<BacktestResponse>({ ok: false, error: "Admin disabled", code: "admin_disabled" }, { status: 404 });
   }
-  if (!isAdminSessionFromRequest(request)) {
+  let auth;
+  try {
+    auth = await requireAdminOrCron(request, { allowCron: true, allowAdminToken: true });
+  } catch (error) {
+    const unauthorized = asUnauthorizedResponse(error);
+    if (unauthorized) return unauthorized;
     return NextResponse.json<BacktestResponse>({ ok: false, error: "Unauthorized", code: "unauthorized" }, { status: 401 });
   }
-  if (!validateAdminRequestOrigin(request)) {
+  if (auth.mode === "admin" && !validateAdminRequestOrigin(request)) {
     return NextResponse.json<BacktestResponse>({ ok: false, error: "Forbidden", code: "forbidden" }, { status: 403 });
   }
 
@@ -54,6 +62,21 @@ export async function POST(request: NextRequest) {
     snapshotMode,
   });
   const status = result.ok ? 200 : 400;
+  await createAuditRun({
+    action: "admin_backtest_run",
+    source: auth.mode,
+    ok: result.ok,
+    durationMs: Date.now() - startedAt,
+    message: result.ok ? "admin_backtest_run_success" : "admin_backtest_run_failed",
+    meta: buildAuditMeta({
+      auth,
+      request: { method: request.method, url: request.url },
+      params: { assetId, fromIso, toIso, stepHours, feeBps, slippageBps, holdSteps, snapshotMode },
+      result: { ok: result.ok },
+      error: result.ok ? undefined : result.error,
+    }),
+    error: result.ok ? undefined : result.error,
+  });
   return NextResponse.json<BacktestResponse>(result, { status });
 }
 

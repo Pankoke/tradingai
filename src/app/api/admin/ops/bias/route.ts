@@ -1,9 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { computeTechnicalBiasForAllActiveAssets } from "@/src/features/bias/computeTechnicalBias";
-import { isAdminSessionFromRequest } from "@/src/lib/admin/auth";
 import { isAdminEnabled, validateAdminRequestOrigin } from "@/src/lib/admin/security";
 import type { Timeframe } from "@/src/server/providers/marketDataProvider";
 import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
+import { asUnauthorizedResponse, requireAdminOrCron } from "@/src/lib/admin/auth/requireAdminOrCron";
+import { buildAuditMeta } from "@/src/lib/admin/audit/buildAuditMeta";
 
 type SuccessResponse = {
   ok: true;
@@ -32,13 +33,18 @@ export async function POST(request: NextRequest) {
       { status: 404 },
     );
   }
-  if (!isAdminSessionFromRequest(request)) {
+  let auth;
+  try {
+    auth = await requireAdminOrCron(request, { allowCron: true, allowAdminToken: true });
+  } catch (error) {
+    const unauthorized = asUnauthorizedResponse(error);
+    if (unauthorized) return unauthorized;
     return NextResponse.json(
       { ok: false, errorCode: "unauthorized", message: "Missing or invalid admin session" },
       { status: 401 },
     );
   }
-  if (!validateAdminRequestOrigin(request)) {
+  if (auth.mode === "admin" && !validateAdminRequestOrigin(request)) {
     return NextResponse.json({ ok: false, errorCode: "forbidden", message: "Invalid request origin" }, { status: 403 });
   }
 
@@ -71,27 +77,33 @@ export async function POST(request: NextRequest) {
     };
     await createAuditRun({
       action: "bias_sync",
-      source: "admin",
+      source: auth.mode,
       ok: true,
       durationMs,
       message: response.message,
-      meta: {
-        processed: result.processed,
-        skipped: result.skipped,
-        timeframe: timeframeValue,
-        date: date.toISOString(),
-      },
+      meta: buildAuditMeta({
+        auth,
+        request: { method: request.method, url: request.url },
+        params: { timeframe: timeframeValue, date: date.toISOString() },
+        result: { ok: true },
+      }),
     });
     return NextResponse.json(response);
   } catch (error) {
     await createAuditRun({
       action: "bias_sync",
-      source: "admin",
+      source: auth.mode,
       ok: false,
       durationMs: Date.now() - startedAt.getTime(),
       message: "bias_sync_failed",
       error: error instanceof Error ? error.message : "unknown error",
-      meta: { timeframe: timeframeValue, date: date.toISOString() },
+      meta: buildAuditMeta({
+        auth,
+        request: { method: request.method, url: request.url },
+        params: { timeframe: timeframeValue, date: date.toISOString() },
+        result: { ok: false },
+        error,
+      }),
     });
     const body: ErrorResponse = {
       ok: false,
