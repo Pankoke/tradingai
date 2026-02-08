@@ -2,6 +2,10 @@ import Link from "next/link";
 import type { Locale } from "@/i18n";
 import { loadEngineHealth } from "@/src/server/admin/outcomeService";
 import { FIX_DATE_ISO } from "@/src/server/services/outcomePolicy";
+import { OutcomesHeader } from "@/src/components/admin/outcomes/OutcomesHeader";
+import { buildOutcomesRelatedLinks } from "@/src/components/admin/outcomes/relatedLinks";
+import deMessages from "@/src/messages/de.json";
+import enMessages from "@/src/messages/en.json";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -19,6 +23,14 @@ const ALLOWED_DAYS = ["30", "90", "180", "365", "730"];
 
 export default async function EngineHealthPage({ params, searchParams }: PageProps) {
   const locale = (await params).locale as Locale;
+  const messages = locale === "de" ? deMessages : enMessages;
+  const related = buildOutcomesRelatedLinks(locale, {
+    explorer: messages["admin.outcomes.related.explorer"],
+    overview: messages["admin.outcomes.related.overview"],
+    diagnostics: messages["admin.outcomes.related.diagnostics"],
+    engineHealth: messages["admin.outcomes.related.engineHealth"],
+    swingPerformance: messages["admin.outcomes.related.swingPerformance"],
+  });
   const query = (await searchParams) ?? {};
   const days = ALLOWED_DAYS.includes(query.days ?? "") ? Number(query.days) : 90;
   const assetId = query.assetId;
@@ -31,8 +43,15 @@ export default async function EngineHealthPage({ params, searchParams }: PagePro
 
   return (
     <div className="space-y-6">
+      <OutcomesHeader
+        title={messages["admin.outcomes.header.engineHealth.title"]}
+        description={messages["admin.outcomes.header.engineHealth.description"]}
+        notice={messages["admin.outcomes.header.engineHealth.notice"]}
+        variant="db"
+        related={related}
+        currentKey="engineHealth"
+      />
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-white">Engine Health (Forward Cohort)</h1>
         <p className="text-sm text-slate-300">
           Nur Outcomes ab {new Date(FIX_DATE_ISO).toISOString().slice(0, 10)} (cohort-policy). Status &quot;invalid&quot;
           ausgeschlossen.

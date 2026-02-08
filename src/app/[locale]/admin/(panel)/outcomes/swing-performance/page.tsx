@@ -8,6 +8,10 @@ import {
   loadPerformanceReport,
   type AggregateRow,
 } from "./utils";
+import { OutcomesHeader } from "@/src/components/admin/outcomes/OutcomesHeader";
+import { buildOutcomesRelatedLinks } from "@/src/components/admin/outcomes/relatedLinks";
+import deMessages from "@/src/messages/de.json";
+import enMessages from "@/src/messages/en.json";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -22,6 +26,15 @@ const TIMEFRAME_CHOICES = [
 
 export default async function SwingPerformancePage({ params, searchParams }: PageProps) {
   const locale = (await params).locale as Locale;
+  const messages = locale === "de" ? deMessages : enMessages;
+  const related = buildOutcomesRelatedLinks(locale, {
+    explorer: messages["admin.outcomes.related.explorer"],
+    overview: messages["admin.outcomes.related.overview"],
+    diagnostics: messages["admin.outcomes.related.diagnostics"],
+    engineHealth: messages["admin.outcomes.related.engineHealth"],
+    swingPerformance: messages["admin.outcomes.related.swingPerformance"],
+  });
+
   const query = (await searchParams) ?? {};
   const timeframe = (query.timeframe ?? "all").toLowerCase();
   const playbookId = query.playbookId ?? "";
@@ -31,9 +44,16 @@ export default async function SwingPerformancePage({ params, searchParams }: Pag
   if (!report) {
     return (
       <div className="space-y-3">
-        <h1 className="text-2xl font-semibold text-white">Swing Performance Overview</h1>
+        <OutcomesHeader
+          title={messages["admin.outcomes.header.swingPerformance.title"]}
+          description={messages["admin.outcomes.header.swingPerformance.description"]}
+          notice={messages["admin.outcomes.header.swingPerformance.notice"]}
+          variant="legacy"
+          related={related}
+          currentKey="swingPerformance"
+        />
         <p className="text-slate-300 text-sm">
-          Kein Artefakt gefunden. Bitte zuerst ausführen: <code>npm run phase1:performance:swing -- --days=30</code>
+          Kein Artefakt gefunden. Bitte zuerst ausfuehren: <code>npm run phase1:performance:swing -- --days=30</code>
         </p>
       </div>
     );
@@ -47,10 +67,18 @@ export default async function SwingPerformancePage({ params, searchParams }: Pag
 
   return (
     <div className="space-y-6">
+      <OutcomesHeader
+        title={messages["admin.outcomes.header.swingPerformance.title"]}
+        description={messages["admin.outcomes.header.swingPerformance.description"]}
+        notice={messages["admin.outcomes.header.swingPerformance.notice"]}
+        variant="legacy"
+        related={related}
+        currentKey="swingPerformance"
+      />
+
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold text-white">Swing Performance Overview</h1>
         <p className="text-sm text-slate-300">
-          Artefakt-basierte Übersicht (Phase-1). Fenster: letzte {report.params.days} Tage. MinClosed:{" "}
+          Artefakt-basierte Uebersicht (Phase-1). Fenster: letzte {report.params.days} Tage. MinClosed: {" "}
           {report.params.minClosed}. Quelle: artifacts/phase1/swing-performance-breakdown-latest-v1.json
         </p>
         <div className="flex flex-wrap gap-2 text-xs">
@@ -113,12 +141,7 @@ export default async function SwingPerformancePage({ params, searchParams }: Pag
         </SummaryCard>
       </section>
 
-      <DataTable
-        title="By Playbook"
-        rows={byPlaybook}
-        hideLowSample={hideLowSample}
-      />
-
+      <DataTable title="By Playbook" rows={byPlaybook} hideLowSample={hideLowSample} />
       <DataTable title="By Asset" rows={byAsset} hideLowSample={hideLowSample} />
 
       <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 text-xs text-slate-300">

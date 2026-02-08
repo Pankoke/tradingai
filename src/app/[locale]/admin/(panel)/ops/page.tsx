@@ -20,6 +20,8 @@ import {
   getSnapshotBuildStatus,
 } from "@/src/server/perception/snapshotBuildService";
 import type { SnapshotBuildSource } from "@/src/features/perception/build/buildSetups";
+import { AdminSectionHeader } from "@/src/components/admin/AdminSectionHeader";
+import { buildOpsGovernanceRelatedLinks } from "@/src/components/admin/relatedLinks";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -251,14 +253,23 @@ export default async function AdminOpsPage({ params }: Props) {
         meta: (dedupAudit.runs[0].meta as EventsDedupRunInfo["meta"]) ?? null,
       }
     : null;
+  const related = buildOpsGovernanceRelatedLinks(locale, {
+    operations: messages["admin.nav.ops"],
+    auditTrail: messages["admin.nav.audit"],
+    systemHealth: messages["admin.nav.system"],
+  });
 
   return (
     <div className="space-y-6">
-      <header className="space-y-2">
-        <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Admin</p>
-        <h1 className="text-3xl font-semibold text-white">{opsMessages.title}</h1>
-        <p className="text-sm text-slate-400">{opsMessages.description}</p>
-      </header>
+      <AdminSectionHeader
+        title={opsMessages.title}
+        description={opsMessages.description}
+        relatedLabel={messages["admin.section.related"]}
+        links={related}
+        currentKey="operations"
+        notice={messages["admin.ops.notice"]}
+        variant="actions"
+      />
       <OpsActionsPanel
         locale={locale}
         messages={opsMessages}

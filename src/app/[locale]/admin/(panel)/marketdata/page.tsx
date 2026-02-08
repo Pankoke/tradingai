@@ -6,6 +6,8 @@ import deMessages from "@/src/messages/de.json";
 import enMessages from "@/src/messages/en.json";
 import { getLatestFreshnessRuns } from "@/src/server/admin/freshnessAuditService";
 import Link from "next/link";
+import { AdminSectionHeader } from "@/src/components/admin/AdminSectionHeader";
+import { buildDataMonitoringRelatedLinks } from "@/src/components/admin/relatedLinks";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -64,14 +66,24 @@ export default async function AdminMarketDataPage({ params }: Props) {
     const days = Math.max(1, Math.round(delayMs / MS_DAY));
     return messages["admin.marketdata.delay.days"].replace("{value}", days.toString());
   };
+  const related = buildDataMonitoringRelatedLinks(locale, {
+    snapshots: messages["admin.nav.snapshots"],
+    marketData: messages["admin.nav.marketdataHealth"],
+    coverage: messages["admin.nav.coverage"],
+    healthReports: messages["admin.nav.healthReports"],
+  });
 
   return (
     <div className="space-y-8">
-      <header className="space-y-2">
-        <p className="text-xs uppercase tracking-[0.3em] text-slate-500">{messages["admin.marketdata.title"]}</p>
-        <h1 className="text-3xl font-semibold text-white">{messages["admin.marketdata.title"]}</h1>
-        <p className="text-sm text-slate-400">{messages["admin.marketdata.subtitle"]}</p>
-      </header>
+      <AdminSectionHeader
+        title={messages["admin.marketdata.title"]}
+        description={messages["admin.marketdata.subtitle"]}
+        relatedLabel={messages["admin.section.related"]}
+        links={related}
+        currentKey="marketData"
+        notice={messages["admin.marketdata.notice"]}
+        variant="info"
+      />
 
       <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">

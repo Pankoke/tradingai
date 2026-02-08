@@ -8,6 +8,8 @@ import { listAuditRuns } from "@/src/server/repositories/auditRunRepository";
 import { getLatestFreshnessRuns } from "@/src/server/admin/freshnessAuditService";
 import { buildHealthSummary } from "@/src/server/health/buildHealthSummary";
 import type { HealthCheckResult } from "@/src/server/health/healthTypes";
+import { AdminSectionHeader } from "@/src/components/admin/AdminSectionHeader";
+import { buildOpsGovernanceRelatedLinks } from "@/src/components/admin/relatedLinks";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -172,14 +174,23 @@ export default async function AdminSystemHealthPage({ params }: Props) {
       last7dLabel: messages["admin.system.counts.active"],
     },
   ];
+  const related = buildOpsGovernanceRelatedLinks(locale, {
+    operations: messages["admin.nav.ops"],
+    auditTrail: messages["admin.nav.audit"],
+    systemHealth: messages["admin.nav.system"],
+  });
 
   return (
     <div className="space-y-8">
-      <header>
-        <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Admin</p>
-        <h1 className="text-3xl font-semibold text-white">{messages["admin.system.title"]}</h1>
-        <p className="text-sm text-slate-400">{messages["admin.system.subtitle"]}</p>
-      </header>
+      <AdminSectionHeader
+        title={messages["admin.system.title"]}
+        description={messages["admin.system.subtitle"]}
+        relatedLabel={messages["admin.section.related"]}
+        links={related}
+        currentKey="systemHealth"
+        notice={messages["admin.system.notice"]}
+        variant="info"
+      />
 
       <section className="grid gap-6 md:grid-cols-2">
         <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-5 shadow-lg shadow-black/40">

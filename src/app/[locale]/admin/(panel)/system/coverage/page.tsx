@@ -5,6 +5,8 @@ import deMessages from "@/src/messages/de.json";
 import enMessages from "@/src/messages/en.json";
 import { loadCoverageMatrix } from "@/src/server/admin/coverageService";
 import { classifyTimeframeStatus, type TimeframeStatus } from "@/src/lib/admin/coverageRules";
+import { AdminSectionHeader } from "@/src/components/admin/AdminSectionHeader";
+import { buildDataMonitoringRelatedLinks } from "@/src/components/admin/relatedLinks";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -29,18 +31,26 @@ export default async function CoveragePage({ params }: Props): Promise<JSX.Eleme
   const localeParam = (await params).locale as Locale;
   const messages = localeParam === "de" ? deMessages : enMessages;
   const matrix = await loadCoverageMatrix();
+  const related = buildDataMonitoringRelatedLinks(localeParam, {
+    snapshots: messages["admin.nav.snapshots"],
+    marketData: messages["admin.nav.marketdataHealth"],
+    coverage: messages["admin.nav.coverage"],
+    healthReports: messages["admin.nav.healthReports"],
+  });
 
   const header = ["Asset", "Provider", "1W", "1D", "4H", "1H", "Profiles"];
 
   return (
     <div className="space-y-6 px-4 py-8">
-      <div>
-        <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Admin</p>
-        <h1 className="text-3xl font-semibold text-white">Data Coverage</h1>
-        <p className="text-sm text-slate-400">
-          Candle freshness per timeframe. Stale: 1H&gt;180m, 4H&gt;480m, 1D&gt;72h, 1W&gt;14d.
-        </p>
-      </div>
+      <AdminSectionHeader
+        title={messages["admin.coverage.title"]}
+        description={messages["admin.coverage.description"]}
+        relatedLabel={messages["admin.section.related"]}
+        links={related}
+        currentKey="coverage"
+        notice={messages["admin.coverage.notice"]}
+        variant="info"
+      />
 
       <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/40">
         <table className="min-w-full text-sm text-slate-100">

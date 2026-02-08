@@ -3,6 +3,10 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import path from "path";
 import type { Locale } from "@/i18n";
+import deMessages from "@/src/messages/de.json";
+import enMessages from "@/src/messages/en.json";
+import { AdminSectionHeader } from "@/src/components/admin/AdminSectionHeader";
+import { buildDataMonitoringRelatedLinks } from "@/src/components/admin/relatedLinks";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -23,24 +27,44 @@ async function listReports(): Promise<string[]> {
 
 export default async function ReportsIndexPage({ params }: PageProps) {
   const { locale } = await params;
+  const typedLocale = locale as Locale;
+  const messages = typedLocale === "de" ? deMessages : enMessages;
   const reports = await listReports();
+  const related = buildDataMonitoringRelatedLinks(typedLocale, {
+    snapshots: messages["admin.nav.snapshots"],
+    marketData: messages["admin.nav.marketdataHealth"],
+    coverage: messages["admin.nav.coverage"],
+    healthReports: messages["admin.nav.healthReports"],
+  });
 
   if (!reports.length) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold text-white">Weekly Health Reports</h1>
-        <p className="text-sm text-slate-400">Keine Reports gefunden. Stelle sicher, dass reports/weekly/*.md vorhanden sind.</p>
+        <AdminSectionHeader
+          title={messages["admin.reports.title"]}
+          description={messages["admin.reports.description"]}
+          relatedLabel={messages["admin.section.related"]}
+          links={related}
+          currentKey="healthReports"
+          notice={messages["admin.reports.notice"]}
+          variant="info"
+        />
+        <p className="text-sm text-slate-400">{messages["admin.reports.empty"]}</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Monitoring</p>
-        <h1 className="text-2xl font-semibold text-white">Weekly Health Reports</h1>
-        <p className="text-sm text-slate-400">Automatisierte Phase0-Auswertungen (Gold & BTC).</p>
-      </div>
+      <AdminSectionHeader
+        title={messages["admin.reports.title"]}
+        description={messages["admin.reports.description"]}
+        relatedLabel={messages["admin.section.related"]}
+        links={related}
+        currentKey="healthReports"
+        notice={messages["admin.reports.notice"]}
+        variant="info"
+      />
 
       <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60">
         <table className="min-w-full divide-y divide-slate-800 text-sm text-slate-200">
@@ -58,7 +82,7 @@ export default async function ReportsIndexPage({ params }: PageProps) {
                 <td className="px-4 py-2 text-slate-300">Gold / BTC</td>
                 <td className="px-4 py-2">
                   <Link className="text-sky-300 hover:text-sky-100" href={`/${locale}/admin/monitoring/reports/${date}`}>
-                    Anzeigen
+                    {messages["admin.reports.view"]}
                   </Link>
                 </td>
               </tr>

@@ -4,6 +4,8 @@ import { listSnapshotsPaged } from "@/src/server/repositories/perceptionSnapshot
 import type { Locale } from "@/i18n";
 import deMessages from "@/src/messages/de.json";
 import enMessages from "@/src/messages/en.json";
+import { AdminSectionHeader } from "@/src/components/admin/AdminSectionHeader";
+import { buildDataMonitoringRelatedLinks } from "@/src/components/admin/relatedLinks";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -106,16 +108,24 @@ export default async function AdminSnapshotsPage({ params, searchParams }: PageP
   const quickFromDate = new Date();
   quickFromDate.setUTCDate(quickFromDate.getUTCDate() - 7);
   const quickFrom = quickFromDate.toISOString().slice(0, 10);
+  const related = buildDataMonitoringRelatedLinks(locale, {
+    snapshots: messages["admin.nav.snapshots"],
+    marketData: messages["admin.nav.marketdataHealth"],
+    coverage: messages["admin.nav.coverage"],
+    healthReports: messages["admin.nav.healthReports"],
+  });
 
   return (
     <div className="space-y-8">
-      <header className="space-y-2">
-        <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
-          {messages["admin.snapshots.title"]}
-        </p>
-        <h1 className="text-3xl font-semibold text-white">{messages["admin.snapshots.title"]}</h1>
-        <p className="text-sm text-slate-400">{messages["admin.snapshots.subtitle"]}</p>
-      </header>
+      <AdminSectionHeader
+        title={messages["admin.snapshots.title"]}
+        description={messages["admin.snapshots.subtitle"]}
+        relatedLabel={messages["admin.section.related"]}
+        links={related}
+        currentKey="snapshots"
+        notice={messages["admin.snapshots.notice"]}
+        variant="info"
+      />
 
       <form className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/50 p-4" method="get">
         <input type="hidden" name="page" value="1" />

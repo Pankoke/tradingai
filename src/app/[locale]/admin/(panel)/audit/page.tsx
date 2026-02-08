@@ -6,6 +6,8 @@ import enMessages from "@/src/messages/en.json";
 import { listAuditRuns } from "@/src/server/repositories/auditRunRepository";
 import { JsonReveal } from "@/src/components/admin/JsonReveal";
 import { getFreshnessRuns } from "@/src/server/admin/freshnessAuditService";
+import { AdminSectionHeader } from "@/src/components/admin/AdminSectionHeader";
+import { buildOpsGovernanceRelatedLinks } from "@/src/components/admin/relatedLinks";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -183,14 +185,23 @@ export default async function AdminAuditPage({ params, searchParams }: PageProps
 
   const total = runs.length;
   const pageCount = Math.max(1, Math.ceil(total / resolvedSearch.pageSize));
+  const related = buildOpsGovernanceRelatedLinks(locale, {
+    operations: messages["admin.nav.ops"],
+    auditTrail: messages["admin.nav.audit"],
+    systemHealth: messages["admin.nav.system"],
+  });
 
   return (
     <div className="space-y-8">
-      <header className="space-y-2">
-        <p className="text-xs uppercase tracking-[0.3em] text-slate-500">{messages["admin.audit.title"]}</p>
-        <h1 className="text-3xl font-semibold text-white">{messages["admin.audit.title"]}</h1>
-        <p className="text-sm text-slate-400">{messages["admin.audit.subtitle"]}</p>
-      </header>
+      <AdminSectionHeader
+        title={messages["admin.audit.title"]}
+        description={messages["admin.audit.subtitle"]}
+        relatedLabel={messages["admin.section.related"]}
+        links={related}
+        currentKey="auditTrail"
+        notice={messages["admin.audit.notice"]}
+        variant="info"
+      />
 
       <form className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/50 p-4" method="get">
         <input type="hidden" name="page" value="1" />

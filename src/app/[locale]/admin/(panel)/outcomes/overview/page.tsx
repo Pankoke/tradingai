@@ -24,6 +24,10 @@ import {
   type Integrity,
   type Totals,
 } from "./lib";
+import { OutcomesHeader } from "@/src/components/admin/outcomes/OutcomesHeader";
+import { buildOutcomesRelatedLinks } from "@/src/components/admin/outcomes/relatedLinks";
+import deMessages from "@/src/messages/de.json";
+import enMessages from "@/src/messages/en.json";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -39,15 +43,30 @@ type PageProps = {
 export default async function OutcomesOverviewPage({ params, searchParams }: PageProps) {
   const resolvedParams = await params;
   const locale = (resolvedParams.locale as Locale | undefined) ?? "en";
+  const messages = locale === "de" ? deMessages : enMessages;
   const query = (await searchParams) ?? {};
   const overviewFilters = parseOverviewParams(query);
   const { timeframe, label, minClosed, includeOpenOnly, flag: flagFilter } = overviewFilters;
+  const related = buildOutcomesRelatedLinks(locale, {
+    explorer: messages["admin.outcomes.related.explorer"],
+    overview: messages["admin.outcomes.related.overview"],
+    diagnostics: messages["admin.outcomes.related.diagnostics"],
+    engineHealth: messages["admin.outcomes.related.engineHealth"],
+    swingPerformance: messages["admin.outcomes.related.swingPerformance"],
+  });
 
   const loaded = await loadLatestOutcomeReport();
   if (!loaded) {
     return (
       <div className="space-y-3">
-        <h1 className="text-2xl font-semibold text-white">Outcomes Overview (Swing)</h1>
+        <OutcomesHeader
+          title={messages["admin.outcomes.header.overview.title"]}
+          description={messages["admin.outcomes.header.overview.description"]}
+          notice={messages["admin.outcomes.header.overview.notice"]}
+          variant="artifact"
+          related={related}
+          currentKey="overview"
+        />
         <p className="text-slate-300 text-sm">
           Kein Phase-1 Outcome-Artefakt gefunden. Bitte ausführen: <code>npm run phase1:analyze:swing -- --days=60</code>
         </p>
@@ -79,6 +98,14 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
 
   return (
     <div className="space-y-6">
+      <OutcomesHeader
+        title={messages["admin.outcomes.header.overview.title"]}
+        description={messages["admin.outcomes.header.overview.description"]}
+        notice={messages["admin.outcomes.header.overview.notice"]}
+        variant="artifact"
+        related={related}
+        currentKey="overview"
+      />
       <OutcomesIntro
         title="Worum geht es hier?"
         sections={[
@@ -114,8 +141,7 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
         integrity={integrity}
         monitoringMode={totals.closed < 20}
       />
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold text-white">Outcomes Overview (Swing)</h1>
+      <div className="space-y-2">
         <MetaBox meta={meta} report={report} />
         <div className="text-xs text-slate-400">
           Filters: tf={overviewWithDays.timeframe}, label={overviewWithDays.label}, minClosed={overviewWithDays.minClosed},
@@ -170,7 +196,7 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
             </Link>
           ))}
         </div>
-      </header>
+      </div>
 
       <section className="grid gap-4 md:grid-cols-3">
         <SummaryCard title="Totals">

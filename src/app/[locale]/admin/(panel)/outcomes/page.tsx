@@ -7,6 +7,10 @@ import { Filters } from "./Filters";
 import { buildHref, buildOverviewHref } from "./href";
 import { OutcomesIntro } from "@/src/components/admin/OutcomesIntro";
 import { parseExplorerParams } from "./queryModel";
+import { OutcomesHeader } from "@/src/components/admin/outcomes/OutcomesHeader";
+import { buildOutcomesRelatedLinks } from "@/src/components/admin/outcomes/relatedLinks";
+import deMessages from "@/src/messages/de.json";
+import enMessages from "@/src/messages/en.json";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -25,6 +29,7 @@ const ALLOWED_DAYS = ["7", "30", "90", "180", "365", "730"];
 export default async function OutcomesPage({ params, searchParams }: PageProps) {
   const resolvedParams = await params;
   const locale = (resolvedParams.locale as Locale | undefined) ?? "en";
+  const messages = locale === "de" ? deMessages : enMessages;
   const resolvedSearchParams = (await searchParams) ?? {};
   const query = parseExplorerParams(resolvedSearchParams);
   const days = ALLOWED_DAYS.includes(String(query.days)) ? query.days : 30;
@@ -37,6 +42,13 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
   const stats = await loadOutcomeStats({ days, assetId, playbookId });
   const totals = await loadOutcomeTotals({ days, assetId, playbookId });
   const playbookFilters = buildPlaybookFilters(stats.availablePlaybooks);
+  const related = buildOutcomesRelatedLinks(locale, {
+    explorer: messages["admin.outcomes.related.explorer"],
+    overview: messages["admin.outcomes.related.overview"],
+    diagnostics: messages["admin.outcomes.related.diagnostics"],
+    engineHealth: messages["admin.outcomes.related.engineHealth"],
+    swingPerformance: messages["admin.outcomes.related.swingPerformance"],
+  });
 
   const recentFiltered = stats.recent.filter((row) => {
     const tradeable = row.setupGrade === "A" || row.setupGrade === "B";
@@ -48,6 +60,14 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
 
   return (
     <div className="space-y-6">
+      <OutcomesHeader
+        title={messages["admin.outcomes.header.explorer.title"]}
+        description={messages["admin.outcomes.header.explorer.description"]}
+        notice={messages["admin.outcomes.header.explorer.notice"]}
+        variant="db"
+        related={related}
+        currentKey="explorer"
+      />
       <OutcomesIntro
         title="Worum geht es hier?"
         sections={[
@@ -83,28 +103,10 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
           Defaults: Grades A/B, NO_TRADE aus.
         </div>
       ) : null}
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-white">Outcomes Explorer (DB)</h1>
-        <p className="text-sm text-slate-300">
-          DB-getrieben, Swing 1D, limit 300 rows. Fenster: letzte {days} Tage{assetId ? `, Asset: ${assetId}` : ""}. Für Gesamt-KPIs siehe artefakt-first
-          Seiten (Overview/Diagnostics).
-        </p>
-        <div className="rounded-md bg-slate-900/60 p-3 text-xs text-slate-200">
+      <div className="space-y-2"><div className="rounded-md bg-slate-900/60 p-3 text-xs text-slate-200">
           Standard: handelbare Grade A/B. Toggles erlauben alle Grades bzw. NO_TRADE. Win-Rate misst nur TP vs SL, Expired/Open zeigen Reife des
           Beobachtungsfensters.
-        </div>
-        <div className="flex flex-wrap gap-3 text-xs text-emerald-300">
-          <Link href={`/${locale}/admin/outcomes/overview`} className="hover:underline">
-            Outcomes Overview (Artefakt)
-          </Link>
-          <Link href={`/${locale}/admin/outcomes/diagnostics`} className="hover:underline">
-            Diagnostics (Artefakt)
-          </Link>
-          <Link href={`/${locale}/admin/playbooks`} className="hover:underline">
-            Playbooks Overview
-          </Link>
-        </div>
-        <Filters
+        </div><Filters
           locale={locale}
           days={days}
           assetId={assetId}
@@ -124,7 +126,7 @@ export default async function OutcomesPage({ params, searchParams }: PageProps) 
         <div className="text-xs text-slate-400">
           Export nutzt aktuell nur Backend-Filter (days/asset/playbook). Grade/NO_TRADE Toggles betreffen die Anzeige, nicht den Export.
         </div>
-      </header>
+      </div>
 
       <section className="grid gap-4 md:grid-cols-2">
         <Card title="Outcome Distribution (per Grade)">
@@ -394,5 +396,6 @@ function buildPlaybookFilters(available: string[]): Array<{ value: string; label
   }
   return chips;
 }
+
 
 

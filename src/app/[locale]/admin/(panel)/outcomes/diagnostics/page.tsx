@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { Locale } from "@/i18n";
 import type { ArtifactMeta } from "@/lib/artifacts/storage";
 import { ArtifactHealthNotice } from "@/src/components/admin/ArtifactHealthNotice";
@@ -10,6 +9,10 @@ import {
   computeMostlyOpenShare,
 } from "./lib";
 import { OutcomesIntro } from "@/src/components/admin/OutcomesIntro";
+import { OutcomesHeader } from "@/src/components/admin/outcomes/OutcomesHeader";
+import { buildOutcomesRelatedLinks } from "@/src/components/admin/outcomes/relatedLinks";
+import deMessages from "@/src/messages/de.json";
+import enMessages from "@/src/messages/en.json";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -18,13 +21,28 @@ type PageProps = {
 export default async function OutcomesDiagnosticsPage({ params }: PageProps) {
   const resolvedParams = await params;
   const locale = (resolvedParams.locale as Locale | undefined) ?? "en";
+  const messages = locale === "de" ? deMessages : enMessages;
+  const related = buildOutcomesRelatedLinks(locale, {
+    explorer: messages["admin.outcomes.related.explorer"],
+    overview: messages["admin.outcomes.related.overview"],
+    diagnostics: messages["admin.outcomes.related.diagnostics"],
+    engineHealth: messages["admin.outcomes.related.engineHealth"],
+    swingPerformance: messages["admin.outcomes.related.swingPerformance"],
+  });
   const outcome = await loadLatestOutcomeReport();
   const join = await loadLatestJoinStats();
 
   if (!outcome || !join) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold text-white">Outcomes Diagnostics (Swing)</h1>
+        <OutcomesHeader
+          title={messages["admin.outcomes.header.diagnostics.title"]}
+          description={messages["admin.outcomes.header.diagnostics.description"]}
+          notice={messages["admin.outcomes.header.diagnostics.notice"]}
+          variant="artifact"
+          related={related}
+          currentKey="diagnostics"
+        />
         <p className="text-slate-300 text-sm">Artefakte nicht gefunden. Bitte generieren:</p>
         <ul className="list-disc pl-5 text-sm text-slate-200">
           <li>
@@ -45,6 +63,14 @@ export default async function OutcomesDiagnosticsPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6">
+      <OutcomesHeader
+        title={messages["admin.outcomes.header.diagnostics.title"]}
+        description={messages["admin.outcomes.header.diagnostics.description"]}
+        notice={messages["admin.outcomes.header.diagnostics.notice"]}
+        variant="artifact"
+        related={related}
+        currentKey="diagnostics"
+      />
       <OutcomesIntro
         title="Worum geht es hier?"
         sections={[
@@ -83,15 +109,14 @@ export default async function OutcomesDiagnosticsPage({ params }: PageProps) {
           <li>Viele offene Outcomes → winrate n/a, closeRate niedrig; minClosed kann Playbooks ausblenden.</li>
         </ul>
       </section>
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold text-white">Outcomes Diagnostics (Swing)</h1>
+      <div className="space-y-2">
         <MetaBox label="Outcome Artefakt" meta={outcome.meta} />
         <MetaBox label="Join-Stats Artefakt" meta={join.meta} />
         <p className="text-sm text-slate-300">
           Artefakt-first: liest statische JSONs aus <code>artifacts/phase1/</code>. Daten können stale sein. Für frische
           Daten: Analyzer + Join-Stats erneut laufen lassen.
         </p>
-      </header>
+      </div>
 
       <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 shadow-sm space-y-2">
         <h2 className="text-sm font-semibold text-white">Data Flow (Phase-1)</h2>
@@ -227,20 +252,6 @@ export default async function OutcomesDiagnosticsPage({ params }: PageProps) {
         />
       </section>
 
-      <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 shadow-sm text-xs text-slate-400 space-y-1">
-        <div>Links:</div>
-        <div className="flex gap-4">
-          <Link href={`/${locale}/admin/outcomes/overview`} className="text-emerald-300 hover:underline">
-            Outcomes Overview
-          </Link>
-          <Link href={`/${locale}/admin/playbooks`} className="text-emerald-300 hover:underline">
-            Playbooks Overview
-          </Link>
-          <Link href={`/${locale}/admin/outcomes`} className="text-emerald-300 hover:underline">
-            Outcomes Explorer (DB)
-          </Link>
-        </div>
-      </section>
     </div>
   );
 }
@@ -299,3 +310,4 @@ function winrate(tp: number, sl: number): number | null {
   const denom = tp + sl;
   return denom > 0 ? tp / denom : null;
 }
+
