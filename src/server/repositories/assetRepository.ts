@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { db } from "../db/db";
 import { assets } from "../db/schema/assets";
 import type { AssetsExportFilters } from "@/src/lib/admin/exports/parseExportFilters";
@@ -73,6 +73,16 @@ export async function getAssetBySymbol(symbol: string): Promise<Asset | undefine
     .where(eq(assets.symbol, symbol))
     .limit(1);
   return asset;
+}
+
+export async function getAssetsByAssetIds(ids: string[]): Promise<Asset[]> {
+  if (!ids.length) return [];
+  return db.select().from(assets).where(inArray(assets.id, ids));
+}
+
+export async function getAssetsBySymbols(symbols: string[]): Promise<Asset[]> {
+  if (!symbols.length) return [];
+  return db.select().from(assets).where(inArray(assets.symbol, symbols));
 }
 
 export async function countAssets(): Promise<number> {

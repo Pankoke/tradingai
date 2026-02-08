@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, desc, gte, lte, eq, ilike, sql, or, isNull, isNotNull } from "drizzle-orm";
+import { and, asc, desc, gte, lte, eq, ilike, inArray, sql, or, isNull, isNotNull } from "drizzle-orm";
 import { db } from "../db/db";
 import { events } from "../db/schema/events";
 import { excluded } from "../db/sqlHelpers";
@@ -162,6 +162,11 @@ export async function listEventsForEnrichment(params: {
 export async function getEventById(id: string): Promise<Event | undefined> {
   const [event] = await db.select().from(events).where(eq(events.id, id)).limit(1);
   return event;
+}
+
+export async function getEventsByIds(ids: string[]): Promise<Event[]> {
+  if (!ids.length) return [];
+  return db.select().from(events).where(inArray(events.id, ids));
 }
 
 export async function createEvent(input: Omit<EventInput, "id" | "createdAt" | "updatedAt"> & { id?: string }): Promise<Event> {

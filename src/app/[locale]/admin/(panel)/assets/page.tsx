@@ -49,6 +49,12 @@ export default async function AdminAssetsPage({ params, searchParams }: Props) {
             {messages["admin.assets.new"]}
           </Link>
           <Link
+            href={`/${locale}/admin/assets/import`}
+            className="rounded-lg border border-amber-700 px-4 py-2 text-sm font-semibold text-amber-200 hover:border-amber-500"
+          >
+            {messages["admin.assets.importCsv"]}
+          </Link>
+          <Link
             href={exportHref}
             className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 hover:border-slate-500"
           >
