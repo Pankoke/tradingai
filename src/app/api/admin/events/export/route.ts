@@ -1,10 +1,12 @@
 import { NextRequest } from "next/server";
 import { respondFail } from "@/src/server/http/apiResponse";
-import { getAllEvents } from "@/src/server/repositories/eventRepository";
+import { getEventsFiltered } from "@/src/server/repositories/eventRepository";
 import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
 import { asUnauthorizedResponse, requireAdminOrCron, type AdminOrCronAuthResult } from "@/src/lib/admin/auth/requireAdminOrCron";
 import { buildAuditMeta } from "@/src/lib/admin/audit/buildAuditMeta";
 import { toCsv, type CsvPrimitive } from "@/src/lib/admin/csv/toCsv";
+import { parseEventsExportFilters } from "@/src/lib/admin/exports/parseExportFilters";
+import type { EventsExportFilters } from "@/src/lib/admin/exports/parseExportFilters";
 
 export const runtime = "nodejs";
 
@@ -21,11 +23,19 @@ const CSV_HEADERS = [
   "updatedAt",
 ] as const;
 
+function serializeFiltersForAudit(filters: EventsExportFilters): Record<string, unknown> {
+  return {
+    ...filters,
+    from: filters.from ? filters.from.toISOString() : undefined,
+    to: filters.to ? filters.to.toISOString() : undefined,
+  };
+}
+
 function toIsoOrEmpty(value: Date | null): string {
   return value instanceof Date ? value.toISOString() : "";
 }
 
-function toCsvRows(rows: Awaited<ReturnType<typeof getAllEvents>>): CsvPrimitive[][] {
+function toCsvRows(rows: Awaited<ReturnType<typeof getEventsFiltered>>): CsvPrimitive[][] {
   return rows.map((event) => [
     event.id,
     event.providerId,
@@ -51,6 +61,7 @@ async function writeExportAudit(params: {
   ok: boolean;
   rows?: number;
   bytes?: number;
+  filters: EventsExportFilters;
   error?: unknown;
 }): Promise<void> {
   await createAuditRun({
@@ -62,7 +73,7 @@ async function writeExportAudit(params: {
     meta: buildAuditMeta({
       auth: params.auth,
       request: { method: params.request.method, url: params.request.url },
-      params: { format: "csv" },
+      params: { format: "csv", filters: serializeFiltersForAudit(params.filters) },
       result: {
         ok: params.ok,
         rows: params.rows,
@@ -84,7 +95,8 @@ export async function GET(request: NextRequest): Promise<Response> {
   }
 
   try {
-    const events = await getAllEvents();
+    const filters = parseEventsExportFilters(request.nextUrl.searchParams);
+    const events = await getEventsFiltered(filters);
     const csvRows = toCsvRows(events);
     const body = toCsv([...CSV_HEADERS], csvRows);
     const bytes = Buffer.byteLength(body, "utf8");
@@ -95,6 +107,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       ok: true,
       rows: csvRows.length,
       bytes,
+      filters,
     });
 
     return new Response(body, {
@@ -110,6 +123,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       request,
       ok: false,
       error,
+      filters: parseEventsExportFilters(request.nextUrl.searchParams),
     });
     return respondFail("INTERNAL_ERROR", "Failed to export events", 500);
   }

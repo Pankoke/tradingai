@@ -6,16 +6,20 @@ import deMessages from "@/src/messages/de.json";
 import enMessages from "@/src/messages/en.json";
 import { AdminSectionHeader } from "@/src/components/admin/AdminSectionHeader";
 import { buildCatalogRelatedLinks } from "@/src/components/admin/relatedLinks";
+import { buildEventsExportHref } from "@/src/lib/admin/exports/buildExportHref";
 
 type Props = {
   params: Promise<{ locale: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export default async function AdminEventsPage({ params }: Props) {
+export default async function AdminEventsPage({ params, searchParams }: Props) {
   const resolvedParams = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const locale = resolvedParams.locale as Locale;
   const messages = locale === "de" ? deMessages : enMessages;
   const events = await listRecentEvents(50);
+  const exportHref = buildEventsExportHref(resolvedSearchParams);
   const related = buildCatalogRelatedLinks(locale, {
     assets: messages["admin.nav.assets"],
     events: messages["admin.nav.events"],
@@ -41,7 +45,7 @@ export default async function AdminEventsPage({ params }: Props) {
             {messages["admin.events.new"]}
           </Link>
           <Link
-            href="/api/admin/events/export"
+            href={exportHref}
             className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 hover:border-slate-500"
           >
             {messages["admin.events.exportCsv"]}

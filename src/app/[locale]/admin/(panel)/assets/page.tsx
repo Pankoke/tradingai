@@ -6,6 +6,7 @@ import deMessages from "@/src/messages/de.json";
 import enMessages from "@/src/messages/en.json";
 import { AdminSectionHeader } from "@/src/components/admin/AdminSectionHeader";
 import { buildCatalogRelatedLinks } from "@/src/components/admin/relatedLinks";
+import { buildAssetsExportHref } from "@/src/lib/admin/exports/buildExportHref";
 
 // Avoid static prerender failures against live DB during build
 export const dynamic = "force-dynamic";
@@ -13,13 +14,16 @@ export const revalidate = 0;
 
 type Props = {
   params: Promise<{ locale: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export default async function AdminAssetsPage({ params }: Props) {
+export default async function AdminAssetsPage({ params, searchParams }: Props) {
   const resolvedParams = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const locale = resolvedParams.locale as Locale;
   const messages = locale === "de" ? deMessages : enMessages;
   const assets = await getAllAssets();
+  const exportHref = buildAssetsExportHref(resolvedSearchParams);
   const related = buildCatalogRelatedLinks(locale, {
     assets: messages["admin.nav.assets"],
     events: messages["admin.nav.events"],
@@ -45,7 +49,7 @@ export default async function AdminAssetsPage({ params }: Props) {
             {messages["admin.assets.new"]}
           </Link>
           <Link
-            href="/api/admin/assets/export"
+            href={exportHref}
             className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 hover:border-slate-500"
           >
             {messages["admin.assets.exportCsv"]}

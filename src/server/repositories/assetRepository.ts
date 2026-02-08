@@ -1,13 +1,52 @@
 import { randomUUID } from "node:crypto";
-import { sql, eq } from "drizzle-orm";
+import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "../db/db";
 import { assets } from "../db/schema/assets";
+import type { AssetsExportFilters } from "@/src/lib/admin/exports/parseExportFilters";
 
 export type Asset = typeof assets["$inferSelect"];
 export type AssetInput = typeof assets["$inferInsert"];
 
 export async function getAllAssets(): Promise<Asset[]> {
   return db.select().from(assets).orderBy(assets.symbol);
+}
+
+export async function getAssetsFiltered(filters: AssetsExportFilters): Promise<Asset[]> {
+  const conditions = [];
+
+  if (filters.q) {
+    const pattern = `%${filters.q}%`;
+    conditions.push(
+      or(
+        ilike(assets.id, pattern),
+        ilike(assets.symbol, pattern),
+        ilike(assets.displaySymbol, pattern),
+        ilike(assets.name, pattern),
+      ),
+    );
+  }
+
+  if (filters.status === "active") {
+    conditions.push(eq(assets.isActive, true));
+  } else if (filters.status === "inactive") {
+    conditions.push(eq(assets.isActive, false));
+  }
+
+  if (filters.class) {
+    conditions.push(eq(assets.assetClass, filters.class));
+  }
+
+  const query = db.select().from(assets);
+  const filteredQuery = conditions.length ? query.where(and(...conditions)) : query;
+  const orderedQuery =
+    filters.sort === "createdAt"
+      ? filteredQuery.orderBy(desc(assets.createdAt), assets.symbol)
+      : filteredQuery.orderBy(assets.symbol);
+
+  if (filters.limit) {
+    return orderedQuery.limit(filters.limit);
+  }
+  return orderedQuery;
 }
 
 export async function getActiveAssets(): Promise<Asset[]> {

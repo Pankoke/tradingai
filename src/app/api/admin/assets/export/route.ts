@@ -1,10 +1,12 @@
 import { NextRequest } from "next/server";
 import { respondFail } from "@/src/server/http/apiResponse";
-import { getAllAssets } from "@/src/server/repositories/assetRepository";
+import { getAssetsFiltered } from "@/src/server/repositories/assetRepository";
 import { createAuditRun } from "@/src/server/repositories/auditRunRepository";
 import { asUnauthorizedResponse, requireAdminOrCron, type AdminOrCronAuthResult } from "@/src/lib/admin/auth/requireAdminOrCron";
 import { buildAuditMeta } from "@/src/lib/admin/audit/buildAuditMeta";
 import { toCsv, type CsvPrimitive } from "@/src/lib/admin/csv/toCsv";
+import { parseAssetsExportFilters } from "@/src/lib/admin/exports/parseExportFilters";
+import type { AssetsExportFilters } from "@/src/lib/admin/exports/parseExportFilters";
 
 export const runtime = "nodejs";
 
@@ -25,7 +27,7 @@ function toIsoOrEmpty(value: Date | null): string {
   return value instanceof Date ? value.toISOString() : "";
 }
 
-function toCsvRows(rows: Awaited<ReturnType<typeof getAllAssets>>): CsvPrimitive[][] {
+function toCsvRows(rows: Awaited<ReturnType<typeof getAssetsFiltered>>): CsvPrimitive[][] {
   return rows.map((asset) => [
     asset.id,
     asset.symbol,
@@ -51,6 +53,7 @@ async function writeExportAudit(params: {
   ok: boolean;
   rows?: number;
   bytes?: number;
+  filters: AssetsExportFilters;
   error?: unknown;
 }): Promise<void> {
   await createAuditRun({
@@ -62,7 +65,7 @@ async function writeExportAudit(params: {
     meta: buildAuditMeta({
       auth: params.auth,
       request: { method: params.request.method, url: params.request.url },
-      params: { format: "csv" },
+      params: { format: "csv", filters: params.filters },
       result: {
         ok: params.ok,
         rows: params.rows,
@@ -84,7 +87,8 @@ export async function GET(request: NextRequest): Promise<Response> {
   }
 
   try {
-    const assets = await getAllAssets();
+    const filters = parseAssetsExportFilters(request.nextUrl.searchParams);
+    const assets = await getAssetsFiltered(filters);
     const csvRows = toCsvRows(assets);
     const body = toCsv([...CSV_HEADERS], csvRows);
     const bytes = Buffer.byteLength(body, "utf8");
@@ -95,6 +99,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       ok: true,
       rows: csvRows.length,
       bytes,
+      filters,
     });
 
     return new Response(body, {
@@ -110,6 +115,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       request,
       ok: false,
       error,
+      filters: parseAssetsExportFilters(request.nextUrl.searchParams),
     });
     return respondFail("INTERNAL_ERROR", "Failed to export assets", 500);
   }

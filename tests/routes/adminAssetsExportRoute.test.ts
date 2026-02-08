@@ -2,11 +2,11 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET } from "@/src/app/api/admin/assets/export/route";
 
-const mockGetAllAssets = vi.fn();
+const mockGetAssetsFiltered = vi.fn();
 const mockCreateAuditRun = vi.fn(async () => undefined);
 
 vi.mock("@/src/server/repositories/assetRepository", () => ({
-  getAllAssets: (...args: unknown[]) => mockGetAllAssets(...args),
+  getAssetsFiltered: (...args: unknown[]) => mockGetAssetsFiltered(...args),
 }));
 
 vi.mock("@/src/server/repositories/auditRunRepository", () => ({
@@ -19,7 +19,7 @@ describe("admin assets export route", () => {
   beforeEach(() => {
     process.env = { ...originalEnv, NODE_ENV: "test", ADMIN_API_TOKEN: "admin123", CRON_SECRET: "cron123" };
     mockCreateAuditRun.mockClear();
-    mockGetAllAssets.mockResolvedValue([
+    mockGetAssetsFiltered.mockResolvedValue([
       {
         id: "gold",
         symbol: "XAUUSD",
@@ -37,7 +37,7 @@ describe("admin assets export route", () => {
 
   it("returns csv for admin auth", async () => {
     const response = await GET(
-      new NextRequest("http://localhost/api/admin/assets/export", {
+      new NextRequest("http://localhost/api/admin/assets/export?q=%20gold%20&status=active&class=commodity&limit=10&sort=createdAt", {
         headers: { authorization: "Bearer admin123" },
       }),
     );
@@ -52,10 +52,25 @@ describe("admin assets export route", () => {
     const [auditCall] = mockCreateAuditRun.mock.calls;
     const auditPayload = auditCall?.[0] as { meta?: Record<string, unknown> };
     const metaResult = auditPayload.meta?.result as { rows?: number; bytes?: number; ok?: boolean } | undefined;
+    const metaParams = auditPayload.meta?.params as { filters?: Record<string, unknown> } | undefined;
     expect(auditPayload.meta?.authMode).toBe("admin");
     expect(metaResult?.ok).toBe(true);
     expect(metaResult?.rows).toBe(1);
     expect(metaResult?.bytes).toBe(Buffer.byteLength(body, "utf8"));
+    expect(metaParams?.filters).toEqual({
+      q: "gold",
+      status: "active",
+      class: "commodity",
+      limit: 10,
+      sort: "createdAt",
+    });
+    expect(mockGetAssetsFiltered).toHaveBeenCalledWith({
+      q: "gold",
+      status: "active",
+      class: "commodity",
+      limit: 10,
+      sort: "createdAt",
+    });
   });
 
   it("returns unauthorized payload when no admin auth", async () => {

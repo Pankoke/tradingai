@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { and, desc, gte, lte, eq, sql, or, isNull, isNotNull } from "drizzle-orm";
+import { and, asc, desc, gte, lte, eq, ilike, sql, or, isNull, isNotNull } from "drizzle-orm";
 import { db } from "../db/db";
 import { events } from "../db/schema/events";
 import { excluded } from "../db/sqlHelpers";
 import type { MarketScopeEnum } from "@/src/server/events/eventDescription";
+import type { EventsExportFilters } from "@/src/lib/admin/exports/parseExportFilters";
 
 export type Event = typeof events["$inferSelect"];
 export type EventInput = typeof events["$inferInsert"];
@@ -93,6 +94,49 @@ export async function listRecentEvents(limit = 100): Promise<Event[]> {
 
 export async function getAllEvents(): Promise<Event[]> {
   return db.select().from(events).orderBy(desc(events.scheduledAt));
+}
+
+export async function getEventsFiltered(filters: EventsExportFilters): Promise<Event[]> {
+  const conditions = [];
+
+  if (filters.q) {
+    const pattern = `%${filters.q}%`;
+    conditions.push(
+      or(
+        ilike(events.id, pattern),
+        ilike(events.providerId, pattern),
+        ilike(events.title, pattern),
+        ilike(events.country, pattern),
+      ),
+    );
+  }
+
+  if (filters.impact === "high") {
+    conditions.push(gte(events.impact, 3));
+  } else if (filters.impact === "medium") {
+    conditions.push(eq(events.impact, 2));
+  } else if (filters.impact === "low") {
+    conditions.push(lte(events.impact, 1));
+  }
+
+  if (filters.from) {
+    conditions.push(gte(events.scheduledAt, filters.from));
+  }
+  if (filters.to) {
+    conditions.push(lte(events.scheduledAt, filters.to));
+  }
+
+  const query = db.select().from(events);
+  const filteredQuery = conditions.length ? query.where(and(...conditions)) : query;
+  const orderedQuery =
+    filters.sort === "createdAt"
+      ? filteredQuery.orderBy(desc(events.createdAt), desc(events.scheduledAt))
+      : filteredQuery.orderBy(desc(events.scheduledAt), asc(events.title));
+
+  if (filters.limit) {
+    return orderedQuery.limit(filters.limit);
+  }
+  return orderedQuery;
 }
 
 export async function listEventsForEnrichment(params: {

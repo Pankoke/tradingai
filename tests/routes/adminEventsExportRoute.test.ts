@@ -2,11 +2,11 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET } from "@/src/app/api/admin/events/export/route";
 
-const mockGetAllEvents = vi.fn();
+const mockGetEventsFiltered = vi.fn();
 const mockCreateAuditRun = vi.fn(async () => undefined);
 
 vi.mock("@/src/server/repositories/eventRepository", () => ({
-  getAllEvents: (...args: unknown[]) => mockGetAllEvents(...args),
+  getEventsFiltered: (...args: unknown[]) => mockGetEventsFiltered(...args),
 }));
 
 vi.mock("@/src/server/repositories/auditRunRepository", () => ({
@@ -19,7 +19,7 @@ describe("admin events export route", () => {
   beforeEach(() => {
     process.env = { ...originalEnv, NODE_ENV: "test", ADMIN_API_TOKEN: "admin123", CRON_SECRET: "cron123" };
     mockCreateAuditRun.mockClear();
-    mockGetAllEvents.mockResolvedValue([
+    mockGetEventsFiltered.mockResolvedValue([
       {
         id: "ev1",
         providerId: "cpi-us",
@@ -48,7 +48,7 @@ describe("admin events export route", () => {
 
   it("returns csv for admin auth", async () => {
     const response = await GET(
-      new NextRequest("http://localhost/api/admin/events/export", {
+      new NextRequest("http://localhost/api/admin/events/export?q=%20cpi%20&impact=high&from=2026-01-01&to=2026-02-01&limit=25&sort=createdAt", {
         headers: { authorization: "Bearer admin123" },
       }),
     );
@@ -63,10 +63,27 @@ describe("admin events export route", () => {
     const [auditCall] = mockCreateAuditRun.mock.calls;
     const auditPayload = auditCall?.[0] as { meta?: Record<string, unknown> };
     const metaResult = auditPayload.meta?.result as { rows?: number; bytes?: number; ok?: boolean } | undefined;
+    const metaParams = auditPayload.meta?.params as { filters?: Record<string, unknown> } | undefined;
     expect(auditPayload.meta?.authMode).toBe("admin");
     expect(metaResult?.ok).toBe(true);
     expect(metaResult?.rows).toBe(1);
     expect(metaResult?.bytes).toBe(Buffer.byteLength(body, "utf8"));
+    expect(metaParams?.filters).toEqual({
+      q: "cpi",
+      impact: "high",
+      from: "2026-01-01T00:00:00.000Z",
+      to: "2026-02-01T00:00:00.000Z",
+      limit: 25,
+      sort: "createdAt",
+    });
+    expect(mockGetEventsFiltered).toHaveBeenCalledWith({
+      q: "cpi",
+      impact: "high",
+      from: new Date("2026-01-01"),
+      to: new Date("2026-02-01"),
+      limit: 25,
+      sort: "createdAt",
+    });
   });
 
   it("returns unauthorized payload when no admin auth", async () => {
