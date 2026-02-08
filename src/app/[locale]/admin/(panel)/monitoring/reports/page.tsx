@@ -32,7 +32,7 @@ export default async function ReportsIndexPage({ params }: PageProps) {
   const reports = await listReports();
   const related = buildDataMonitoringRelatedLinks(typedLocale, {
     snapshots: messages["admin.nav.snapshots"],
-    marketData: messages["admin.nav.marketdataHealth"],
+    marketDataHealth: messages["admin.nav.marketdataHealth"],
     coverage: messages["admin.nav.coverage"],
     healthReports: messages["admin.nav.healthReports"],
   });
@@ -93,3 +93,4 @@ export default async function ReportsIndexPage({ params }: PageProps) {
     </div>
   );
 }
+

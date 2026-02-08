@@ -33,7 +33,7 @@ export default async function CoveragePage({ params }: Props): Promise<JSX.Eleme
   const matrix = await loadCoverageMatrix();
   const related = buildDataMonitoringRelatedLinks(localeParam, {
     snapshots: messages["admin.nav.snapshots"],
-    marketData: messages["admin.nav.marketdataHealth"],
+    marketDataHealth: messages["admin.nav.marketdataHealth"],
     coverage: messages["admin.nav.coverage"],
     healthReports: messages["admin.nav.healthReports"],
   });
@@ -114,3 +114,4 @@ function ProfileBadge({ label, active }: { label: string; active: boolean }) {
     </span>
   );
 }
+

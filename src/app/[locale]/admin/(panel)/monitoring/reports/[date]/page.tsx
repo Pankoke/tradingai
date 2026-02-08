@@ -30,7 +30,7 @@ export default async function ReportDetailPage({ params }: PageProps) {
   if (!content) return notFound();
   const related = buildDataMonitoringRelatedLinks(typedLocale, {
     snapshots: messages["admin.nav.snapshots"],
-    marketData: messages["admin.nav.marketdataHealth"],
+    marketDataHealth: messages["admin.nav.marketdataHealth"],
     coverage: messages["admin.nav.coverage"],
     healthReports: messages["admin.nav.healthReports"],
   });
@@ -60,3 +60,4 @@ export default async function ReportDetailPage({ params }: PageProps) {
     </div>
   );
 }
+

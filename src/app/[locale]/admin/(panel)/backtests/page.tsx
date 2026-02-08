@@ -8,6 +8,8 @@ import type { CompletedTrade } from "@/src/domain/backtest/types";
 import { getActiveAssets } from "@/src/server/repositories/assetRepository";
 import TradesTable from "./TradesTableClient";
 import { RunBacktestForm } from "./RunBacktestForm";
+import { AdminSectionHeader } from "@/src/components/admin/AdminSectionHeader";
+import { buildBacktestingRelatedLinks } from "@/src/components/admin/relatedLinks";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -218,6 +220,9 @@ export default async function AdminBacktestsPage({ params, searchParams }: Props
     `/${locale}/api/admin/backtest/runs/${encodeURIComponent(runKey)}/export?type=${type}`;
   const buildCompareExportUrl = (a: string, b: string, type: "kpis" | "summary" | "all") =>
     `/${locale}/api/admin/backtest/compare/export?primary=${encodeURIComponent(a)}&secondary=${encodeURIComponent(b)}&type=${type}`;
+  const related = buildBacktestingRelatedLinks(locale, {
+    backtests: messages["admin.nav.backtests"] ?? "Backtests",
+  });
 
   const formatCosts = (run: BacktestRunMeta | null) => {
     if (!run) return "";
@@ -230,9 +235,18 @@ export default async function AdminBacktestsPage({ params, searchParams }: Props
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+    <div className="space-y-6">
+      <AdminSectionHeader
+        title={messages["admin.backtests.title"]}
+        description={messages["admin.backtests.description"]}
+        relatedLabel={messages["admin.section.related"]}
+        links={related}
+        currentKey="backtests"
+        notice={messages["admin.backtests.notice"]}
+        variant="info"
+      />
+      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
       <div className="space-y-3">
-        <h1 className="text-xl font-semibold">{t("admin.backtest.runs.title", "Backtest Runs")}</h1>
         <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-sm text-[var(--text-secondary)] space-y-2">
           <div className="text-base font-semibold text-white">Was diese Seite macht</div>
           <ul className="list-disc pl-4 space-y-1">
@@ -414,6 +428,7 @@ export default async function AdminBacktestsPage({ params, searchParams }: Props
             {compareKey && secondaryTrades.length > 0 && <TradesTable trades={secondaryTrades} title="Trades (compare)" />}
           </>
         )}
+      </div>
       </div>
     </div>
   );

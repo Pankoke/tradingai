@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Locale } from "@/i18n";
 import type { ArtifactMeta } from "@/lib/artifacts/storage";
 import { ArtifactHealthNotice } from "@/src/components/admin/ArtifactHealthNotice";
@@ -71,6 +72,11 @@ export default async function OutcomesDiagnosticsPage({ params }: PageProps) {
         related={related}
         currentKey="diagnostics"
       />
+      <div className="text-xs">
+        <Link href={`/${locale}/admin/artifacts`} className="text-sky-300 hover:text-sky-100">
+          {messages["admin.artifacts.linkHistory"]}
+        </Link>
+      </div>
       <OutcomesIntro
         title="Worum geht es hier?"
         sections={[

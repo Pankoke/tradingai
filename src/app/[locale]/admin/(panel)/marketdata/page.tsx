@@ -68,7 +68,7 @@ export default async function AdminMarketDataPage({ params }: Props) {
   };
   const related = buildDataMonitoringRelatedLinks(locale, {
     snapshots: messages["admin.nav.snapshots"],
-    marketData: messages["admin.nav.marketdataHealth"],
+    marketDataHealth: messages["admin.nav.marketdataHealth"],
     coverage: messages["admin.nav.coverage"],
     healthReports: messages["admin.nav.healthReports"],
   });
@@ -80,7 +80,7 @@ export default async function AdminMarketDataPage({ params }: Props) {
         description={messages["admin.marketdata.subtitle"]}
         relatedLabel={messages["admin.section.related"]}
         links={related}
-        currentKey="marketData"
+        currentKey="marketDataHealth"
         notice={messages["admin.marketdata.notice"]}
         variant="info"
       />
@@ -244,3 +244,4 @@ export default async function AdminMarketDataPage({ params }: Props) {
     </div>
   );
 }
+

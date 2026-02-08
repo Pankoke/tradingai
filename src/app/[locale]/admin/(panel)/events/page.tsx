@@ -2,6 +2,10 @@ import Link from "next/link";
 import { deleteEventAction } from "@/src/app/[locale]/admin/(panel)/events/actions";
 import { listRecentEvents } from "@/src/server/repositories/eventRepository";
 import type { Locale } from "@/i18n";
+import deMessages from "@/src/messages/de.json";
+import enMessages from "@/src/messages/en.json";
+import { AdminSectionHeader } from "@/src/components/admin/AdminSectionHeader";
+import { buildCatalogRelatedLinks } from "@/src/components/admin/relatedLinks";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -10,23 +14,32 @@ type Props = {
 export default async function AdminEventsPage({ params }: Props) {
   const resolvedParams = await params;
   const locale = resolvedParams.locale as Locale;
+  const messages = locale === "de" ? deMessages : enMessages;
   const events = await listRecentEvents(50);
+  const related = buildCatalogRelatedLinks(locale, {
+    assets: messages["admin.nav.assets"],
+    events: messages["admin.nav.events"],
+  });
 
   return (
     <div className="space-y-8">
-      <header className="flex items-center justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Events</p>
-          <h1 className="text-3xl font-semibold text-white">Event-Management</h1>
-          <p className="text-sm text-slate-400">Letzte 50 Events, sortiert nach Termin.</p>
-        </div>
+      <div className="space-y-4">
+        <AdminSectionHeader
+          title={messages["admin.events.title"]}
+          description={messages["admin.events.description"]}
+          relatedLabel={messages["admin.section.related"]}
+          links={related}
+          currentKey="events"
+          notice={messages["admin.events.notice"]}
+          variant="info"
+        />
         <Link
           href={`/${locale}/admin/events/new`}
           className="rounded-lg bg-sky-500/80 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-400"
         >
-          Neues Event
+          {messages["admin.events.new"]}
         </Link>
-      </header>
+      </div>
 
       <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/40">
         <table className="min-w-full divide-y divide-slate-800 text-sm">

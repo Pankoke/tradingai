@@ -75,6 +75,11 @@ export default async function SwingPerformancePage({ params, searchParams }: Pag
         related={related}
         currentKey="swingPerformance"
       />
+      <div className="text-xs">
+        <Link href={`/${locale}/admin/artifacts`} className="text-sky-300 hover:text-sky-100">
+          {messages["admin.artifacts.linkHistory"]}
+        </Link>
+      </div>
 
       <header className="space-y-2">
         <p className="text-sm text-slate-300">

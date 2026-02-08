@@ -106,6 +106,11 @@ export default async function OutcomesOverviewPage({ params, searchParams }: Pag
         related={related}
         currentKey="overview"
       />
+      <div className="text-xs">
+        <Link href={`/${locale}/admin/artifacts`} className="text-sky-300 hover:text-sky-100">
+          {messages["admin.artifacts.linkHistory"]}
+        </Link>
+      </div>
       <OutcomesIntro
         title="Worum geht es hier?"
         sections={[

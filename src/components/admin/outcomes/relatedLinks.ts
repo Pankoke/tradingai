@@ -1,20 +1,20 @@
 import type { Locale } from "@/i18n";
 import type { OutcomesRelatedLink } from "@/src/components/admin/outcomes/OutcomesHeader";
+import { buildSectionRelatedLinks } from "@/src/components/admin/relatedLinks";
 
-const paths = {
-  explorer: (locale: Locale) => `/${locale}/admin/outcomes`,
-  overview: (locale: Locale) => `/${locale}/admin/outcomes/overview`,
-  diagnostics: (locale: Locale) => `/${locale}/admin/outcomes/diagnostics`,
-  engineHealth: (locale: Locale) => `/${locale}/admin/outcomes/engine-health`,
-  swingPerformance: (locale: Locale) => `/${locale}/admin/outcomes/swing-performance`,
+export type OutcomesRelatedLabels = {
+  explorer: string;
+  overview: string;
+  diagnostics: string;
+  engineHealth: string;
+  swingPerformance: string;
 };
 
-export function buildOutcomesRelatedLinks(locale: Locale, labels: Record<string, string>): OutcomesRelatedLink[] {
-  return [
-    { key: "explorer", label: labels.explorer, href: paths.explorer(locale) },
-    { key: "overview", label: labels.overview, href: paths.overview(locale) },
-    { key: "diagnostics", label: labels.diagnostics, href: paths.diagnostics(locale) },
-    { key: "engineHealth", label: labels.engineHealth, href: paths.engineHealth(locale) },
-    { key: "swingPerformance", label: labels.swingPerformance, href: paths.swingPerformance(locale) },
-  ];
+export function buildOutcomesRelatedLinks(locale: Locale, labels: OutcomesRelatedLabels): OutcomesRelatedLink[] {
+  return buildSectionRelatedLinks({
+    section: "outcomes",
+    locale,
+    labels,
+    fallbackActiveKey: "explorer",
+  }).links;
 }

@@ -2,6 +2,10 @@ import Link from "next/link";
 import { deleteAssetAction } from "@/src/app/[locale]/admin/(panel)/assets/actions";
 import { getAllAssets } from "@/src/server/repositories/assetRepository";
 import type { Locale } from "@/i18n";
+import deMessages from "@/src/messages/de.json";
+import enMessages from "@/src/messages/en.json";
+import { AdminSectionHeader } from "@/src/components/admin/AdminSectionHeader";
+import { buildCatalogRelatedLinks } from "@/src/components/admin/relatedLinks";
 
 // Avoid static prerender failures against live DB during build
 export const dynamic = "force-dynamic";
@@ -14,23 +18,32 @@ type Props = {
 export default async function AdminAssetsPage({ params }: Props) {
   const resolvedParams = await params;
   const locale = resolvedParams.locale as Locale;
+  const messages = locale === "de" ? deMessages : enMessages;
   const assets = await getAllAssets();
+  const related = buildCatalogRelatedLinks(locale, {
+    assets: messages["admin.nav.assets"],
+    events: messages["admin.nav.events"],
+  });
 
   return (
     <div className="space-y-8">
-      <header className="flex items-center justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Assets</p>
-          <h1 className="text-3xl font-semibold text-white">Asset-Management</h1>
-          <p className="text-sm text-slate-400">Regelbasierte Stammdaten</p>
-        </div>
+      <div className="space-y-4">
+        <AdminSectionHeader
+          title={messages["admin.assets.title"]}
+          description={messages["admin.assets.description"]}
+          relatedLabel={messages["admin.section.related"]}
+          links={related}
+          currentKey="assets"
+          notice={messages["admin.assets.notice"]}
+          variant="info"
+        />
         <Link
           href={`/${locale}/admin/assets/new`}
           className="rounded-lg bg-sky-500/80 px-4 py-2 text-sm font-semibold text-white"
         >
-          Neues Asset
+          {messages["admin.assets.new"]}
         </Link>
-      </header>
+      </div>
 
       <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/40">
         <table className="min-w-full divide-y divide-slate-800 text-sm">
