@@ -15,6 +15,24 @@ function resolveTwelveDataSymbol(asset: Asset): string {
   if (upperSymbol === "GC=F" || upperSymbol === "GOLD" || upperSymbol === "XAUUSD" || upperSymbol === "XAUUSD=X" || upperId === "GOLD") {
     return "XAU/USD";
   }
+  if (upperSymbol === "SI=F" || upperSymbol === "SILVER" || upperId === "SILVER") {
+    return "XAG/USD";
+  }
+  if (upperSymbol === "CL=F" || upperSymbol === "WTI" || upperId === "WTI") {
+    return "WTI/USD";
+  }
+  if (upperSymbol === "GBPUSD=X" || upperSymbol === "GBPUSD" || upperId === "GBPUSD") {
+    return "GBP/USD";
+  }
+  if (upperSymbol === "USDJPY=X" || upperSymbol === "USDJPY" || upperId === "USDJPY") {
+    return "USD/JPY";
+  }
+  if (upperSymbol === "EURUSD=X" || upperSymbol === "EURUSD" || upperId === "EURUSD") {
+    return "EUR/USD";
+  }
+  if (upperSymbol === "EURJPY=X" || upperSymbol === "EURJPY" || upperId === "EURJPY") {
+    return "EUR/JPY";
+  }
   return upperSymbol || upperId || "UNKNOWN";
 }
 

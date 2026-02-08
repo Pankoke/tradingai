@@ -1,8 +1,12 @@
 import "dotenv/config";
 import "tsconfig-paths/register";
+import { config as loadDotenv } from "dotenv";
 
 import { resolve } from "node:path";
 import { writeFileSync } from "node:fs";
+
+loadDotenv();
+loadDotenv({ path: ".env.local", override: false });
 
 if (!process.env.DATABASE_URL) {
   console.error("[audit:swing-snapshots] DATABASE_URL not set – skipping (read-only audit requires DB access).");
@@ -355,6 +359,7 @@ async function main() {
   const outVerification = resolve("reports", "audits", "swing-4h-refinement-verification.md");
   writeFileSync(outVerification, verification, "utf8");
   console.log(`[audit:swing-snapshots] geschrieben: ${outVerification}`);
+  process.exit(0);
 }
 
 main().catch((err) => {

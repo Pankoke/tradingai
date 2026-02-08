@@ -39,12 +39,31 @@ type TwelveDataResponse = {
 
 function mapAssetToTwelveDataSymbol(asset: Asset): string | null {
   const upper = (asset.symbol ?? "").toUpperCase();
+  const upperId = (asset.id ?? "").toUpperCase();
   if (asset.assetClass === "crypto") {
     if (upper.includes("BTC")) return "BTC/USD";
     if (upper.includes("ETH")) return "ETH/USD";
   }
-  if (upper === "GC=F" || upper === "GOLD" || upper === "XAUUSD" || upper === "XAUUSD=X" || asset.id?.toLowerCase() === "gold") {
+  if (upper === "GC=F" || upper === "GOLD" || upper === "XAUUSD" || upper === "XAUUSD=X" || upperId === "GOLD") {
     return "XAU/USD";
+  }
+  if (upper === "SI=F" || upper === "SILVER" || upperId === "SILVER") {
+    return "XAG/USD";
+  }
+  if (upper === "CL=F" || upper === "WTI" || upperId === "WTI") {
+    return "WTI/USD";
+  }
+  if (upper === "GBPUSD=X" || upper === "GBPUSD" || upperId === "GBPUSD") {
+    return "GBP/USD";
+  }
+  if (upper === "USDJPY=X" || upper === "USDJPY" || upperId === "USDJPY") {
+    return "USD/JPY";
+  }
+  if (upper === "EURUSD=X" || upper === "EURUSD" || upperId === "EURUSD") {
+    return "EUR/USD";
+  }
+  if (upper === "EURJPY=X" || upper === "EURJPY" || upperId === "EURJPY") {
+    return "EUR/JPY";
   }
   // TODO: extend mapping for FX/indices/commodities as they are enabled
   return null;
