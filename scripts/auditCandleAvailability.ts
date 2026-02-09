@@ -46,6 +46,16 @@ type TfStats = {
   sources: Set<string>;
 };
 
+type ProviderStats = {
+  source: string;
+  assetId: string;
+  symbol: string;
+  timeframe: TargetTimeframe;
+  count30d: number;
+  count60d: number;
+  latestTimestamp: Date | null;
+};
+
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
     promise,
@@ -62,6 +72,23 @@ function createEmptyTfStats(): TfStats {
     latestTimestamp: null,
     latestSource: null,
     sources: new Set<string>(),
+  };
+}
+
+function createProviderStats(params: {
+  source: string;
+  assetId: string;
+  symbol: string;
+  timeframe: TargetTimeframe;
+}): ProviderStats {
+  return {
+    source: params.source,
+    assetId: params.assetId,
+    symbol: params.symbol,
+    timeframe: params.timeframe,
+    count30d: 0,
+    count60d: 0,
+    latestTimestamp: null,
   };
 }
 
@@ -166,6 +193,8 @@ async function main(): Promise<void> {
   )) as CandleRow[];
 
   const stats = new Map<string, TfStats>();
+  const assetById = new Map(selectedAssets.map((asset) => [asset.id, asset]));
+  const providerStats = new Map<string, ProviderStats>();
 
   for (const row of recentCandles) {
     const tf = row.timeframe.toUpperCase() as TargetTimeframe;
@@ -182,6 +211,26 @@ async function main(): Promise<void> {
     }
     entry.sources.add(row.source);
     stats.set(key, entry);
+
+    const asset = assetById.get(row.assetId);
+    if (!asset) continue;
+    const providerKey = `${row.source}|${row.assetId}|${tf}`;
+    const providerEntry =
+      providerStats.get(providerKey) ??
+      createProviderStats({
+        source: row.source,
+        assetId: row.assetId,
+        symbol: asset.symbol,
+        timeframe: tf,
+      });
+    providerEntry.count60d += 1;
+    if (row.timestamp >= since30) {
+      providerEntry.count30d += 1;
+    }
+    if (!providerEntry.latestTimestamp || row.timestamp > providerEntry.latestTimestamp) {
+      providerEntry.latestTimestamp = row.timestamp;
+    }
+    providerStats.set(providerKey, providerEntry);
   }
 
   const lines: string[] = [];
@@ -203,6 +252,26 @@ async function main(): Promise<void> {
       const status = entry.count60d > 0 ? "available" : "missing";
       lines.push(
         `| ${asset.id} | ${asset.symbol} | ${timeframe} | ${entry.count30d} | ${entry.count60d} | ${formatDate(entry.latestTimestamp)} | ${freshness} | ${entry.latestSource ?? "n/a"} | ${Array.from(entry.sources).sort().join(",") || "n/a"} | ${status} |`,
+      );
+    }
+  }
+
+  lines.push("");
+  lines.push("## Provider/Source Summary (last 60d)");
+  lines.push("");
+  lines.push("| source | assetId | symbol | timeframe | count30d | count60d | latestTimestamp |");
+  lines.push("| --- | --- | --- | --- | ---: | ---: | --- |");
+  const providerRows = Array.from(providerStats.values()).sort((a, b) => {
+    if (a.source !== b.source) return a.source.localeCompare(b.source);
+    if (a.assetId !== b.assetId) return a.assetId.localeCompare(b.assetId);
+    return a.timeframe.localeCompare(b.timeframe);
+  });
+  if (!providerRows.length) {
+    lines.push("| n/a | n/a | n/a | n/a | 0 | 0 | n/a |");
+  } else {
+    for (const row of providerRows) {
+      lines.push(
+        `| ${row.source} | ${row.assetId} | ${row.symbol} | ${row.timeframe} | ${row.count30d} | ${row.count60d} | ${formatDate(row.latestTimestamp)} |`,
       );
     }
   }
