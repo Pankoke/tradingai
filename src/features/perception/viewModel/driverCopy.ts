@@ -16,18 +16,31 @@ export function buildSignalScoreDriverBullets(vm: SetupViewModel): DriverCopyBul
   const delta = Math.abs(trend - bias);
 
   const mappedFromReasons = signalReasons.map(mapSignalReasonToBullet).filter((value): value is DriverCopyBullet => value !== null);
-  const derived: DriverCopyBullet[] = [
-    trend >= 65 && bias >= 65 && delta < 20
-      ? { key: "setup.scoreDrivers.signal.trendBiasAligned", params: { trend, bias } }
-      : null,
-    delta >= 25 ? { key: "setup.scoreDrivers.signal.trendBiasConflict", params: { delta } } : null,
-    orderflow >= 65 ? { key: "setup.scoreDrivers.signal.orderflowStrong", params: { score: orderflow } } : null,
-    orderflow <= 40 ? { key: "setup.scoreDrivers.signal.orderflowWeak", params: { score: orderflow } } : null,
-    event >= 70 ? { key: "setup.scoreDrivers.signal.eventRiskElevated", params: { score: event } } : null,
-    sentiment >= 80 || sentiment <= 20 ? { key: "setup.scoreDrivers.signal.sentimentExtreme", params: { score: sentiment } } : null,
-    signalScore >= 75 ? { key: "setup.scoreDrivers.signal.signalQualityStrong", params: { score: signalScore } } : null,
-    signalScore < 50 ? { key: "setup.scoreDrivers.signal.signalQualityMixed", params: { score: signalScore } } : null,
-  ].filter((value): value is DriverCopyBullet => value !== null);
+  const derived: DriverCopyBullet[] = [];
+  if (trend >= 65 && bias >= 65 && delta < 20) {
+    derived.push({ key: "setup.scoreDrivers.signal.trendBiasAligned", params: { trend, bias } });
+  }
+  if (delta >= 25) {
+    derived.push({ key: "setup.scoreDrivers.signal.trendBiasConflict", params: { delta } });
+  }
+  if (orderflow >= 65) {
+    derived.push({ key: "setup.scoreDrivers.signal.orderflowStrong", params: { score: orderflow } });
+  }
+  if (orderflow <= 40) {
+    derived.push({ key: "setup.scoreDrivers.signal.orderflowWeak", params: { score: orderflow } });
+  }
+  if (event >= 70) {
+    derived.push({ key: "setup.scoreDrivers.signal.eventRiskElevated", params: { score: event } });
+  }
+  if (sentiment >= 80 || sentiment <= 20) {
+    derived.push({ key: "setup.scoreDrivers.signal.sentimentExtreme", params: { score: sentiment } });
+  }
+  if (signalScore >= 75) {
+    derived.push({ key: "setup.scoreDrivers.signal.signalQualityStrong", params: { score: signalScore } });
+  }
+  if (signalScore < 50) {
+    derived.push({ key: "setup.scoreDrivers.signal.signalQualityMixed", params: { score: signalScore } });
+  }
 
   const merged = dedupeBullets([...mappedFromReasons, ...derived]);
   if (merged.length > 0) return merged.slice(0, 3);
@@ -60,15 +73,16 @@ export function buildConfidenceScoreDriverBullets(
         ? { key: "setup.scoreDrivers.confidence.eventRiskMedium", params: { score: event } }
         : { key: "setup.scoreDrivers.confidence.eventRiskLow", params: { score: event } };
 
-  const extras: DriverCopyBullet[] = [
-    delta >= 25 ? { key: "setup.scoreDrivers.confidence.alignmentMixed", params: { delta } } : null,
-    hasDecisionConstraint
-      ? {
-          key: "setup.scoreDrivers.confidence.decisionConstraint",
-          params: { reason: noTradeReason ? ` (${truncateReason(noTradeReason)})` : "" },
-        }
-      : null,
-  ].filter((value): value is DriverCopyBullet => value !== null);
+  const extras: DriverCopyBullet[] = [];
+  if (delta >= 25) {
+    extras.push({ key: "setup.scoreDrivers.confidence.alignmentMixed", params: { delta } });
+  }
+  if (hasDecisionConstraint) {
+    extras.push({
+      key: "setup.scoreDrivers.confidence.decisionConstraint",
+      params: { reason: noTradeReason ? ` (${truncateReason(noTradeReason)})` : "" },
+    });
+  }
 
   return dedupeBullets([consistency, eventRisk, ...extras]).slice(0, 3);
 }
