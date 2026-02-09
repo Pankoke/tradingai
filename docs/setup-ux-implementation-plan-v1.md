@@ -17,7 +17,18 @@
   - `src/messages/de.json`
 
 ## Story 2 - Decision Summary Data Model & Heuristics (pure TS)
-- Status: TODO
+- Status: Implemented
+- Scope delivered:
+  - Pure function `buildDecisionSummaryVM(input)` implemented with deterministic heuristics.
+  - New typed VM contracts for interpretation/band/execution mode/pros/cautions/reasonsAgainst.
+  - Heuristic mapping from existing setup signals (grade, decision, rings, signalQuality, rrr, event modifier).
+  - Unit test suite with five scenarios (strong setup, confirmation required, NO_TRADE reasons, event critical, weak RRR).
+  - i18n keys under `setup.decisionSummary.*` added for de/en.
+- Changed files:
+  - `src/features/perception/viewModel/decisionSummary.ts`
+  - `tests/viewModel/decisionSummary.test.ts`
+  - `src/messages/en.json`
+  - `src/messages/de.json`
 
 ## Story 3 - Decision Summary UI Component (Card + i18n + disclaimer)
 - Status: TODO

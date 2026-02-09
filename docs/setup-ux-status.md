@@ -35,9 +35,20 @@
 - PR/Commit:
 
 ### Story 2 - Decision Summary Data Model & Heuristics (pure TS)
-- Status: TODO
+- Status: DONE
 - Notes:
+  - Neuer, deterministischer und pure ViewModel-Layer `buildDecisionSummaryVM(input)` implementiert.
+  - Ausgabe umfasst: `interpretation` (key + params), `band` (A/B/C), `executionMode`, `pros`, `cautions`, optionale `reasonsAgainst`.
+  - Heuristiken nutzen nur bestehende Setup-/Engine-Felder (grade/decision, rings, signalQuality, riskReward, eventModifier, decision reasons).
+  - Bullet-Listen sind auf max. 3 Eintraege begrenzt und dedupliziert.
+  - Keine UI-Änderungen in Story 2.
 - Files:
+  - `src/features/perception/viewModel/decisionSummary.ts`
+  - `tests/viewModel/decisionSummary.test.ts`
+  - `src/messages/en.json`
+  - `src/messages/de.json`
+  - `docs/setup-ux-status.md`
+  - `docs/setup-ux-implementation-plan-v1.md`
 - PR/Commit:
 
 ### Story 3 - Decision Summary UI Component (Card + i18n + disclaimer)
