@@ -222,7 +222,3 @@ export const mockSetups: Setup[] = [
     },
   },
 ];
-
-export function getSetupById(id: string): Setup | undefined {
-  return mockSetups.find((setup) => setup.id === id);
-}

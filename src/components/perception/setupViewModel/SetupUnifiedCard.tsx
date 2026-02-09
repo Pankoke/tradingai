@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useMemo, useState, type JSX } from "react";
+import { useEffect, useMemo, useState, type JSX } from "react";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import { SetupCardHeaderBlock } from "@/src/components/perception/setupViewModel/SetupCardHeaderBlock";
 import { SetupCardRingsBlock } from "@/src/components/perception/setupViewModel/SetupCardRingsBlock";
@@ -11,6 +11,7 @@ import type { SetupViewModel } from "@/src/components/perception/setupViewModel/
 import { BigGauge, getConfidenceGaugePalette, getSignalQualityGaugePalette } from "@/src/components/perception/RingGauges";
 import { RiskRewardBlock } from "@/src/components/perception/RiskRewardBlock";
 import { RingInsightTabs } from "@/src/components/perception/RingInsightTabs";
+import { DecisionSummaryCard } from "@/src/components/perception/DecisionSummaryCard";
 import {
   analyzeEventContext,
   pickPrimaryEventCandidate,
@@ -20,6 +21,12 @@ import {
 import { deriveEventTimingHint } from "@/src/components/perception/eventExecutionHelpers";
 import type { Setup } from "@/src/lib/engine/types";
 import { isEventModifierEnabledClient } from "@/src/lib/config/eventModifier";
+import { buildDecisionSummaryVM, type DecisionSummaryVM } from "@/src/features/perception/viewModel/decisionSummary";
+import {
+  buildConfidenceScoreDriverBullets,
+  buildSignalScoreDriverBullets,
+  type DriverCopyBullet,
+} from "@/src/features/perception/viewModel/driverCopy";
 
 type Props = {
   vm: SetupViewModel;
@@ -33,6 +40,8 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
   const modifierEnabled = isEventModifierEnabledClient();
   const [activeRing, setActiveRing] = useState<"trend" | "event" | "bias" | "sentiment" | "orderflow">("trend");
   const [expanded, setExpanded] = useState(mode === "sotd" ? true : defaultExpanded);
+  const [driversDetailsExpanded, setDriversDetailsExpanded] = useState(mode !== "list");
+  const [executionDetailsExpanded, setExecutionDetailsExpanded] = useState(mode !== "list");
 
   const signalQuality = vm.signalQuality ?? null;
   const confidenceScore = vm.rings.confidenceScore ?? 0;
@@ -40,9 +49,12 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
   const signalPalette = getSignalQualityGaugePalette(signalQuality?.score ?? 0);
 
   const eventContext = vm.eventContext ?? null;
+  const isListMode = mode === "list";
+  const isDriversCollapsible = expanded && isListMode;
+  const isExecutionCollapsible = isListMode;
   const compactMetrics = !expanded && mode === "list";
-  const eventInsights = useMemo(() => analyzeEventContext(eventContext), [eventContext]);
-  const primaryEventCandidate = useMemo(() => pickPrimaryEventCandidate(eventContext), [eventContext]);
+  const driversDetailsId = useMemo(() => `drivers-details-${toDomIdSegment(vm.id)}`, [vm.id]);
+  const executionDetailsId = useMemo(() => `execution-details-${toDomIdSegment(vm.id)}`, [vm.id]);
   const executionContent = useMemo(() => buildExecutionContent(vm, t, modifierEnabled), [vm, t, modifierEnabled]);
   const primaryCollapsed = useMemo(
     () => pickCollapsedExecutionPrimaryBullet(vm, t, modifierEnabled),
@@ -83,10 +95,46 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
         ].filter((line): line is string => Boolean(line))
       : null;
   const actionCardsVariant = expanded ? "full" : "mini";
+  const signalDriverBullets = useMemo(() => buildSignalScoreDriverBullets(vm), [vm]);
+  const confidenceDriverBullets = useMemo(
+    () => buildConfidenceScoreDriverBullets(vm, { modifierEnabled }),
+    [vm, modifierEnabled],
+  );
+  const decisionSummaryResult = useMemo((): { summary: DecisionSummaryVM | null; debugReason: string | null } => {
+    try {
+      return { summary: buildDecisionSummaryVM(vm), debugReason: null };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "unknown_error";
+      return { summary: null, debugReason: `exception: ${message}` };
+    }
+  }, [vm]);
+  const showDecisionSummaryDebug = process.env.NODE_ENV === "development" && expanded && !decisionSummaryResult.summary;
 
   const generatedAtText = vm.meta.generatedAt ?? vm.meta.snapshotCreatedAt ?? vm.meta.snapshotTime ?? null;
   const showInsightPanel = mode === "sotd" || expanded;
+  const showDriverInsights = showInsightPanel && (!isDriversCollapsible || driversDetailsExpanded);
+  const showExecutionDetails = !isExecutionCollapsible || executionDetailsExpanded;
   const numberFormatter = useMemo(() => new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2, minimumFractionDigits: 2 }), []);
+
+  useEffect(() => {
+    if (mode !== "list") {
+      setDriversDetailsExpanded(true);
+      return;
+    }
+    if (!expanded) {
+      setDriversDetailsExpanded(false);
+    }
+  }, [expanded, mode]);
+
+  useEffect(() => {
+    if (mode !== "list") {
+      setExecutionDetailsExpanded(true);
+      return;
+    }
+    if (!expanded) {
+      setExecutionDetailsExpanded(false);
+    }
+  }, [expanded, mode]);
 
   const formatZone = (value: number | null, fallback?: string | null): string => {
     if (value === null || Number.isNaN(value)) return fallback ?? "n/a";
@@ -95,6 +143,13 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
     const high = value + delta;
     return `${numberFormatter.format(low)} - ${numberFormatter.format(high)}`;
   };
+
+  const entryDisplay =
+    vm.entry.display ??
+    (vm.entry.from !== null && vm.entry.to !== null ? `${numberFormatter.format(vm.entry.from)} - ${numberFormatter.format(vm.entry.to)}` : "n/a");
+  const stopDisplay = formatZone(vm.stop.value, vm.stop.display ?? null);
+  const takeProfitDisplay = formatZone(vm.takeProfit.value, vm.takeProfit.display ?? null);
+  const rrrDisplay = vm.riskReward?.rrr !== null && vm.riskReward?.rrr !== undefined ? numberFormatter.format(vm.riskReward.rrr) : "n/a";
 
   return (
     <div className="space-y-6 rounded-3xl border border-slate-800 bg-slate-950/40 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
@@ -109,12 +164,11 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
 
       {expanded ? (
         <div className="grid gap-3 md:grid-cols-2">
-          <SignalQualityCard signalQuality={signalQuality} palette={signalPalette} />
+          <SignalQualityCard signalQuality={signalQuality} palette={signalPalette} driverBullets={signalDriverBullets} />
           <ConfidenceCard
             confidenceScore={confidenceScore}
             palette={confidencePalette}
-            rings={vm.rings}
-            modifierEnabled={modifierEnabled}
+            driverBullets={confidenceDriverBullets}
           />
         </div>
       ) : compactMetrics ? (
@@ -125,15 +179,50 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
       ) : null}
 
       {expanded ? (
-        <div className="space-y-3 rounded-3xl border border-slate-800 bg-slate-900/70 p-5 shadow-[0_10px_40px_rgba(2,6,23,0.45)]">
+        <div data-testid="decision-summary-layer">
+          {decisionSummaryResult.summary ? <DecisionSummaryCard summary={decisionSummaryResult.summary} compact={mode === "list"} /> : null}
+          {showDecisionSummaryDebug ? (
+            <div
+              data-testid="decision-summary-debug"
+              data-reason={decisionSummaryResult.debugReason ?? "unknown"}
+              className="rounded-2xl border border-amber-700/50 bg-amber-950/30 p-4 text-sm text-amber-100"
+            >
+              <p className="font-semibold">{t("setup.decisionSummary.debug.unavailable")}</p>
+              <p className="mt-1 text-xs text-amber-200">
+                {t("setup.decisionSummary.debug.reasonLabel")}: {decisionSummaryResult.debugReason ?? "unknown"}
+              </p>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {expanded ? (
+        <div
+          data-testid="drivers-layer"
+          className="space-y-3 rounded-3xl border border-slate-800 bg-slate-900/70 p-5 shadow-[0_10px_40px_rgba(2,6,23,0.45)]"
+        >
           <SetupCardRingsBlock
             setup={vm}
             activeRing={activeRing}
             onActiveRingChange={setActiveRing}
             hideEventRing={modifierEnabled}
           />
-          {showInsightPanel ? (
-            <div className="space-y-3 border-t border-slate-800 pt-4">
+          {isDriversCollapsible ? (
+            <div className="border-t border-slate-800 pt-3">
+              <button
+                type="button"
+                data-testid="drivers-disclosure-trigger"
+                aria-expanded={driversDetailsExpanded}
+                aria-controls={driversDetailsId}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/70 px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-slate-100 transition hover:border-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300/70"
+                onClick={() => setDriversDetailsExpanded((prev) => !prev)}
+              >
+                {driversDetailsExpanded ? t("setup.drivers.details.hide") : t("setup.drivers.details.show")}
+              </button>
+            </div>
+          ) : null}
+          {showDriverInsights ? (
+            <div id={driversDetailsId} data-testid="drivers-detail-content" className="space-y-3 border-t border-slate-800 pt-4">
               {renderInsightContent()}
             </div>
           ) : null}
@@ -150,43 +239,78 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
           )
         : null}
 
-      <SetupCardExecutionBlock
-        title={executionContent.title}
-        bullets={bulletsToRender}
-        debugLines={executionDebugLine}
-        eventModifier={vm.eventModifier ?? null}
-      />
+      {isExecutionCollapsible ? (
+        <div data-testid="execution-summary-row" className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+          <dl className="grid gap-2 text-xs text-slate-300 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-1">
+              <dt className="font-semibold uppercase tracking-[0.12em] text-slate-400">{t("setups.entry")}</dt>
+              <dd className="text-sm text-slate-100">{entryDisplay}</dd>
+            </div>
+            <div className="space-y-1">
+              <dt className="font-semibold uppercase tracking-[0.12em] text-slate-400">{t("setups.stopLoss")}</dt>
+              <dd className="text-sm text-slate-100">{stopDisplay}</dd>
+            </div>
+            <div className="space-y-1">
+              <dt className="font-semibold uppercase tracking-[0.12em] text-slate-400">{t("setups.takeProfit")}</dt>
+              <dd className="text-sm text-slate-100">{takeProfitDisplay}</dd>
+            </div>
+            <div className="space-y-1">
+              <dt className="font-semibold uppercase tracking-[0.12em] text-slate-400">{t("perception.riskReward.rrrLabel")}</dt>
+              <dd className="text-sm text-slate-100">{rrrDisplay}</dd>
+            </div>
+          </dl>
+          <div className="mt-3 border-t border-slate-800 pt-3">
+            <button
+              type="button"
+              data-testid="execution-disclosure-trigger"
+              aria-expanded={executionDetailsExpanded}
+              aria-controls={executionDetailsId}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/70 px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-slate-100 transition hover:border-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300/70"
+              onClick={() => setExecutionDetailsExpanded((prev) => !prev)}
+            >
+              {executionDetailsExpanded ? t("setup.execution.details.hide") : t("setup.execution.details.show")}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
-      <SetupActionCards
-        entry={{
-          display:
-            vm.entry.display ??
-            (vm.entry.from !== null && vm.entry.to !== null
-              ? `${numberFormatter.format(vm.entry.from)} - ${numberFormatter.format(vm.entry.to)}`
-              : "n/a"),
-          noteKey: "setups.entry.note.default",
-          copyValue: vm.entry.display ?? (vm.entry.from !== null ? String(vm.entry.from) : null),
-        }}
-        stop={{
-          display: formatZone(vm.stop.value, vm.stop.display ?? null),
-          noteKey: "setups.stop.note.default",
-          copyValue: vm.stop.display ?? (vm.stop.value !== null ? String(vm.stop.value) : null),
-        }}
-        takeProfit={{
-          display: formatZone(vm.takeProfit.value, vm.takeProfit.display ?? null),
-          noteKey: "setups.takeProfit.note.primary",
-          copyValue: vm.takeProfit.display ?? (vm.takeProfit.value !== null ? String(vm.takeProfit.value) : null),
-        }}
-        copyLabels={{
-          copy: t("setups.action.copy"),
-          copied: t("setups.action.copied"),
-        }}
-        variant={actionCardsVariant}
-        allowCopy={false}
-        forceRangeFromPoint
-      />
+      {showExecutionDetails ? (
+        <div id={executionDetailsId} data-testid="execution-detail-content" className="space-y-4">
+          <SetupCardExecutionBlock
+            title={executionContent.title}
+            bullets={bulletsToRender}
+            debugLines={executionDebugLine}
+            eventModifier={vm.eventModifier ?? null}
+          />
 
-      {expanded && vm.riskReward ? <RiskRewardBlock riskReward={vm.riskReward} /> : null}
+          <SetupActionCards
+            entry={{
+              display: entryDisplay,
+              noteKey: "setups.entry.note.default",
+              copyValue: vm.entry.display ?? (vm.entry.from !== null ? String(vm.entry.from) : null),
+            }}
+            stop={{
+              display: stopDisplay,
+              noteKey: "setups.stop.note.default",
+              copyValue: vm.stop.display ?? (vm.stop.value !== null ? String(vm.stop.value) : null),
+            }}
+            takeProfit={{
+              display: takeProfitDisplay,
+              noteKey: "setups.takeProfit.note.primary",
+              copyValue: vm.takeProfit.display ?? (vm.takeProfit.value !== null ? String(vm.takeProfit.value) : null),
+            }}
+            copyLabels={{
+              copy: t("setups.action.copy"),
+              copied: t("setups.action.copied"),
+            }}
+            variant={actionCardsVariant}
+            allowCopy={false}
+            forceRangeFromPoint
+          />
+
+          {expanded && vm.riskReward ? <RiskRewardBlock riskReward={vm.riskReward} /> : null}
+        </div>
+      ) : null}
 
       {mode === "list" ? (
         <div className="flex justify-end">
@@ -224,12 +348,13 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
 function SignalQualityCard({
   signalQuality,
   palette,
+  driverBullets,
 }: {
   signalQuality: SetupViewModel["signalQuality"];
   palette: ReturnType<typeof getSignalQualityGaugePalette>;
+  driverBullets: DriverCopyBullet[];
 }): JSX.Element {
   const t = useT();
-  const reasons = signalQuality?.reasons ?? [];
   const score = signalQuality?.score ?? 0;
   return (
     <div className="flex items-start gap-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 shadow-[0_20px_45px_rgba(2,6,23,0.45)]">
@@ -242,15 +367,10 @@ function SignalQualityCard({
           {t("perception.signalQuality.bulletsTitle")}
         </p>
         <ul className="space-y-1 text-sm text-slate-100">
-          {reasons.map((reason) => (
-            <li key={reason} className="flex items-start gap-2">
+          {driverBullets.map((item) => (
+            <li key={item.key} className="flex items-start gap-2">
               <span className="mt-1 h-1.5 w-1.5 rounded-full bg-slate-400" />
-              <span>
-                {(() => {
-                  const translation = t(reason);
-                  return translation === reason ? t("perception.signalQuality.reason.default") : translation;
-                })()}
-              </span>
+              <span>{resolveDriverBulletText(item, t)}</span>
             </li>
           ))}
         </ul>
@@ -265,21 +385,13 @@ function SignalQualityCard({
 function ConfidenceCard({
   confidenceScore,
   palette,
-  rings,
-  modifierEnabled,
+  driverBullets,
 }: {
   confidenceScore: number;
   palette: ReturnType<typeof getConfidenceGaugePalette>;
-  rings: SetupViewModel["rings"];
-  modifierEnabled: boolean;
+  driverBullets: DriverCopyBullet[];
 }): JSX.Element {
   const t = useT();
-  const consistencyLevel = confidenceScore >= 60 ? "high" : confidenceScore >= 45 ? "medium" : "low";
-  const eventLevel = modifierEnabled ? "low" : (rings.eventScore ?? 0) >= 70 ? "high" : (rings.eventScore ?? 0) >= 40 ? "medium" : "low";
-  const bullets = [
-    t(`perception.confidence.bullets.consistency.${consistencyLevel}`),
-    t(`perception.confidence.bullets.eventRisk.${eventLevel}`),
-  ];
 
   return (
     <div className="flex items-start gap-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 shadow-[0_20px_45px_rgba(2,6,23,0.45)]">
@@ -292,10 +404,10 @@ function ConfidenceCard({
           {t("perception.confidence.bulletsTitle")}
         </p>
         <ul className="space-y-1 text-sm text-slate-100">
-          {bullets.map((line) => (
-            <li key={line} className="flex items-start gap-2">
+          {driverBullets.map((item) => (
+            <li key={item.key} className="flex items-start gap-2">
               <span className="mt-1 h-1.5 w-1.5 rounded-full bg-slate-400" />
-              <span>{line}</span>
+              <span>{resolveDriverBulletText(item, t)}</span>
             </li>
           ))}
         </ul>
@@ -305,6 +417,16 @@ function ConfidenceCard({
       </div>
     </div>
   );
+}
+
+function toDomIdSegment(value: string): string {
+  return value.replace(/[^A-Za-z0-9_-]+/g, "-").toLowerCase();
+}
+
+function resolveDriverBulletText(item: DriverCopyBullet, t: ReturnType<typeof useT>): string {
+  const template = t(item.key);
+  if (!item.params) return template;
+  return Object.entries(item.params).reduce((result, [key, value]) => result.replaceAll(`{${key}}`, String(value)), template);
 }
 
 function CompactMetricCard({
