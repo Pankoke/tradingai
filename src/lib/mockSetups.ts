@@ -1,6 +1,8 @@
 import type { Setup } from "./engine/types";
 import { createDefaultRings } from "@/src/lib/engine/rings";
 
+const MOCK_TIMESTAMP = "2026-02-09T12:00:00.000Z";
+
 const buildMockRings = (scores: {
   trendScore: number;
   eventScore: number;
@@ -17,12 +19,12 @@ const buildMockRings = (scores: {
   orderflow: scores.orderflowScore,
   confidence: scores.confidenceScore,
   meta: {
-    trend: { quality: "heuristic", timeframe: "unknown", notes: ["mock_mode"] },
-    event: { quality: "heuristic", timeframe: "unknown", notes: ["mock_mode"] },
-    bias: { quality: "heuristic", timeframe: "unknown", notes: ["mock_mode"] },
-    sentiment: { quality: "heuristic", timeframe: "unknown", notes: ["mock_mode"] },
-    orderflow: { quality: "heuristic", timeframe: "unknown", notes: ["mock_mode"] },
-    confidence: { quality: "derived", timeframe: "unknown", notes: ["mock_mode"] },
+    trend: { quality: "heuristic", timeframe: "unknown", asOf: MOCK_TIMESTAMP, notes: ["mock_mode"] },
+    event: { quality: "heuristic", timeframe: "unknown", asOf: MOCK_TIMESTAMP, notes: ["mock_mode"] },
+    bias: { quality: "heuristic", timeframe: "unknown", asOf: MOCK_TIMESTAMP, notes: ["mock_mode"] },
+    sentiment: { quality: "heuristic", timeframe: "unknown", asOf: MOCK_TIMESTAMP, notes: ["mock_mode"] },
+    orderflow: { quality: "heuristic", timeframe: "unknown", asOf: MOCK_TIMESTAMP, notes: ["mock_mode"] },
+    confidence: { quality: "derived", timeframe: "unknown", asOf: MOCK_TIMESTAMP, notes: ["mock_mode"] },
   },
 });
 
@@ -51,6 +53,7 @@ export const mockSetups: Setup[] = [
     takeProfit: "87.50",
     type: "Regelbasiert",
     accessLevel: "free",
+    snapshotCreatedAt: MOCK_TIMESTAMP,
     riskReward: {
       riskPercent: null,
       rewardPercent: null,
@@ -82,6 +85,7 @@ export const mockSetups: Setup[] = [
     takeProfit: "69.000",
     type: "KI",
     accessLevel: "free",
+    snapshotCreatedAt: MOCK_TIMESTAMP,
     riskReward: {
       riskPercent: null,
       rewardPercent: null,
@@ -113,6 +117,7 @@ export const mockSetups: Setup[] = [
     takeProfit: "2.980",
     type: "Regelbasiert",
     accessLevel: "free",
+    snapshotCreatedAt: MOCK_TIMESTAMP,
     riskReward: {
       riskPercent: null,
       rewardPercent: null,
@@ -144,6 +149,7 @@ export const mockSetups: Setup[] = [
     takeProfit: "18.780",
     type: "Regelbasiert",
     accessLevel: "free",
+    snapshotCreatedAt: MOCK_TIMESTAMP,
     riskReward: {
       riskPercent: null,
       rewardPercent: null,
@@ -175,6 +181,7 @@ export const mockSetups: Setup[] = [
     takeProfit: "18.380",
     type: "Regelbasiert",
     accessLevel: "free",
+    snapshotCreatedAt: MOCK_TIMESTAMP,
     riskReward: {
       riskPercent: null,
       rewardPercent: null,
@@ -206,6 +213,7 @@ export const mockSetups: Setup[] = [
     takeProfit: "2.372",
     type: "KI",
     accessLevel: "free",
+    snapshotCreatedAt: MOCK_TIMESTAMP,
     riskReward: {
       riskPercent: null,
       rewardPercent: null,
