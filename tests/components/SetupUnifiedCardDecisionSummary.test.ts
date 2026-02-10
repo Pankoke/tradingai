@@ -77,11 +77,11 @@ const baseVm: SetupViewModel = {
   meta: { eventLevel: "low" },
 };
 
-function renderCard(defaultExpanded: boolean): string {
+function renderCard(defaultExpanded: boolean, mode: "list" | "sotd" = "list"): string {
   return renderToStaticMarkup(
     React.createElement(SetupUnifiedCard, {
       vm: baseVm,
-      mode: "list",
+      mode,
       defaultExpanded,
     }),
   );
@@ -98,5 +98,14 @@ describe("SetupUnifiedCard decision summary integration", () => {
     const html = renderCard(false);
     expect(html).not.toContain("data-testid=\"decision-summary-layer\"");
     expect(html).not.toContain("setup.decisionSummary.title");
+  });
+
+  test("renders input metrics section label in list and sotd score layers", () => {
+    const listHtml = renderCard(true, "list");
+    const sotdHtml = renderCard(true, "sotd");
+    expect(listHtml).toContain("data-testid=\"input-metrics-label\"");
+    expect(listHtml).toContain("setup.sections.inputMetrics");
+    expect(sotdHtml).toContain("data-testid=\"input-metrics-label\"");
+    expect(sotdHtml).toContain("setup.sections.inputMetrics");
   });
 });

@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState, type JSX } from "react";
+import { useEffect, useMemo, useState, useId, type JSX } from "react";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import { SetupCardHeaderBlock } from "@/src/components/perception/setupViewModel/SetupCardHeaderBlock";
 import { SetupCardRingsBlock } from "@/src/components/perception/setupViewModel/SetupCardRingsBlock";
@@ -55,6 +55,8 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
   const compactMetrics = !expanded && mode === "list";
   const driversDetailsId = useMemo(() => `drivers-details-${toDomIdSegment(vm.id)}`, [vm.id]);
   const executionDetailsId = useMemo(() => `execution-details-${toDomIdSegment(vm.id)}`, [vm.id]);
+  const inputMetricsHeadingId = useId();
+  const executionSectionHeadingId = useId();
   const executionContent = useMemo(() => buildExecutionContent(vm, t, modifierEnabled), [vm, t, modifierEnabled]);
   const primaryCollapsed = useMemo(
     () => pickCollapsedExecutionPrimaryBullet(vm, t, modifierEnabled),
@@ -162,20 +164,30 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
         variant={mode === "list" && !expanded ? "compact" : "full"}
       />
 
-      {expanded ? (
-        <div className="grid gap-3 md:grid-cols-2">
-          <SignalQualityCard signalQuality={signalQuality} palette={signalPalette} driverBullets={signalDriverBullets} />
-          <ConfidenceCard
-            confidenceScore={confidenceScore}
-            palette={confidencePalette}
-            driverBullets={confidenceDriverBullets}
-          />
-        </div>
-      ) : compactMetrics ? (
-        <div className="grid gap-3 md:grid-cols-2">
-          <CompactMetricCard title={t("perception.signalQuality.label")} value={signalQuality?.score ?? 0} palette={signalPalette} />
-          <CompactMetricCard title={t("perception.today.confidenceLabel")} value={confidenceScore ?? 0} palette={confidencePalette} />
-        </div>
+      {expanded || compactMetrics ? (
+        <section aria-labelledby={inputMetricsHeadingId} className="space-y-3">
+          <div className="space-y-1" data-testid="input-metrics-label">
+            <h3 id={inputMetricsHeadingId} className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-300">
+              {t("setup.sections.inputMetrics")}
+            </h3>
+            <p className="text-xs text-slate-400">{t("setup.sections.inputMetrics.help")}</p>
+          </div>
+          {expanded ? (
+            <div className="grid gap-3 md:grid-cols-2">
+              <SignalQualityCard signalQuality={signalQuality} palette={signalPalette} driverBullets={signalDriverBullets} />
+              <ConfidenceCard
+                confidenceScore={confidenceScore}
+                palette={confidencePalette}
+                driverBullets={confidenceDriverBullets}
+              />
+            </div>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2">
+              <CompactMetricCard title={t("perception.signalQuality.label")} value={signalQuality?.score ?? 0} palette={signalPalette} />
+              <CompactMetricCard title={t("perception.today.confidenceLabel")} value={confidenceScore ?? 0} palette={confidencePalette} />
+            </div>
+          )}
+        </section>
       ) : null}
 
       {expanded ? (
@@ -238,6 +250,18 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
             </div>
           )
         : null}
+
+      <section aria-labelledby={executionSectionHeadingId} data-testid="execution-layer" className="space-y-3">
+        <div className="space-y-1">
+          <h3 id={executionSectionHeadingId} className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-300">
+            {t("setup.execution.sectionTitle")}
+          </h3>
+          <p className="text-xs text-slate-400">{t("setup.execution.levels.help")}</p>
+          <p className="text-xs text-slate-400">{t("setup.execution.rrr.help")}</p>
+          <p data-testid="execution-disclaimer" className="text-xs text-slate-400">
+            {t("setup.execution.disclaimer.short")}
+          </p>
+        </div>
 
       {isExecutionCollapsible ? (
         <div data-testid="execution-summary-row" className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
@@ -311,6 +335,7 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
           {expanded && vm.riskReward ? <RiskRewardBlock riskReward={vm.riskReward} /> : null}
         </div>
       ) : null}
+      </section>
 
       {mode === "list" ? (
         <div className="flex justify-end">

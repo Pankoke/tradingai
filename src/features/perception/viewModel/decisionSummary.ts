@@ -5,6 +5,7 @@ import type { SetupViewModel } from "@/src/components/perception/setupViewModel/
 export type DecisionExecutionMode = "confirmation" | "breakout" | "pullback" | "wait";
 export type DecisionSummaryBand = "A" | "B" | "C";
 export type SummaryParamValue = string | number;
+export type DecisionSummaryUncertaintyLevel = "low" | "medium" | "high";
 
 export type SummaryBullet = {
   key: string;
@@ -21,6 +22,12 @@ export type DecisionSummaryVM = {
   pros: SummaryBullet[];
   cautions: SummaryBullet[];
   reasonsAgainst?: SummaryBullet[];
+  explainability?: SummaryBullet[];
+  uncertainty?: {
+    level: DecisionSummaryUncertaintyLevel;
+    key: string;
+    params?: Record<string, SummaryParamValue>;
+  };
 };
 
 export function buildDecisionSummaryVM(input: SetupViewModel): DecisionSummaryVM {
@@ -95,6 +102,16 @@ export function buildDecisionSummaryVM(input: SetupViewModel): DecisionSummaryVM
     eventCritical,
     isHardStop,
   });
+  const uncertainty = resolveUncertainty({
+    cautionsCount: cautions.length,
+    reasonsAgainstCount: reasonsAgainst?.length ?? 0,
+    executionMode,
+    band,
+  });
+  const explainability = resolveExplainability({
+    pros,
+    cautions,
+  });
 
   return {
     interpretation,
@@ -103,6 +120,8 @@ export function buildDecisionSummaryVM(input: SetupViewModel): DecisionSummaryVM
     pros,
     cautions,
     reasonsAgainst: reasonsAgainst && reasonsAgainst.length > 0 ? reasonsAgainst : undefined,
+    explainability: explainability.length > 0 ? explainability : undefined,
+    uncertainty,
   };
 }
 
@@ -134,6 +153,7 @@ function resolveBand(input: {
 }): DecisionSummaryBand {
   if (input.decisionBlocked) return "C";
   if (input.setupGrade === "A" || input.setupGrade === "B") return input.setupGrade;
+  if (input.setupGrade === "C") return "C";
   if (input.setupGrade === "NO_TRADE") return "C";
   if (input.signalQualityGrade === "A" || input.signalQualityGrade === "B" || input.signalQualityGrade === "C") {
     return input.signalQualityGrade;
@@ -176,6 +196,62 @@ function resolveInterpretation(input: {
     return { key: "setup.decisionSummary.interpretation.confirmationRequired", params: { direction } };
   }
   return { key: "setup.decisionSummary.interpretation.partialAlignment", params: { direction } };
+}
+
+function resolveUncertainty(input: {
+  cautionsCount: number;
+  reasonsAgainstCount: number;
+  executionMode: DecisionExecutionMode;
+  band: DecisionSummaryBand;
+}): { level: DecisionSummaryUncertaintyLevel; key: string } {
+  let level: DecisionSummaryUncertaintyLevel = "low";
+
+  if (input.reasonsAgainstCount > 0) {
+    level = "high";
+  } else if (input.cautionsCount >= 2) {
+    level = "medium";
+  } else if (input.cautionsCount === 1) {
+    level = "low";
+  }
+
+  const requiresMediumFloor = input.executionMode === "wait" || input.band === "C";
+  if (requiresMediumFloor && level === "low") {
+    level = "medium";
+  }
+
+  return {
+    level,
+    key: `setup.decisionSummary.uncertainty.${level}`,
+  };
+}
+
+function resolveExplainability(input: {
+  pros: SummaryBullet[];
+  cautions: SummaryBullet[];
+}): SummaryBullet[] {
+  const selected: SummaryBullet[] = [];
+
+  for (const item of input.pros) {
+    if (selected.length >= 2) break;
+    selected.push(item);
+  }
+
+  const primaryConstraint = input.cautions.find(
+    (item) => !selected.some((selectedItem) => selectedItem.key === item.key),
+  );
+  if (primaryConstraint && selected.length < 3) {
+    selected.push(primaryConstraint);
+  }
+
+  if (selected.length < 3) {
+    for (const caution of input.cautions) {
+      if (selected.length >= 3) break;
+      if (selected.some((item) => item.key === caution.key)) continue;
+      selected.push(caution);
+    }
+  }
+
+  return selected.slice(0, 3);
 }
 
 function resolveReasonsAgainst(input: SetupViewModel): SummaryBullet[] {

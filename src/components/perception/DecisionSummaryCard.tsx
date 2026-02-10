@@ -1,6 +1,6 @@
 "use client";
 
-import type { JSX } from "react";
+import { useId, type JSX } from "react";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import { Badge } from "@/src/components/ui/badge";
 import { Tooltip } from "@/src/components/ui/tooltip";
@@ -14,6 +14,8 @@ type DecisionSummaryCardProps = {
 
 export function DecisionSummaryCard({ summary, className = "", compact = false }: DecisionSummaryCardProps): JSX.Element {
   const t = useT();
+  const titleId = useId();
+  const sectionLabelId = useId();
   const executionModeKey = `setup.decisionSummary.executionMode.${summary.executionMode}`;
   const interpretationText = resolveText(t(summary.interpretation.key), summary.interpretation.params);
   const shortDisclaimer = t("setup.decisionSummary.disclaimer.short");
@@ -22,10 +24,18 @@ export function DecisionSummaryCard({ summary, className = "", compact = false }
   return (
     <section
       className={`rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-md ${compact ? "space-y-3" : "space-y-4"} ${className}`}
-      aria-label={t("setup.decisionSummary.title")}
+      aria-labelledby={titleId}
     >
+      <div className="space-y-1" data-testid="overall-interpretation-label">
+        <p id={sectionLabelId} className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-300">
+          {t("setup.sections.overallInterpretation")}
+        </p>
+        <p className="text-xs text-slate-400">{t("setup.sections.overallInterpretation.help")}</p>
+      </div>
       <header className="flex flex-wrap items-center gap-2">
-        <h3 className="text-sm font-semibold text-slate-100">{t("setup.decisionSummary.title")}</h3>
+        <h3 id={titleId} aria-describedby={sectionLabelId} className="text-sm font-semibold text-slate-100">
+          {t("setup.decisionSummary.title")}
+        </h3>
         {summary.band ? (
           <Badge variant="outline" className="rounded-full border-slate-700 bg-slate-800 px-2 py-0.5 text-[0.65rem] text-slate-100">
             {summary.band}
@@ -34,9 +44,26 @@ export function DecisionSummaryCard({ summary, className = "", compact = false }
         <Badge variant="outline" className="rounded-full border-slate-700 bg-slate-800 px-2 py-0.5 text-[0.65rem] text-slate-200">
           {t(executionModeKey)}
         </Badge>
+        {summary.uncertainty ? (
+          <Badge
+            data-testid="decision-summary-uncertainty"
+            variant="outline"
+            className="rounded-full border-slate-700 bg-slate-800 px-2 py-0.5 text-[0.65rem] text-slate-200"
+          >
+            {t("setup.decisionSummary.uncertainty.label")}: {resolveText(t(summary.uncertainty.key), summary.uncertainty.params)}
+          </Badge>
+        ) : null}
       </header>
 
       <p className="line-clamp-2 text-sm text-slate-300">{interpretationText}</p>
+      {summary.explainability && summary.explainability.length > 0 ? (
+        <p data-testid="decision-summary-based-on" className="text-xs text-slate-400">
+          {t("setup.decisionSummary.basedOn.label")}:{" "}
+          {summary.explainability
+            .map((item) => resolveText(t(item.key), item.params))
+            .join(t("setup.decisionSummary.basedOn.separator"))}
+        </p>
+      ) : null}
 
       <div className={`grid gap-3 ${compact ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"}`}>
         <SummaryList title={t("setup.decisionSummary.pros")} bullets={summary.pros} />

@@ -100,6 +100,9 @@ describe("buildDecisionSummaryVM", () => {
     expect(result.executionMode).toBe("pullback");
     expect(result.pros.length).toBeGreaterThan(result.cautions.length);
     expect(result.executionMode).not.toBe("wait");
+    expect(result.explainability).toBeDefined();
+    expect((result.explainability ?? []).length).toBeLessThanOrEqual(3);
+    expect((result.explainability ?? []).length).toBeGreaterThan(0);
   });
 
   test("uses confirmation interpretation when trend is weak but bias is strong", () => {
@@ -131,6 +134,7 @@ describe("buildDecisionSummaryVM", () => {
     expect(result.executionMode).toBe("wait");
     expect(result.reasonsAgainst?.length).toBeGreaterThan(0);
     expect(result.reasonsAgainst?.[0]?.key).toBe("setup.decisionSummary.reasonAgainst.biasConstraint");
+    expect(result.uncertainty?.level).toBe("high");
   });
 
   test("adds elevated-event caution and event-based reason when event is execution critical", () => {
@@ -159,5 +163,74 @@ describe("buildDecisionSummaryVM", () => {
     const result = buildDecisionSummaryVM(vm);
 
     expect(result.cautions.map((item) => item.key)).toContain("setup.decisionSummary.caution.rrrLimited");
+    expect(result.uncertainty?.level).toBe("low");
+  });
+
+  test("sets medium uncertainty when two or more cautions are present", () => {
+    const vm = makeVm({
+      decision: "WATCH",
+      setupGrade: "B",
+      setupType: "range_bias",
+      rings: { trendScore: 40, biasScore: 45, sentimentScore: 62, orderflowScore: 40, confidenceScore: 70, eventScore: 30 } as SetupViewModel["rings"],
+      riskReward: { riskPercent: 1, rewardPercent: 2.2, rrr: 2.2, volatilityLabel: "medium" },
+      signalQuality: { grade: "B", score: 62, labelKey: "perception.signalQuality.grade.B", reasons: [] },
+    });
+
+    const result = buildDecisionSummaryVM(vm);
+
+    expect(result.cautions.length).toBeGreaterThanOrEqual(2);
+    expect(result.uncertainty?.level).toBe("medium");
+    expect(result.explainability).toBeDefined();
+    expect((result.explainability ?? []).length).toBeLessThanOrEqual(3);
+    expect((result.explainability ?? []).some((item) =>
+      result.pros.some((pro) => pro.key === item.key) || result.cautions.some((caution) => caution.key === item.key),
+    )).toBe(true);
+  });
+
+  test("enforces at least medium uncertainty for band C even with limited cautions", () => {
+    const vm = makeVm({
+      setupGrade: "C",
+      decision: "WATCH",
+      setupType: "pullback_continuation",
+      rings: {
+        trendScore: 70,
+        biasScore: 69,
+        sentimentScore: 60,
+        orderflowScore: 61,
+        confidenceScore: 72,
+        eventScore: 35,
+      } as SetupViewModel["rings"],
+      riskReward: { riskPercent: 1, rewardPercent: 2.3, rrr: 2.3, volatilityLabel: "medium" },
+      signalQuality: { grade: "B", score: 75, labelKey: "perception.signalQuality.grade.B", reasons: [] },
+    });
+
+    const result = buildDecisionSummaryVM(vm);
+
+    expect(result.band).toBe("C");
+    expect(result.uncertainty?.level).toBe("medium");
+  });
+
+  test("does not return an empty explainability structure", () => {
+    const vm = makeVm({
+      decision: "WATCH",
+      setupGrade: "B",
+      setupType: "pullback_continuation",
+      rings: {
+        trendScore: 72,
+        biasScore: 70,
+        sentimentScore: 58,
+        orderflowScore: 66,
+        confidenceScore: 68,
+        eventScore: 30,
+      } as SetupViewModel["rings"],
+      signalQuality: { grade: "A", score: 80, labelKey: "perception.signalQuality.grade.A", reasons: [] },
+      riskReward: { riskPercent: 1.1, rewardPercent: 2.3, rrr: 2.1, volatilityLabel: "low" },
+    });
+
+    const result = buildDecisionSummaryVM(vm);
+
+    expect(result.explainability).toBeDefined();
+    expect((result.explainability ?? []).length).toBeGreaterThan(0);
+    expect((result.explainability ?? []).length).toBeLessThanOrEqual(3);
   });
 });

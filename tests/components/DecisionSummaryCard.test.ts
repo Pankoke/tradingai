@@ -7,6 +7,8 @@ import type { DecisionSummaryVM } from "@/src/features/perception/viewModel/deci
 
 const messages = {
   "setup.decisionSummary.title": "Decision Summary",
+  "setup.sections.overallInterpretation": "Overall interpretation",
+  "setup.sections.overallInterpretation.help": "This section summarizes the current context at a high level.",
   "setup.decisionSummary.pros": "Pros",
   "setup.decisionSummary.cautions": "Cautions",
   "setup.decisionSummary.reasonsAgainst": "Reasons against",
@@ -16,6 +18,12 @@ const messages = {
   "setup.decisionSummary.executionMode.breakout": "Breakout",
   "setup.decisionSummary.executionMode.pullback": "Pullback",
   "setup.decisionSummary.executionMode.wait": "Wait",
+  "setup.decisionSummary.uncertainty.label": "Context uncertainty",
+  "setup.decisionSummary.uncertainty.low": "low",
+  "setup.decisionSummary.uncertainty.medium": "medium",
+  "setup.decisionSummary.uncertainty.high": "high",
+  "setup.decisionSummary.basedOn.label": "Based on",
+  "setup.decisionSummary.basedOn.separator": " · ",
   "setup.decisionSummary.interpretation.partialAlignment": "Context indicates partial alignment for {direction} conditions.",
   "setup.decisionSummary.pro.biasStrong": "Bias context is supportive (score {score}).",
   "setup.decisionSummary.pro.rrrFavorable": "Risk/reward profile is favorable (RRR {rrr}).",
@@ -35,6 +43,14 @@ const summaryBase: DecisionSummaryVM = {
     { key: "setup.decisionSummary.pro.rrrFavorable", params: { rrr: 2.3 } },
   ],
   cautions: [{ key: "setup.decisionSummary.caution.eventRiskElevated", params: { score: 74 } }],
+  explainability: [
+    { key: "setup.decisionSummary.pro.biasStrong", params: { score: 72 } },
+    { key: "setup.decisionSummary.caution.eventRiskElevated", params: { score: 74 } },
+  ],
+  uncertainty: {
+    level: "medium",
+    key: "setup.decisionSummary.uncertainty.medium",
+  },
 };
 
 function renderSummary(summary: DecisionSummaryVM): string {
@@ -50,7 +66,9 @@ function renderSummary(summary: DecisionSummaryVM): string {
 describe("DecisionSummaryCard", () => {
   test("renders title and short disclaimer", () => {
     const html = renderSummary(summaryBase);
+    expect(html).toContain("data-testid=\"overall-interpretation-label\"");
     expect(html).toContain("Decision Summary");
+    expect(html).toContain("Overall interpretation");
     expect(html).toContain("Informational context only.");
   });
 
@@ -79,5 +97,19 @@ describe("DecisionSummaryCard", () => {
     expect(htmlWith).toContain("Reasons against");
     expect(htmlWith).toContain("Event-related constraint is active.");
     expect(htmlWithout).not.toContain("Reasons against");
+  });
+
+  test("renders uncertainty marker when uncertainty is present", () => {
+    const html = renderSummary(summaryBase);
+    expect(html).toContain("data-testid=\"decision-summary-uncertainty\"");
+    expect(html).toContain("Context uncertainty: medium");
+  });
+
+  test("renders based-on line with explainability items from i18n keys", () => {
+    const html = renderSummary(summaryBase);
+    expect(html).toContain("data-testid=\"decision-summary-based-on\"");
+    expect(html).toContain("Based on:");
+    expect(html).toContain("Bias context is supportive (score 72).");
+    expect(html).toContain("Event-risk context is elevated (score 74).");
   });
 });

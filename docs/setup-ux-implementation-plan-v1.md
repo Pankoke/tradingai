@@ -131,3 +131,22 @@ Roadmap status: COMPLETE (Stories 1-8 implemented, canonical behavior documented
   - `docs/setup-ux-qa-checklist-v1.md`
   - `docs/setup-ux-status.md`
   - `docs/setup-ux-implementation-plan-v1.md`
+
+## Story 10 - Decision Weight Rebalancing (Semantik & Informationsgewichtung)
+- Status: Implemented
+- Scope delivered:
+  - Score layer in `SetupUnifiedCard` now has explicit semantic section labeling as input metrics.
+  - Decision Summary layer now has explicit semantic sub-labeling as overall interpretation.
+  - Added neutral helper lines for both sections to reinforce informational hierarchy.
+  - Added landmark/heading semantics (`aria-labelledby`, `aria-describedby`) without visual redesign.
+  - Added component test coverage for input-metrics and overall-interpretation labels.
+- Changed files:
+  - `src/components/perception/setupViewModel/SetupUnifiedCard.tsx`
+  - `src/components/perception/DecisionSummaryCard.tsx`
+  - `tests/components/SetupUnifiedCardDecisionSummary.test.ts`
+  - `tests/components/DecisionSummaryCard.test.ts`
+  - `src/messages/en.json`
+  - `src/messages/de.json`
+  - `docs/setup-ux-status.md`
+  - `docs/setup-ux-phase3-roadmap.md`
+  - `docs/setup-ux-implementation-plan-v1.md`
