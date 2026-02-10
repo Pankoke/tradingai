@@ -189,7 +189,7 @@ describe("buildDecisionSummaryVM", () => {
 
   test("enforces at least medium uncertainty for band C even with limited cautions", () => {
     const vm = makeVm({
-      setupGrade: "C",
+      setupGrade: null,
       decision: "WATCH",
       setupType: "pullback_continuation",
       rings: {
@@ -201,7 +201,7 @@ describe("buildDecisionSummaryVM", () => {
         eventScore: 35,
       } as SetupViewModel["rings"],
       riskReward: { riskPercent: 1, rewardPercent: 2.3, rrr: 2.3, volatilityLabel: "medium" },
-      signalQuality: { grade: "B", score: 75, labelKey: "perception.signalQuality.grade.B", reasons: [] },
+      signalQuality: { grade: "C", score: 75, labelKey: "perception.signalQuality.grade.C", reasons: [] },
     });
 
     const result = buildDecisionSummaryVM(vm);

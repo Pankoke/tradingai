@@ -153,7 +153,6 @@ function resolveBand(input: {
 }): DecisionSummaryBand {
   if (input.decisionBlocked) return "C";
   if (input.setupGrade === "A" || input.setupGrade === "B") return input.setupGrade;
-  if (input.setupGrade === "C") return "C";
   if (input.setupGrade === "NO_TRADE") return "C";
   if (input.signalQualityGrade === "A" || input.signalQualityGrade === "B" || input.signalQualityGrade === "C") {
     return input.signalQualityGrade;
