@@ -1,4 +1,4 @@
-export type AssetMeta = {
+﻿export type AssetMeta = {
   displaySymbol: string;
   name: string;
   assetClass: string;
@@ -11,6 +11,8 @@ export type AssetDisplayContext = {
   providerSymbolUsed?: string | null;
   dataSourceUsed?: string | null;
 };
+
+const MOJIBAKE_SEPARATORS: RegExp[] = [/Жњ/g, /Ð–Ñš/g, /Ãâ€“Ã‘Å¡/g];
 
 const ASSET_LOOKUP: Record<string, AssetMeta> = {
   dax: { displaySymbol: "DAX", name: "DAX Index", assetClass: "Index" },
@@ -30,6 +32,14 @@ const ASSET_LOOKUP: Record<string, AssetMeta> = {
 
 function normalizeKey(key?: string): string | undefined {
   return key?.toLowerCase();
+}
+
+function sanitizeAssetText(value: string): string {
+  let sanitized = value;
+  for (const pattern of MOJIBAKE_SEPARATORS) {
+    sanitized = sanitized.replace(pattern, " - ");
+  }
+  return sanitized.replace(/\s+/g, " ").trim();
 }
 
 function isIntradayContext(context?: AssetDisplayContext): boolean {
@@ -66,13 +76,19 @@ export function getAssetMeta(assetId?: string, fallbackSymbol?: string, context?
     };
   }
 
-  return baseMeta;
+  return {
+    displaySymbol: sanitizeAssetText(baseMeta.displaySymbol),
+    name: sanitizeAssetText(baseMeta.name),
+    assetClass: baseMeta.assetClass,
+  };
 }
 
 export function formatAssetLabel(assetId?: string, symbol?: string, context?: AssetDisplayContext): string {
   const meta = getAssetMeta(assetId, symbol, context);
-  if (meta.name !== meta.displaySymbol) {
-    return `${meta.displaySymbol} Жњ ${meta.name}`;
+  const displaySymbol = sanitizeAssetText(meta.displaySymbol);
+  const name = sanitizeAssetText(meta.name);
+  if (name !== displaySymbol) {
+    return `${displaySymbol} - ${name}`;
   }
-  return meta.displaySymbol;
+  return displaySymbol;
 }
