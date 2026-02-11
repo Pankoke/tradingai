@@ -9,6 +9,9 @@ const messages = {
   "setup.decisionSummary.title": "Decision Summary",
   "setup.sections.overallInterpretation": "Overall interpretation",
   "setup.sections.overallInterpretation.help": "This section summarizes the current context at a high level.",
+  "setup.phase4a.interpretationFraming.label": "Context and interpretation",
+  "setup.phase4a.interpretationFraming.help": "This summary interprets metrics and drivers as descriptive context.",
+  "setup.phase4a.uncertaintyIntegration.line": "This interpretation includes {level} uncertainty.",
   "setup.decisionSummary.pros": "Pros",
   "setup.decisionSummary.cautions": "Cautions",
   "setup.decisionSummary.reasonsAgainst": "Reasons against",
@@ -67,8 +70,10 @@ describe("DecisionSummaryCard", () => {
   test("renders title and short disclaimer", () => {
     const html = renderSummary(summaryBase);
     expect(html).toContain("data-testid=\"overall-interpretation-label\"");
+    expect(html).toContain("data-testid=\"interpretation-framing\"");
     expect(html).toContain("Decision Summary");
     expect(html).toContain("Overall interpretation");
+    expect(html).toContain("Context and interpretation");
     expect(html).toContain("Informational context only.");
   });
 
@@ -103,6 +108,15 @@ describe("DecisionSummaryCard", () => {
     const html = renderSummary(summaryBase);
     expect(html).toContain("data-testid=\"decision-summary-uncertainty\"");
     expect(html).toContain("Context uncertainty: medium");
+  });
+
+  test("renders uncertainty integration line only when uncertainty is present", () => {
+    const withUncertaintyHtml = renderSummary(summaryBase);
+    const withoutUncertaintyHtml = renderSummary({ ...summaryBase, uncertainty: undefined });
+
+    expect(withUncertaintyHtml).toContain("data-testid=\"uncertainty-integration\"");
+    expect(withUncertaintyHtml).toContain("This interpretation includes medium uncertainty.");
+    expect(withoutUncertaintyHtml).not.toContain("data-testid=\"uncertainty-integration\"");
   });
 
   test("renders based-on line with explainability items from i18n keys", () => {

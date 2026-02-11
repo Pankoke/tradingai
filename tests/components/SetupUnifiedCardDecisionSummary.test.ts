@@ -92,6 +92,8 @@ describe("SetupUnifiedCard decision summary integration", () => {
     const html = renderCard(true);
     expect(html).toContain("data-testid=\"decision-summary-layer\"");
     expect(html).toContain("setup.decisionSummary.title");
+    expect(html).toContain("data-testid=\"interpretation-framing\"");
+    expect(html).toContain("setup.phase4a.interpretationFraming.label");
   });
 
   test("does not render decision summary when expanded=false", () => {
@@ -105,7 +107,11 @@ describe("SetupUnifiedCard decision summary integration", () => {
     const sotdHtml = renderCard(true, "sotd");
     expect(listHtml).toContain("data-testid=\"input-metrics-label\"");
     expect(listHtml).toContain("setup.sections.inputMetrics");
+    expect(listHtml).toContain("data-testid=\"scores-context-microcopy\"");
+    expect(listHtml).toContain("setup.phase4a.scoresContext");
     expect(sotdHtml).toContain("data-testid=\"input-metrics-label\"");
     expect(sotdHtml).toContain("setup.sections.inputMetrics");
+    expect(sotdHtml).toContain("data-testid=\"scores-context-microcopy\"");
+    expect(sotdHtml).toContain("setup.phase4a.scoresContext");
   });
 });

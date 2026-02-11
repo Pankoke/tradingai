@@ -167,9 +167,13 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
       {expanded || compactMetrics ? (
         <section aria-labelledby={inputMetricsHeadingId} className="space-y-3">
           <div className="space-y-1" data-testid="input-metrics-label">
+            <p data-testid="scores-context-microcopy" className="text-xs text-slate-400">
+              {t("setup.phase4a.scoresContext")}
+            </p>
             <h3 id={inputMetricsHeadingId} className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-300">
               {t("setup.sections.inputMetrics")}
             </h3>
+            <p className="text-xs text-slate-400">{t("setup.phase4a.scoresContext.help")}</p>
             <p className="text-xs text-slate-400">{t("setup.sections.inputMetrics.help")}</p>
           </div>
           {expanded ? (
@@ -256,6 +260,9 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
           <h3 id={executionSectionHeadingId} className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-300">
             {t("setup.execution.sectionTitle")}
           </h3>
+          <p data-testid="execution-framing" className="text-xs text-slate-400">
+            {t("setup.phase4a.executionFraming.line")}
+          </p>
           <p className="text-xs text-slate-400">{t("setup.execution.levels.help")}</p>
           <p className="text-xs text-slate-400">{t("setup.execution.rrr.help")}</p>
           <p data-testid="execution-disclaimer" className="text-xs text-slate-400">

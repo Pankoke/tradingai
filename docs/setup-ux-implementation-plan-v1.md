@@ -150,3 +150,68 @@ Roadmap status: COMPLETE (Stories 1-8 implemented, canonical behavior documented
   - `docs/setup-ux-status.md`
   - `docs/setup-ux-phase3-roadmap.md`
   - `docs/setup-ux-implementation-plan-v1.md`
+
+## Story 14 - Contextualize Scores as Metrics (Score De-emphasis ohne Redesign)
+- Status: Implemented
+- Scope delivered:
+  - Added a neutral, visible scores-context microcopy at the start of the score layer in `SetupUnifiedCard`.
+  - Added a short supporting help line to reinforce that score cards are input/context metrics.
+  - Kept layout, layer order, and component structure unchanged (microcopy/semantics only).
+  - Added test coverage for microcopy presence in both `list` and `sotd` modes.
+- Changed files:
+  - `src/components/perception/setupViewModel/SetupUnifiedCard.tsx`
+  - `tests/components/SetupUnifiedCardDecisionSummary.test.ts`
+  - `src/messages/en.json`
+  - `src/messages/de.json`
+  - `docs/setup-ux-phase4a-roadmap.md`
+  - `docs/setup-ux-status.md`
+  - `docs/setup-ux-implementation-plan-v1.md`
+
+## Story 15 - Strengthen Interpretation Framing (Interpretation-first, ohne Layer Shift)
+- Status: Implemented
+- Scope delivered:
+  - Added a visible interpretation-framing line to `DecisionSummaryCard` to emphasize interpretation-first reading.
+  - Added a short semantic help line clarifying that summary text interprets metrics and drivers as descriptive context.
+  - No layer shift, no new component, no structural redesign.
+  - Added test coverage in both standalone `DecisionSummaryCard` and embedded `SetupUnifiedCard` rendering.
+- Changed files:
+  - `src/components/perception/DecisionSummaryCard.tsx`
+  - `tests/components/DecisionSummaryCard.test.ts`
+  - `tests/components/SetupUnifiedCardDecisionSummary.test.ts`
+  - `src/messages/en.json`
+  - `src/messages/de.json`
+  - `docs/setup-ux-phase4a-roadmap.md`
+  - `docs/setup-ux-status.md`
+  - `docs/setup-ux-implementation-plan-v1.md`
+
+## Story 16 - Integrate Uncertainty into Interpretation (ohne neue Kennzahlen)
+- Status: Implemented
+- Scope delivered:
+  - Added a calm uncertainty integration line in the interpretation area of `DecisionSummaryCard`.
+  - Integration uses existing localized uncertainty level output (`setup.decisionSummary.uncertainty.*`) and appears only when uncertainty exists.
+  - Added `data-testid="uncertainty-integration"` and component tests for present/absent rendering behavior.
+  - No DecisionSummary VM heuristic changes and no layout/layer changes.
+- Changed files:
+  - `src/components/perception/DecisionSummaryCard.tsx`
+  - `tests/components/DecisionSummaryCard.test.ts`
+  - `src/messages/en.json`
+  - `src/messages/de.json`
+  - `docs/setup-ux-phase4a-roadmap.md`
+  - `docs/setup-ux-status.md`
+  - `docs/setup-ux-implementation-plan-v1.md`
+
+## Story 17 - Final Execution Contextualisation (cognitive neutralization, copy-only)
+- Status: Implemented
+- Scope delivered:
+  - Added one calm execution framing microcopy line in the existing execution header area.
+  - Framing is visible in list and sotd modes without changing disclosure or section structure.
+  - Existing execution disclaimer remained in place; no additional disclaimer block introduced.
+  - Extended execution disclosure tests to verify framing visibility for list and sotd rendering.
+- Changed files:
+  - `src/components/perception/setupViewModel/SetupUnifiedCard.tsx`
+  - `tests/components/SetupUnifiedCardExecutionDisclosure.test.ts`
+  - `src/messages/en.json`
+  - `src/messages/de.json`
+  - `docs/setup-ux-phase4a-roadmap.md`
+  - `docs/setup-ux-status.md`
+  - `docs/setup-ux-implementation-plan-v1.md`

@@ -18,6 +18,9 @@ export function DecisionSummaryCard({ summary, className = "", compact = false }
   const sectionLabelId = useId();
   const executionModeKey = `setup.decisionSummary.executionMode.${summary.executionMode}`;
   const interpretationText = resolveText(t(summary.interpretation.key), summary.interpretation.params);
+  const uncertaintyLevelText = summary.uncertainty
+    ? resolveText(t(summary.uncertainty.key), summary.uncertainty.params)
+    : null;
   const shortDisclaimer = t("setup.decisionSummary.disclaimer.short");
   const longDisclaimer = t("setup.decisionSummary.disclaimer.long");
 
@@ -55,7 +58,19 @@ export function DecisionSummaryCard({ summary, className = "", compact = false }
         ) : null}
       </header>
 
+      <div className="space-y-1">
+        <p data-testid="interpretation-framing" className="text-xs font-medium text-slate-300">
+          {t("setup.phase4a.interpretationFraming.label")}
+        </p>
+        <p className="text-xs text-slate-400">{t("setup.phase4a.interpretationFraming.help")}</p>
+      </div>
+
       <p className="line-clamp-2 text-sm text-slate-300">{interpretationText}</p>
+      {uncertaintyLevelText ? (
+        <p data-testid="uncertainty-integration" className="text-xs text-slate-400">
+          {resolveText(t("setup.phase4a.uncertaintyIntegration.line"), { level: uncertaintyLevelText })}
+        </p>
+      ) : null}
       {summary.explainability && summary.explainability.length > 0 ? (
         <p data-testid="decision-summary-based-on" className="text-xs text-slate-400">
           {t("setup.decisionSummary.basedOn.label")}:{" "}

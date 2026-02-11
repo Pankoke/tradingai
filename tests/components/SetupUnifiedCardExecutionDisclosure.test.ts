@@ -86,6 +86,8 @@ describe("SetupUnifiedCard execution progressive disclosure", () => {
     const trigger = screen.getByTestId("execution-disclosure-trigger");
     expect(trigger.getAttribute("aria-expanded")).toBe("false");
     expect(screen.getByText("setup.execution.sectionTitle")).toBeDefined();
+    expect(screen.getByTestId("execution-framing")).toBeDefined();
+    expect(screen.getByText("setup.phase4a.executionFraming.line")).toBeDefined();
     expect(screen.getByTestId("execution-disclaimer")).toBeDefined();
     expect(screen.getByText("setup.execution.disclaimer.short")).toBeDefined();
     expect(screen.getByTestId("execution-summary-row")).toBeDefined();
@@ -110,6 +112,8 @@ describe("SetupUnifiedCard execution progressive disclosure", () => {
     render(React.createElement(SetupUnifiedCard, { vm: baseVm, mode: "sotd" }));
 
     expect(screen.getByText("setup.execution.sectionTitle")).toBeDefined();
+    expect(screen.getByTestId("execution-framing")).toBeDefined();
+    expect(screen.getByText("setup.phase4a.executionFraming.line")).toBeDefined();
     expect(screen.getByTestId("execution-disclaimer")).toBeDefined();
     expect(screen.getByText("setup.execution.disclaimer.short")).toBeDefined();
     expect(screen.queryByTestId("execution-disclosure-trigger")).toBeNull();

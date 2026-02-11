@@ -257,3 +257,68 @@
   - `docs/setup-ux-status.md`
   - `docs/setup-ux-phase3-roadmap.md`
 - PR/Commit: local 2026-02-10
+
+### Phase 4A / Story 14 - Contextualize Scores as Metrics (Score De-emphasis ohne Redesign)
+- Status: DONE
+- Notes:
+  - Im canonical `SetupUnifiedCard` wurde am Anfang des Scores-Layers eine sichtbare Microcopy eingefuegt, die Scores explizit als Kontext-/Input-Metriken einordnet.
+  - Die Microcopy ist in `list`- und `sotd`-Mode vorhanden und ueber `data-testid="scores-context-microcopy"` testbar.
+  - Ergaenzende kurze Help-Zeile wurde ohne Layout- oder Layer-Aenderung integriert; i18n-only unter `setup.phase4a.*`.
+- Files:
+  - `src/components/perception/setupViewModel/SetupUnifiedCard.tsx`
+  - `tests/components/SetupUnifiedCardDecisionSummary.test.ts`
+  - `src/messages/en.json`
+  - `src/messages/de.json`
+  - `docs/setup-ux-phase4a-roadmap.md`
+  - `docs/setup-ux-status.md`
+  - `docs/setup-ux-implementation-plan-v1.md`
+- PR/Commit: local 2026-02-11
+
+### Phase 4A / Story 15 - Strengthen Interpretation Framing (Interpretation-first, ohne Layer Shift)
+- Status: DONE
+- Notes:
+  - `DecisionSummaryCard` zeigt jetzt eine sichtbare Framing-Zeile fuer die Interpretation (`data-testid="interpretation-framing"`).
+  - Eine kurze semantische Help-Zeile ergaenzt, dass die Summary Metriken und Treiber als beschreibenden Kontext einordnet.
+  - Keine Layer-/Layout-Aenderung und keine neue Komponente; i18n-only unter `setup.phase4a.interpretationFraming.*`.
+- Files:
+  - `src/components/perception/DecisionSummaryCard.tsx`
+  - `tests/components/DecisionSummaryCard.test.ts`
+  - `tests/components/SetupUnifiedCardDecisionSummary.test.ts`
+  - `src/messages/en.json`
+  - `src/messages/de.json`
+  - `docs/setup-ux-phase4a-roadmap.md`
+  - `docs/setup-ux-status.md`
+  - `docs/setup-ux-implementation-plan-v1.md`
+- PR/Commit: local 2026-02-11
+
+### Phase 4A / Story 16 - Integrate Uncertainty into Interpretation (ohne neue Kennzahlen)
+- Status: DONE
+- Notes:
+  - Uncertainty wurde im `DecisionSummaryCard` zusaetzlich in den Interpretationsbereich integriert (ruhige Kontextzeile statt neuer Badge-Logik).
+  - Die Integrationszeile nutzt das bestehende lokalisierte Uncertainty-Level (`setup.decisionSummary.uncertainty.*`) und rendert nur bei vorhandenem `summary.uncertainty`.
+  - Testbarkeit ueber `data-testid="uncertainty-integration"`; kein Layout-/Layer-Shift und keine VM-Heuristik-Aenderung.
+- Files:
+  - `src/components/perception/DecisionSummaryCard.tsx`
+  - `tests/components/DecisionSummaryCard.test.ts`
+  - `src/messages/en.json`
+  - `src/messages/de.json`
+  - `docs/setup-ux-phase4a-roadmap.md`
+  - `docs/setup-ux-status.md`
+  - `docs/setup-ux-implementation-plan-v1.md`
+- PR/Commit: local 2026-02-11
+
+### Phase 4A / Story 17 - Final Execution Contextualisation (cognitive neutralization, copy-only)
+- Status: DONE
+- Notes:
+  - Im Execution-Layer von `SetupUnifiedCard` wurde eine zusaetzliche ruhige Framing-Zeile eingefuegt (`data-testid="execution-framing"`).
+  - Die Zeile ist in `list` und `sotd` sichtbar und ordnet Entry/Stop/Target/RRR als Strukturreferenz ein.
+  - Keine neuen Panels/Komponenten, kein Layout-Shift und keine Aenderung der Disclosure-Logik.
+- Files:
+  - `src/components/perception/setupViewModel/SetupUnifiedCard.tsx`
+  - `tests/components/SetupUnifiedCardExecutionDisclosure.test.ts`
+  - `src/messages/en.json`
+  - `src/messages/de.json`
+  - `docs/setup-ux-phase4a-roadmap.md`
+  - `docs/setup-ux-status.md`
+  - `docs/setup-ux-implementation-plan-v1.md`
+- PR/Commit: local 2026-02-11
