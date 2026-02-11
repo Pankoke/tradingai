@@ -215,3 +215,19 @@ Roadmap status: COMPLETE (Stories 1-8 implemented, canonical behavior documented
   - `docs/setup-ux-phase4a-roadmap.md`
   - `docs/setup-ux-status.md`
   - `docs/setup-ux-implementation-plan-v1.md`
+
+## Story 18 - Consistent Cognitive Framing Across Drivers (minimal, no duplication)
+- Status: Implemented
+- Scope delivered:
+  - Added one short drivers-framing microcopy line in the existing drivers section.
+  - Framing clarifies drivers as supporting interpretation factors, without adding new summary blocks.
+  - No disclosure/layout changes and no panel content changes.
+  - Added deterministic test coverage for framing visibility in list and sotd render paths.
+- Changed files:
+  - `src/components/perception/setupViewModel/SetupUnifiedCard.tsx`
+  - `tests/components/SetupUnifiedCardDecisionSummary.test.ts`
+  - `src/messages/en.json`
+  - `src/messages/de.json`
+  - `docs/setup-ux-phase4a-roadmap.md`
+  - `docs/setup-ux-status.md`
+  - `docs/setup-ux-implementation-plan-v1.md`

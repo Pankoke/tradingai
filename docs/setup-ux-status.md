@@ -322,3 +322,19 @@
   - `docs/setup-ux-status.md`
   - `docs/setup-ux-implementation-plan-v1.md`
 - PR/Commit: local 2026-02-11
+
+### Phase 4A / Story 18 - Consistent Cognitive Framing Across Drivers (minimal, no duplication)
+- Status: DONE
+- Notes:
+  - Im Drivers-Bereich von `SetupUnifiedCard` wurde eine kurze Framing-Zeile ergaenzt (`data-testid="drivers-framing"`).
+  - Die Microcopy ordnet Drivers als unterstuetzende Erklaerfaktoren fuer die Einordnung ein und dupliziert keine Summary-Inhalte.
+  - Sichtbarkeit im gerenderten Drivers-Layer in `list` (expanded) und `sotd` ist per Test abgesichert.
+- Files:
+  - `src/components/perception/setupViewModel/SetupUnifiedCard.tsx`
+  - `tests/components/SetupUnifiedCardDecisionSummary.test.ts`
+  - `src/messages/en.json`
+  - `src/messages/de.json`
+  - `docs/setup-ux-phase4a-roadmap.md`
+  - `docs/setup-ux-status.md`
+  - `docs/setup-ux-implementation-plan-v1.md`
+- PR/Commit: local 2026-02-11

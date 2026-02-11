@@ -429,6 +429,7 @@
   "setup.phase4a.interpretationFraming.help": "This summary interprets metrics and drivers as descriptive context.",
   "setup.phase4a.uncertaintyIntegration.line": "This interpretation includes {level} uncertainty.",
   "setup.phase4a.executionFraming.line": "Structural levels for reference context (not instructions).",
+  "setup.phase4a.driversFraming.line": "Drivers explain interpretation context as supporting factors.",
   "setup.decisionSummary.pro.biasStrong": "Bias context is supportive (score {score}).",
   "setup.decisionSummary.pro.trendSupportive": "Trend context is supportive (score {score}).",
   "setup.decisionSummary.pro.signalQualityStrong": "Signal quality context is strong (score {score}).",

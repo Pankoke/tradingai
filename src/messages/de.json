@@ -424,6 +424,7 @@
   "setup.phase4a.interpretationFraming.help": "Diese Summary ordnet Metriken und Treiber als beschreibenden Kontext ein.",
   "setup.phase4a.uncertaintyIntegration.line": "Diese Einordnung enthaelt {level} Unsicherheit.",
   "setup.phase4a.executionFraming.line": "Strukturelle Level zur Kontext-Einordnung (keine Anweisung).",
+  "setup.phase4a.driversFraming.line": "Treiber erklaeren den Einordnungskontext als unterstuetzende Faktoren.",
   "setup.decisionSummary.pro.biasStrong": "Der Bias-Kontext ist stuetzend (Score {score}).",
   "setup.decisionSummary.pro.trendSupportive": "Der Trend-Kontext ist stuetzend (Score {score}).",
   "setup.decisionSummary.pro.signalQualityStrong": "Der Signalqualitaets-Kontext ist stark (Score {score}).",

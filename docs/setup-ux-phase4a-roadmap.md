@@ -79,3 +79,22 @@ Phase 4A focuses on semantic framing so score cards are read as input metrics, w
   - `docs/setup-ux-status.md`
   - `docs/setup-ux-implementation-plan-v1.md`
 - PR/Commit: local 2026-02-11
+
+## Story 18 - Consistent Cognitive Framing Across Drivers (minimal, no duplication)
+- Status: Implemented
+- Goal:
+  - Keep drivers readable as supporting explanation factors, not as standalone decision checklist.
+- Scope delivered:
+  - Added one short drivers-framing microcopy line in the existing drivers section of `SetupUnifiedCard`.
+  - Framing remains minimal (single line), i18n-only, without duplicating Decision Summary "Based on" content.
+  - Added `data-testid="drivers-framing"` for deterministic assertions.
+  - Extended list+sotd setup card test coverage for framing visibility.
+- Changed files:
+  - `src/components/perception/setupViewModel/SetupUnifiedCard.tsx`
+  - `tests/components/SetupUnifiedCardDecisionSummary.test.ts`
+  - `src/messages/en.json`
+  - `src/messages/de.json`
+  - `docs/setup-ux-phase4a-roadmap.md`
+  - `docs/setup-ux-status.md`
+  - `docs/setup-ux-implementation-plan-v1.md`
+- PR/Commit: local 2026-02-11

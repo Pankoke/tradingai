@@ -217,6 +217,9 @@ export function SetupUnifiedCard({ vm, mode, defaultExpanded = false, setupOrigi
           data-testid="drivers-layer"
           className="space-y-3 rounded-3xl border border-slate-800 bg-slate-900/70 p-5 shadow-[0_10px_40px_rgba(2,6,23,0.45)]"
         >
+          <p data-testid="drivers-framing" className="text-xs text-slate-400">
+            {t("setup.phase4a.driversFraming.line")}
+          </p>
           <SetupCardRingsBlock
             setup={vm}
             activeRing={activeRing}

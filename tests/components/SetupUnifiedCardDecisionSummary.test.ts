@@ -114,4 +114,14 @@ describe("SetupUnifiedCard decision summary integration", () => {
     expect(sotdHtml).toContain("data-testid=\"scores-context-microcopy\"");
     expect(sotdHtml).toContain("setup.phase4a.scoresContext");
   });
+
+  test("renders drivers framing microcopy in list and sotd when drivers layer is visible", () => {
+    const listHtml = renderCard(true, "list");
+    const sotdHtml = renderCard(true, "sotd");
+
+    expect(listHtml).toContain("data-testid=\"drivers-framing\"");
+    expect(listHtml).toContain("setup.phase4a.driversFraming.line");
+    expect(sotdHtml).toContain("data-testid=\"drivers-framing\"");
+    expect(sotdHtml).toContain("setup.phase4a.driversFraming.line");
+  });
 });
