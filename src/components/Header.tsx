@@ -63,6 +63,7 @@ export function Header(): JSX.Element {
 
   const isResourcesSection =
     sectionPath.startsWith("/how-it-works") ||
+    sectionPath.startsWith("/changelog") ||
     sectionPath.startsWith("/events") ||
     sectionPath.startsWith("/bias");
 
@@ -294,13 +295,13 @@ export function Header(): JSX.Element {
                       </li>
                       <li>
                         <Link
-                          href={`${localePrefix}/how-it-works/perception`}
+                          href={`${localePrefix}/changelog`}
                           className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
                           onClick={closeMenus}
                         >
-                          <div className="font-medium">Perception Lab Deep Dive</div>
+                          <div className="font-medium">Changelog</div>
                           <p className="text-xs text-[var(--text-secondary)]">
-                            Detaillierte Erklärung der Analyse-Module und Scores.
+                            Public updates on engine versions and revisions.
                           </p>
                         </Link>
                       </li>
@@ -431,3 +432,4 @@ export function Header(): JSX.Element {
     </header>
   );
 }
+

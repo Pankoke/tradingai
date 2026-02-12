@@ -210,13 +210,13 @@ export function MobileMenu({ open, onClose }: MobileMenuProps): JSX.Element | nu
                   </li>
                   <li>
                     <Link
-                      href={`${localePrefix}/how-it-works/perception`}
+                      href={`${localePrefix}/changelog`}
                       className="block rounded-md px-2 py-1.5 text-[var(--text-primary)] hover:bg-white/5"
                       onClick={onClose}
                     >
-                      <div className="text-xs font-medium">Perception Lab Deep Dive</div>
+                      <div className="text-xs font-medium">Changelog</div>
                       <p className="mt-0.5 text-[0.7rem] text-[var(--text-secondary)]">
-                        Details zu Modulen, Scores und Ranking.
+                        Oeffentliche Updates zu Engine-Versionen und Revisionen.
                       </p>
                     </Link>
                   </li>
@@ -291,3 +291,4 @@ export function MobileMenu({ open, onClose }: MobileMenuProps): JSX.Element | nu
     </div>
   );
 }
+

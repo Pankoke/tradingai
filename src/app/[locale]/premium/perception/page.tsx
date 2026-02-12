@@ -30,11 +30,46 @@ export default async function PremiumPerceptionPage({ params }: PageProps): Prom
   return (
     <main className="min-h-screen bg-[var(--bg-main)] px-6 py-12">
       <div className="mx-auto max-w-3xl space-y-4 text-[var(--text-primary)]">
-        <h1 className="text-2xl font-semibold">Premium Perception</h1>
+        <h1 className="text-2xl font-semibold">{t("premium.perception.hero.title")}</h1>
+        <p className="text-sm text-[var(--text-secondary)]">
+          {t("premium.perception.hero.subtitle")}
+        </p>
         <div className="rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-surface)] p-6 shadow-[0_0_0_1px_rgba(14,165,233,0.15)]">
           <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">
             {t("perception.engineMeta.title")}
           </p>
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">
+            {t("premium.perception.engineStatus.intro")}
+          </p>
+          <p className="mt-2 text-xs text-slate-400">
+            {t("ui.tooltip.snapshot")}
+          </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-black/20 p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                {t("premium.engine.version.title")}
+              </p>
+              <p className="mt-1 text-sm text-[var(--text-primary)]">
+                {t("premium.engine.version.value")}
+              </p>
+            </div>
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-black/20 p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                {t("premium.engine.lastUpdate.title")}
+              </p>
+              <p className="mt-1 text-sm text-[var(--text-primary)]">
+                {t("premium.engine.lastUpdate.value")}
+              </p>
+            </div>
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-black/20 p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                {t("premium.engine.revision.title")}
+              </p>
+              <p className="mt-1 text-sm text-[var(--text-primary)]">
+                {t("premium.engine.revision.value")}
+              </p>
+            </div>
+          </div>
           {snapshot ? (
             <EngineMetaPanel
               generatedAt={snapshot.snapshot.snapshotTime.toISOString()}
@@ -46,6 +81,9 @@ export default async function PremiumPerceptionPage({ params }: PageProps): Prom
         </div>
         <p className="text-sm text-[var(--text-secondary)]">
           {t("perception.rings.explainerIntro")}
+        </p>
+        <p className="text-xs text-slate-400">
+          {t("ui.tooltip.confidence")}
         </p>
         <div className="mt-6">
           <FiveRingsExplainer t={t} />
