@@ -217,6 +217,17 @@ export default function MarketingPage(): JSX.Element {
             <p className="max-w-3xl text-sm text-[var(--text-secondary)] sm:text-base dark:text-slate-200">
               {t("hero.subtitle")}
             </p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--text-secondary)]">
+              <Link href={`/${locale}/how-it-works`} className="hover:text-[var(--text-primary)] hover:underline">
+                {locale === "de" ? "So funktioniert das Framework ->" : "How the framework works ->"}
+              </Link>
+              <Link href={`/${locale}/data-sources`} className="hover:text-[var(--text-primary)] hover:underline">
+                {locale === "de" ? "Daten & Abdeckung ->" : "Data & coverage transparency ->"}
+              </Link>
+              <Link href={`/${locale}/changelog`} className="hover:text-[var(--text-primary)] hover:underline">
+                {locale === "de" ? "Engine-Changelog ->" : "Engine changelog ->"}
+              </Link>
+            </div>
             <a
               href="#perception-lab"
               className="text-sm font-semibold text-sky-600 underline underline-offset-4 dark:text-sky-400"

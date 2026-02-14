@@ -63,6 +63,7 @@ export function Header(): JSX.Element {
 
   const isResourcesSection =
     sectionPath.startsWith("/how-it-works") ||
+    sectionPath.startsWith("/data-sources") ||
     sectionPath.startsWith("/changelog") ||
     sectionPath.startsWith("/events") ||
     sectionPath.startsWith("/bias");
@@ -290,6 +291,18 @@ export function Header(): JSX.Element {
                           <div className="font-medium">How it works</div>
                           <p className="text-xs text-[var(--text-secondary)]">
                             Wie das Perception Lab Setups aus Regeln &amp; KI erzeugt.
+                          </p>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          href={`${localePrefix}/data-sources`}
+                          className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
+                          onClick={closeMenus}
+                        >
+                          <div className="font-medium">Data & Coverage</div>
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            Transparent view of source layers and coverage limits.
                           </p>
                         </Link>
                       </li>

@@ -3,7 +3,9 @@
 import React from "react";
 import type { JSX } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useT } from "../../../lib/i18n/ClientProvider";
+import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
 
 type Plan = {
   name: string;
@@ -24,6 +26,13 @@ type ComparisonRow = {
 
 export default function Page(): JSX.Element {
   const t = useT();
+  const pathname = usePathname();
+  const segments = pathname.split("/").filter(Boolean);
+  const maybeLocale = segments[0];
+  const locale: Locale = i18nConfig.locales.includes(maybeLocale as Locale)
+    ? (maybeLocale as Locale)
+    : i18nConfig.defaultLocale;
+  const localePrefix = `/${locale}`;
 
   const plans: Plan[] = [
     {
@@ -151,6 +160,23 @@ export default function Page(): JSX.Element {
                 <span>{row.pro}</span>
               </div>
             ))}
+          </div>
+        </section>
+
+        <section className="mt-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4">
+          <p className="text-sm text-[var(--text-secondary)]">
+            {locale === "de" ? "Vor dem Upgrade kannst du Folgendes pruefen:" : "Before upgrading, you can review:"}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--text-secondary)]">
+            <Link href={`${localePrefix}/how-it-works`} className="hover:text-[var(--text-primary)] hover:underline">
+              {locale === "de" ? "So funktioniert das Framework ->" : "How the framework works ->"}
+            </Link>
+            <Link href={`${localePrefix}/data-sources`} className="hover:text-[var(--text-primary)] hover:underline">
+              {locale === "de" ? "Daten & Abdeckung ->" : "Data & coverage transparency ->"}
+            </Link>
+            <Link href={`${localePrefix}/changelog`} className="hover:text-[var(--text-primary)] hover:underline">
+              {locale === "de" ? "Engine-Changelog ->" : "Engine changelog ->"}
+            </Link>
           </div>
         </section>
 

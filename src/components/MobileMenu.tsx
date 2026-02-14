@@ -210,6 +210,18 @@ export function MobileMenu({ open, onClose }: MobileMenuProps): JSX.Element | nu
                   </li>
                   <li>
                     <Link
+                      href={`${localePrefix}/data-sources`}
+                      className="block rounded-md px-2 py-1.5 text-[var(--text-primary)] hover:bg-white/5"
+                      onClick={onClose}
+                    >
+                      <div className="text-xs font-medium">Data & Coverage</div>
+                      <p className="mt-0.5 text-[0.7rem] text-[var(--text-secondary)]">
+                        Transparente Sicht auf Quellen-Layer und Abdeckungsgrenzen.
+                      </p>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
                       href={`${localePrefix}/changelog`}
                       className="block rounded-md px-2 py-1.5 text-[var(--text-primary)] hover:bg-white/5"
                       onClick={onClose}
