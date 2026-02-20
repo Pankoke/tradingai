@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Activity, BarChart3, Shield, Zap, ActivitySquare } from "lucide-react";
 import { fetchPerceptionToday } from "@/src/lib/api/perceptionClient";
+import { fetchMarketingOverview, type MarketingOverviewResponse } from "@/src/lib/api/marketingOverviewClient";
 import type { Setup } from "@/src/lib/engine/types";
 import type { HomepageSetup } from "@/src/lib/homepage-setups";
 import { clamp } from "@/src/lib/math";
@@ -129,6 +130,8 @@ function toHomepageSetup(setup: Setup): HomepageSetup {
 export default function MarketingPage(): JSX.Element {
   const t = useT();
   const pathname = usePathname();
+  const [overview, setOverview] = useState<MarketingOverviewResponse | null>(null);
+  const [overviewState, setOverviewState] = useState<"loading" | "ready" | "error">("loading");
   const [setupOfTheDay, setSetupOfTheDay] =
     useState<HomepageSetup | null>(null);
   const [setupOfTheDayRaw, setSetupOfTheDayRaw] = useState<Setup | null>(null);
@@ -149,7 +152,14 @@ export default function MarketingPage(): JSX.Element {
   useEffect(() => {
   const load = async (): Promise<void> => {
     try {
-      const data = await fetchPerceptionToday();
+      const [overviewData, data] = await Promise.all([
+        fetchMarketingOverview(),
+        fetchPerceptionToday(),
+      ]);
+
+      setOverview(overviewData);
+      setOverviewState("ready");
+
       const heroItem =
         data.items.find((item) => item.isSetupOfTheDay) ?? data.items[0] ?? null;
       const heroSetup =
@@ -161,20 +171,12 @@ export default function MarketingPage(): JSX.Element {
       setState("ready");
     } catch (error) {
       console.error(error);
+      setOverviewState("error");
       setState("error");
     }
   };
     void load();
   }, []);
-
-  const allSetups = useMemo(
-    () => (setupOfTheDay ? [setupOfTheDay] : []),
-    [setupOfTheDay],
-  );
-  const assetsAnalyzed = new Set(allSetups.map((s) => s.symbol)).size;
-  const activeSetups = allSetups.length;
-  const strongSignals = allSetups.filter((s) => !s.weakSignal).length;
-  const weakSignals = allSetups.filter((s) => s.weakSignal).length;
   const todayHuman = new Date().toLocaleDateString(
     locale === "de" ? "de-DE" : "en-US",
     {
@@ -236,28 +238,7 @@ export default function MarketingPage(): JSX.Element {
             </a>
           </div>
 
-          <div className="grid w-full max-w-xl grid-cols-2 gap-3 self-start md:mt-6">
-            <KpiCard
-              icon={<BarChart3 className="h-4 w-4 text-sky-300" />}
-              label={t("homepage.kpi.assets")}
-              value={assetsAnalyzed}
-            />
-            <KpiCard
-              icon={<Activity className="h-4 w-4 text-emerald-300" />}
-              label={t("homepage.kpi.active")}
-              value={activeSetups}
-            />
-            <KpiCard
-              icon={<Zap className="h-4 w-4 text-emerald-300" />}
-              label={t("homepage.kpi.strong")}
-              value={strongSignals}
-            />
-            <KpiCard
-              icon={<Shield className="h-4 w-4 text-amber-300" />}
-              label={t("homepage.kpi.weak")}
-              value={weakSignals}
-            />
-          </div>
+          <LiveOverviewPanel locale={locale} overview={overview} state={overviewState} />
         </header>
 
         {/* SETUP OF THE DAY */}
@@ -364,30 +345,100 @@ export default function MarketingPage(): JSX.Element {
 // Kleinkomponenten
 // -----------------------------------------------------------------------------
 
-type KpiCardProps = {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-};
+function formatAsOf(value: string | null | undefined, locale: Locale): string {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "—";
+  const formatted = parsed.toLocaleString(locale === "de" ? "de-DE" : "en-US", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
+  });
+  return `${formatted} UTC`;
+}
 
-function KpiCard({ icon, label, value }: KpiCardProps): JSX.Element {
+function LiveOverviewPanel({
+  locale,
+  overview,
+  state,
+}: {
+  locale: Locale;
+  overview: MarketingOverviewResponse | null;
+  state: "loading" | "ready" | "error";
+}): JSX.Element {
+  const labels = {
+    title: locale === "de" ? "Perception Lab — Systemstatus" : "Perception Lab — System Status",
+    status: locale === "de" ? "Betrieb aktiv" : "Operational",
+    badge1: locale === "de" ? "Snapshot-basiert" : "Snapshot-based",
+    badge2: locale === "de" ? "Playbook-gesteuert" : "Playbook-driven",
+    badge3: locale === "de" ? "Fallback-aware" : "Fallback-aware",
+    assets: locale === "de" ? "Assets im Universe" : "Assets tracked",
+    active: locale === "de" ? "Aktive Setups" : "Active setups",
+    emptyActive:
+      locale === "de"
+        ? "Keine qualifizierten Setups im letzten Snapshot"
+        : "No qualifying setups in the latest snapshot",
+    footer:
+      locale === "de"
+        ? `Engine ${overview?.engineVersion ?? "unknown"} · Stand ${formatAsOf(overview?.latestSnapshotTime, locale)}`
+        : `Engine ${overview?.engineVersion ?? "unknown"} · As of ${formatAsOf(overview?.latestSnapshotTime, locale)}`,
+  };
+
   return (
-    <div className="h-full rounded-2xl border border-slate-700 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),_transparent_55%),_rgba(4,7,15,0.98)] px-3 py-2.5 shadow-[0_18px_50px_rgba(0,0,0,0.8)]">
-      <div className="flex flex-col items-center gap-1.5 text-center">
-        <div className="flex items-center justify-center gap-1.5 text-sm text-slate-100">
-          {icon}
-          <span className="font-medium">{label}</span>
+    <div className="group w-full max-w-xl self-start rounded-2xl border border-slate-600/60 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.16),_transparent_55%),_radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.1),_transparent_45%),_rgba(4,7,15,0.96)] p-5 shadow-[0_14px_40px_rgba(0,0,0,0.45)] transition-shadow duration-200 hover:shadow-[0_20px_56px_rgba(0,0,0,0.58)] md:mt-6">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold tracking-[0.01em] text-white">{labels.title}</p>
+          <span className="rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-200">
+            {labels.status}
+          </span>
         </div>
-        <div className="text-2xl font-semibold leading-tight text-white">
-          {value}
+
+        <div className="flex flex-wrap gap-1.5">
+          <span className="rounded-full border border-slate-500/50 bg-slate-800/75 px-2 py-0.5 text-[10px] text-slate-300">
+            {labels.badge1}
+          </span>
+          <span className="rounded-full border border-slate-500/50 bg-slate-800/75 px-2 py-0.5 text-[10px] text-slate-300">
+            {labels.badge2}
+          </span>
+          <span className="rounded-full border border-slate-500/50 bg-slate-800/75 px-2 py-0.5 text-[10px] text-slate-300">
+            {labels.badge3}
+          </span>
         </div>
+
+        {state === "loading" ? (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="h-[110px] animate-pulse rounded-xl border border-slate-700/70 bg-slate-800/35" />
+            <div className="h-[110px] animate-pulse rounded-xl border border-slate-700/70 bg-slate-800/35" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="rounded-xl border border-slate-700/80 bg-black/25 px-4 py-3">
+              <p className="text-[10px] uppercase tracking-[0.22em] text-slate-400">{labels.assets}</p>
+              <p className="mt-2 text-5xl font-semibold leading-none text-white">
+                {String(overview?.universeAssetsTotal ?? 0)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-slate-700/80 bg-black/25 px-4 py-3">
+              <p className="text-[10px] uppercase tracking-[0.22em] text-slate-400">{labels.active}</p>
+              <p className="mt-2 text-5xl font-semibold leading-none text-white">
+                {String(overview?.activeSetups ?? 0)}
+              </p>
+              {(overview?.activeSetups ?? 0) === 0 ? (
+                <p className="mt-2 text-[11px] text-slate-400">{labels.emptyActive}</p>
+              ) : null}
+            </div>
+          </div>
+        )}
+
+        <p className="border-t border-slate-700/80 pt-3 text-xs text-slate-400">{labels.footer}</p>
       </div>
     </div>
   );
 }
-
-
-
 
 type InfoCardProps = {
   icon: JSX.Element;

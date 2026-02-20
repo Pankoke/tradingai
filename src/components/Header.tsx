@@ -56,6 +56,7 @@ export function Header(): JSX.Element {
 
   const isProductsSection =
     sectionPath.startsWith("/setups") ||
+    sectionPath.startsWith("/setup-v2") ||
     sectionPath.startsWith("/premium") ||
     sectionPath.startsWith("/ai-tools") ||
     sectionPath.startsWith("/backtesting") ||
@@ -174,6 +175,18 @@ export function Header(): JSX.Element {
                           </div>
                           <p className="text-xs text-[var(--text-secondary)]">
                             Alle täglichen Setups für aktive Trader.
+                          </p>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          href={`${localePrefix}/setup-v2`}
+                          className="block rounded-lg px-2 py-1.5 text-[var(--text-primary)] transition hover:bg-white/5"
+                          onClick={closeMenus}
+                        >
+                          <div className="font-medium">Setup View V2</div>
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            Alternative Setup-Ansicht fuer A/B-Vergleich.
                           </p>
                         </Link>
                       </li>
