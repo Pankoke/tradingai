@@ -10,11 +10,20 @@ export type SetupV2Copy = {
     unknown: string;
   };
   hero: {
+    symbol: string;
+    timeframe: string;
     contextDirection: string;
     alignmentIndex: string;
     conflictLevel: string;
     riskProfile: string;
     asOf: string;
+    riskProfiles: {
+      conservative: string;
+      balanced: string;
+      aggressive: string;
+    };
+    summaryLead: string;
+    summaryStability: string;
   };
   context: {
     long: string;
@@ -26,7 +35,7 @@ export type SetupV2Copy = {
     subtitle: string;
     none: string;
     low: string;
-    medium: string;
+    moderate: string;
     high: string;
     items: {
       flowTrend: string;
@@ -34,12 +43,15 @@ export type SetupV2Copy = {
       eventPressure: string;
       fallbackQuality: string;
     };
+    stabilityNote: string;
   };
   zones: {
     title: string;
+    subtitle: string;
     interaction: string;
     invalidation: string;
     objective: string;
+    distanceRatio: string;
     unavailable: string;
   };
   drivers: {
@@ -50,6 +62,11 @@ export type SetupV2Copy = {
     orderflow: string;
     event: string;
     confidence: string;
+    intensity: {
+      soft: string;
+      moderate: string;
+      strong: string;
+    };
   };
   details: {
     titleMetrics: string;
@@ -57,15 +74,22 @@ export type SetupV2Copy = {
     titleMetadata: string;
     metrics: {
       setupGrade: string;
-      decisionClass: string;
+      modelState: string;
       eventModifier: string;
-      riskRewardRatio: string;
+      distanceRatio: string;
     };
     metadata: {
       snapshotId: string;
       snapshotLabel: string;
       engineVersion: string;
       generated: string;
+    };
+    modelStates: {
+      active: string;
+      monitoringPlus: string;
+      monitoring: string;
+      restricted: string;
+      neutral: string;
     };
     definitions: {
       alignment: string;
@@ -85,11 +109,20 @@ const EN_COPY: SetupV2Copy = {
     unknown: "unknown",
   },
   hero: {
-    contextDirection: "Computed Context Direction",
+    symbol: "Asset",
+    timeframe: "Timeframe",
+    contextDirection: "Context Direction",
     alignmentIndex: "Alignment Index",
     conflictLevel: "Conflict Level",
     riskProfile: "Risk Profile",
     asOf: "As-of",
+    riskProfiles: {
+      conservative: "Conservative",
+      balanced: "Balanced",
+      aggressive: "Aggressive",
+    },
+    summaryLead: "Structural summary:",
+    summaryStability: "Current structure indicates a descriptive context state, not an outcome statement.",
   },
   context: {
     long: "Long Context",
@@ -97,44 +130,52 @@ const EN_COPY: SetupV2Copy = {
     neutral: "Neutral Context",
   },
   conflict: {
-    title: "Conflict-First Review",
-    subtitle: "Potential divergence across layers is highlighted before supportive signals.",
-    none: "No material conflicts detected across the current driver set.",
+    title: "Conflict-First Core",
+    subtitle: "Structural divergence is shown before supportive drivers.",
+    none: "No material conflict detected across current drivers.",
     low: "Low",
-    medium: "Medium",
+    moderate: "Moderate",
     high: "High",
     items: {
-      flowTrend: "Orderflow and trend strength are not aligned.",
-      biasSentiment: "Bias and sentiment point to different structural context.",
-      eventPressure: "Event window pressure adds execution uncertainty.",
-      fallbackQuality: "At least one ring uses fallback or stale quality context.",
+      flowTrend: "Orderflow and trend are directionally misaligned.",
+      biasSentiment: "Bias and sentiment indicate different structural context.",
+      eventPressure: "Event window pressure increases uncertainty.",
+      fallbackQuality: "At least one ring relies on fallback or stale quality.",
     },
+    stabilityNote: "Structural stability is lower when multiple layers diverge at the same time.",
   },
   zones: {
-    title: "Reference Zones",
+    title: "Structurally Relevant Price Zones",
+    subtitle: "Structured level map without execution instructions.",
     interaction: "Interaction Zone",
     invalidation: "Invalidation Zone",
     objective: "Objective Zone",
+    distanceRatio: "Structural Zone Ratio",
     unavailable: "n/a",
   },
   drivers: {
-    title: "Weighted Driver View",
+    title: "Structural Influence Factors",
     trend: "Trend",
     bias: "Bias",
     sentiment: "Sentiment",
     orderflow: "Orderflow",
     event: "Event",
     confidence: "Confidence",
+    intensity: {
+      soft: "soft",
+      moderate: "moderate",
+      strong: "strong",
+    },
   },
   details: {
     titleMetrics: "Advanced Metrics",
-    titleDefinitions: "Definitions",
+    titleDefinitions: "Model Notes",
     titleMetadata: "Snapshot Metadata",
     metrics: {
       setupGrade: "Setup grade",
-      decisionClass: "Decision class",
+      modelState: "Model state",
       eventModifier: "Event modifier",
-      riskRewardRatio: "Risk/Reward ratio",
+      distanceRatio: "Structural Zone Ratio",
     },
     metadata: {
       snapshotId: "Snapshot ID",
@@ -142,10 +183,17 @@ const EN_COPY: SetupV2Copy = {
       engineVersion: "Engine version",
       generated: "Generated",
     },
+    modelStates: {
+      active: "Active context",
+      monitoringPlus: "Monitoring plus",
+      monitoring: "Monitoring",
+      restricted: "Restricted context",
+      neutral: "Neutral context",
+    },
     definitions: {
       alignment: "Alignment Index summarizes structural coherence across trend, bias, sentiment, and orderflow.",
-      conflict: "Conflict Level highlights cross-signal tension and uncertainty concentration.",
-      zones: "Reference Zones describe structural price regions and do not represent execution instructions.",
+      conflict: "Conflict Level highlights tension concentration across signal layers.",
+      zones: "Reference Zones mark structural price regions and remain descriptive.",
     },
   },
 };
@@ -160,11 +208,20 @@ const DE_COPY: SetupV2Copy = {
     unknown: "unbekannt",
   },
   hero: {
-    contextDirection: "Berechnete Kontext-Richtung",
+    symbol: "Asset",
+    timeframe: "Zeitrahmen",
+    contextDirection: "Kontext-Richtung",
     alignmentIndex: "Alignment-Index",
     conflictLevel: "Konfliktlevel",
     riskProfile: "Risikoprofil",
     asOf: "Stand",
+    riskProfiles: {
+      conservative: "Konservativ",
+      balanced: "Ausgewogen",
+      aggressive: "Dynamisch",
+    },
+    summaryLead: "Strukturelle Einordnung:",
+    summaryStability: "Der aktuelle Aufbau beschreibt einen Kontextzustand, keine Ergebnisaussage.",
   },
   context: {
     long: "Long-Kontext",
@@ -172,44 +229,52 @@ const DE_COPY: SetupV2Copy = {
     neutral: "Neutraler Kontext",
   },
   conflict: {
-    title: "Konfliktorientierte Pruefung",
-    subtitle: "Moegliche Divergenzen werden vor unterstuetzenden Signalen hervorgehoben.",
-    none: "Keine wesentlichen Konflikte im aktuellen Driver-Set erkannt.",
+    title: "Konfliktfokus",
+    subtitle: "Strukturelle Divergenzen werden vor unterstuetzenden Treibern gezeigt.",
+    none: "Keine wesentlichen Konflikte in den aktuellen Treibern erkannt.",
     low: "Niedrig",
-    medium: "Mittel",
+    moderate: "Moderat",
     high: "Hoch",
     items: {
-      flowTrend: "Orderflow und Trendstaerke sind nicht konsistent.",
-      biasSentiment: "Bias und Sentiment zeigen in unterschiedliche Strukturkontexte.",
-      eventPressure: "Event-Fenster erzeugt zusaetzliche Unsicherheit.",
+      flowTrend: "Orderflow und Trend sind richtungsseitig nicht konsistent.",
+      biasSentiment: "Bias und Sentiment zeigen unterschiedliche Strukturkontexte.",
+      eventPressure: "Event-Fenster erhoeht die Unsicherheit.",
       fallbackQuality: "Mindestens ein Ring nutzt Fallback- oder stale-Qualitaet.",
     },
+    stabilityNote: "Die strukturelle Stabilitaet sinkt, wenn mehrere Layer gleichzeitig divergieren.",
   },
   zones: {
-    title: "Referenzzonen",
+    title: "Strukturell relevante Preiszonen",
+    subtitle: "Strukturierte Level-Karte ohne Ausfuehrungsanweisung.",
     interaction: "Interaction Zone",
     invalidation: "Invalidation Zone",
     objective: "Objective Zone",
+    distanceRatio: "Strukturelles Verhaeltnis der Zonen",
     unavailable: "k. A.",
   },
   drivers: {
-    title: "Gewichtete Driver-Sicht",
+    title: "Strukturelle Einflussfaktoren",
     trend: "Trend",
     bias: "Bias",
     sentiment: "Sentiment",
     orderflow: "Orderflow",
     event: "Event",
     confidence: "Confidence",
+    intensity: {
+      soft: "niedrig",
+      moderate: "moderat",
+      strong: "ausgepraegt",
+    },
   },
   details: {
     titleMetrics: "Erweiterte Metriken",
-    titleDefinitions: "Definitionen",
+    titleDefinitions: "Modelhinweise",
     titleMetadata: "Snapshot-Metadaten",
     metrics: {
       setupGrade: "Setup-Grade",
-      decisionClass: "Entscheidungsklasse",
+      modelState: "Modelzustand",
       eventModifier: "Event-Modifikator",
-      riskRewardRatio: "Chance/Risiko-Verhaeltnis",
+      distanceRatio: "Strukturelles Verhaeltnis der Zonen",
     },
     metadata: {
       snapshotId: "Snapshot-ID",
@@ -217,10 +282,17 @@ const DE_COPY: SetupV2Copy = {
       engineVersion: "Engine-Version",
       generated: "Erstellt",
     },
+    modelStates: {
+      active: "Aktiver Kontext",
+      monitoringPlus: "Monitoring plus",
+      monitoring: "Monitoring",
+      restricted: "Eingeschraenkter Kontext",
+      neutral: "Neutraler Kontext",
+    },
     definitions: {
       alignment: "Der Alignment-Index fasst die strukturelle Kohaerenz ueber Trend, Bias, Sentiment und Orderflow zusammen.",
-      conflict: "Das Konfliktlevel markiert Spannungen zwischen Signal-Layern und Unsicherheitsclustern.",
-      zones: "Referenzzonen beschreiben strukturelle Preisbereiche und sind keine Ausfuehrungsanweisung.",
+      conflict: "Das Konfliktlevel zeigt, wie stark Spannungen zwischen Signal-Layern gebuendelt sind.",
+      zones: "Referenzzonen markieren strukturelle Preisbereiche und bleiben deskriptiv.",
     },
   },
 };
