@@ -13,6 +13,7 @@ import { clamp } from "@/src/lib/math";
 import { useT } from "@/src/lib/i18n/ClientProvider";
 import { i18nConfig, type Locale } from "@/src/lib/i18n/config";
 import { SetupOfTheDayCard } from "@/src/app/[locale]/(marketing)/components/SetupOfTheDayCard";
+import PipelineDiagram from "@/src/components/marketing/PipelineDiagram";
 
 type Labels = ReturnType<typeof buildLabels>;
 
@@ -375,24 +376,30 @@ function LiveOverviewPanel({
     badge1: locale === "de" ? "Snapshot-basiert" : "Snapshot-based",
     badge2: locale === "de" ? "Playbook-gesteuert" : "Playbook-driven",
     badge3: locale === "de" ? "Fallback-aware" : "Fallback-aware",
-    assets: locale === "de" ? "Assets im Universe" : "Assets tracked",
-    active: locale === "de" ? "Aktive Setups" : "Active setups",
-    emptyActive:
-      locale === "de"
-        ? "Keine qualifizierten Setups im letzten Snapshot"
-        : "No qualifying setups in the latest snapshot",
     footer:
       locale === "de"
         ? `Engine ${overview?.engineVersion ?? "unknown"} · Stand ${formatAsOf(overview?.latestSnapshotTime, locale)}`
         : `Engine ${overview?.engineVersion ?? "unknown"} · As of ${formatAsOf(overview?.latestSnapshotTime, locale)}`,
+    methodTitle: locale === "de" ? "Wie Setups entstehen" : "How setups are created",
+    methodBullets:
+      locale === "de"
+        ? [
+            "Struktur + Volatilitaet -> Entry-Zone, SL, Ziele (RRR)",
+            "Rings 0-100 -> Kontext aus Trend/Bias/Event/Sentiment/Flow",
+            "Playbook-Regeln -> Entscheidung & Filter (Trade / Watch / Blocked)",
+          ]
+        : [
+            "Structure + volatility -> entry zone, SL, targets (RRR)",
+            "Rings 0-100 -> trend/bias/event/sentiment/flow context",
+            "Playbook rules -> decision & filters (trade / watch / blocked)",
+          ],
   };
-
   return (
     <div className="group w-full max-w-xl self-start rounded-2xl border border-slate-600/60 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.16),_transparent_55%),_radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.1),_transparent_45%),_rgba(4,7,15,0.96)] p-5 shadow-[0_14px_40px_rgba(0,0,0,0.45)] transition-shadow duration-200 hover:shadow-[0_20px_56px_rgba(0,0,0,0.58)] md:mt-6">
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm font-semibold tracking-[0.01em] text-white">{labels.title}</p>
-          <span className="rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-200">
+          <span className={`rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-200 ${state === "loading" ? "animate-pulse" : ""}`}>
             {labels.status}
           </span>
         </div>
@@ -409,30 +416,19 @@ function LiveOverviewPanel({
           </span>
         </div>
 
-        {state === "loading" ? (
-          <div className="grid grid-cols-2 gap-4">
-            <div className="h-[110px] animate-pulse rounded-xl border border-slate-700/70 bg-slate-800/35" />
-            <div className="h-[110px] animate-pulse rounded-xl border border-slate-700/70 bg-slate-800/35" />
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-4">
-            <div className="rounded-xl border border-slate-700/80 bg-black/25 px-4 py-3">
-              <p className="text-[10px] uppercase tracking-[0.22em] text-slate-400">{labels.assets}</p>
-              <p className="mt-2 text-5xl font-semibold leading-none text-white">
-                {String(overview?.universeAssetsTotal ?? 0)}
-              </p>
-            </div>
-            <div className="rounded-xl border border-slate-700/80 bg-black/25 px-4 py-3">
-              <p className="text-[10px] uppercase tracking-[0.22em] text-slate-400">{labels.active}</p>
-              <p className="mt-2 text-5xl font-semibold leading-none text-white">
-                {String(overview?.activeSetups ?? 0)}
-              </p>
-              {(overview?.activeSetups ?? 0) === 0 ? (
-                <p className="mt-2 text-[11px] text-slate-400">{labels.emptyActive}</p>
-              ) : null}
-            </div>
-          </div>
-        )}
+        <PipelineDiagram locale={locale === "de" ? "de" : "en"} variant="embedded" />
+
+        <div className="border-t border-slate-700/80 pt-3">
+          <p className="text-xs font-semibold tracking-[0.02em] text-slate-100">{labels.methodTitle}</p>
+          <ul className="mt-2 space-y-1.5 text-[11px] leading-relaxed text-slate-300">
+            {labels.methodBullets.map((bullet) => (
+              <li key={bullet} className="flex items-start gap-1.5">
+                <span className="mt-[0.32rem] h-1.5 w-1.5 shrink-0 rounded-full bg-sky-300/90" />
+                <span>{bullet}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
 
         <p className="border-t border-slate-700/80 pt-3 text-xs text-slate-400">{labels.footer}</p>
       </div>
